@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Injaaz Site Visit Form</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="manifest" href="/static/manifest.json">
+  <script src="/static/main.js" defer></script>
+</head>
+<body>
+  <h1>Site Visit Form (Minimal)</h1>
+  <form id="visitForm">
+    <label>Building name: <input name="building_name" /></label><br/>
+    <label>Technician email: <input name="email" type="email"/></label><br/>
+    <button type="button" id="submitBtn">Submit test metadata</button>
+  </form>
+
+  <div id="status" style="margin-top:20px;color:green"></div>
+
+  <script>
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      const form = document.getElementById('visitForm');
+      const fd = new FormData(form);
+      const visit_info = {};
+      for (const [k, v] of fd.entries()) visit_info[k] = v;
+      const payload = { visit_info, report_items: [] , signatures: {} };
+      const res = await fetch('/site-visit/api/submit/metadata', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const body = await res.json();
+      document.getElementById('status').textContent = JSON.stringify(body);
+    });
+  </script>
+</body>
+</html>
