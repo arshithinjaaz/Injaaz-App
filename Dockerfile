@@ -21,7 +21,7 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 # Copy application code
 COPY . /app
 
-# Create a non-root user (optional)
+# Create a non-root user and fix permissions
 RUN useradd -m injaaz && chown -R injaaz /app
 USER injaaz
 
@@ -32,4 +32,5 @@ ENV WEB_CONCURRENCY=${WEB_CONCURRENCY:-1}
 EXPOSE 5000
 
 # Run via sh -c so environment variables like $PORT expand
-CMD sh -c "gunicorn -w ${WEB_CONCURRENCY} -b 0.0.0.0:${PORT} app:app"
+# Point Gunicorn at the resilient wsgi entrypoint that exposes `app`
+CMD sh -c "gunicorn -w ${WEB_CONCURRENCY} -b 0.0.0.0:${PORT} wsgi:app"
