@@ -5,6 +5,7 @@ from datetime import datetime
 from app.services.excel_service import create_report_workbook
 from app.services.cloudinary_service import upload_local_file, init_cloudinary
 from app.services.email_service import send_outlook_email
+from app.services.pdf_service import generate_visit_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -26,19 +27,28 @@ def generate_and_send_report(report_id, visit_info, final_items, generated_dir, 
         # Excel
         excel_path, excel_filename = create_report_workbook(generated_dir, visit_info, final_items)
 
-        # PDF generation placeholder (replace with real PDF generator)
-        pdf_filename = f"{report_id}.pdf"
-        pdf_path = os.path.join(generated_dir, pdf_filename)
-        with open(pdf_path, 'wb') as f:
-            f.write(b"%PDF-1.4\n%placeholder\n")
+        # PDF generation - use the new PDF service
+        try:
+            pdf_path, pdf_filename = generate_visit_pdf(visit_info, final_items, generated_dir, report_id=report_id)
+            logger.info("PDF generated: %s", pdf_path)
+        except Exception as e:
+            logger.exception("PDF generation failed: %s", e)
+            status = {"status": "failed", "error": f"PDF generation failed: {e}"}
+            _write_status_file(generated_dir, report_id, status)
+            return
 
         # Attempt Cloudinary upload if configured
         excel_url = None
         pdf_url = None
+        uploaded_to_cloudinary = False
         if init_cloudinary():
             try:
-                excel_url = upload_local_file(excel_path, f"{report_id}_excel")
-                pdf_url = upload_local_file(pdf_path, f"{report_id}_pdf")
+                if excel_path and os.path.exists(excel_path):
+                    excel_url = upload_local_file(excel_path, f"{report_id}_excel")
+                if pdf_path and os.path.exists(pdf_path):
+                    pdf_url = upload_local_file(pdf_path, f"{report_id}_pdf")
+                uploaded_to_cloudinary = bool(excel_url or pdf_url)
+                logger.info("Uploaded to Cloudinary: excel=%s pdf=%s", bool(excel_url), bool(pdf_url))
             except Exception:
                 logger.exception("Failed uploading to Cloudinary")
 
@@ -52,6 +62,7 @@ def generate_and_send_report(report_id, visit_info, final_items, generated_dir, 
             "status": "done",
             "excel_url": excel_url,
             "pdf_url": pdf_url,
+            "uploaded_to_cloudinary": uploaded_to_cloudinary,
             "finished_at": datetime.utcnow().isoformat()
         }
         _write_status_file(generated_dir, report_id, final_status)
