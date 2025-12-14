@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ schema.title }}</title>
+  <style>
+    body{font-family:system-ui,Arial;margin:24px;max-width:900px}
+    label{display:block;margin-top:8px}
+    input[type=text],input[type=email],textarea{width:100%;padding:8px;box-sizing:border-box}
+    .small{font-size:0.9em;color:#666}
+  </style>
+</head>
+<body>
+  <h1>{{ schema.title }}</h1>
+  <p class="small">{{ schema.description }}</p>
+
+  <form id="main-form" action="{{ url_for('forms.submit_form', form_name=form_name) }}" method="post" enctype="multipart/form-data">
+    {% for field in schema.fields %}
+      <label>{{ field.label }}
+        {% if field.type == 'textarea' %}
+          <textarea name="{{ field.name }}" {% if field.required %} required {% endif %}></textarea>
+        {% else %}
+          <input type="{{ field.type }}" name="{{ field.name }}" {% if field.required %} required {% endif %} />
+        {% endif %}
+      </label>
+    {% endfor %}
+
+    {% if schema.allow_photos %}
+      <label>Photos
+        <input type="file" name="photos" accept="image/*" multiple />
+      </label>
+      <div class="small">Upload photos to assist the report (max 15MB per file).</div>
+    {% endif %}
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <div id="result" style="margin-top:18px;"></div>
+
+  <script>
+    // Graceful client-side UX: intercept submit to show simple feedback
+    const form = document.getElementById('main-form');
+    const result = document.getElementById('result');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      result.textContent = 'Submitting...';
+      const fd = new FormData(form);
+      try {
+        const resp = await fetch(form.action, { method: 'POST', body: fd });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || JSON.stringify(data));
+        result.innerHTML = `<div>Submitted. visit_id: ${data.visit_id}. Job queued. Check status at <a href="${data.status_url}">${data.status_url}</a></div>`;
+      } catch (err) {
+        result.innerHTML = `<div style="color:crimson;">Submit failed: ${err.message}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>
