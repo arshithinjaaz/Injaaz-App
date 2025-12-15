@@ -6,7 +6,7 @@
   <style>body{font-family:system-ui,Arial;margin:24px}</style>
 </head>
 <body>
-  <h1>Forms Dashboard</h1>
+  <h1>Forms Dashboard!</h1>
   <ul>
     {% for f in forms %}
       <li><a href="{{ url_for('forms.render_form', form_name=f.name) }}">{{ f.title }}</a></li>
