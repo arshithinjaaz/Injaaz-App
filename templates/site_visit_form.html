@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Site Visit — Submit</title>
+  <style>
+    body { font-family: system-ui, Arial; margin: 28px; max-width: 900px; }
+    .item { border: 1px solid #ddd; padding: 12px; margin-bottom: 12px; border-radius: 6px; }
+    label { display:block; margin-top:8px; }
+    input[type="text"], input[type="email"], textarea { width:100%; padding:8px; box-sizing:border-box; }
+    button { margin-top:10px; padding:8px 12px; }
+    .small { font-size:0.9em; color:#666; }
+    .thumb { height:80px; margin-right:8px; }
+    .images { display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+    .status { margin-top:12px; color:#0a5; }
+    .error { margin-top:12px; color:#c33; }
+  </style>
+</head>
+<body>
+  <h1>Submit Site Visit</h1>
+
+  <form id="visit-form">
+    <fieldset>
+      <legend>Visit Info</legend>
+      <label>Building name
+        <input type="text" id="building_name" name="building_name" required />
+      </label>
+      <label>Email:
+        <input type="email" id="email" name="email" required />
+      </label>
+      <label>Address:
+        <input type="text" id="building_address" name="building_address" />
+      </label>
+    </fieldset>
+
+    <fieldset style="margin-top:16px;">
+      <legend>Report items</legend>
+      <div id="items"></div>
+
+      <button id="add-item" type="button">+ Add item</button>
+      <p class="small">Each item can include uploaded photos. Photos are uploaded directly to Cloudinary using the unsigned preset.</p>
+    </fieldset>
+
+    <fieldset style="margin-top:16px;">
+      <legend>Signatures (optional)</legend>
+      <label>Inspector name
+        <input type="text" id="inspector_name" />
+      </label>
+    </fieldset>
+
+    <div style="margin-top:14px;">
+      <button id="submit-btn" type="submit">Submit metadata</button>
+      <button id="finalize-btn" type="button" disabled>Finalize (enqueue report)</button>
+    </div>
+
+    <div id="feedback" aria-live="polite"></div>
+  </form>
+
+  <script>
+    // Cloudinary variables injected from server-side rendering
+    window.CLOUDINARY_CLOUD_NAME = "{{ cloud_name|e }}";
+    window.CLOUDINARY_UPLOAD_PRESET = "{{ upload_preset|e }}";
+  </script>
+
+  <script src="/static/site_form.js"></script>
+</body>
+</html>
