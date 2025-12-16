@@ -7,6 +7,9 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     .signature-pad { border:1px solid #ccc; width:100%; height:120px; }
+    .item-card { border:1px solid #e0e0e0; padding:12px; border-radius:6px; margin-bottom:10px; }
+    .thumb { max-width:120px; max-height:80px; margin-right:6px; margin-bottom:6px; border:1px solid #ddd; padding:2px; }
+    .items-list .meta { font-size:0.95rem; color:#333; }
   </style>
 </head>
 <body class="p-4">
@@ -25,21 +28,51 @@
           <input id="visit_date" name="visit_date" type="date" class="form-control" required>
         </div>
 
+        <!-- Single item input area (user fills this then clicks Add Item) -->
+        <div class="col-12 mb-2">
+          <h5>Add item</h5>
+        </div>
+
+        <div class="col-md-4 mb-2">
+          <label class="form-label">Asset</label>
+          <select id="curAsset" class="form-select" disabled>
+            <option value="">-- Select --</option>
+          </select>
+        </div>
+
+        <div class="col-md-4 mb-2">
+          <label class="form-label">System</label>
+          <select id="curSystem" class="form-select" disabled>
+            <option value="">-- Select --</option>
+          </select>
+        </div>
+
+        <div class="col-md-4 mb-2">
+          <label class="form-label">Description</label>
+          <select id="curDescription" class="form-select" disabled>
+            <option value="">-- Select --</option>
+          </select>
+        </div>
+
         <div class="col-12 mb-3">
-          <label for="assetSelect" class="form-label">Asset</label>
-          <select id="assetSelect" class="form-select"></select>
+          <label class="form-label">Photos (for this item)</label>
+          <input id="curPhotos" type="file" class="form-control" accept="image/*" multiple>
+          <div id="curPreview" class="mt-2"></div>
         </div>
 
-        <div class="col-md-6 mb-3">
-          <label for="systemSelect" class="form-label">System</label>
-          <select id="systemSelect" class="form-select" disabled></select>
+        <div class="col-12 mb-3 d-flex gap-2">
+          <button id="addItemBtn" type="button" class="btn btn-success">Add Item</button>
+          <button id="clearCurrentBtn" type="button" class="btn btn-outline-secondary">Clear Current</button>
+          <button id="clearItemsBtn" type="button" class="btn btn-outline-secondary">Clear All Items</button>
         </div>
 
-        <div class="col-md-6 mb-3">
-          <label for="descriptionSelect" class="form-label">Description</label>
-          <select id="descriptionSelect" class="form-select" disabled></select>
+        <!-- List of added items (read-only entries) -->
+        <div class="col-12 mb-3">
+          <h5>Items</h5>
+          <div id="itemsList" class="items-list"></div>
         </div>
 
+        <!-- Signatures -->
         <div class="col-12 mb-3">
           <label class="form-label">Technician Signature</label>
           <canvas id="techSignaturePad" class="signature-pad"></canvas>
@@ -52,14 +85,9 @@
           <input type="hidden" id="opManSignatureData" name="opMan_signature">
         </div>
 
-        <div class="col-12 mb-3">
-          <label for="photos" class="form-label">Photos</label>
-          <input id="photos" name="photos" type="file" multiple class="form-control">
-        </div>
-
         <div class="col-12 d-flex gap-2">
           <button type="button" id="prevButton" class="btn btn-secondary" disabled>Previous</button>
-          <button type="button" id="nextButton" class="btn btn-success">Next / Submit</button>
+          <button type="button" id="submitAllBtn" class="btn btn-success">Submit All</button>
           <button type="button" id="clearTech" class="btn btn-outline-secondary">Clear Tech Sig</button>
           <button type="button" id="clearOp" class="btn btn-outline-secondary">Clear Op Sig</button>
         </div>
@@ -76,23 +104,20 @@
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 
-  <!-- Module-specific static: dropdown helper (served from the blueprint static) -->
-  <script src="{{ url_for('hvac_mep_bp.static', filename='dropdown_init.js') }}"></script>
-  <!-- App-level helpers (form.js) - keep if present in your top-level static/ -->
+  <!-- dropdown initializer only (it will fetch /hvac-mep/dropdowns and dispatch "dropdowns:loaded") -->
+  <script src="{{ url_for('static', filename='dropdown_init.js') }}"></script>
   <script src="{{ url_for('static', filename='form.js') }}"></script>
 
   <script>
-    // compute module base from blueprint index
     const modulePrefix = "{{ url_for('hvac_mep_bp.index') }}".replace('/form','');
 
-    // simple signature pads initialization (fallback if form.js doesn't provide)
+    // Signature pads
     function initSignaturePads() {
       const techCanvas = document.getElementById('techSignaturePad');
       const opCanvas = document.getElementById('opManSignaturePad');
       const techPad = new SignaturePad(techCanvas);
       const opPad = new SignaturePad(opCanvas);
 
-      // Resize canvases to device pixel ratio
       function resizeCanvas(canvas, pad) {
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
         const width = canvas.offsetWidth * ratio;
@@ -100,104 +125,257 @@
         canvas.width = width;
         canvas.height = height;
         canvas.getContext('2d').scale(ratio, ratio);
-        if (!pad.isEmpty()) {
-          // no-op: pad data will be lost on resize; in production consider using toDataURL/fromDataURL
-        }
       }
       resizeCanvas(techCanvas, techPad);
       resizeCanvas(opCanvas, opPad);
-      window.addEventListener('resize', () => {
-        resizeCanvas(techCanvas, techPad);
-        resizeCanvas(opCanvas, opPad);
-      });
+      window.addEventListener('resize', () => { resizeCanvas(techCanvas, techPad); resizeCanvas(opCanvas, opPad); });
 
-      // expose simple helpers
       document.getElementById('clearTech').addEventListener('click', () => { techPad.clear(); document.getElementById('techSignatureData').value=''; });
       document.getElementById('clearOp').addEventListener('click', () => { opPad.clear(); document.getElementById('opManSignatureData').value=''; });
 
       return { techPad, opPad };
     }
 
+    // Items UX: single entry form that appends to items list
     (function(){
-      const form = document.getElementById('mainForm');
+      const curAsset = document.getElementById('curAsset');
+      const curSystem = document.getElementById('curSystem');
+      const curDescription = document.getElementById('curDescription');
+      const curPhotos = document.getElementById('curPhotos');
+      const curPreview = document.getElementById('curPreview');
+      const addItemBtn = document.getElementById('addItemBtn');
+      const clearCurrentBtn = document.getElementById('clearCurrentBtn');
+      const clearItemsBtn = document.getElementById('clearItemsBtn');
+      const itemsList = document.getElementById('itemsList');
+      const submitAllBtn = document.getElementById('submitAllBtn');
       const statusBox = document.getElementById('statusBox');
       const pads = initSignaturePads();
 
-      // wire dropdown helper already injected by dropdown_init.js
+      let items = []; // array of {asset, system, description, files: [File], previews: [objectURL]}
 
-      // helper: capture signatures into hidden inputs
-      function captureSignatures() {
+      // Utility: clear select and set placeholder
+      function clearSelect(el, placeholder='-- Select --') {
+        el.innerHTML = `<option value="">${placeholder}</option>`;
+        el.disabled = true;
+      }
+
+      // Fill top-level asset select from DROPDOWN_DATA
+      function fillAssets() {
+        clearSelect(curAsset);
+        if (typeof DROPDOWN_DATA === 'object' && Object.keys(DROPDOWN_DATA).length>0) {
+          Object.keys(DROPDOWN_DATA).forEach(cat=>{
+            const o = document.createElement('option');
+            o.value = cat;
+            o.textContent = cat;
+            curAsset.appendChild(o);
+          });
+          curAsset.disabled = false;
+        } else {
+          curAsset.disabled = true;
+        }
+        // reset dependent selects
+        clearSelect(curSystem);
+        clearSelect(curDescription);
+      }
+
+      // populate systems for selected asset
+      curAsset.addEventListener('change', () => {
+        curSystem.innerHTML = '<option value="">-- Select --</option>';
+        curDescription.innerHTML = '<option value="">-- Select --</option>';
+        const cat = curAsset.value;
+        if (!cat) { curSystem.disabled=true; curDescription.disabled=true; return; }
+        const sysObj = (window.DROPDOWN_DATA && window.DROPDOWN_DATA[cat]) ? window.DROPDOWN_DATA[cat] : null;
+        if (sysObj && typeof sysObj === 'object') {
+          Object.keys(sysObj).forEach(sk=>{
+            const o = document.createElement('option');
+            o.value = sk;
+            o.textContent = sk;
+            curSystem.appendChild(o);
+          });
+          curSystem.disabled = false;
+          curDescription.disabled = true;
+        } else {
+          curSystem.disabled = true;
+          curDescription.disabled = true;
+        }
+      });
+
+      // populate descriptions for selected system
+      curSystem.addEventListener('change', () => {
+        curDescription.innerHTML = '<option value="">-- Select --</option>';
+        const cat = curAsset.value;
+        const sk = curSystem.value;
+        if (!cat || !sk) { curDescription.disabled=true; return; }
+        const arr = (window.DROPDOWN_DATA && window.DROPDOWN_DATA[cat]) ? window.DROPDOWN_DATA[cat][sk] || [] : [];
+        arr.forEach(v=>{
+          const o = document.createElement('option');
+          o.value = v;
+          o.textContent = v;
+          curDescription.appendChild(o);
+        });
+        curDescription.disabled = false;
+      });
+
+      // preview current photos
+      curPhotos.addEventListener('change', () => {
+        curPreview.innerHTML = '';
+        const files = Array.from(curPhotos.files || []);
+        files.forEach(f=>{
+          const img = document.createElement('img');
+          img.className = 'thumb';
+          img.src = URL.createObjectURL(f);
+          curPreview.appendChild(img);
+        });
+      });
+
+      // add current entry to items list
+      addItemBtn.addEventListener('click', () => {
+        const asset = curAsset.value || '';
+        const system = curSystem.value || '';
+        const description = curDescription.value || '';
+        if (!asset || !system || !description) {
+          alert('Please select Asset, System and Description before adding.');
+          return;
+        }
+        const files = Array.from(curPhotos.files || []);
+        const previews = files.map(f => URL.createObjectURL(f));
+
+        items.push({ asset, system, description, files, previews });
+        renderItems();
+        resetCurrent();
+      });
+
+      // clear only current form inputs
+      clearCurrentBtn.addEventListener('click', resetCurrent);
+
+      // clear whole items array
+      clearItemsBtn.addEventListener('click', () => {
+        // revoke previews
+        items.forEach(it => (it.previews||[]).forEach(u=>URL.revokeObjectURL(u)));
+        items = [];
+        renderItems();
+      });
+
+      function resetCurrent() {
+        curAsset.value = '';
+        curSystem.innerHTML = '<option value="">-- Select --</option>';
+        curSystem.disabled = true;
+        curDescription.innerHTML = '<option value="">-- Select --</option>';
+        curDescription.disabled = true;
+        curPhotos.value = '';
+        curPreview.innerHTML = '';
+      }
+
+      function renderItems() {
+        itemsList.innerHTML = '';
+        if (items.length === 0) {
+          itemsList.innerHTML = '<div class="text-muted">No items added yet</div>';
+          return;
+        }
+        items.forEach((it, idx) => {
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="meta"><strong>Asset:</strong> ${escapeHtml(it.asset)} &nbsp; <strong>System:</strong> ${escapeHtml(it.system)} &nbsp; <strong>Description:</strong> ${escapeHtml(it.description)}</div>
+                <div class="mt-2 thumbs-row"></div>
+              </div>
+              <div>
+                <button data-idx="${idx}" class="btn btn-sm btn-danger remove-item">Remove</button>
+              </div>
+            </div>
+          `;
+          const thumbsRow = card.querySelector('.thumbs-row');
+          (it.previews||[]).forEach(url => {
+            const img = document.createElement('img');
+            img.className = 'thumb';
+            img.src = url;
+            thumbsRow.appendChild(img);
+          });
+          // remove handler
+          card.querySelector('.remove-item').addEventListener('click', (e) => {
+            const i = Number(e.currentTarget.dataset.idx);
+            removeItem(i);
+          });
+          itemsList.appendChild(card);
+        });
+      }
+
+      function removeItem(index) {
+        if (index<0 || index>=items.length) return;
+        // revoke object URLs
+        (items[index].previews||[]).forEach(u=>URL.revokeObjectURL(u));
+        items.splice(index,1);
+        renderItems();
+      }
+
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]); });
+      }
+
+      // submit all: build FormData with items and per-item photos
+      async function submitAll() {
+        // capture signatures
         const techData = pads.techPad.isEmpty() ? '' : pads.techPad.toDataURL('image/png');
         const opData = pads.opPad.isEmpty() ? '' : pads.opPad.toDataURL('image/png');
         document.getElementById('techSignatureData').value = techData;
         document.getElementById('opManSignatureData').value = opData;
-      }
 
-      async function postFormData(url, formData) {
-        const res = await fetch(url, { method: 'POST', body: formData });
-        if (!res.ok) throw new Error('Submission failed: ' + res.statusText);
-        return res.json();
-      }
-
-      // nextButton triggers submit flow
-      document.getElementById('nextButton').addEventListener('click', async () => {
-        try {
-          statusBox.innerText = "Preparing submission...";
-          // capture signatures
-          captureSignatures();
-
-          // build multipart/formdata:
-          const fd = new FormData();
-          // fields
-          new FormData(form).forEach((v,k) => fd.append(k,v));
-          // photos
-          const files = document.getElementById('photos').files;
-          for (let i=0;i<files.length;i++) fd.append('photo', files[i]);
-
-          // Post to module submit endpoint (we expect JSON endpoints; adapt if your backend differs)
-          const submitUrl = modulePrefix + '/submit';
-          statusBox.innerText = "Uploading...";
-          const json = await postFormData(submitUrl, fd);
-
-          if (json && json.job_id) {
-            statusBox.innerText = "Queued job: " + json.job_id;
-            // poll status (poll endpoint implemented server-side at /status/<job_id>)
-            const pollUrl = modulePrefix + '/status/' + json.job_id;
-            const interval = 1500;
-            const maxAttempts = 200;
-            let attempts = 0;
-            const p = setInterval(async () => {
-              attempts++;
-              try {
-                const r = await fetch(pollUrl);
-                if (!r.ok) throw new Error('Status fetch failed');
-                const body = await r.json();
-                statusBox.innerText = `State: ${body.state}  progress: ${body.progress || 0}%`;
-                if (body.state === 'done' || body.state === 'failed') {
-                  clearInterval(p);
-                  if (body.state === 'done') {
-                    const links = (body.results || []).map(x => `<a href="${x.url}" target="_blank">${x.filename}</a>`).join('<br>');
-                    statusBox.innerHTML = 'Done.<br>' + links;
-                  } else {
-                    statusBox.innerText = 'Job failed: ' + JSON.stringify(body.results || body);
-                  }
-                }
-                if (attempts > maxAttempts) {
-                  clearInterval(p);
-                  statusBox.innerText = 'Timeout waiting for job completion.';
-                }
-              } catch (err) {
-                clearInterval(p);
-                statusBox.innerText = 'Polling error: ' + err.message;
-              }
-            }, interval);
-          } else {
-            statusBox.innerText = 'Unexpected response: ' + JSON.stringify(json);
-          }
-        } catch (e) {
-          statusBox.innerText = "Error: " + e.message;
+        if (items.length === 0) {
+          if (!confirm('No items added. Submit empty form?')) return;
         }
-      });
+
+        statusBox.innerText = 'Preparing submission...';
+        const fd = new FormData();
+        fd.append('site_name', document.getElementById('site_name').value || '');
+        fd.append('visit_date', document.getElementById('visit_date').value || '');
+        fd.append('tech_signature', techData || '');
+        fd.append('opMan_signature', opData || '');
+
+        fd.append('items_count', items.length.toString());
+        items.forEach((it, idx) => {
+          fd.append(`item_${idx}_asset`, it.asset);
+          fd.append(`item_${idx}_system`, it.system);
+          fd.append(`item_${idx}_description`, it.description);
+          (it.files||[]).forEach(f => {
+            fd.append(`item_${idx}_photo`, f, f.name);
+          });
+        });
+
+        // send
+        try {
+          statusBox.innerText = 'Uploading...';
+          const submitUrl = modulePrefix + '/submit';
+          const res = await fetch(submitUrl, { method:'POST', body: fd });
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error('Server error: ' + res.status + ' ' + txt);
+          }
+          const json = await res.json();
+          statusBox.innerText = `Submission queued: ${json.job_id || json.submission_id || ''}`;
+          // Optionally clear items on success:
+          // clearItemsBtn.click();
+        } catch (err) {
+          statusBox.innerText = 'Submission failed: ' + err.message;
+        }
+      }
+
+      submitAllBtn.addEventListener('click', submitAll);
+
+      // Wait for DROPDOWN_DATA to be available, then fill assets. Dropdown initializer dispatches 'dropdowns:loaded'
+      function onDropdownsReady() {
+        fillAssets();
+      }
+      if (typeof DROPDOWN_DATA !== 'undefined' && Object.keys(DROPDOWN_DATA||{}).length>0) {
+        fillAssets();
+      } else {
+        window.addEventListener('dropdowns:loaded', onDropdownsReady, { once: true });
+      }
+
+      // initial UI state
+      renderItems();
+
     })();
   </script>
 </body>
