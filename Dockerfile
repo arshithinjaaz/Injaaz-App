@@ -39,9 +39,12 @@ COPY . /app
 RUN useradd -m injaaz && chown -R injaaz /app
 USER injaaz
 
+# Render will provide PORT at runtime. Provide sane defaults for local testing.
 ENV PORT=${PORT:-5000}
 ENV WEB_CONCURRENCY=${WEB_CONCURRENCY:-1}
 
 EXPOSE 5000
 
-CMD ["gunicorn", "wsgi:app", "-w", "1", "--threads", "4", "-b", "0.0.0.0:${PORT}"]
+# Use shell form so environment variables like ${PORT} are expanded at runtime.
+# Fallback to 5000 if PORT is not set.
+CMD sh -c "gunicorn wsgi:app -w ${WEB_CONCURRENCY:-1} --threads 4 --bind 0.0.0.0:${PORT:-5000}"
