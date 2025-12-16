@@ -8,5 +8,5 @@ hvac_mep_bp = Blueprint(
     url_prefix='/hvac-mep'
 )
 
-# Import routes so blueprint is registered when package is imported
+# Import routes when package is imported so blueprint gets registered
 from . import routes  # noqa: F401

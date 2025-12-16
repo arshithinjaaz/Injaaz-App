@@ -9,10 +9,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /wheels
 
-COPY requirements-prod.txt /wheels/requirements-prod.txt
+# NOTE: repo contains requirements-prods.txt (plural) — use that file so COPY succeeds.
+COPY requirements-prods.txt /wheels/requirements-prods.txt
 
 RUN python -m pip install --upgrade pip setuptools wheel \
- && pip wheel --wheel-dir=/wheels -r /wheels/requirements-prod.txt
+ && pip wheel --wheel-dir=/wheels -r /wheels/requirements-prods.txt
 
 # Stage 2: runtime image
 FROM python:3.10-slim
@@ -27,10 +28,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy built wheels and install from them
 COPY --from=builder /wheels /wheels
-COPY requirements-prod.txt /app/requirements-prod.txt
+COPY requirements-prods.txt /app/requirements-prods.txt
 
 RUN python -m pip install --upgrade pip setuptools wheel \
- && pip install --no-index --find-links=/wheels -r /app/requirements-prod.txt
+ && pip install --no-index --find-links=/wheels -r /app/requirements-prods.txt
 
 # Copy application code
 COPY . /app
@@ -46,5 +47,4 @@ ENV WEB_CONCURRENCY=${WEB_CONCURRENCY:-1}
 EXPOSE 5000
 
 # Use shell form so environment variables like ${PORT} are expanded at runtime.
-# Fallback to 5000 if PORT is not set.
 CMD sh -c "gunicorn wsgi:app -w ${WEB_CONCURRENCY:-1} --threads 4 --bind 0.0.0.0:${PORT:-5000}"

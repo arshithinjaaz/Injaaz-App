@@ -4,7 +4,7 @@ import time
 import tempfile
 import traceback
 from datetime import datetime
-from flask import Blueprint, render_template, jsonify, request, url_for, send_from_directory, current_app
+from flask import Blueprint, render_template, jsonify, request, url_for, send_from_directory
 
 # Optional Cloudinary
 try:
@@ -26,10 +26,10 @@ except Exception:
     RedisError = Exception
     _HAS_REDIS = False
 
-# Import local helpers (create these under module_hvac_mep/utils)
+# Import local helpers (ensure these files exist in module_hvac_mep/utils)
 from .utils.email_sender import send_outlook_email
 from .utils.excel_writer import create_report_workbook
-from .utils.pdf_generator import generate_visit_pdf  # copy/adapt from site_visit utils
+from .utils.pdf_generator import generate_visit_pdf
 from .utils.state import save_report_state, get_report_state
 
 # Configuration (environment)
@@ -45,8 +45,16 @@ BASE_DIR = os.path.dirname(BLUEPRINT_DIR)
 TEMPLATE_ABSOLUTE_PATH = os.path.join(BLUEPRINT_DIR, 'templates')
 DROPDOWN_DATA_PATH = os.path.join(BLUEPRINT_DIR, 'dropdown_data.json')
 
-GENERATED_DIR_NAME = current_app.config.get('GENERATED_DIR', os.path.join(BASE_DIR, 'generated')) if 'current_app' in globals() else os.path.join(BASE_DIR, 'generated')
-GENERATED_DIR = os.path.join(BASE_DIR, 'generated')  # used by send_from_directory
+# Do NOT use current_app at import time. Provide a default and a getter that reads app config at runtime.
+DEFAULT_GENERATED_DIR = os.path.join(BASE_DIR, 'generated')
+
+def get_generated_dir():
+    """Return the generated directory: prefer app config at runtime, fallback to module default."""
+    try:
+        from flask import current_app
+        return current_app.config.get('GENERATED_DIR', DEFAULT_GENERATED_DIR)
+    except Exception:
+        return DEFAULT_GENERATED_DIR
 
 hvac_mep_bp = Blueprint(
     'hvac_mep_bp',
@@ -193,14 +201,15 @@ def finalize_report():
             item['image_urls'] = image_urls
             item.pop('photo_count', None)
 
-        os.makedirs(GENERATED_DIR, exist_ok=True)
+        gen_dir = get_generated_dir()
+        os.makedirs(gen_dir, exist_ok=True)
 
         # Create Excel synchronously
-        excel_path, excel_filename = create_report_workbook(GENERATED_DIR, visit_info, final_items)
+        excel_path, excel_filename = create_report_workbook(gen_dir, visit_info, final_items)
 
         # If no queue, generate PDF synchronously
         if q is None:
-            pdf_path, pdf_filename = generate_visit_pdf(visit_info, final_items, GENERATED_DIR)
+            pdf_path, pdf_filename = generate_visit_pdf(visit_info, final_items, gen_dir)
             attachments = [p for p in (excel_path, pdf_path) if p and os.path.exists(p)]
             try:
                 send_outlook_email(f"HVAC Report: {visit_info.get('building_name','Unknown')}", "Report generated", attachments, visit_info.get('email'))
@@ -213,9 +222,9 @@ def finalize_report():
                 "pdf_url": url_for('hvac_mep_bp.download_generated', filename=pdf_filename, _external=True)
             })
 
-        # Enqueue background job (if Redis/RQ available) — you must create module_hvac_mep.utils.tasks.generate_and_send_report
+        # Enqueue background job (if Redis/RQ available)
         from .utils.tasks import generate_and_send_report  # noqa: E402
-        job = q.enqueue(generate_and_send_report, report_id, visit_info, final_items, GENERATED_DIR, job_timeout=1800)
+        job = q.enqueue(generate_and_send_report, report_id, visit_info, final_items, gen_dir, job_timeout=1800)
         try:
             if redis_conn is not None:
                 redis_conn.set(f"report:{report_id}", json.dumps({"status": "pending", "job_id": job.get_id()}))
@@ -252,4 +261,5 @@ def report_status():
 
 @hvac_mep_bp.route('/generated/<path:filename>')
 def download_generated(filename):
-    return send_from_directory(GENERATED_DIR, filename, as_attachment=True)
+    gen_dir = get_generated_dir()
+    return send_from_directory(gen_dir, filename, as_attachment=True)
