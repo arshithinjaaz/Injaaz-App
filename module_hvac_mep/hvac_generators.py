@@ -1,31 +1,39 @@
 """
 Optional generator wrapper for HVAC & MEP reports.
-If you have existing generator functions from the old repo,
-copy them into this file (or keep this wrapper and import from old file paths).
-This file exports create_excel_report and create_pdf_report.
-
-Both functions accept:
-- data: dict (submission data)
-- output_dir: path to directory where output files should be written
-
-They must return the basename of the generated file (e.g. "jobid_report.xlsx").
+Placeholders included so the application can generate simple files.
+Replace these placeholders with your real generators (xlsxwriter/reportlab code)
+if and when you copy them from the old repo.
 """
 import os
-import json
 import time
+import json
 
 def create_excel_report(data, output_dir):
-    # Replace with your real generator. This is a placeholder.
-    basename = f"hvac_report_{int(time.time())}.xlsx"
+    """
+    Create a simple placeholder .xlsx-like file (binary blob).
+    Return the basename of the file created.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    ts = int(time.time())
+    basename = f"hvac_report_{ts}.xlsx"
     path = os.path.join(output_dir, basename)
+    # Placeholder content; replace with real workbook generation
     with open(path, "wb") as f:
-        f.write(b"HVAC EXCEL PLACEHOLDER")
+        payload = f"HVAC Excel Placeholder\nData: {json.dumps(data) if data else '{}'}\n".encode("utf-8")
+        f.write(payload)
     return basename
 
 def create_pdf_report(data, output_dir):
-    # Replace with your real generator. This is a placeholder.
-    basename = f"hvac_report_{int(time.time())}.pdf"
+    """
+    Create a simple placeholder .pdf-like file.
+    Return the basename of the file created.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    ts = int(time.time())
+    basename = f"hvac_report_{ts}.pdf"
     path = os.path.join(output_dir, basename)
+    # Placeholder content; replace with real PDF generation
     with open(path, "wb") as f:
-        f.write(b"HVAC PDF PLACEHOLDER")
+        payload = f"HVAC PDF Placeholder\nData: {json.dumps(data) if data else '{}'}\n".encode("utf-8")
+        f.write(payload)
     return basename
