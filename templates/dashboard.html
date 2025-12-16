@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Injaaz Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="p-4">
+  <div class="container">
+    <h1>Injaaz App — Dashboard</h1>
+    <p>Quick links to forms:</p>
+    <div class="list-group">
+      <a class="list-group-item list-group-item-action" href="{{ url_for('hvac_mep_bp.index') }}">HVAC &amp; MEP Form</a>
+      <a class="list-group-item list-group-item-action" href="{{ url_for('civil_bp.index') }}">Civil Form</a>
+      <a class="list-group-item list-group-item-action" href="{{ url_for('cleaning_bp.index') }}">Cleaning Form</a>
+    </div>
+
+    <hr>
+    <p class="text-muted">If a page shows errors, check server logs for import issues or missing files.</p>
+  </div>
+</body>
+</html>
