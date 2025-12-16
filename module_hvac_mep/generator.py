@@ -1,38 +1,37 @@
 """
-Generator module for HVAC MEP submissions.
+module_hvac_mep/generator.py
 
-- Uses module_site_visit.utils.pdf_generator.generate_visit_pdf
-  and module_site_visit.utils.excel_writer.create_report_workbook
-  to produce PDF and Excel reports.
-- Updates job progress using common.utils helpers.
-- Optionally sends an email with attachments or links using Flask app config.
+Background generator for HVAC/MEP submissions.
 
-Call:
-    process_submission(job_id, submission_path, app)
-
-Runs inside a background thread/process. The caller (routes) should pass
-the Flask `app` object so this function can push an app_context().
+Behavior:
+- Called as: process_submission(job_id, submission_path, app)
+- Reads the saved submission JSON (which must include "base_url": request.host_url.rstrip('/'))
+- Produces Excel and PDF using site-visit utilities:
+    - module_site_visit.utils.excel_writer.create_report_workbook
+    - module_site_visit.utils.pdf_generator.generate_visit_pdf
+- Builds absolute download URLs by using saved base_url + url_for(..., _external=False)
+- Updates job progress, optionally emails results, and marks job done/failed.
 """
 import os
 import json
 import time
 import traceback
 import mimetypes
-import smtplib
 import ssl
+import smtplib
 from email.message import EmailMessage
 from datetime import datetime
 
 from flask import url_for
 
-# import our existing report generators (site_visit utilities)
+# site-visit generators (should exist in repo)
 from module_site_visit.utils.pdf_generator import generate_visit_pdf
 from module_site_visit.utils.excel_writer import create_report_workbook
 
 # job helpers
 from common.utils import mark_job_done, update_job_progress
 
-# Defaults (if not provided in app.config)
+# Defaults (can be overridden via app.config)
 BLUEPRINT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(BLUEPRINT_DIR)
 DEFAULT_GENERATED_DIR = os.path.join(BASE_DIR, "generated")
@@ -120,10 +119,20 @@ def process_submission(job_id, submission_path, app):
     """
     Main background worker. Expects `app` (Flask app instance) so the function
     can push an app_context for url_for and config lookups.
+
+    This function will:
+      - read submission JSON from submission_path
+      - construct visit_info and processed_items
+      - generate Excel and PDF into GENERATED_DIR
+      - build absolute URLs using submission['base_url'] + relative url_for(...)
+      - optionally email results
+      - mark job done / failed
     """
     gen_dir, uploads_dir, jobs_dir = _paths_from_app(app)
+    start_ts = time.time()
 
     try:
+        app.logger.info(f"[JOB {job_id}] START submission_path={submission_path}")
         update_job_progress(jobs_dir, job_id, 5)
 
         # load submission json
@@ -133,21 +142,23 @@ def process_submission(job_id, submission_path, app):
                 with open(submission_path, "r", encoding="utf-8") as sf:
                     submission = json.load(sf)
         except Exception:
-            app.logger.exception("Failed to load submission JSON")
+            app.logger.exception(f"[JOB {job_id}] Failed to load submission JSON")
             submission = {}
 
-        # Build visit_info and processed_items expected by site_visit utils
+        app.logger.info(f"[JOB {job_id}] loaded submission id={submission.get('id')} items={len(submission.get('items', []))}")
+
+        # Build visit_info expected by site_visit utils
         visit_info = {}
         visit_info["building_name"] = submission.get("site_name") or submission.get("id", "Unknown")
-        visit_info["building_address"] = submission.get("site_address", "")  # optional
+        visit_info["building_address"] = submission.get("site_address", "")
         visit_info["visit_date"] = submission.get("visit_date", "")
-        # signatures: our routes saved dicts like {"saved": "<fname>", "url": "<external url>"}
+
+        # Signatures: can be saved filename or external url
         tech_sig = submission.get("tech_signature") or {}
         opman_sig = submission.get("opman_signature") or {}
         if isinstance(tech_sig, dict):
             if tech_sig.get("url"):
                 visit_info["tech_signature_url"] = tech_sig.get("url")
-            # compute local path if saved filename present
             if tech_sig.get("saved"):
                 visit_info["tech_signature_path"] = os.path.join(uploads_dir, tech_sig.get("saved"))
         if isinstance(opman_sig, dict):
@@ -156,7 +167,7 @@ def process_submission(job_id, submission_path, app):
             if opman_sig.get("saved"):
                 visit_info["opMan_signature_path"] = os.path.join(uploads_dir, opman_sig.get("saved"))
 
-        # additional metadata (optional)
+        # Other metadata
         visit_info["technician_name"] = submission.get("technician_name") or submission.get("tech_name") or ""
         visit_info["opMan_name"] = submission.get("opMan_name") or ""
         visit_info["contact_person"] = submission.get("contact_person") or ""
@@ -164,22 +175,20 @@ def process_submission(job_id, submission_path, app):
         visit_info["email"] = submission.get("email") or ""
         visit_info["general_notes"] = submission.get("general_notes") or ""
 
+        # Build processed_items for generators (image_paths and image_urls)
         processed_items = []
         for it in submission.get("items", []) or []:
-            # each item may include photos saved earlier with 'path' and 'url'
             image_paths = []
             image_urls = []
             for p in (it.get("photos") or []):
                 if isinstance(p, dict):
-                    # routes.py saved 'path' and 'url'
                     if p.get("path"):
                         image_paths.append(p.get("path"))
                     if p.get("url"):
                         image_urls.append(p.get("url"))
                 else:
-                    # fallback if photos are saved as strings (filenames)
+                    # treat as filename fallback
                     try:
-                        # treat as saved filename
                         fp = os.path.join(uploads_dir, p)
                         if os.path.exists(fp):
                             image_paths.append(fp)
@@ -196,39 +205,41 @@ def process_submission(job_id, submission_path, app):
                 "image_urls": image_urls,
             })
 
-        # Generate Excel and PDF inside app_context so url_for builds correct external URLs
+        # Generate Excel and PDF inside app.app_context so url_for(...) works for relative urls.
         with app.app_context():
             update_job_progress(jobs_dir, job_id, 15)
-            # Excel: create_report_workbook(output_dir, visit_info, processed_items) -> (path, filename)
+
+            # Excel
             try:
                 excel_path, excel_filename = create_report_workbook(gen_dir, visit_info, processed_items)
             except Exception:
-                app.logger.exception("Excel generation failed")
+                app.logger.exception(f"[JOB {job_id}] Excel generation failed")
                 excel_path, excel_filename = None, None
-
+            app.logger.info(f"[JOB {job_id}] excel result: {excel_path} / {excel_filename}")
             update_job_progress(jobs_dir, job_id, 50)
 
-            # PDF: generate_visit_pdf(visit_info, processed_items, output_dir)
+            # PDF
             try:
                 pdf_path, pdf_filename = generate_visit_pdf(visit_info, processed_items, gen_dir)
             except TypeError:
-                # older signature order (some callers pass output_dir first)
+                # older signature handling (defensive)
                 try:
                     pdf_path, pdf_filename = generate_visit_pdf(visit_info, processed_items, gen_dir)
                 except Exception:
-                    app.logger.exception("PDF generation failed")
+                    app.logger.exception(f"[JOB {job_id}] PDF generation failed (fallback)")
                     pdf_path, pdf_filename = None, None
             except Exception:
-                app.logger.exception("PDF generation failed")
+                app.logger.exception(f"[JOB {job_id}] PDF generation failed")
                 pdf_path, pdf_filename = None, None
-
+            app.logger.info(f"[JOB {job_id}] pdf result: {pdf_path} / {pdf_filename}")
             update_job_progress(jobs_dir, job_id, 85)
 
+            # Build results (use submission base_url to produce absolute links)
             results = []
             attachments = []
-            # Prefer base_url stored with the submission to build absolute links
-            base = submission.get("base_url") if isinstance(submission, dict) else None
-
+            base = None
+            if isinstance(submission, dict):
+                base = submission.get("base_url")  # should be like "http://127.0.0.1:5000"
             if excel_filename:
                 rel = url_for("hvac_mep_bp.download_generated", filename=excel_filename, _external=False)
                 url = f"{base}{rel}" if base else rel
@@ -259,7 +270,7 @@ def process_submission(job_id, submission_path, app):
                 try:
                     email_sent = _send_email(app, subject, body, recipients, attachments=attachments)
                 except Exception:
-                    app.logger.exception("Error while sending email")
+                    app.logger.exception(f"[JOB {job_id}] Error while sending email")
                     email_sent = False
 
             # Mark job done
@@ -267,8 +278,10 @@ def process_submission(job_id, submission_path, app):
             mark_job_done(jobs_dir, job_id, meta)
             update_job_progress(jobs_dir, job_id, 100)
 
+        app.logger.info(f"[JOB {job_id}] DONE total={(time.time() - start_ts):.2f}s")
+
     except Exception:
-        traceback.print_exc()
+        app.logger.exception(f"[JOB {job_id}] Unhandled exception in process_submission")
         try:
             update_job_progress(jobs_dir, job_id, 0, state="failed", results=[{"error": "internal error"}])
         except Exception:
