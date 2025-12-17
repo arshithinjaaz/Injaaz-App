@@ -47,6 +47,9 @@ executor = ThreadPoolExecutor(max_workers=2)
 def create_app():
     app = Flask(__name__, static_folder='static', template_folder='templates')
 
+    # Add this to allow larger uploads
+    app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB total upload
+
     # App-wide config used by blueprints and utils
     app.config['BASE_DIR'] = BASE_DIR
     app.config['GENERATED_DIR'] = GENERATED_DIR
@@ -56,8 +59,8 @@ def create_app():
 
     # Register blueprints only if they were imported successfully.
     if hvac_mep_bp:
-        app.register_blueprint(hvac_mep_bp, url_prefix='/hvac-mep')
-        logger.info("Registered blueprint: /hvac-mep")
+        app.register_blueprint(hvac_mep_bp, url_prefix='/hvac-mep')  # Must be /hvac-mep with dash
+        logger.info("✓ Registered HVAC/MEP blueprint at /hvac-mep")
     else:
         # Provide a helpful placeholder endpoint so someone visiting knows the blueprint failed to import
         @app.route('/hvac-mep')

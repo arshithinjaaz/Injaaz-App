@@ -1,22 +1,586 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Injaaz Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Injaaz - Site Reporting Platform</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --primary: #125435;
+      --primary-light: #1a7a4d;
+      --primary-dark: #0d3d24;
+      --secondary: #D9D9D9;
+      --text-dark: #1a1a1a;
+      --text-light: #6b6b6b;
+      --bg-light: #fafafa;
+      --white: #ffffff;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--white);
+      color: var(--text-dark);
+      overflow-x: hidden;
+      line-height: 1.6;
+      position: relative;
+    }
+    
+    /* Animated gradient background overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(18, 84, 53, 0.03) 0%, transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(26, 122, 77, 0.02) 0%, transparent 40%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    /* Navigation with glassmorphism */
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(30px) saturate(180%);
+      border-bottom: 1px solid rgba(18, 84, 53, 0.08);
+      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.02);
+      transition: all 0.3s ease;
+    }
+    
+    .nav.scrolled {
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+    }
+    
+    .nav-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 2rem 4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    /* Stunning logo with glow effect */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    
+    .logo::after {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      background: radial-gradient(circle, rgba(18, 84, 53, 0.1) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      border-radius: 50%;
+      z-index: -1;
+    }
+    
+    .logo:hover::after {
+      opacity: 1;
+    }
+    
+    .logo img {
+      height: 55px;
+      width: auto;
+      filter: drop-shadow(0 2px 8px rgba(18, 84, 53, 0.15));
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .logo span {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -1px;
+      transition: all 0.3s ease;
+    }
+    
+    .logo:hover img {
+      filter: drop-shadow(0 6px 20px rgba(18, 84, 53, 0.3));
+      transform: scale(1.05);
+    }
+    
+    .logo:hover span {
+      letter-spacing: 0px;
+    }
+    
+    /* Elegant nav menu */
+    .nav-menu {
+      display: flex;
+      gap: 3rem;
+      list-style: none;
+    }
+    
+    .nav-menu a {
+      color: var(--text-light);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+      position: relative;
+      padding: 0.5rem 0;
+    }
+    
+    .nav-menu a::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary-light), var(--primary));
+      transform: translateX(-50%);
+      transition: width 0.3s ease;
+    }
+    
+    .nav-menu a:hover {
+      color: var(--primary);
+    }
+    
+    .nav-menu a:hover::before {
+      width: 100%;
+    }
+    
+    /* Hero Section with animated elements */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      background: var(--white);
+      padding-top: 120px;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .hero-content {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 4rem;
+      width: 100%;
+    }
+    
+    /* Animated hero text */
+    .hero-text {
+      max-width: 900px;
+      margin-bottom: 6rem;
+      opacity: 0;
+      animation: fadeInUp 1s ease forwards 0.2s;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .hero-title {
+      font-size: clamp(3.5rem, 10vw, 7rem);
+      font-weight: 700;
+      line-height: 0.95;
+      margin-bottom: 2rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -4px;
+      position: relative;
+    }
+    
+    /* Animated underline effect */
+    .hero-title::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 0;
+      width: 120px;
+      height: 5px;
+      background: linear-gradient(90deg, var(--primary), transparent);
+      border-radius: 3px;
+      animation: expandWidth 1.5s ease forwards 0.8s;
+    }
+    
+    @keyframes expandWidth {
+      from { width: 0; }
+      to { width: 120px; }
+    }
+    
+    .hero-subtitle {
+      font-size: clamp(1.1rem, 2vw, 1.3rem);
+      color: var(--text-light);
+      font-weight: 400;
+      max-width: 550px;
+      line-height: 1.7;
+      letter-spacing: 0.2px;
+    }
+    
+    /* Premium module cards */
+    .modules-section {
+      margin-top: 4rem;
+      opacity: 0;
+      animation: fadeInUp 1s ease forwards 0.6s;
+    }
+    
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+    }
+    
+    .module-card {
+      background: var(--white);
+      border: 1px solid rgba(18, 84, 53, 0.08);
+      border-radius: 8px;
+      padding: 2.5rem 2rem;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Gradient overlay on hover */
+    .module-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .module-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at center, rgba(18, 84, 53, 0.03) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      pointer-events: none;
+    }
+    
+    .module-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-8px);
+      box-shadow: 
+        0 20px 50px rgba(18, 84, 53, 0.12),
+        0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+    
+    .module-card:hover::before {
+      transform: scaleX(1);
+    }
+    
+    .module-card:hover::after {
+      opacity: 1;
+    }
+    
+    .module-number {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      font-weight: 600;
+      letter-spacing: 2px;
+      margin-bottom: 1.5rem;
+      display: block;
+      text-transform: uppercase;
+      opacity: 0.7;
+      transition: all 0.3s ease;
+    }
+    
+    .module-card:hover .module-number {
+      color: var(--primary);
+      opacity: 1;
+    }
+    
+    /* Premium icon with gradient */
+    .module-icon {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 15px rgba(18, 84, 53, 0.2);
+      position: relative;
+    }
+    
+    .module-icon::before {
+      content: '';
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      right: -5px;
+      bottom: -5px;
+      background: linear-gradient(135deg, var(--primary-light), var(--primary));
+      border-radius: 10px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      z-index: -1;
+      filter: blur(10px);
+    }
+    
+    .module-card:hover .module-icon {
+      transform: scale(1.1) rotate(-5deg);
+      box-shadow: 0 8px 25px rgba(18, 84, 53, 0.3);
+    }
+    
+    .module-card:hover .module-icon::before {
+      opacity: 0.6;
+    }
+    
+    .module-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: var(--text-dark);
+      letter-spacing: -0.5px;
+      transition: color 0.3s ease;
+    }
+    
+    .module-card:hover .module-title {
+      color: var(--primary);
+    }
+    
+    .module-description {
+      color: var(--text-light);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+      transition: color 0.3s ease;
+    }
+    
+    .module-card:hover .module-description {
+      color: var(--text-dark);
+    }
+    
+    /* Animated arrow */
+    .module-arrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+    }
+    
+    .module-arrow::after {
+      content: '→';
+      transition: transform 0.3s ease;
+      display: inline-block;
+    }
+    
+    .module-card:hover .module-arrow {
+      gap: 0.75rem;
+    }
+    
+    .module-card:hover .module-arrow::after {
+      transform: translateX(5px);
+    }
+    
+    /* Premium footer */
+    .footer {
+      background: linear-gradient(180deg, var(--white) 0%, var(--bg-light) 100%);
+      border-top: 1px solid rgba(18, 84, 53, 0.08);
+      text-align: center;
+      padding: 4rem 4rem;
+      margin-top: 10rem;
+      position: relative;
+    }
+    
+    .footer::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      border-radius: 2px;
+    }
+    
+    .footer p {
+      font-size: 0.85rem;
+      color: var(--text-light);
+      letter-spacing: 0.5px;
+      margin-top: 2rem;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .nav-container {
+        padding: 1.5rem 2rem;
+      }
+      
+      .hero-content {
+        padding: 0 2rem;
+      }
+      
+      .modules-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .logo img {
+        height: 40px;
+      }
+      
+      .logo span {
+        font-size: 1.4rem;
+      }
+      
+      .nav-menu {
+        display: none;
+      }
+      
+      .module-card {
+        padding: 2rem 1.5rem;
+      }
+      
+      .hero-title {
+        letter-spacing: -2px;
+      }
+    }
+    
+    /* Smooth scroll behavior */
+    html {
+      scroll-behavior: smooth;
+    }
+  </style>
 </head>
-<body class="p-4">
-  <div class="container">
-    <h1>Injaaz App — Dashboard</h1>
-    <p>Quick links to forms:</p>
-    <div class="list-group">
-      <a class="list-group-item list-group-item-action" href="{{ url_for('hvac_mep_bp.index') }}">HVAC &amp; MEP Form</a>
-      <a class="list-group-item list-group-item-action" href="{{ url_for('civil_bp.index') }}">Civil Form</a>
-      <a class="list-group-item list-group-item-action" href="{{ url_for('cleaning_bp.index') }}">Cleaning Form</a>
+<body>
+  <nav class="nav" id="nav">
+    <div class="nav-container">
+      <a href="/" class="logo">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
+        <span>Injaaz</span>
+      </a>
+      <ul class="nav-menu">
+        <li><a href="#modules">Modules</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
     </div>
+  </nav>
 
-    <hr>
-    <p class="text-muted">If a page shows errors, check server logs for import issues or missing files.</p>
+  <div class="hero">
+    <div class="hero-content">
+      <div class="hero-text">
+        <h1 class="hero-title">Professional Site Reporting</h1>
+        <p class="hero-subtitle">
+          Streamline your inspection workflows with intelligent reporting, 
+          real-time collaboration, and automated documentation.
+        </p>
+      </div>
+
+      <section class="modules-section" id="modules">
+        <div class="modules-grid">
+          <a href="/hvac-mep/form" class="module-card">
+            <span class="module-number">01 — Module</span>
+            <div class="module-icon">🔧</div>
+            <h2 class="module-title">HVAC & MEP</h2>
+            <p class="module-description">
+              Heating, Ventilation, Air Conditioning, and Mechanical, Electrical & Plumbing systems inspection and reporting.
+            </p>
+            <span class="module-arrow">Start Inspection →</span>
+          </a>
+
+          <a href="/civil/form" class="module-card">
+            <span class="module-number">02 — Module</span>
+            <div class="module-icon">🏢</div>
+            <h2 class="module-title">Civil Works</h2>
+            <p class="module-description">
+              Construction site inspections, structural assessments, and civil engineering documentation.
+            </p>
+            <span class="module-arrow">Start Inspection →</span>
+          </a>
+
+          <a href="/cleaning/form" class="module-card">
+            <span class="module-number">03 — Module</span>
+            <div class="module-icon">🧹</div>
+            <h2 class="module-title">Cleaning Services</h2>
+            <p class="module-description">
+              Facility cleaning inspections, maintenance checklists, and service quality reports.
+            </p>
+            <span class="module-arrow">Start Inspection →</span>
+          </a>
+        </div>
+      </section>
+    </div>
   </div>
+
+  <footer class="footer">
+    <p>© 2024 Injaaz • Professional Site Reporting Platform</p>
+  </footer>
+
+  <script>
+    // Enhanced scroll effect
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      if (window.pageYOffset > 50) {
+        nav.classList.add('scrolled');
+      } else {
+        nav.classList.remove('scrolled');
+      }
+    });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+  </script>
 </body>
 </html>

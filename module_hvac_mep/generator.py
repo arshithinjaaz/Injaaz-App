@@ -2,15 +2,6 @@
 module_hvac_mep/generator.py
 
 Background generator for HVAC/MEP submissions.
-
-Behavior:
-- Called as: process_submission(job_id, submission_path, app)
-- Reads the saved submission JSON (which must include "base_url": request.host_url.rstrip('/'))
-- Produces Excel and PDF using site-visit utilities:
-    - module_site_visit.utils.excel_writer.create_report_workbook
-    - module_site_visit.utils.pdf_generator.generate_visit_pdf
-- Builds absolute download URLs by using saved base_url + url_for(..., _external=False)
-- Updates job progress, optionally emails results, and marks job done/failed.
 """
 import os
 import json
@@ -21,6 +12,7 @@ import ssl
 import smtplib
 from email.message import EmailMessage
 from datetime import datetime
+import logging
 
 from flask import url_for
 
@@ -28,8 +20,13 @@ from flask import url_for
 from module_site_visit.utils.pdf_generator import generate_visit_pdf
 from module_site_visit.utils.excel_writer import create_report_workbook
 
-# job helpers
-from common.utils import mark_job_done, update_job_progress
+# job helpers - use the config-aware wrappers
+from common.utils import (
+    mark_job_done_with_config as mark_job_done,
+    update_job_progress_with_config as update_job_progress
+)
+
+logger = logging.getLogger(__name__)
 
 # Defaults (can be overridden via app.config)
 BLUEPRINT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -115,37 +112,28 @@ def _send_email(app, subject, body, recipients, attachments=None):
         return False
 
 
-def process_submission(job_id, submission_path, app):
+def process_submission(submission_data, job_id, config):
     """
-    Main background worker. Expects `app` (Flask app instance) so the function
-    can push an app_context for url_for and config lookups.
+    Main background worker. Expects `config` (dict from app.config) and submission_data dict.
 
     This function will:
-      - read submission JSON from submission_path
+      - use submission_data directly (no need to load from file)
       - construct visit_info and processed_items
       - generate Excel and PDF into GENERATED_DIR
-      - build absolute URLs using submission['base_url'] + relative url_for(...)
+      - build absolute URLs using submission_data['base_url'] + relative url_for(...)
       - optionally email results
       - mark job done / failed
     """
-    gen_dir, uploads_dir, jobs_dir = _paths_from_app(app)
+    gen_dir = config.get("GENERATED_DIR", DEFAULT_GENERATED_DIR)
+    uploads_dir = config.get("UPLOADS_DIR", DEFAULT_UPLOADS_DIR)
     start_ts = time.time()
 
     try:
-        app.logger.info(f"[JOB {job_id}] START submission_path={submission_path}")
-        update_job_progress(jobs_dir, job_id, 5)
+        logger.info(f"[JOB {job_id}] START processing submission")
+        update_job_progress(job_id, 5, config)
 
-        # load submission json
-        submission = {}
-        try:
-            if submission_path and os.path.exists(submission_path):
-                with open(submission_path, "r", encoding="utf-8") as sf:
-                    submission = json.load(sf)
-        except Exception:
-            app.logger.exception(f"[JOB {job_id}] Failed to load submission JSON")
-            submission = {}
-
-        app.logger.info(f"[JOB {job_id}] loaded submission id={submission.get('id')} items={len(submission.get('items', []))}")
+        submission = submission_data
+        logger.info(f"[JOB {job_id}] loaded submission id={submission.get('id')} items={len(submission.get('items', []))}")
 
         # Build visit_info expected by site_visit utils
         visit_info = {}
@@ -205,84 +193,298 @@ def process_submission(job_id, submission_path, app):
                 "image_urls": image_urls,
             })
 
-        # Generate Excel and PDF inside app.app_context so url_for(...) works for relative urls.
-        with app.app_context():
-            update_job_progress(jobs_dir, job_id, 15)
+        update_job_progress(job_id, 15, config)
 
-            # Excel
-            try:
-                excel_path, excel_filename = create_report_workbook(gen_dir, visit_info, processed_items)
-            except Exception:
-                app.logger.exception(f"[JOB {job_id}] Excel generation failed")
-                excel_path, excel_filename = None, None
-            app.logger.info(f"[JOB {job_id}] excel result: {excel_path} / {excel_filename}")
-            update_job_progress(jobs_dir, job_id, 50)
-
-            # PDF
-            try:
-                pdf_path, pdf_filename = generate_visit_pdf(visit_info, processed_items, gen_dir)
-            except TypeError:
-                # older signature handling (defensive)
-                try:
-                    pdf_path, pdf_filename = generate_visit_pdf(visit_info, processed_items, gen_dir)
-                except Exception:
-                    app.logger.exception(f"[JOB {job_id}] PDF generation failed (fallback)")
-                    pdf_path, pdf_filename = None, None
-            except Exception:
-                app.logger.exception(f"[JOB {job_id}] PDF generation failed")
-                pdf_path, pdf_filename = None, None
-            app.logger.info(f"[JOB {job_id}] pdf result: {pdf_path} / {pdf_filename}")
-            update_job_progress(jobs_dir, job_id, 85)
-
-            # Build results (use submission base_url to produce absolute links)
-            results = []
-            attachments = []
-            base = None
-            if isinstance(submission, dict):
-                base = submission.get("base_url")  # should be like "http://127.0.0.1:5000"
-            if excel_filename:
-                rel = url_for("hvac_mep_bp.download_generated", filename=excel_filename, _external=False)
-                url = f"{base}{rel}" if base else rel
-                results.append({"filename": excel_filename, "url": url})
-                if excel_path and os.path.exists(excel_path):
-                    attachments.append(excel_path)
-            if pdf_filename:
-                rel = url_for("hvac_mep_bp.download_generated", filename=pdf_filename, _external=False)
-                url = f"{base}{rel}" if base else rel
-                results.append({"filename": pdf_filename, "url": url})
-                if pdf_path and os.path.exists(pdf_path):
-                    attachments.append(pdf_path)
-
-            # Try to send email if configured
-            recipients_conf = app.config.get("MAIL_RECIPIENTS") or app.config.get("NOTIFY_RECIPIENTS")
-            recipients = []
-            if recipients_conf:
-                if isinstance(recipients_conf, str):
-                    recipients = [r.strip() for r in recipients_conf.split(",") if r.strip()]
-                elif isinstance(recipients_conf, (list, tuple)):
-                    recipients = list(recipients_conf)
-
-            email_sent = False
-            if recipients:
-                subject = f"Injaaz - HVAC/MEP Submission {submission.get('id') or job_id}"
-                links = "\n".join([f"{r['filename']}: {r['url']}" for r in results])
-                body = f"Submission {submission.get('id') or job_id} processed.\n\nFiles:\n{links}\n\nRegards,\nInjaaz"
-                try:
-                    email_sent = _send_email(app, subject, body, recipients, attachments=attachments)
-                except Exception:
-                    app.logger.exception(f"[JOB {job_id}] Error while sending email")
-                    email_sent = False
-
-            # Mark job done
-            meta = {"generated": results, "email_sent": bool(email_sent)}
-            mark_job_done(jobs_dir, job_id, meta)
-            update_job_progress(jobs_dir, job_id, 100)
-
-        app.logger.info(f"[JOB {job_id}] DONE total={(time.time() - start_ts):.2f}s")
-
-    except Exception:
-        app.logger.exception(f"[JOB {job_id}] Unhandled exception in process_submission")
+        # Excel
         try:
-            update_job_progress(jobs_dir, job_id, 0, state="failed", results=[{"error": "internal error"}])
+            logger.info(f"Generating Excel report for job {job_id}")
+            excel_path, excel_filename = create_report_workbook(gen_dir, visit_info, processed_items)
+            if not excel_path or not os.path.exists(excel_path):
+                raise Exception("Excel report generation failed")
+        except Exception:
+            logger.exception(f"[JOB {job_id}] Excel generation failed")
+            excel_path, excel_filename = None, None
+        logger.info(f"[JOB {job_id}] excel result: {excel_path} / {excel_filename}")
+        update_job_progress(job_id, 50, config)
+
+        # PDF
+        try:
+            logger.info(f"Generating PDF report for job {job_id}")
+            pdf_path, pdf_filename = generate_visit_pdf(visit_info, processed_items, gen_dir)
+            if not pdf_path or not os.path.exists(pdf_path):
+                raise Exception("PDF report generation failed")
+        except Exception:
+            logger.exception(f"[JOB {job_id}] PDF generation failed")
+            pdf_path, pdf_filename = None, None
+        logger.info(f"[JOB {job_id}] pdf result: {pdf_path} / {pdf_filename}")
+        update_job_progress(job_id, 85, config)
+
+        # Build results - use submission base_url for absolute links
+        results = {}
+        base = submission.get("base_url", "")
+        
+        if excel_filename and excel_path:
+            results['excel_url'] = f"{base}/hvac-mep/generated/{excel_filename}"
+            
+        if pdf_filename and pdf_path:
+            results['pdf_url'] = f"{base}/hvac-mep/generated/{pdf_filename}"
+
+        logger.info(f"[JOB {job_id}] Built results: {results}")
+
+        # Mark job done - this sets state="done" and progress=100
+        mark_job_done(job_id, True, config, results=results)
+
+        logger.info(f"[JOB {job_id}] DONE total={(time.time() - start_ts):.2f}s")
+
+    except Exception as e:
+        logger.exception(f"[JOB {job_id}] Unhandled exception in process_submission")
+        try:
+            mark_job_done(job_id, False, config, error=str(e))
         except Exception:
             pass
+
+def generate_visit_pdf(visit_info, processed_items, output_dir):
+    """
+    Generate comprehensive HVAC/MEP PDF report with ALL images.
+    Handles unlimited images per item with proper pagination.
+    """
+    try:
+        logger.info(f"Starting PDF generation in {output_dir}")
+        
+        # Generate filename
+        site_name = visit_info.get('building_name', 'Unknown_Site').replace(' ', '_')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        pdf_filename = f"HVAC_MEP_{site_name}_{timestamp}.pdf"
+        pdf_path = os.path.join(output_dir, pdf_filename)
+        
+        # Create PDF document
+        doc = SimpleDocTemplate(
+            pdf_path,
+            pagesize=A4,
+            rightMargin=1.5*cm,
+            leftMargin=1.5*cm,
+            topMargin=2*cm,
+            bottomMargin=2*cm
+        )
+        
+        # Container for PDF elements
+        story = []
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#125435'),
+            spaceAfter=0.3*inch,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=16,
+            textColor=colors.HexColor('#125435'),
+            spaceAfter=0.2*inch,
+            spaceBefore=0.3*inch,
+            fontName='Helvetica-Bold'
+        )
+        
+        subheading_style = ParagraphStyle(
+            'CustomSubHeading',
+            parent=styles['Heading3'],
+            fontSize=12,
+            textColor=colors.HexColor('#1a7a4d'),
+            spaceAfter=0.15*inch,
+            fontName='Helvetica-Bold'
+        )
+        
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontSize=10,
+            spaceAfter=0.1*inch
+        )
+        
+        # TITLE
+        story.append(Paragraph("HVAC & MEP INSPECTION REPORT", title_style))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # SITE INFORMATION
+        story.append(Paragraph("Site Information", heading_style))
+        
+        site_info_data = [
+            ['Site Name:', visit_info.get('building_name', 'N/A')],
+            ['Visit Date:', visit_info.get('visit_date', 'N/A')],
+            ['Report Generated:', datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
+            ['Total Items:', str(len(processed_items))]
+        ]
+        
+        site_table = Table(site_info_data, colWidths=[2*inch, 4*inch])
+        site_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f5f5f5')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        story.append(site_table)
+        story.append(Spacer(1, 0.3*inch))
+        
+        # INSPECTION ITEMS
+        if processed_items:
+            for idx, item in enumerate(processed_items, 1):
+                # Item header
+                story.append(Paragraph(f"Item {idx}: {item.get('asset', 'N/A')}", subheading_style))
+                
+                # Item details table
+                item_details = [
+                    ['Asset:', item.get('asset', 'N/A')],
+                    ['System:', item.get('system', 'N/A')],
+                    ['Description:', item.get('description', 'N/A')],
+                    ['Photos:', str(len(item.get('image_paths', [])))]
+                ]
+                
+                item_table = Table(item_details, colWidths=[1.5*inch, 4.5*inch])
+                item_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f9fafb')),
+                    ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                    ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 9),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                    ('TOPPADDING', (0, 0), (-1, -1), 6),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+                ]))
+                
+                story.append(item_table)
+                story.append(Spacer(1, 0.15*inch))
+                
+                # PHOTOS - Add ALL photos for this item
+                photos = item.get('image_paths', [])
+                
+                if photos:
+                    # Process photos in rows of 2 for better layout
+                    photo_rows = []
+                    for i in range(0, len(photos), 2):
+                        row_photos = photos[i:i+2]
+                        photo_row = []
+                        
+                        for photo_path in row_photos:
+                            try:
+                                if os.path.exists(photo_path):
+                                    img = Image(photo_path, width=2.5*inch, height=2*inch)
+                                    photo_row.append(img)
+                                else:
+                                    logger.warning(f"Photo not found: {photo_path}")
+                                    photo_row.append(Paragraph(f"Image not found", normal_style))
+                            except Exception as e:
+                                logger.error(f"Error loading photo {photo_path}: {str(e)}")
+                                photo_row.append(Paragraph(f"Error loading image", normal_style))
+                        
+                        # If odd number of photos, add empty cell
+                        if len(photo_row) == 1:
+                            photo_row.append('')
+                        
+                        photo_rows.append(photo_row)
+                    
+                    # Create photo table
+                    if photo_rows:
+                        photo_table = Table(photo_rows, colWidths=[2.8*inch, 2.8*inch])
+                        photo_table.setStyle(TableStyle([
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+                            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                            ('TOPPADDING', (0, 0), (-1, -1), 5),
+                            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                        ]))
+                        story.append(photo_table)
+                        story.append(Spacer(1, 0.2*inch))
+                
+                # Add page break after each item (except last)
+                if idx < len(processed_items):
+                    story.append(PageBreak())
+        
+        else:
+            story.append(Paragraph("No inspection items recorded.", normal_style))
+        
+        # SIGNATURES PAGE
+        story.append(PageBreak())
+        story.append(Paragraph("Signatures", heading_style))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Technician Signature
+        tech_signature = visit_info.get('tech_signature', '')
+        story.append(Paragraph("Technician Signature:", subheading_style))
+        
+        if tech_signature and tech_signature.startswith('data:image'):
+            try:
+                # Extract base64 data
+                img_data = tech_signature.split(',')[1]
+                img_bytes = base64.b64decode(img_data)
+                img_buffer = BytesIO(img_bytes)
+                
+                sig_img = Image(img_buffer, width=3*inch, height=1.5*inch)
+                story.append(sig_img)
+            except Exception as e:
+                logger.error(f"Error processing tech signature: {str(e)}")
+                story.append(Paragraph("Signature not available", normal_style))
+        else:
+            story.append(Paragraph("Not signed", normal_style))
+        
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Manager Signature
+        manager_signature = visit_info.get('opMan_signature', '')
+        story.append(Paragraph("Operation Manager Signature:", subheading_style))
+        
+        if manager_signature and manager_signature.startswith('data:image'):
+            try:
+                img_data = manager_signature.split(',')[1]
+                img_bytes = base64.b64decode(img_data)
+                img_buffer = BytesIO(img_bytes)
+                
+                sig_img = Image(img_buffer, width=3*inch, height=1.5*inch)
+                story.append(sig_img)
+            except Exception as e:
+                logger.error(f"Error processing manager signature: {str(e)}")
+                story.append(Paragraph("Signature not available", normal_style))
+        else:
+            story.append(Paragraph("Not signed", normal_style))
+        
+        # Footer
+        story.append(Spacer(1, 0.5*inch))
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.grey,
+            alignment=TA_CENTER
+        )
+        story.append(Paragraph(
+            f"Generated by Injaaz Platform • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            footer_style
+        ))
+        
+        # Build PDF
+        doc.build(story)
+        
+        if not os.path.exists(pdf_path):
+            raise Exception(f"PDF file not created at {pdf_path}")
+        
+        logger.info(f"✅ PDF report created successfully: {pdf_path}")
+        return pdf_path
+        
+    except Exception as e:
+        logger.error(f"❌ PDF generation error: {str(e)}")
+        raise

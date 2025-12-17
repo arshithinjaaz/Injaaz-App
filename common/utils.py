@@ -70,3 +70,39 @@ def mark_job_done(jobs_dir, job_id, results):
         "completed_at": time.time()
     })
     write_job_state(jobs_dir, job_id, s)
+
+# Config-aware wrapper functions for background tasks
+def mark_job_started_with_config(job_id, config, meta=None):
+    """Wrapper that extracts JOBS_DIR from config dict"""
+    jobs_dir = config.get('JOBS_DIR')
+    return mark_job_started(jobs_dir, job_id, meta)
+
+def update_job_progress_with_config(job_id, progress, config, state='running', results=None):
+    """Wrapper that extracts JOBS_DIR from config dict"""
+    jobs_dir = config.get('JOBS_DIR')
+    return update_job_progress(jobs_dir, job_id, progress, state, results)
+
+def mark_job_done_with_config(job_id, success, config, results=None, error=None):
+    """Wrapper that extracts JOBS_DIR from config dict and handles error state"""
+    jobs_dir = config.get('JOBS_DIR')
+    if not success:
+        result_data = {"error": error or "Unknown error"}
+        s = read_job_state(jobs_dir, job_id) or {}
+        s.update({
+            "state": "failed",
+            "progress": 0,
+            "results": result_data,
+            "completed_at": time.time()
+        })
+        write_job_state(jobs_dir, job_id, s)
+    else:
+        # Success case - MUST call mark_job_done with correct signature
+        # mark_job_done(jobs_dir, job_id, results_dict)
+        if results is None:
+            results = {}
+        mark_job_done(jobs_dir, job_id, results)  # This sets state="done"
+
+def read_job_state_with_config(job_id, config):
+    """Wrapper that extracts JOBS_DIR from config dict"""
+    jobs_dir = config.get('JOBS_DIR')
+    return read_job_state(jobs_dir, job_id)

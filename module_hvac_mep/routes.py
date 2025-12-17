@@ -5,47 +5,47 @@ import time
 import base64
 import re
 import traceback
+import logging
 from datetime import datetime
 from flask import Blueprint, current_app, render_template, request, jsonify, url_for, send_from_directory
+
+# CRITICAL FIX: Define logger FIRST before using it
+logger = logging.getLogger(__name__)
 
 # common utilities (ensure common/utils.py exists)
 from common.utils import (
     random_id,
     save_uploaded_file,
     mark_job_started,
+    read_job_state,
     update_job_progress,
     mark_job_done,
-    read_job_state,
 )
 
-# try to import generators (placeholders available in hvac_generators.py)
+# Import BOTH report generators
 try:
     from .hvac_generators import create_excel_report, create_pdf_report
-except Exception:
-    # fallback placeholders
+    logger.info("✅ Successfully imported hvac_generators")
+except Exception as e:
+    logger.error(f"❌ Failed to import generators: {e}")
     def create_excel_report(data, output_dir):
-        os.makedirs(output_dir, exist_ok=True)
-        ts = int(time.time())
-        basename = f"hvac_report_{ts}.xlsx"
-        path = os.path.join(output_dir, basename)
-        with open(path, "wb") as f:
-            f.write(b"Dummy Excel")
-        return basename
-
+        raise NotImplementedError("Excel generator not available")
     def create_pdf_report(data, output_dir):
-        os.makedirs(output_dir, exist_ok=True)
-        ts = int(time.time())
-        basename = f"hvac_report_{ts}.pdf"
-        path = os.path.join(output_dir, basename)
-        with open(path, "wb") as f:
-            f.write(b"Dummy PDF")
-        return basename
+        raise NotImplementedError("PDF generator not available")
 
 # import the external generator worker you added
 try:
     from . import generator as hvac_generator
 except Exception:
     hvac_generator = None  # we'll still allow fallback behavior if needed
+
+try:
+    from .generator import process_submission
+except ImportError:
+    # Fallback if generator.py doesn't exist
+    def process_submission(submission_data, job_id, config):
+        from common.utils import mark_job_done
+        mark_job_done(job_id, False, error="Generator not implemented", config=config)
 
 BLUEPRINT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(BLUEPRINT_DIR)
@@ -128,14 +128,13 @@ _DATAURL_RE = re.compile(r"data:(?P<mime>[^;]+);base64,(?P<data>.+)")
 def save_signature_dataurl(dataurl, uploads_dir, prefix="signature"):
     """
     Decode a data URL (data:image/png;base64,...) and save as PNG under uploads_dir.
-    Returns (saved_filename, public_url) or (None, None) on failure.
-    Note: this function uses url_for(), so must be called inside an app/request context.
+    Returns (saved_filename, file_path, public_url) or (None, None, None) on failure.
     """
     if not dataurl:
-        return None, None
+        return None, None, None
     m = _DATAURL_RE.match(dataurl)
     if not m:
-        return None, None
+        return None, None, None
     mime = m.group("mime")
     b64 = m.group("data")
     ext = "png"
@@ -148,12 +147,12 @@ def save_signature_dataurl(dataurl, uploads_dir, prefix="signature"):
         path = os.path.join(uploads_dir, fname)
         with open(path, "wb") as fh:
             fh.write(raw)
-        # return filename and external URL via download_generated
+        # CRITICAL FIX: Return filename, path, AND url
         url = url_for("hvac_mep_bp.download_generated", filename=f"uploads/{fname}", _external=True)
-        return fname, url
+        return fname, path, url  # <- Now returns 3 values
     except Exception:
         traceback.print_exc()
-        return None, None
+        return None, None, None
 
 
 # ---------- Submit route (handles multi-item + per-item photos + signatures) ----------
@@ -181,14 +180,14 @@ def submit():
         tech_sig_file = None
         opman_sig_file = None
         if tech_sig_dataurl:
-            # save_signature_dataurl uses url_for -> safe here (we are in request/app context)
-            fname, url = save_signature_dataurl(tech_sig_dataurl, UPLOADS_DIR, prefix="tech_sig")
+            # CRITICAL FIX: Now captures path
+            fname, fpath, url = save_signature_dataurl(tech_sig_dataurl, UPLOADS_DIR, prefix="tech_sig")
             if fname:
-                tech_sig_file = {"saved": fname, "url": url}
+                tech_sig_file = {"saved": fname, "path": fpath, "url": url}
         if opman_sig_dataurl:
-            fname, url = save_signature_dataurl(opman_sig_dataurl, UPLOADS_DIR, prefix="opman_sig")
+            fname, fpath, url = save_signature_dataurl(opman_sig_dataurl, UPLOADS_DIR, prefix="opman_sig")
             if fname:
-                opman_sig_file = {"saved": fname, "url": url}
+                opman_sig_file = {"saved": fname, "path": fpath, "url": url}
 
         # Determine items_count
         try:
@@ -286,71 +285,37 @@ def submit():
         # Create job record and enqueue background task
         os.makedirs(JOBS_DIR, exist_ok=True)
         job_id = random_id("job")
+        
+        # Use JOBS_DIR directly
         mark_job_started(JOBS_DIR, job_id, meta={"submission_id": sub_id, "module": "hvac_mep", "created_at": datetime.utcnow().isoformat()})
 
-        # Capture the Flask app object so background worker can push an app context when needed
-        app_obj = current_app._get_current_object()
+        logger.info(f"Starting background task for job {job_id}")
 
-        # If the modular generator is available, delegate the heavy lifting to it.
-        if hvac_generator and hasattr(hvac_generator, 'process_submission'):
-            try:
-                EXECUTOR.submit(hvac_generator.process_submission, job_id, submission_path, app_obj)
-            except Exception:
-                import threading
-                t = threading.Thread(target=hvac_generator.process_submission, args=(job_id, submission_path, app_obj), daemon=True)
-                t.start()
+        # Submit to executor - FIXED: Use process_job instead of process_submission
+        executor = current_app.config.get('EXECUTOR')
+        if executor:
+            executor.submit(
+                process_job,
+                submission_record,
+                job_id,
+                current_app.config
+            )
         else:
-            # Fallback: use the simple inline generation (uses hvac_generators functions)
-            def task_generate_reports(job_id_local, submission_path_local, app_obj_local):
-                try:
-                    # run inside app context so url_for works
-                    with app_obj_local.app_context():
-                        update_job_progress(JOBS_DIR, job_id_local, 10)
-                        data = {}
-                        try:
-                            if submission_path_local and os.path.exists(submission_path_local):
-                                with open(submission_path_local, "r", encoding="utf-8") as sf:
-                                    data = json.load(sf)
-                        except Exception:
-                            data = {}
-
-                        excel_name = create_excel_report(data, output_dir=GENERATED_DIR)
-                        update_job_progress(JOBS_DIR, job_id_local, 60)
-                        pdf_name = create_pdf_report(data, output_dir=GENERATED_DIR)
-                        update_job_progress(JOBS_DIR, job_id_local, 95)
-
-                        # Build result URLs using stored base_url to avoid needing SERVER_NAME config
-                        results = []
-                        base = data.get("base_url") if isinstance(data, dict) else None
-                        if excel_name:
-                            rel = url_for("hvac_mep_bp.download_generated", filename=excel_name, _external=False)
-                            results.append({"filename": excel_name, "url": f"{base}{rel}" if base else rel})
-                        if pdf_name:
-                            rel = url_for("hvac_mep_bp.download_generated", filename=pdf_name, _external=False)
-                            results.append({"filename": pdf_name, "url": f"{base}{rel}" if base else rel})
-
-                        mark_job_done(JOBS_DIR, job_id_local, results)
-                except Exception as exc:
-                    traceback.print_exc()
-                    update_job_progress(JOBS_DIR, job_id_local, 0, state="failed", results=[{"error": str(exc)}])
-
-            try:
-                EXECUTOR.submit(task_generate_reports, job_id, submission_path, app_obj)
-            except Exception:
-                import threading
-                t = threading.Thread(target=task_generate_reports, args=(job_id, submission_path, app_obj), daemon=True)
-                t.start()
+            logger.error("ThreadPoolExecutor not found in app config")
+            return jsonify({'error': 'Background processing not available'}), 500
 
         return jsonify({"status": "queued", "job_id": job_id, "submission_id": sub_id, "items": len(items)})
-
+    
     except Exception as e:
-        traceback.print_exc()
-        return jsonify({"status": "error", "error": str(e)}), 500
+        logger.error(f"Submission failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 
 @hvac_mep_bp.route("/status/<job_id>", methods=["GET"])
 def status(job_id):
     GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+    # Use JOBS_DIR directly
     state = read_job_state(JOBS_DIR, job_id)
     if not state:
         return jsonify({"error": "unknown job"}), 404
@@ -362,3 +327,49 @@ def download_generated(filename):
     GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
     # allow nested paths like uploads/<name>
     return send_from_directory(GENERATED_DIR, filename, as_attachment=True)
+
+def process_job(submission_data, job_id, config):
+    """Background worker: Generate BOTH Excel AND PDF reports"""
+    try:
+        GENERATED_DIR = config.get('GENERATED_DIR')
+        JOBS_DIR = config.get('JOBS_DIR')
+        
+        logger.info(f"🔄 Processing job {job_id}")
+        
+        # Update progress: Starting
+        update_job_progress(JOBS_DIR, job_id, 10)
+        
+        # Generate Excel
+        logger.info("📊 Generating Excel report...")
+        update_job_progress(JOBS_DIR, job_id, 30)
+        excel_path = create_excel_report(submission_data, GENERATED_DIR)
+        excel_filename = os.path.basename(excel_path)
+        logger.info(f"✅ Excel created: {excel_filename}")
+        
+        # Generate PDF
+        logger.info("📄 Generating PDF report...")
+        update_job_progress(JOBS_DIR, job_id, 60)
+        pdf_path = create_pdf_report(submission_data, GENERATED_DIR)
+        pdf_filename = os.path.basename(pdf_path)
+        logger.info(f"✅ PDF created: {pdf_filename}")
+        
+        # Build URLs using base_url from submission
+        base_url = submission_data.get('base_url', '')
+        excel_url = f"{base_url}/generated/{excel_filename}"
+        pdf_url = f"{base_url}/generated/{pdf_filename}"
+        
+        # Mark complete
+        update_job_progress(JOBS_DIR, job_id, 100)
+        
+        results = {
+            'excel_url': excel_url,
+            'pdf_url': pdf_url
+        }
+        
+        mark_job_done(JOBS_DIR, job_id, results)
+        logger.info(f"✅ Job {job_id} completed successfully")
+        
+    except Exception as e:
+        logger.error(f"❌ Job {job_id} failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        mark_job_done(JOBS_DIR, job_id, {'error': str(e)})

@@ -2,116 +2,610 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>HVAC & MEP - Form</title>
+  <title>HVAC & MEP - Inspection Form</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    .signature-pad { border:1px solid #ccc; width:100%; height:120px; }
-    .item-card { border:1px solid #e0e0e0; padding:12px; border-radius:6px; margin-bottom:10px; }
-    .thumb { max-width:120px; max-height:80px; margin-right:6px; margin-bottom:6px; border:1px solid #ddd; padding:2px; }
-    .items-list .meta { font-size:0.95rem; color:#333; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --primary: #125435;
+      --primary-light: #1a7a4d;
+      --primary-dark: #0d3d24;
+      --text-primary: #1a1a1a;
+      --text-secondary: #6b6b6b;
+      --text-light: #9ca3af;
+      --border-light: #e5e7eb;
+      --bg-page: #fafafa;
+      --white: #ffffff;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    body {
+      background: var(--bg-page);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 0;
+      margin: 0;
+      line-height: 1.5;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Ultra-minimal navigation */
+    .navbar {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: 0 1px 0 rgba(18, 84, 53, 0.06);
+      padding: 1rem 0;
+      margin-bottom: 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid rgba(18, 84, 53, 0.04);
+    }
+    
+    .navbar-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--primary) !important;
+      text-decoration: none;
+      letter-spacing: -0.3px;
+      transition: opacity 0.2s ease;
+    }
+    
+    .navbar-brand img {
+      height: 28px;
+      width: auto;
+    }
+    
+    .navbar-brand:hover {
+      opacity: 0.8;
+    }
+    
+    .module-badge {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      padding: 0.375rem 0.875rem;
+      background: #f5f5f5;
+      border-radius: 4px;
+      letter-spacing: 0.3px;
+    }
+    
+    /* Clean, spacious container */
+    .container {
+      max-width: 1200px;
+      background: var(--white);
+      border-radius: 8px;
+      padding: 2.5rem 3rem;
+      box-shadow: var(--shadow-sm);
+      margin: 1.5rem auto;
+      border: 1px solid var(--border-light);
+    }
+    
+    /* Minimal typography */
+    h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-bottom: 0.375rem;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+    
+    h5 {
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 1.25rem;
+      margin-top: 2.5rem;
+      padding-bottom: 0.625rem;
+      border-bottom: 1px solid var(--border-light);
+      letter-spacing: -0.2px;
+    }
+    
+    .text-muted {
+      color: var(--text-secondary) !important;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+    }
+    
+    /* Minimal form labels */
+    .form-label {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      margin-bottom: 0.375rem;
+      display: block;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.75rem;
+    }
+    
+    /* Clean inputs with subtle borders */
+    .form-control, .form-select {
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      padding: 0.625rem 0.875rem;
+      transition: all 0.15s ease;
+      font-size: 0.9375rem;
+      background: var(--white);
+      color: var(--text-primary);
+    }
+    
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(18, 84, 53, 0.06);
+      outline: none;
+    }
+    
+    /* Minimal flat buttons */
+    .btn {
+      border-radius: 4px;
+      padding: 0.625rem 1.25rem;
+      font-weight: 600;
+      border: none;
+      transition: all 0.15s ease;
+      font-size: 0.875rem;
+      letter-spacing: 0.2px;
+    }
+    
+    .btn-success {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: var(--primary-dark);
+      box-shadow: 0 2px 8px rgba(18, 84, 53, 0.2);
+    }
+    
+    .btn-outline-secondary {
+      border: 1px solid var(--border-light);
+      color: var(--text-secondary);
+      background: transparent;
+    }
+    
+    .btn-outline-secondary:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+      background: #fafafa;
+    }
+    
+    .btn-outline-danger {
+      border: 1px solid #dc3545;
+      color: #dc3545;
+      background: transparent;
+    }
+    
+    .btn-outline-danger:hover {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .btn-lg {
+      padding: 0.75rem 1.75rem;
+      font-size: 0.9375rem;
+    }
+    
+    /* Minimal signature pad */
+    .signature-pad {
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      width: 100%;
+      height: 140px;
+      background: #fafafa;
+      cursor: crosshair;
+    }
+    
+    .signature-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    
+    .signature-hint {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      font-weight: 400;
+    }
+    
+    /* Clean item cards */
+    .item-card {
+      border: 1px solid var(--border-light);
+      padding: 1.25rem;
+      border-radius: 4px;
+      margin-bottom: 0.875rem;
+      background: var(--white);
+      transition: all 0.15s ease;
+    }
+    
+    .item-card:hover {
+      box-shadow: var(--shadow-sm);
+    }
+    
+    /* Minimal thumbnails */
+    .thumb-container {
+      display: inline-block;
+      position: relative;
+      margin: 3px;
+    }
+    
+    .thumb {
+      width: 90px;
+      height: 60px;
+      object-fit: cover;
+      border: 1px solid var(--border-light);
+      border-radius: 3px;
+      transition: all 0.15s;
+    }
+    
+    .thumb:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .thumb-delete {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Minimal download section */
+    .download-links {
+      background: #f8faf9;
+      border: 1px solid var(--primary);
+      padding: 1.5rem;
+      border-radius: 4px;
+      margin-top: 1.5rem;
+    }
+    
+    .download-links h5 {
+      color: var(--primary-dark);
+      margin-bottom: 0.875rem;
+      border: none;
+      margin-top: 0;
+      font-size: 1rem;
+    }
+    
+    .download-links a {
+      display: block;
+      margin: 0.5rem 0;
+      padding: 0.75rem 1rem;
+      background: var(--white);
+      border-radius: 4px;
+      text-decoration: none;
+      color: var(--primary);
+      font-weight: 600;
+      transition: all 0.15s ease;
+      border: 1px solid var(--border-light);
+      font-size: 0.875rem;
+    }
+    
+    .download-links a:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    /* Minimal drop zone */
+    .drop-zone {
+      border: 2px dashed var(--border-light);
+      border-radius: 4px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      background: #fafafa;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      border-color: var(--primary);
+      background: #f8faf9;
+    }
+    
+    .drop-zone-content {
+      color: var(--text-secondary);
+      font-size: 0.9375rem;
+    }
+    
+    .drop-zone-content strong {
+      display: block;
+      color: var(--text-primary);
+      margin-bottom: 0.375rem;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    
+    .drop-zone-content small {
+      display: block;
+      font-size: 0.8125rem;
+      margin-top: 0.375rem;
+      color: var(--text-light);
+    }
+    
+    .upload-progress {
+      margin-top: 0.875rem;
+      display: none;
+    }
+    
+    .progress {
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border-light);
+    }
+    
+    .progress-bar {
+      border-radius: 2px;
+    }
+    
+    .photo-count {
+      color: var(--text-secondary);
+      font-size: 0.8125rem;
+      margin-top: 0.5rem;
+      padding: 0.375rem 0.75rem;
+      background: var(--white);
+      border-radius: 3px;
+      display: inline-block;
+      border: 1px solid var(--border-light);
+      font-weight: 500;
+    }
+    
+    .photo-count.warning {
+      background: #fff8e1;
+      border-color: #ffa000;
+      color: #664d03;
+    }
+    
+    .photo-count.danger {
+      background: #ffebee;
+      border-color: #d32f2f;
+      color: #5f2120;
+    }
+    
+    .alert {
+      border-radius: 4px;
+      border: none;
+      font-size: 0.875rem;
+      padding: 0.875rem 1rem;
+    }
+    
+    .progress-bar-container {
+      margin-top: 1rem;
+    }
+    
+    /* Empty state */
+    .items-list .text-muted {
+      padding: 1.5rem;
+      text-align: center;
+      background: #fafafa;
+      border: 1px dashed var(--border-light);
+      border-radius: 4px;
+      font-size: 0.9375rem;
+    }
+    
+    /* Section spacing */
+    .mb-section {
+      margin-bottom: 2.5rem;
+    }
+    
+    /* Grid improvements */
+    .row {
+      --bs-gutter-x: 1.25rem;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container {
+        padding: 1.5rem 1.25rem;
+        margin: 1rem;
+        border-radius: 6px;
+      }
+      
+      .navbar-container {
+        padding: 0 1.25rem;
+      }
+    }
   </style>
 </head>
-<body class="p-4">
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a class="navbar-brand" href="/">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz">
+        <span>Injaaz</span>
+      </a>
+      <div class="module-badge">HVAC & MEP</div>
+    </div>
+  </nav>
+  
   <div class="container">
-    <h2>HVAC & MEP Form</h2>
+    <h2>HVAC & MEP Inspection</h2>
+    <p class="text-muted mb-4">Complete site visit documentation with photos and signatures</p>
 
     <form id="mainForm" enctype="multipart/form-data" onsubmit="return false;">
       <div class="row g-3">
+        <!-- Site Info -->
         <div class="col-md-6 mb-3">
-          <label for="site_name" class="form-label">Site name</label>
+          <label for="site_name" class="form-label">Site Name</label>
           <input id="site_name" name="site_name" class="form-control" required>
         </div>
 
         <div class="col-md-6 mb-3">
-          <label for="visit_date" class="form-label">Date</label>
+          <label for="visit_date" class="form-label">Visit Date</label>
           <input id="visit_date" name="visit_date" type="date" class="form-control" required>
         </div>
 
-        <!-- Single item input area (user fills this then clicks Add Item) -->
-        <div class="col-12 mb-2">
-          <h5>Add item</h5>
+        <!-- Add Item Section -->
+        <div class="col-12 mb-section">
+          <h5>📋 Add Inspection Item</h5>
         </div>
 
         <div class="col-md-4 mb-2">
           <label class="form-label">Asset</label>
           <select id="curAsset" class="form-select" disabled>
-            <option value="">-- Select --</option>
+            <option value="">Select Asset</option>
           </select>
         </div>
 
         <div class="col-md-4 mb-2">
           <label class="form-label">System</label>
           <select id="curSystem" class="form-select" disabled>
-            <option value="">-- Select --</option>
+            <option value="">Select System</option>
           </select>
         </div>
 
         <div class="col-md-4 mb-2">
           <label class="form-label">Description</label>
           <select id="curDescription" class="form-select" disabled>
-            <option value="">-- Select --</option>
+            <option value="">Select Description</option>
           </select>
         </div>
 
+        <!-- Photos -->
         <div class="col-12 mb-3">
-          <label class="form-label">Photos (for this item)</label>
-          <input id="curPhotos" type="file" class="form-control" accept="image/*" multiple>
-          <div id="curPreview" class="mt-2"></div>
+          <label class="form-label">📸 Photos (Maximum 20 per item)</label>
+          <input id="curPhotos" type="file" class="form-control d-none" accept="image/*" multiple>
+          
+          <div id="dropZone" class="drop-zone">
+            <div class="drop-zone-content">
+              <strong>Drag and drop images here</strong>
+              <small>or click to browse • Maximum 20 images • Auto-compressed to 1920px</small>
+            </div>
+          </div>
+          
+          <div id="uploadProgress" class="upload-progress">
+            <div class="progress">
+              <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <div id="photoCount" class="photo-count" style="display:none;"></div>
+          <div id="curPreview" class="mt-3"></div>
         </div>
 
+        <!-- Action Buttons -->
         <div class="col-12 mb-3 d-flex gap-2">
-          <button id="addItemBtn" type="button" class="btn btn-success">Add Item</button>
-          <button id="clearCurrentBtn" type="button" class="btn btn-outline-secondary">Clear Current</button>
-          <button id="clearItemsBtn" type="button" class="btn btn-outline-secondary">Clear All Items</button>
+          <button id="addItemBtn" type="button" class="btn btn-success">✅ Add Item</button>
+          <button id="clearCurrentBtn" type="button" class="btn btn-outline-secondary">🗑️ Clear Current</button>
+          <button id="clearItemsBtn" type="button" class="btn btn-outline-danger">🗑️ Clear All Items</button>
         </div>
 
-        <!-- List of added items (read-only entries) -->
-        <div class="col-12 mb-3">
-          <h5>Items</h5>
+        <!-- Items List -->
+        <div class="col-12 mb-section">
+          <h5>📦 Inspection Items</h5>
           <div id="itemsList" class="items-list"></div>
         </div>
 
         <!-- Signatures -->
         <div class="col-12 mb-3">
-          <label class="form-label">Technician Signature</label>
+          <div class="signature-label">
+            <label class="form-label mb-0">✍️ Technician Signature</label>
+            <span class="signature-hint">Draw signature with mouse/touch</span>
+          </div>
           <canvas id="techSignaturePad" class="signature-pad"></canvas>
           <input type="hidden" id="techSignatureData" name="tech_signature">
         </div>
 
-        <div class="col-12 mb-3">
-          <label class="form-label">Operation Manager Signature</label>
+        <div class="col-12 mb-4">
+          <div class="signature-label">
+            <label class="form-label mb-0">✍️ Operation Manager Signature</label>
+            <span class="signature-hint">Draw signature with mouse/touch</span>
+          </div>
           <canvas id="opManSignaturePad" class="signature-pad"></canvas>
           <input type="hidden" id="opManSignatureData" name="opMan_signature">
         </div>
 
-        <div class="col-12 d-flex gap-2">
-          <button type="button" id="prevButton" class="btn btn-secondary" disabled>Previous</button>
-          <button type="button" id="submitAllBtn" class="btn btn-success">Submit All</button>
-          <button type="button" id="clearTech" class="btn btn-outline-secondary">Clear Tech Sig</button>
-          <button type="button" id="clearOp" class="btn btn-outline-secondary">Clear Op Sig</button>
+        <!-- Submit Section -->
+        <div class="col-12 d-flex gap-2 mb-4">
+          <button type="button" id="submitAllBtn" class="btn btn-success btn-lg">🚀 Submit Inspection</button>
+          <button type="button" id="clearTech" class="btn btn-outline-secondary">Clear Tech</button>
+          <button type="button" id="clearOp" class="btn btn-outline-secondary">Clear Manager</button>
         </div>
 
+        <!-- Status & Downloads -->
         <div class="col-12">
           <div id="statusBox" class="mt-3"></div>
+          <div id="progressContainer" class="progress-bar-container" style="display:none;">
+            <div class="progress">
+              <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>
+            </div>
+          </div>
+          <div id="downloadLinks" class="download-links" style="display:none;">
+            <h5>✅ Reports Ready!</h5>
+            <a id="excelLink" href="#" target="_blank">📊 Download Excel Report</a>
+            <a id="pdfLink" href="#" target="_blank">📄 Download PDF Report</a>
+          </div>
         </div>
       </div>
     </form>
   </div>
 
-  <!-- Dependencies -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
-
-  <!-- dropdown initializer only (it will fetch /hvac-mep/dropdowns and dispatch "dropdowns:loaded") -->
   <script src="{{ url_for('static', filename='dropdown_init.js') }}"></script>
   <script src="{{ url_for('static', filename='form.js') }}"></script>
 
   <script>
     const modulePrefix = "{{ url_for('hvac_mep_bp.index') }}".replace('/form','');
+    const MAX_PHOTOS_PER_ITEM = 20;
+    const MAX_IMAGE_DIMENSION = 1920;
+    const JPEG_QUALITY = 0.85;
 
-    // Signature pads
+    function checkBrowserSupport() {
+      if (!window.FileReader) {
+        alert('⚠️ Your browser does not support file uploads. Please use a modern browser.');
+        return false;
+      }
+      if (!HTMLCanvasElement.prototype.toBlob) {
+        console.warn('Canvas.toBlob not supported, using polyfill');
+        Object.defineProperty(HTMLCanvasElement.prototype, 'toBlob', {
+          value: function (callback, type, quality) {
+            const canvas = this;
+            setTimeout(() => {
+              const binStr = atob(canvas.toDataURL(type, quality).split(',')[1]);
+              const len = binStr.length;
+              const arr = new Uint8Array(len);
+              for (let i = 0; i < len; i++) { arr[i] = binStr.charCodeAt(i); }
+              callback(new Blob([arr], { type: type || 'image/png' }));
+            });
+          }
+        });
+      }
+      return true;
+    }
+
     function initSignaturePads() {
       const techCanvas = document.getElementById('techSignaturePad');
       const opCanvas = document.getElementById('opManSignaturePad');
@@ -136,34 +630,188 @@
       return { techPad, opPad };
     }
 
-    // Items UX: single entry form that appends to items list
     (function(){
       const curAsset = document.getElementById('curAsset');
       const curSystem = document.getElementById('curSystem');
       const curDescription = document.getElementById('curDescription');
       const curPhotos = document.getElementById('curPhotos');
       const curPreview = document.getElementById('curPreview');
+      const dropZone = document.getElementById('dropZone');
+      const photoCount = document.getElementById('photoCount');
+      const uploadProgress = document.getElementById('uploadProgress');
+      const uploadProgressBar = document.getElementById('uploadProgressBar');
       const addItemBtn = document.getElementById('addItemBtn');
       const clearCurrentBtn = document.getElementById('clearCurrentBtn');
       const clearItemsBtn = document.getElementById('clearItemsBtn');
       const itemsList = document.getElementById('itemsList');
       const submitAllBtn = document.getElementById('submitAllBtn');
       const statusBox = document.getElementById('statusBox');
+      const progressContainer = document.getElementById('progressContainer');
+      const progressBar = document.getElementById('progressBar');
+      const downloadLinks = document.getElementById('downloadLinks');
+      const excelLink = document.getElementById('excelLink');
+      const pdfLink = document.getElementById('pdfLink');
+      
       const pads = initSignaturePads();
 
-      let items = []; // array of {asset, system, description, files: [File], previews: [objectURL]}
+      let items = [];
+      let currentFiles = [];
+      let currentPreviews = [];
+      let pollingInterval = null;
 
-      // Utility: clear select and set placeholder
-      function clearSelect(el, placeholder='-- Select --') {
+      if (!checkBrowserSupport()) {
+        dropZone.style.display = 'none';
+        curPhotos.classList.remove('d-none');
+        uploadProgress.innerHTML = '<div class="alert alert-warning">⚠️ Using fallback mode</div>';
+        uploadProgress.style.display = 'block';
+      }
+
+      async function compressImage(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let { width, height } = img;
+              
+              if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+                if (width > height) {
+                  height = Math.round((height / width) * MAX_IMAGE_DIMENSION);
+                  width = MAX_IMAGE_DIMENSION;
+                } else {
+                  width = Math.round((width / height) * MAX_IMAGE_DIMENSION);
+                  height = MAX_IMAGE_DIMENSION;
+                }
+              }
+              
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              
+              canvas.toBlob((blob) => {
+                if (!blob) {
+                  reject(new Error('Compression failed'));
+                  return;
+                }
+                const compressed = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                resolve(compressed);
+              }, 'image/jpeg', JPEG_QUALITY);
+            };
+            img.onerror = () => reject(new Error('Image load failed'));
+            img.src = e.target.result;
+          };
+          reader.onerror = () => reject(new Error('File read failed'));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function handleFiles(files) {
+        if (!files || files.length === 0) return;
+        
+        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+        if (imageFiles.length === 0) {
+          alert('Please select image files only.');
+          return;
+        }
+        
+        const totalAfter = currentFiles.length + imageFiles.length;
+        if (totalAfter > MAX_PHOTOS_PER_ITEM) {
+          alert(`Maximum ${MAX_PHOTOS_PER_ITEM} photos per item. You have ${currentFiles.length}, trying to add ${imageFiles.length}.`);
+          return;
+        }
+        
+        uploadProgress.style.display = 'block';
+        
+        const BATCH_SIZE = 3;
+        for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
+          const batch = imageFiles.slice(i, i + BATCH_SIZE);
+          const promises = batch.map(file => compressImage(file));
+          
+          try {
+            const compressed = await Promise.all(promises);
+            compressed.forEach(c => {
+              currentFiles.push(c);
+              currentPreviews.push(URL.createObjectURL(c));
+            });
+            
+            const progress = Math.round(((i + batch.length) / imageFiles.length) * 100);
+            uploadProgressBar.style.width = progress + '%';
+            uploadProgressBar.textContent = `Compressing ${Math.min(i + batch.length, imageFiles.length)}/${imageFiles.length}...`;
+          } catch (err) {
+            console.error('Batch compression error:', err);
+          }
+        }
+        
+        uploadProgress.style.display = 'none';
+        renderPhotoPreview();
+      }
+
+      function renderPhotoPreview() {
+        curPreview.innerHTML = '';
+        const count = currentFiles.length;
+        
+        if (count === 0) {
+          photoCount.style.display = 'none';
+          return;
+        }
+        
+        photoCount.style.display = 'inline-block';
+        photoCount.textContent = `${count} / ${MAX_PHOTOS_PER_ITEM} photos`;
+        photoCount.className = 'photo-count mt-2';
+        if (count >= MAX_PHOTOS_PER_ITEM * 0.8) photoCount.classList.add('warning');
+        if (count >= MAX_PHOTOS_PER_ITEM) photoCount.classList.add('danger');
+        
+        currentPreviews.forEach((url, idx) => {
+          const container = document.createElement('div');
+          container.className = 'thumb-container';
+          
+          const img = document.createElement('img');
+          img.className = 'thumb';
+          img.src = url;
+          img.alt = `Photo ${idx + 1}`;
+          
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'thumb-delete';
+          deleteBtn.innerHTML = '×';
+          deleteBtn.type = 'button';
+          deleteBtn.title = 'Remove this photo';
+          deleteBtn.onclick = () => removePhoto(idx);
+          
+          container.appendChild(img);
+          container.appendChild(deleteBtn);
+          curPreview.appendChild(container);
+        });
+      }
+
+      function removePhoto(index) {
+        if (index < 0 || index >= currentFiles.length) return;
+        URL.revokeObjectURL(currentPreviews[index]);
+        currentFiles.splice(index, 1);
+        currentPreviews.splice(index, 1);
+        renderPhotoPreview();
+      }
+
+      dropZone.addEventListener('click', () => curPhotos.click());
+      dropZone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag-over'); });
+      dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('drag-over'); });
+      dropZone.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
+      curPhotos.addEventListener('change', () => handleFiles(curPhotos.files));
+
+      // CRITICAL: Dropdown logic
+      function clearSelect(el, placeholder='Select') {
         el.innerHTML = `<option value="">${placeholder}</option>`;
         el.disabled = true;
       }
 
-      // Fill top-level asset select from DROPDOWN_DATA
       function fillAssets() {
-        clearSelect(curAsset);
-        if (typeof DROPDOWN_DATA === 'object' && Object.keys(DROPDOWN_DATA).length>0) {
-          Object.keys(DROPDOWN_DATA).forEach(cat=>{
+        clearSelect(curAsset, 'Select Asset');
+        if (typeof DROPDOWN_DATA === 'object' && Object.keys(DROPDOWN_DATA).length > 0) {
+          Object.keys(DROPDOWN_DATA).forEach(cat => {
             const o = document.createElement('option');
             o.value = cat;
             o.textContent = cat;
@@ -172,21 +820,24 @@
           curAsset.disabled = false;
         } else {
           curAsset.disabled = true;
+          console.error('DROPDOWN_DATA not loaded');
         }
-        // reset dependent selects
-        clearSelect(curSystem);
-        clearSelect(curDescription);
+        clearSelect(curSystem, 'Select System');
+        clearSelect(curDescription, 'Select Description');
       }
 
-      // populate systems for selected asset
       curAsset.addEventListener('change', () => {
-        curSystem.innerHTML = '<option value="">-- Select --</option>';
-        curDescription.innerHTML = '<option value="">-- Select --</option>';
+        curSystem.innerHTML = '<option value="">Select System</option>';
+        curDescription.innerHTML = '<option value="">Select Description</option>';
         const cat = curAsset.value;
-        if (!cat) { curSystem.disabled=true; curDescription.disabled=true; return; }
+        if (!cat) { 
+          curSystem.disabled = true; 
+          curDescription.disabled = true; 
+          return; 
+        }
         const sysObj = (window.DROPDOWN_DATA && window.DROPDOWN_DATA[cat]) ? window.DROPDOWN_DATA[cat] : null;
         if (sysObj && typeof sysObj === 'object') {
-          Object.keys(sysObj).forEach(sk=>{
+          Object.keys(sysObj).forEach(sk => {
             const o = document.createElement('option');
             o.value = sk;
             o.textContent = sk;
@@ -200,14 +851,16 @@
         }
       });
 
-      // populate descriptions for selected system
       curSystem.addEventListener('change', () => {
-        curDescription.innerHTML = '<option value="">-- Select --</option>';
+        curDescription.innerHTML = '<option value="">Select Description</option>';
         const cat = curAsset.value;
         const sk = curSystem.value;
-        if (!cat || !sk) { curDescription.disabled=true; return; }
+        if (!cat || !sk) { 
+          curDescription.disabled = true; 
+          return; 
+        }
         const arr = (window.DROPDOWN_DATA && window.DROPDOWN_DATA[cat]) ? window.DROPDOWN_DATA[cat][sk] || [] : [];
-        arr.forEach(v=>{
+        arr.forEach(v => {
           const o = document.createElement('option');
           o.value = v;
           o.textContent = v;
@@ -216,19 +869,6 @@
         curDescription.disabled = false;
       });
 
-      // preview current photos
-      curPhotos.addEventListener('change', () => {
-        curPreview.innerHTML = '';
-        const files = Array.from(curPhotos.files || []);
-        files.forEach(f=>{
-          const img = document.createElement('img');
-          img.className = 'thumb';
-          img.src = URL.createObjectURL(f);
-          curPreview.appendChild(img);
-        });
-      });
-
-      // add current entry to items list
       addItemBtn.addEventListener('click', () => {
         const asset = curAsset.value || '';
         const system = curSystem.value || '';
@@ -237,39 +877,37 @@
           alert('Please select Asset, System and Description before adding.');
           return;
         }
-        const files = Array.from(curPhotos.files || []);
-        const previews = files.map(f => URL.createObjectURL(f));
-
-        items.push({ asset, system, description, files, previews });
+        items.push({ asset, system, description, files: [...currentFiles], previews: [...currentPreviews] });
         renderItems();
         resetCurrent();
       });
 
-      // clear only current form inputs
       clearCurrentBtn.addEventListener('click', resetCurrent);
-
-      // clear whole items array
       clearItemsBtn.addEventListener('click', () => {
-        // revoke previews
-        items.forEach(it => (it.previews||[]).forEach(u=>URL.revokeObjectURL(u)));
+        if (!confirm('Clear all items?')) return;
+        items.forEach(it => (it.previews || []).forEach(u => URL.revokeObjectURL(u)));
         items = [];
         renderItems();
       });
 
       function resetCurrent() {
         curAsset.value = '';
-        curSystem.innerHTML = '<option value="">-- Select --</option>';
+        curSystem.innerHTML = '<option value="">Select System</option>';
         curSystem.disabled = true;
-        curDescription.innerHTML = '<option value="">-- Select --</option>';
+        curDescription.innerHTML = '<option value="">Select Description</option>';
         curDescription.disabled = true;
         curPhotos.value = '';
+        currentPreviews.forEach(u => URL.revokeObjectURL(u));
+        currentFiles = [];
+        currentPreviews = [];
         curPreview.innerHTML = '';
+        photoCount.style.display = 'none';
       }
 
       function renderItems() {
         itemsList.innerHTML = '';
         if (items.length === 0) {
-          itemsList.innerHTML = '<div class="text-muted">No items added yet</div>';
+          itemsList.innerHTML = '<div class="text-muted">📭 No items added yet</div>';
           return;
         }
         items.forEach((it, idx) => {
@@ -277,36 +915,44 @@
           card.className = 'item-card';
           card.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
-              <div>
+              <div style="flex:1;">
                 <div class="meta"><strong>Asset:</strong> ${escapeHtml(it.asset)} &nbsp; <strong>System:</strong> ${escapeHtml(it.system)} &nbsp; <strong>Description:</strong> ${escapeHtml(it.description)}</div>
+                <div class="photo-count mt-1" style="font-size:0.85rem;">📷 ${it.files.length} photo(s)</div>
                 <div class="mt-2 thumbs-row"></div>
               </div>
-              <div>
-                <button data-idx="${idx}" class="btn btn-sm btn-danger remove-item">Remove</button>
-              </div>
+              <div><button data-idx="${idx}" class="btn btn-sm btn-danger remove-item">🗑️ Remove</button></div>
             </div>
           `;
           const thumbsRow = card.querySelector('.thumbs-row');
-          (it.previews||[]).forEach(url => {
+          const maxShow = 6;
+          (it.previews || []).slice(0, maxShow).forEach(url => {
             const img = document.createElement('img');
             img.className = 'thumb';
             img.src = url;
+            img.style.width = '70px';
+            img.style.height = '50px';
+            img.style.marginRight = '4px';
             thumbsRow.appendChild(img);
           });
-          // remove handler
+          if (it.files.length > maxShow) {
+            const more = document.createElement('span');
+            more.textContent = `+${it.files.length - maxShow} more`;
+            more.className = 'badge bg-secondary';
+            more.style.marginLeft = '8px';
+            thumbsRow.appendChild(more);
+          }
           card.querySelector('.remove-item').addEventListener('click', (e) => {
             const i = Number(e.currentTarget.dataset.idx);
-            removeItem(i);
+            if (confirm('Remove this item?')) removeItem(i);
           });
           itemsList.appendChild(card);
         });
       }
 
       function removeItem(index) {
-        if (index<0 || index>=items.length) return;
-        // revoke object URLs
-        (items[index].previews||[]).forEach(u=>URL.revokeObjectURL(u));
-        items.splice(index,1);
+        if (index < 0 || index >= items.length) return;
+        (items[index].previews || []).forEach(u => URL.revokeObjectURL(u));
+        items.splice(index, 1);
         renderItems();
       }
 
@@ -314,68 +960,131 @@
         return String(s).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]); });
       }
 
-      // submit all: build FormData with items and per-item photos
+      function pollJobStatus(jobId) {
+        if (pollingInterval) clearInterval(pollingInterval);
+        progressContainer.style.display = 'block';
+        downloadLinks.style.display = 'none';
+        pollingInterval = setInterval(async () => {
+          try {
+            const statusUrl = `${modulePrefix}/status/${jobId}`;
+            const res = await fetch(statusUrl);
+            if (!res.ok) throw new Error('Status check failed');
+            const job = await res.json();
+            const progress = job.progress || 0;
+            progressBar.style.width = progress + '%';
+            progressBar.textContent = progress + '%';
+            
+            if (job.state === 'done') {
+              clearInterval(pollingInterval);
+              progressBar.classList.remove('progress-bar-animated');
+              progressBar.classList.add('bg-success');
+              statusBox.innerHTML = '<div class="alert alert-success">✅ Reports generated successfully!</div>';
+              
+              if (job.results && (job.results.excel_url || job.results.pdf_url)) {
+                // Show download links
+                downloadLinks.style.display = 'block';
+                
+                if (job.results.excel_url) {
+                  excelLink.href = job.results.excel_url;
+                  excelLink.style.display = 'block';
+                  // Auto-download Excel immediately
+                  autoDownload(job.results.excel_url, 'hvac_mep_report.xlsx');
+                } else {
+                  excelLink.style.display = 'none';
+                }
+                
+                if (job.results.pdf_url) {
+                  pdfLink.href = job.results.pdf_url;
+                  pdfLink.style.display = 'block';
+                  // Auto-download PDF after 1 second
+                  setTimeout(() => autoDownload(job.results.pdf_url, 'hvac_mep_report.pdf'), 1000);
+                } else {
+                  pdfLink.style.display = 'none';
+                }
+              }
+            } else if (job.state === 'failed') {
+              clearInterval(pollingInterval);
+              progressBar.classList.remove('progress-bar-animated');
+              progressBar.classList.add('bg-danger');
+              const errorMsg = job.results?.error || 'Unknown error';
+              statusBox.innerHTML = `<div class="alert alert-danger">❌ Generation failed: ${errorMsg}</div>`;
+            } else {
+              statusBox.innerHTML = `<div class="alert alert-info">⏳ Generating reports... ${progress}%</div>`;
+            }
+          } catch (err) {
+            console.error('Polling error:', err);
+          }
+        }, 1000);
+      }
+
+      function autoDownload(url, filename) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || '';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 100);
+      }
+
       async function submitAll() {
-        // capture signatures
         const techData = pads.techPad.isEmpty() ? '' : pads.techPad.toDataURL('image/png');
         const opData = pads.opPad.isEmpty() ? '' : pads.opPad.toDataURL('image/png');
         document.getElementById('techSignatureData').value = techData;
         document.getElementById('opManSignatureData').value = opData;
 
-        if (items.length === 0) {
-          if (!confirm('No items added. Submit empty form?')) return;
-        }
+        if (items.length === 0 && !confirm('No items added. Submit empty form?')) return;
 
-        statusBox.innerText = 'Preparing submission...';
+        statusBox.innerHTML = '<div class="alert alert-info">📋 Preparing submission...</div>';
+        progressContainer.style.display = 'none';
+        downloadLinks.style.display = 'none';
+        
         const fd = new FormData();
         fd.append('site_name', document.getElementById('site_name').value || '');
         fd.append('visit_date', document.getElementById('visit_date').value || '');
         fd.append('tech_signature', techData || '');
         fd.append('opMan_signature', opData || '');
-
         fd.append('items_count', items.length.toString());
         items.forEach((it, idx) => {
           fd.append(`item_${idx}_asset`, it.asset);
           fd.append(`item_${idx}_system`, it.system);
           fd.append(`item_${idx}_description`, it.description);
-          (it.files||[]).forEach(f => {
-            fd.append(`item_${idx}_photo`, f, f.name);
-          });
+          (it.files || []).forEach(f => fd.append(`item_${idx}_photo`, f, f.name));
         });
 
-        // send
         try {
-          statusBox.innerText = 'Uploading...';
+          statusBox.innerHTML = '<div class="alert alert-info">📤 Uploading...</div>';
           const submitUrl = modulePrefix + '/submit';
-          const res = await fetch(submitUrl, { method:'POST', body: fd });
+          const res = await fetch(submitUrl, { method: 'POST', body: fd });
           if (!res.ok) {
             const txt = await res.text();
             throw new Error('Server error: ' + res.status + ' ' + txt);
           }
           const json = await res.json();
-          statusBox.innerText = `Submission queued: ${json.job_id || json.submission_id || ''}`;
-          // Optionally clear items on success:
-          // clearItemsBtn.click();
+          if (json.job_id) {
+            statusBox.innerHTML = `<div class="alert alert-info">✅ Uploaded! Generating reports...</div>`;
+            pollJobStatus(json.job_id);
+          } else {
+            statusBox.innerHTML = '<div class="alert alert-warning">Submission accepted but no job ID</div>';
+          }
         } catch (err) {
-          statusBox.innerText = 'Submission failed: ' + err.message;
+          statusBox.innerHTML = `<div class="alert alert-danger">❌ Submission failed: ${err.message}</div>`;
         }
       }
 
       submitAllBtn.addEventListener('click', submitAll);
 
-      // Wait for DROPDOWN_DATA to be available, then fill assets. Dropdown initializer dispatches 'dropdowns:loaded'
-      function onDropdownsReady() {
-        fillAssets();
+      function onDropdownsReady() { 
+        fillAssets(); 
       }
-      if (typeof DROPDOWN_DATA !== 'undefined' && Object.keys(DROPDOWN_DATA||{}).length>0) {
+      
+      if (typeof DROPDOWN_DATA !== 'undefined' && Object.keys(DROPDOWN_DATA || {}).length > 0) {
         fillAssets();
       } else {
         window.addEventListener('dropdowns:loaded', onDropdownsReady, { once: true });
       }
 
-      // initial UI state
       renderItems();
-
     })();
   </script>
 </body>
