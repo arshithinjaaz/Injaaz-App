@@ -1,65 +1,489 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Cleaning - Form</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
-</head>
-<body class="p-4">
-  <div class="container">
-    <h2>Cleaning Form</h2>
-
-    <form id="mainForm">
-      <div class="mb-3">
-        <label for="site_name">Site name</label>
-        <input id="site_name" name="site_name" class="form-control" required>
-      </div>
-
-      <div class="mb-3">
-        <label for="key_person_name">Key Person/Contact Name</label>
-        <input id="key_person_name" name="key_person_name" class="form-control">
-      </div>
-
-      <div class="mb-3">
-        <label>Technician Signature</label>
-        <canvas id="techSignaturePad" style="border:1px solid #ccc; width:100%; height:120px;"></canvas>
-      </div>
-
-      <button type="button" id="submitBtn" class="btn btn-primary">Submit</button>
-      <div id="statusBox" class="mt-3"></div>
-    </form>
-  </div>
-
-  <script>
-    const modulePrefix = "{{ url_for('cleaning_bp.index') }}".replace('/form','');
-  </script>
-  <script src="{{ url_for('static', filename='form.js') }}"></script>
-  <script>
-    (function(){
-      const form = document.getElementById('mainForm');
-      const statusBox = document.getElementById('statusBox');
-      const pads = initSignaturePads();
-
-      document.getElementById('submitBtn').addEventListener('click', async () => {
-        statusBox.innerText = "Submitting...";
-        try {
-          const data = await submitForm(modulePrefix, form, pads);
-          statusBox.innerText = "Queued job: " + data.job_id;
-          const result = await pollJobStatus(modulePrefix, data.job_id, (js) => {
-            statusBox.innerText = `State: ${js.state}, progress: ${js.progress}%`;
-          });
-          if (result.state === 'done') {
-            const links = result.results.map(r => `<a href="${r.url}" target="_blank">${r.filename}</a>`).join('<br>');
-            statusBox.innerHTML = `Done.<br>${links}`;
-          } else {
-            statusBox.innerText = "Job failed: " + JSON.stringify(result.results);
-          }
-        } catch (e) {
-          statusBox.innerText = "Error: " + e.message;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Assessment Report Form - INJAAZ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script> 
+    <style>
+        body { background-color: #f4f7f6; }
+        .form-container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1); 
+            margin-bottom: 20px;
         }
-      });
-    })();
-  </script>
+        .header-section { border-bottom: 3px solid #125435; padding-bottom: 15px; margin-bottom: 20px; }
+        .nav-tabs .nav-link { color: #555; border: none; border-bottom: 3px solid transparent; margin-right: 15px; font-weight: 500;}
+        .nav-tabs .nav-link.active { color: #125435; border-color: #125435; background-color: transparent; font-weight: bold;}
+        .tab-content { padding-top: 20px; }
+        .section-heading { color: #125435; font-weight: bold; margin-bottom: 15px; border-left: 5px solid #125435; padding-left: 10px; }
+        .btn-success-custom { background-color: #125435; border-color: #125435; color: white; }
+        .btn-success-custom:hover { background-color: #17794b; border-color: #0d3c26; color: white; }
+        .image-preview { max-width: 100px; max-height: 100px; object-fit: cover; border-radius: 4px; }
+        .photo-container { position: relative; display: inline-block; margin: 5px; border: 1px solid #ddd; padding: 5px; border-radius: 6px; }
+        .remove-photo { position: absolute; top: 0; right: 0; background: red; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; line-height: 1; padding: 0; cursor: pointer; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-11">
+            <div class="form-container">
+                
+                <div class="header-section text-center">
+                    <h2 class="text-uppercase" style="color: #125435;">Site Assessment Report</h2>
+                </div>
+
+                <div id="status-message" class="alert d-none" role="alert"></div>
+
+                <form id="site-assessment-form">
+                    <ul class="nav nav-tabs" id="assessmentTabs" role="tablist">
+                        <li class="nav-item" role="presentation"><button class="nav-link active" id="tab-1-link" data-bs-toggle="tab" data-bs-target="#tab-1" type="button" role="tab">1. Project & Facility</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-2-link" data-bs-toggle="tab" data-bs-target="#tab-2" type="button" role="tab">2. Cleaning & Scope</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab">3. Safety & Staffing</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-4-link" data-bs-toggle="tab" data-bs-target="#tab-4" type="button" role="tab">4. Visual Evidence</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-5-link" data-bs-toggle="tab" data-bs-target="#tab-5" type="button" role="tab">5. Sign-off & Submit</button></li>
+                    </ul>
+
+                    <div class="tab-content" id="assessmentTabContent">
+                        
+                        <!-- TAB 1: Project & Facility -->
+                        <div class="tab-pane fade show active" id="tab-1" role="tabpanel">
+                            <h4 class="section-heading">Project & Client Details</h4>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="client_name" class="form-label">Client Name</label>
+                                    <input type="text" class="form-control" id="client_name" name="client_name">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="project_name" class="form-label">Project Name</label>
+                                    <input type="text" class="form-control" id="project_name" name="project_name">
+                                </div>
+                                <div class="col-12">
+                                    <label for="site_address" class="form-label">Site Address</label>
+                                    <input type="text" class="form-control" id="site_address" name="site_address">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="date_of_visit" class="form-label">Date of Visit</label>
+                                    <input type="date" class="form-control" id="date_of_visit" name="date_of_visit">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="key_person_name" class="form-label">Key Person/Contact Name</label>
+                                    <input type="text" class="form-control" id="key_person_name" name="key_person_name">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="contact_number" class="form-label">Contact Number</label>
+                                    <input type="tel" class="form-control" id="contact_number" name="contact_number">
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <h4 class="section-heading">Site Count & Current Operations</h4>
+                            <div class="row g-3">
+                                <div class="col-md-4"><label class="form-label">Room Count (General)</label><input type="number" class="form-control" name="room_count" min="0"></div>
+                                <div class="col-md-4"><label class="form-label">Current Team Size</label><input type="number" class="form-control" name="current_team_size" min="0"></div>
+                                <div class="col-md-4"><label class="form-label">Lift Count (Total)</label><input type="number" class="form-control" name="lift_count_total" min="0"></div>
+                                <div class="col-12"><label class="form-label">Current Team Description</label><textarea class="form-control" name="current_team_desc" rows="2" placeholder="e.g., 5 cleaners, 1 supervisor, 8 hours/day"></textarea></div>
+                                
+                                <div class="col-12"><h5 class="mt-3 text-secondary">Facility Area Counts</h5></div>
+
+                                <div class="col-md-4"><label class="form-label">Floor (Description/Name)</label><input type="text" class="form-control" name="facility_floor"></div>
+                                <div class="col-md-4"><label class="form-label">Ground Parking (Count)</label><input type="number" class="form-control" name="facility_ground_parking" min="0"></div>
+                                <div class="col-md-4"><label class="form-label">Basement (Count)</label><input type="number" class="form-control" name="facility_basement" min="0"></div>
+                                
+                                <div class="col-md-4"><label class="form-label">Podium (Count)</label><input type="number" class="form-control" name="facility_podium" min="0"></div>
+                                <div class="col-md-4"><label class="form-label">Gym Room (Count)</label><input type="number" class="form-control" name="facility_gym_room" min="0"></div>
+                                <div class="col-md-4"><label class="form-label">Swimming Pool (Count)</label><input type="number" class="form-control" name="facility_swimming_pool" min="0"></div>
+
+                                <div class="col-md-4"><label class="form-label">Washroom (Male Count)</label><input type="number" class="form-control" name="facility_washroom_male" min="0"></div>
+                                <div class="col-md-4"><label class="form-label">Washroom (Female Count)</label><input type="number" class="form-control" name="facility_washroom_female" min="0"></div>
+                                
+                                <div class="col-md-4"><label class="form-label">Changing Room (Count)</label><input type="number" class="form-control" name="facility_changing_room" min="0"></div>
+                                <div class="col-md-4"><label class="form-label">Kids Play Area (Count)</label><input type="number" class="form-control" name="facility_play_kids_place" min="0"></div>
+                                
+                                <div class="col-md-4"><label class="form-label">Garbage Room (Count)</label><input type="number" class="form-control" name="facility_garbage_room" min="0"></div>
+                                <div class="col-md-4"><label class="form-label">Floor Chute Room (Count)</label><input type="number" class="form-control" name="facility_floor_chute_room" min="0"></div>
+                                <div class="col-md-4"><label class="form-label">Staircase (Count)</label><input type="number" class="form-control" name="facility_staircase" min="0"></div>
+                                
+                                <div class="col-md-4"><label class="form-label">Floor Service Room (Count)</label><input type="number" class="form-control" name="facility_floor_service_room" min="0"></div>
+                                <div class="col-md-4"><label class="form-label">Cleaner (Total Count)</label><input type="number" class="form-control" name="facility_cleaner_count" min="0"></div>
+                            </div>
+
+                            <div class="d-flex mt-4">
+                                <button type="button" class="btn btn-primary ms-auto" onclick="goToTab(2)">Next: Cleaning & Scope &raquo;</button>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: Cleaning & Scope -->
+                        <div class="tab-pane fade" id="tab-2" role="tabpanel">
+                            <h4 class="section-heading">Cleaning Requirements & Scope</h4>
+
+                            <h5 class="mt-4 text-success">Routine Cleaning Scope (Areas)</h5>
+                            <div class="row g-2 ps-3 border p-3 rounded mb-4">
+                                <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="scope_offices" value="True"><label class="form-check-label">Offices</label></div></div>
+                                <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="scope_toilets" value="True"><label class="form-check-label">Toilets/Washrooms</label></div></div>
+                                <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="scope_hallways" value="True"><label class="form-check-label">Corridors/Hallways</label></div></div>
+                                <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="scope_kitchen" value="True"><label class="form-check-label">Kitchen/Pantry</label></div></div>
+                                <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="scope_exterior" value="True"><label class="form-check-label">Building Exterior</label></div></div>
+                                <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="scope_special_care" value="True"><label class="form-check-label">Special Care Areas</label></div></div>
+                            </div>
+
+                            <h5 class="mt-4 text-success">Deep Cleaning Requirements</h5>
+                            <div class="row g-3 border p-3 rounded mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Deep Cleaning Required?</label>
+                                    <select class="form-select" name="deep_clean_required">
+                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Areas to Deep Clean</label>
+                                    <input type="text" class="form-control" name="deep_clean_areas" placeholder="e.g., Marble floors, carpets">
+                                </div>
+                            </div>
+
+                            <h5 class="mt-4 text-success">Waste Disposal</h5>
+                            <div class="row g-3 ps-3 mb-4">
+                                <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="waste_general" value="True" checked><label class="form-check-label">General Waste</label></div></div>
+                                <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="waste_recycling" value="True"><label class="form-check-label">Recycling</label></div></div>
+                                <div class="col-md-6">
+                                    <input class="form-check-input" type="checkbox" name="waste_hazardous" value="True">
+                                    <label class="form-check-label">Hazardous Waste</label>
+                                    <input type="text" class="form-control mt-2" name="waste_hazardous_details" placeholder="Specify type">
+                                </div>
+                            </div>
+                            
+                            <h4 class="section-heading">Special Considerations</h4>
+                            <div class="row g-3">
+                                <div class="col-12"><label class="form-label">Restricted Access Areas?</label><textarea class="form-control" name="restricted_access" rows="2"></textarea></div>
+                                <div class="col-12"><label class="form-label">Pest Control Needed?</label><textarea class="form-control" name="pest_control" rows="2"></textarea></div>
+                            </div>
+
+                            <div class="d-flex justify-content-between mt-4">
+                                <button type="button" class="btn btn-secondary" onclick="goToTab(1)">&laquo; Previous</button>
+                                <button type="button" class="btn btn-primary" onclick="goToTab(3)">Next: Safety & Staffing &raquo;</button>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: Safety & Staffing -->
+                        <div class="tab-pane fade" id="tab-3" role="tabpanel">
+                            <h4 class="section-heading">Safety & Maintenance Assessment</h4>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Primary Working Hours</label>
+                                    <input type="text" class="form-control" name="working_hours" placeholder="e.g., 8:00 AM - 5:00 PM">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Required Team Size</label>
+                                    <input type="number" class="form-control" name="required_team_size" min="0">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Site Access Requirements</label>
+                                    <textarea class="form-control" name="site_access_requirements" rows="2"></textarea>
+                                </div>
+                            </div>
+                            
+                            <h5 class="mt-4 text-success">Maintenance and Equipment</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Current Equipment Condition</label>
+                                    <select class="form-select" name="facility_equipment_condition">
+                                        <option value="Excellent">Excellent</option>
+                                        <option value="Good" selected>Good</option>
+                                        <option value="Fair">Fair</option>
+                                        <option value="Poor">Poor</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Required Equipment</label>
+                                    <input type="text" class="form-control" name="required_equipment">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Maintenance Notes</label>
+                                    <textarea class="form-control" name="facility_maintenance_notes" rows="3"></textarea>
+                                </div>
+                            </div>
+                            
+                            <h5 class="mt-4 text-success">Safety and Risk</h5>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">High-Risk Areas</label>
+                                    <textarea class="form-control" name="high_risk_areas" rows="2"></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Suggested Safety Measures/PPE</label>
+                                    <input type="text" class="form-control" name="suggested_safety_ppe">
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between mt-4">
+                                <button type="button" class="btn btn-secondary" onclick="goToTab(2)">&laquo; Previous</button>
+                                <button type="button" class="btn btn-primary" onclick="goToTab(4)">Next: Visual Evidence &raquo;</button>
+                            </div>
+                        </div>
+
+                        <!-- TAB 4: Visual Evidence -->
+                        <div class="tab-pane fade" id="tab-4" role="tabpanel">
+                            <h4 class="section-heading">Visual Evidence</h4>
+                            
+                            <div class="mb-3">
+                                <label for="photo_upload" class="form-label">Upload Images</label>
+                                <input class="form-control" type="file" id="photo_upload" multiple accept="image/*">
+                                <small class="form-text text-muted">Max 5MB per image</small>
+                            </div>
+
+                            <div id="photo-previews" class="d-flex flex-wrap"></div>
+                            
+                            <div class="mt-3">
+                                <button type="button" id="clear-photos-btn" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Clear All</button>
+                            </div>
+                            
+                            <hr class="my-4">
+                            
+                            <h4 class="section-heading">Summary</h4>
+                            <div class="mb-3">
+                                <label for="general_comments" class="form-label">General Comments</label>
+                                <textarea class="form-control" id="general_comments" name="general_comments" rows="4"></textarea>
+                            </div>
+
+                            <div class="d-flex justify-content-between mt-4">
+                                <button type="button" class="btn btn-secondary" onclick="goToTab(3)">&laquo; Previous</button>
+                                <button type="button" class="btn btn-primary" onclick="goToTab(5)">Next: Sign-off &raquo;</button>
+                            </div>
+                        </div>
+
+                        <!-- TAB 5: Sign-off & Submit -->
+                        <div class="tab-pane fade" id="tab-5" role="tabpanel">
+                            <h4 class="section-heading">Sign-off & Submission</h4>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label">Technician Signature</label>
+                                    <div style="border: 1px solid #ced4da; border-radius: 4px;">
+                                        <canvas id="tech_signature_canvas" class="w-100" height="150"></canvas>
+                                    </div>
+                                    <input type="text" class="form-control mt-2" name="assessor_name" placeholder="Name (Printed)">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="clearSignature('tech_signature_canvas')">Clear</button>
+                                </div>
+
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label">Client Signature</label>
+                                    <div style="border: 1px solid #ced4da; border-radius: 4px;">
+                                        <canvas id="contact_signature_canvas" class="w-100" height="150"></canvas>
+                                    </div>
+                                    <input type="text" class="form-control mt-2" name="contact_name" placeholder="Name (Printed)">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="clearSignature('contact_signature_canvas')">Clear</button>
+                                </div>
+                            </div>
+                            
+                            <input type="hidden" id="tech_signature_data" name="tech_signature">
+                            <input type="hidden" id="contact_signature_data" name="contact_signature">
+                            
+                            <div class="d-flex justify-content-between mt-4">
+                                <button type="button" class="btn btn-secondary" onclick="goToTab(4)">&laquo; Previous</button>
+                                <button type="submit" class="btn btn-lg btn-success-custom">
+                                    <i class="fas fa-file-download me-2"></i> Submit & Generate Reports
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const modulePrefix = '/cleaning';
+
+    function goToTab(tabNumber) {
+        const tabLink = document.getElementById(`tab-${tabNumber}-link`);
+        if (tabLink) new bootstrap.Tab(tabLink).show();
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('site-assessment-form');
+        const statusDiv = document.getElementById('status-message');
+        const photoUpload = document.getElementById('photo_upload');
+        const photoPreviews = document.getElementById('photo-previews');
+        const clearPhotosBtn = document.getElementById('clear-photos-btn');
+        let photoBase64 = [];
+
+        // Signature Pads
+        const techCanvas = document.getElementById('tech_signature_canvas');
+        const contactCanvas = document.getElementById('contact_signature_canvas');
+        let techSignaturePad = null;
+        let contactSignaturePad = null;
+        
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            
+            function setupCanvas(canvas, signaturePad) {
+                if (!signaturePad || canvas.offsetWidth === 0) return;
+                const data = signaturePad.toData(); 
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext('2d').scale(ratio, ratio);
+                canvas.getContext('2d').fillStyle = 'white';
+                canvas.getContext('2d').fillRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+                signaturePad.fromData(data); 
+            }
+
+            if (techCanvas) setupCanvas(techCanvas, techSignaturePad);
+            if (contactCanvas) setupCanvas(contactCanvas, contactSignaturePad);
+        }
+        
+        if (techCanvas) techSignaturePad = new SignaturePad(techCanvas, { backgroundColor: 'white' });
+        if (contactCanvas) contactSignaturePad = new SignaturePad(contactCanvas, { backgroundColor: 'white' });
+        
+        document.getElementById('tab-5-link').addEventListener('shown.bs.tab', resizeCanvas);
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        window.clearSignature = function(canvasId) {
+            const pad = canvasId === 'tech_signature_canvas' ? techSignaturePad : contactSignaturePad;
+            if (pad) {
+                pad.clear();
+                const ctx = pad.canvas.getContext('2d');
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, pad.canvas.offsetWidth, pad.canvas.offsetHeight);
+            }
+        }
+
+        // Photo Handling
+        function renderPhotoPreviews() {
+            photoPreviews.innerHTML = '';
+            photoBase64.forEach((base64, index) => {
+                const container = document.createElement('div');
+                container.className = 'photo-container';
+                const img = document.createElement('img');
+                img.src = base64;
+                img.className = 'image-preview';
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'remove-photo';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.addEventListener('click', () => {
+                    photoBase64.splice(index, 1);
+                    renderPhotoPreviews();
+                });
+                container.appendChild(img);
+                container.appendChild(removeBtn);
+                photoPreviews.appendChild(container);
+            });
+        }
+
+        photoUpload.addEventListener('change', function(e) {
+            Array.from(e.target.files).forEach(file => {
+                if (file.size > 5 * 1024 * 1024) {
+                    alert(`Photo too large: ${file.name}`);
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    photoBase64.push(ev.target.result);
+                    renderPhotoPreviews();
+                };
+                reader.readAsDataURL(file);
+            });
+            e.target.value = '';
+        });
+
+        clearPhotosBtn.addEventListener('click', () => {
+            photoBase64 = [];
+            renderPhotoPreviews();
+        });
+
+        // Form Submission with Custom Validation
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            // CUSTOM VALIDATION
+            const clientName = document.getElementById('client_name').value.trim();
+            const projectName = document.getElementById('project_name').value.trim();
+            const visitDate = document.getElementById('date_of_visit').value.trim();
+            
+            if (!clientName || !projectName || !visitDate) {
+                statusDiv.className = 'alert alert-warning';
+                statusDiv.textContent = 'Please fill in Client Name, Project Name, and Visit Date (Tab 1)';
+                statusDiv.classList.remove('d-none');
+                goToTab(1);
+                return;
+            }
+
+            const formData = new FormData(form);
+            const data = {};
+            
+            for (const [key, value] of formData.entries()) data[key] = value;
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                data[cb.name] = formData.has(cb.name) ? 'True' : 'False';
+            });
+            
+            data['photos'] = photoBase64;
+            data['tech_signature'] = techSignaturePad && !techSignaturePad.isEmpty() ? techSignaturePad.toDataURL() : '';
+            data['contact_signature'] = contactSignaturePad && !contactSignaturePad.isEmpty() ? contactSignaturePad.toDataURL() : '';
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            statusDiv.className = 'alert alert-info';
+            statusDiv.textContent = 'Submitting...';
+            statusDiv.classList.remove('d-none');
+            
+            try {
+                const submitUrl = `${modulePrefix}/submit`;
+                console.log('Submitting to:', submitUrl);
+                
+                const response = await fetch(submitUrl, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Submission failed');
+                
+                statusDiv.textContent = `Job queued: ${result.job_id}`;
+                
+                const pollInterval = setInterval(async () => {
+                    const jobResponse = await fetch(`${modulePrefix}/job-status/${result.job_id}`);
+                    const jobData = await jobResponse.json();
+                    
+                    if (jobData.state === 'done') {
+                        clearInterval(pollInterval);
+                        statusDiv.className = 'alert alert-success';
+                        statusDiv.innerHTML = `
+                            <strong>Success!</strong><br>
+                            <a href="${jobData.results.excel}" class="btn btn-sm btn-success mt-2">Download Excel</a>
+                            <a href="${jobData.results.pdf}" class="btn btn-sm btn-danger mt-2">Download PDF</a>
+                        `;
+                    } else if (jobData.state === 'failed') {
+                        clearInterval(pollInterval);
+                        statusDiv.className = 'alert alert-danger';
+                        statusDiv.textContent = "Failed: " + (jobData.error || 'Unknown');
+                    } else {
+                        statusDiv.textContent = `Progress: ${jobData.progress}%`;
+                    }
+                }, 2000);
+                
+            } catch (e) {
+                console.error('Submission error:', e);
+                statusDiv.className = 'alert alert-danger';
+                statusDiv.textContent = "Error: " + e.message;
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    });
+</script>
 </body>
 </html>
