@@ -18,6 +18,7 @@ from reportlab.lib.units import cm, inch
 from reportlab.platypus import (Image, PageBreak, SimpleDocTemplate, Spacer,
                                   Table, TableStyle, Paragraph)
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from common.utils import get_image_for_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -314,3 +315,131 @@ def create_pdf_report(data, output_dir):
             ['Client Name:', data.get('client_name', 'N/A')],
             ['Project Name:', data.get('project_name', 'N/A')],
             ['Site Address:', data.get('site_address', 'N/A')],
+            ['Date of Visit:', data.get('date_of_visit', 'N/A')],
+            ['Key Person:', data.get('key_person_name', 'N/A')],
+            ['Contact Number:', data.get('contact_number', 'N/A')],
+        ]
+        
+        client_table = Table(client_info, colWidths=[4*cm, 12*cm])
+        client_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E8F5E9')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.append(client_table)
+        story.append(Spacer(1, 0.3*inch))
+        
+        # SITE COUNT & OPERATIONS
+        story.append(Paragraph("Site Count & Current Operations", heading_style))
+        operations_data = [
+            ['Room Count:', str(data.get('room_count', 'N/A'))],
+            ['Current Team Size:', str(data.get('current_team_size', 'N/A'))],
+            ['Lift Count:', str(data.get('lift_count_total', 'N/A'))],
+            ['Team Description:', str(data.get('current_team_desc', 'N/A'))],
+        ]
+        
+        ops_table = Table(operations_data, colWidths=[4*cm, 12*cm])
+        ops_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E8F5E9')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.append(ops_table)
+        story.append(Spacer(1, 0.3*inch))
+        
+        # GENERAL COMMENTS
+        story.append(Paragraph("General Comments", heading_style))
+        comments = data.get('general_comments', 'No comments provided.')
+        story.append(Paragraph(comments, normal_style))
+        story.append(Spacer(1, 0.3*inch))
+        
+        # PHOTOS
+        photos = data.get('photos', [])
+        if photos:
+            story.append(Paragraph("Site Photos", heading_style))
+            for i, photo_info in enumerate(photos):
+                try:
+                    img_data, is_url = get_image_for_pdf(photo_info)
+                    if img_data:
+                        img = Image(img_data, width=4*inch, height=3*inch)
+                        story.append(img)
+                        story.append(Spacer(1, 0.1*inch))
+                        if (i + 1) % 2 == 0:
+                            story.append(Spacer(1, 0.2*inch))
+                except Exception as e:
+                    logger.error(f"Failed to add photo {i}: {e}")
+        
+        # SIGNATURES
+        story.append(Paragraph("Signatures", heading_style))
+        
+        sig_data = []
+        
+        # Technician signature
+        tech_sig = data.get('tech_signature', {})
+        try:
+            img_data, is_url = get_image_for_pdf(tech_sig)
+            if img_data:
+                tech_img = Image(img_data, width=2*inch, height=1*inch)
+                sig_data.append(['Technician Signature:', tech_img])
+            else:
+                sig_data.append(['Technician Signature:', 'Not provided'])
+        except Exception as e:
+            logger.error(f"Failed to load tech signature: {e}")
+            sig_data.append(['Technician Signature:', 'Signature not available'])
+        
+        # Contact signature
+        contact_sig = data.get('contact_signature', {})
+        try:
+            img_data, is_url = get_image_for_pdf(contact_sig)
+            if img_data:
+                contact_img = Image(img_data, width=2*inch, height=1*inch)
+                sig_data.append(['Contact Person Signature:', contact_img])
+            else:
+                sig_data.append(['Contact Person Signature:', 'Not provided'])
+        except Exception as e:
+            logger.error(f"Failed to load contact signature: {e}")
+            sig_data.append(['Contact Person Signature:', 'Signature not available'])
+        
+        if sig_data:
+            sig_table = Table(sig_data, colWidths=[4*cm, 8*cm])
+            sig_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E8F5E9')),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ]))
+            story.append(sig_table)
+        
+        # Build PDF
+        doc.build(story)
+        
+        if not os.path.exists(pdf_path):
+            raise Exception(f"PDF file not created at {pdf_path}")
+        
+        logger.info(f"✅ PDF report created: {pdf_path}")
+        return pdf_path
+        
+    except Exception as e:
+        logger.error(f"❌ PDF generation error: {str(e)}")
+        raise

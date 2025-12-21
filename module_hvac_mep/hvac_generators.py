@@ -10,6 +10,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from io import BytesIO
 import base64
+from common.utils import get_image_for_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +167,7 @@ def create_pdf_report(data, output_dir):
                 story.append(item_table)
                 story.append(Spacer(1, 0.15*inch))
                 
-                # PHOTOS - FIXED: Extract path from dict
+                # PHOTOS - Support both cloud URLs and local paths
                 photos = item.get('photos', [])
                 
                 if photos:
@@ -180,18 +181,12 @@ def create_pdf_report(data, output_dir):
                         
                         for photo_item in row_photos:
                             try:
-                                # CRITICAL FIX: Extract path string from dict
-                                if isinstance(photo_item, dict):
-                                    photo_path = photo_item.get('path')
-                                else:
-                                    photo_path = photo_item
-                                
-                                if photo_path and os.path.exists(photo_path):
-                                    img = Image(photo_path, width=2.5*inch, height=2*inch)
+                                img_data, is_url = get_image_for_pdf(photo_item)
+                                if img_data:
+                                    img = Image(img_data, width=2.5*inch, height=2*inch)
                                     photo_row.append(img)
                                 else:
-                                    logger.warning(f"Photo not found: {photo_path}")
-                                    photo_row.append(Paragraph(f"Image not found", normal_style))
+                                    photo_row.append(Paragraph(f"Image not available", normal_style))
                             except Exception as e:
                                 logger.error(f"Error loading photo {photo_item}: {str(e)}")
                                 photo_row.append(Paragraph(f"Error loading image", normal_style))
@@ -232,33 +227,17 @@ def create_pdf_report(data, output_dir):
         tech_signature = data.get('tech_signature', '')
         story.append(Paragraph("Technician Signature:", subheading_style))
         
-        tech_sig_data = None
-        if isinstance(tech_signature, dict):
-            tech_sig_data = tech_signature.get('path')
-        elif isinstance(tech_signature, str):
-            tech_sig_data = tech_signature
-        
-        if tech_sig_data:
-            try:
-                if isinstance(tech_sig_data, str) and os.path.exists(tech_sig_data):
-                    # CRITICAL FIX: Keep aspect ratio
-                    sig_img = Image(tech_sig_data)
-                    sig_img._restrictSize(3*inch, 1.5*inch)  # Max size, keeps aspect ratio
-                    story.append(sig_img)
-                elif isinstance(tech_sig_data, str) and tech_sig_data.startswith('data:image'):
-                    img_data = tech_sig_data.split(',')[1]
-                    img_bytes = base64.b64decode(img_data)
-                    img_buffer = BytesIO(img_bytes)
-                    sig_img = Image(img_buffer)
-                    sig_img._restrictSize(3*inch, 1.5*inch)  # Max size, keeps aspect ratio
-                    story.append(sig_img)
-                else:
-                    story.append(Paragraph("Signature not available", normal_style))
-            except Exception as e:
-                logger.error(f"❌ Error processing tech signature: {str(e)}")
-                story.append(Paragraph("Signature not available", normal_style))
-        else:
-            story.append(Paragraph("Not signed", normal_style))
+        try:
+            img_data, is_url = get_image_for_pdf(tech_signature)
+            if img_data:
+                sig_img = Image(img_data)
+                sig_img._restrictSize(3*inch, 1.5*inch)  # Max size, keeps aspect ratio
+                story.append(sig_img)
+            else:
+                story.append(Paragraph("Not signed", normal_style))
+        except Exception as e:
+            logger.error(f"❌ Error processing tech signature: {str(e)}")
+            story.append(Paragraph("Signature not available", normal_style))
         
         story.append(Spacer(1, 0.3*inch))
         
@@ -266,33 +245,17 @@ def create_pdf_report(data, output_dir):
         manager_signature = data.get('opman_signature', '')
         story.append(Paragraph("Operation Manager Signature:", subheading_style))
         
-        manager_sig_data = None
-        if isinstance(manager_signature, dict):
-            manager_sig_data = manager_signature.get('path')
-        elif isinstance(manager_signature, str):
-            manager_sig_data = manager_signature
-        
-        if manager_sig_data:
-            try:
-                if isinstance(manager_sig_data, str) and os.path.exists(manager_sig_data):
-                    # CRITICAL FIX: Keep aspect ratio
-                    sig_img = Image(manager_sig_data)
-                    sig_img._restrictSize(3*inch, 1.5*inch)  # Max size, keeps aspect ratio
-                    story.append(sig_img)
-                elif isinstance(manager_sig_data, str) and manager_sig_data.startswith('data:image'):
-                    img_data = manager_sig_data.split(',')[1]
-                    img_bytes = base64.b64decode(img_data)
-                    img_buffer = BytesIO(img_bytes)
-                    sig_img = Image(manager_sig_data)
-                    sig_img._restrictSize(3*inch, 1.5*inch)  # Max size, keeps aspect ratio
-                    story.append(sig_img)
-                else:
-                    story.append(Paragraph("Signature not available", normal_style))
-            except Exception as e:
-                logger.error(f"❌ Error processing manager signature: {str(e)}")
-                story.append(Paragraph("Signature not available", normal_style))
-        else:
-            story.append(Paragraph("Not signed", normal_style))
+        try:
+            img_data, is_url = get_image_for_pdf(manager_signature)
+            if img_data:
+                sig_img = Image(img_data)
+                sig_img._restrictSize(3*inch, 1.5*inch)  # Max size, keeps aspect ratio
+                story.append(sig_img)
+            else:
+                story.append(Paragraph("Not signed", normal_style))
+        except Exception as e:
+            logger.error(f"❌ Error processing manager signature: {str(e)}")
+            story.append(Paragraph("Signature not available", normal_style))
         
         # Footer
         story.append(Spacer(1, 0.5*inch))

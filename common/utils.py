@@ -2,7 +2,10 @@ import os
 import uuid
 import json
 import time
+import logging
 from werkzeug.utils import secure_filename
+
+logger = logging.getLogger(__name__)
 
 def random_id(prefix="job"):
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
@@ -106,3 +109,131 @@ def read_job_state_with_config(job_id, config):
     """Wrapper that extracts JOBS_DIR from config dict"""
     jobs_dir = config.get('JOBS_DIR')
     return read_job_state(jobs_dir, job_id)
+
+# ---------- Cloud Storage Integration ----------
+
+def upload_file_to_cloud(file_storage, folder="uploads"):
+    """
+    Upload file to Cloudinary and return secure URL.
+    Falls back to local storage if Cloudinary is not configured.
+    Returns (url, is_cloud) tuple.
+    """
+    try:
+        from app.services.cloudinary_service import init_cloudinary, upload_local_file
+        
+        if not init_cloudinary():
+            logger.warning("Cloudinary not configured, falling back to local storage")
+            return None, False
+        
+        # Save temporarily to upload to Cloudinary
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        filename = secure_filename(file_storage.filename)
+        if not filename:
+            filename = f"file_{int(time.time())}"
+        unique = f"{uuid.uuid4().hex[:8]}"
+        base, ext = os.path.splitext(filename)
+        temp_filename = f"{base}_{unique}{ext}"
+        temp_path = os.path.join(temp_dir, temp_filename)
+        
+        file_storage.save(temp_path)
+        
+        # Upload to Cloudinary
+        public_id_prefix = f"{folder}/{base}_{unique}"
+        url = upload_local_file(temp_path, public_id_prefix)
+        
+        # Clean up temp file
+        try:
+            os.remove(temp_path)
+        except:
+            pass
+        
+        if url:
+            logger.info(f"✅ Uploaded to Cloudinary: {url}")
+            return url, True
+        else:
+            logger.error("❌ Cloudinary upload failed")
+            return None, False
+            
+    except Exception as e:
+        logger.error(f"❌ Cloud upload error: {e}")
+        return None, False
+
+def save_uploaded_file_cloud(file_storage, uploads_dir, folder="uploads"):
+    """
+    Save file to cloud storage (Cloudinary) - CLOUD ONLY, NO LOCAL FALLBACK.
+    Returns dict: {"url": str, "is_cloud": bool, "filename": str or None}
+    Raises exception if cloud storage is not configured or upload fails.
+    """
+    cloud_url, is_cloud = upload_file_to_cloud(file_storage, folder=folder)
+    
+    if is_cloud and cloud_url:
+        return {
+            "url": cloud_url,
+            "is_cloud": True,
+            "filename": None  # Not stored locally
+        }
+    
+    # No fallback - raise error
+    logger.error("❌ CLOUD STORAGE REQUIRED: Cloudinary not configured or upload failed")
+    raise Exception("Cloud storage (Cloudinary) is required. Please configure CLOUDINARY_* environment variables.")
+
+def upload_base64_to_cloud(data_uri, folder="signatures", prefix="sig"):
+    """
+    Upload base64 data URI (signature) to Cloudinary - CLOUD ONLY.
+    Returns (url, is_cloud) tuple.
+    Raises exception if cloud storage fails.
+    """
+    try:
+        from app.services.cloudinary_service import upload_base64_signature
+        
+        url = upload_base64_signature(data_uri, f"{folder}/{prefix}")
+        if url:
+            logger.info(f"✅ Uploaded signature to Cloudinary: {url}")
+            return url, True
+        else:
+            logger.error("❌ CLOUD STORAGE REQUIRED: Signature upload to Cloudinary failed")
+            raise Exception("Cloud storage (Cloudinary) signature upload failed. Check credentials.")
+            
+    except Exception as e:
+        logger.error(f"❌ Cloud signature upload error: {e}")
+        raise Exception(f"Cloud storage required but failed: {e}")
+
+def get_image_for_pdf(image_info):
+    """
+    Get image data (path or BytesIO) for PDF generation.
+    Handles both cloud URLs and local paths.
+    
+    Args:
+        image_info: Can be a dict with 'url' or 'path' keys, or a string path
+        
+    Returns:
+        (image_data, is_url) tuple where image_data is path or BytesIO stream
+    """
+    import io
+    import requests
+    
+    # Handle string path (legacy)
+    if isinstance(image_info, str):
+        if os.path.exists(image_info):
+            return image_info, False
+        return None, False
+    
+    # Handle dict with url or path
+    if isinstance(image_info, dict):
+        # Try cloud URL first
+        if image_info.get('url') and image_info.get('is_cloud'):
+            try:
+                response = requests.get(image_info['url'], timeout=10)
+                response.raise_for_status()
+                return io.BytesIO(response.content), True
+            except Exception as e:
+                logger.error(f"Failed to fetch cloud image {image_info['url']}: {e}")
+                # Fall through to try local path
+        
+        # Try local path
+        path = image_info.get('path')
+        if path and os.path.exists(path):
+            return path, False
+    
+    return None, False

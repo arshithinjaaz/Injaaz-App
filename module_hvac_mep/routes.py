@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 from common.utils import (
     random_id,
     save_uploaded_file,
+    save_uploaded_file_cloud,
+    upload_base64_to_cloud,
     mark_job_started,
     read_job_state,
     update_job_progress,
@@ -127,32 +129,21 @@ _DATAURL_RE = re.compile(r"data:(?P<mime>[^;]+);base64,(?P<data>.+)")
 
 def save_signature_dataurl(dataurl, uploads_dir, prefix="signature"):
     """
-    Decode a data URL (data:image/png;base64,...) and save as PNG under uploads_dir.
-    Returns (saved_filename, file_path, public_url) or (None, None, None) on failure.
+    Upload signature to cloud storage - CLOUD ONLY.
+    Returns (saved_filename_or_none, file_path_or_none, public_url) tuple.
+    Raises exception if cloud upload fails.
     """
     if not dataurl:
         return None, None, None
-    m = _DATAURL_RE.match(dataurl)
-    if not m:
-        return None, None, None
-    mime = m.group("mime")
-    b64 = m.group("data")
-    ext = "png"
-    if mime and "/" in mime:
-        ext = mime.split("/")[-1]
-    try:
-        os.makedirs(uploads_dir, exist_ok=True)
-        raw = base64.b64decode(b64)
-        fname = f"{prefix}_{int(time.time())}_{random_id()}.{ext}"
-        path = os.path.join(uploads_dir, fname)
-        with open(path, "wb") as fh:
-            fh.write(raw)
-        # CRITICAL FIX: Return filename, path, AND url
-        url = url_for("hvac_mep_bp.download_generated", filename=f"uploads/{fname}", _external=True)
-        return fname, path, url  # <- Now returns 3 values
-    except Exception:
-        traceback.print_exc()
-        return None, None, None
+    
+    # Cloud upload only - no fallback
+    cloud_url, is_cloud = upload_base64_to_cloud(dataurl, folder="signatures", prefix=prefix)
+    if is_cloud and cloud_url:
+        logger.info(f"✅ Signature uploaded to cloud: {cloud_url}")
+        return None, None, cloud_url  # No local file
+    
+    # Should never reach here due to exception in upload_base64_to_cloud
+    raise Exception("Cloud storage required but signature upload failed")
 
 
 # ---------- Submit route (handles multi-item + per-item photos + signatures) ----------
@@ -210,15 +201,19 @@ def submit():
                 uploaded_files = request.files.getlist(file_field) or []
                 for f in uploaded_files:
                     if f and getattr(f, "filename", None):
-                        saved_name = save_uploaded_file(f, UPLOADS_DIR)
-                        photos_saved.append(
-                            {
+                        try:
+                            # Upload to cloud (required)
+                            result = save_uploaded_file_cloud(f, UPLOADS_DIR, folder="hvac_photos")
+                            photos_saved.append({
                                 "field": file_field,
-                                "saved": saved_name,
-                                "path": os.path.join(UPLOADS_DIR, saved_name),
-                                "url": url_for("hvac_mep_bp.download_generated", filename=f"uploads/{saved_name}", _external=True),
-                            }
-                        )
+                                "saved": None,
+                                "path": None,
+                                "url": result["url"],
+                                "is_cloud": True
+                            })
+                        except Exception as e:
+                            logger.error(f"Failed to upload photo: {e}")
+                            return jsonify({"error": f"Cloud storage error: {str(e)}"}), 500
 
                 items.append(
                     {
@@ -237,15 +232,18 @@ def submit():
                 # Ignore any item_x_photo style keys if they existed but items_count was 0
                 f = request.files.get(key)
                 if f and getattr(f, "filename", None):
-                    saved_name = save_uploaded_file(f, UPLOADS_DIR)
-                    saved_files.append(
-                        {
+                    try:
+                        result = save_uploaded_file_cloud(f, UPLOADS_DIR, folder="hvac_photos")
+                        saved_files.append({
                             "field": key,
-                            "saved": saved_name,
-                            "path": os.path.join(UPLOADS_DIR, saved_name),
-                            "url": url_for("hvac_mep_bp.download_generated", filename=f"uploads/{saved_name}", _external=True),
-                        }
-                    )
+                            "saved": None,
+                            "path": None,
+                            "url": result["url"],
+                            "is_cloud": True
+                        })
+                    except Exception as e:
+                        logger.error(f"Failed to upload file: {e}")
+                        return jsonify({"error": f"Cloud storage error: {str(e)}"}), 500
 
             # If there are explicit item fields (single item), capture them
             asset = request.form.get("asset") or request.form.get("item_0_asset") or ""

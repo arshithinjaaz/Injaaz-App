@@ -1,7 +1,10 @@
 import os
 import json
+import logging
 from flask import Blueprint, current_app, render_template, request, jsonify, url_for
-from common.utils import random_id, save_uploaded_file, mark_job_started, update_job_progress, mark_job_done
+from common.utils import random_id, save_uploaded_file_cloud, mark_job_started, update_job_progress, mark_job_done
+
+logger = logging.getLogger(__name__)
 
 try:
     from .civil_generators import create_excel_report, create_pdf_report
@@ -63,12 +66,17 @@ def submit():
     for key in request.files:
         f = request.files.get(key)
         if f and f.filename:
-            saved = save_uploaded_file(f, UPLOADS_DIR)
-            saved_files.append({
-                "field": key,
-                "saved": saved,
-                "url": url_for('download_generated', filename=f"uploads/{saved}", _external=True)
-            })
+            try:
+                result = save_uploaded_file_cloud(f, UPLOADS_DIR, folder="civil_photos")
+                saved_files.append({
+                    "field": key,
+                    "saved": None,
+                    "url": result["url"],
+                    "is_cloud": True
+                })
+            except Exception as e:
+                logger.error(f"Failed to upload file: {e}")
+                return jsonify({"error": f"Cloud storage error: {str(e)}"}), 500
     sub_id = random_id("sub")
     subs_dir = os.path.join(GENERATED_DIR, "submissions")
     os.makedirs(subs_dir, exist_ok=True)
