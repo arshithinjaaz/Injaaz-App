@@ -3,11 +3,25 @@
 <head>
   <meta charset="utf-8">
   <title>Civil Works - Site Assessment Form</title>
+  <meta name="description" content="Civil works site assessment form - Works offline">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#125435">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Injaaz Civil">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+  <script src="{{ url_for('static', filename='pwa-install.js') }}" defer></script>
+  
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='photo_upload_queue.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <script src="{{ url_for('static', filename='photo_upload_queue.js') }}"></script>
+  <script src="{{ url_for('static', filename='photo_queue_ui.js') }}"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -658,6 +672,75 @@
     
     let currentFiles = [];
     let currentPreviews = [];
+    
+    // Initialize Upload Queue with Optimistic UI
+    let photoQueue, photoQueueUI;
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize upload queue
+      photoQueue = new PhotoUploadQueue({
+        maxConcurrent: 3,
+        uploadEndpoint: modulePrefix + '/upload-photo',
+        onProgress: (stats) => {
+          if (photoQueueUI) photoQueueUI.updateProgress(stats);
+        },
+        onItemComplete: (item, success) => {
+          if (photoQueueUI) photoQueueUI.updatePhotoStatus(item);
+          if (success && item.url) {
+            // Store successful uploads
+            const fileObj = { url: item.url, is_cloud: true };
+            const existingIndex = currentFiles.findIndex(f => f._queueId === item.id);
+            if (existingIndex >= 0) {
+              currentFiles[existingIndex] = fileObj;
+            } else {
+              currentFiles.push(fileObj);
+            }
+          }
+        },
+        onQueueComplete: (stats) => {
+          console.log(`Upload complete: ${stats.completed} uploaded, ${stats.failed} failed`);
+          saveDraft(); // Save after all uploads complete
+        }
+      });
+      
+      // Initialize UI helper
+      photoQueueUI = new PhotoQueueUI('photoPreviewContainer', {
+        maxPhotos: MAX_PHOTOS,
+        onRetryAll: () => photoQueue.retryAllFailed(),
+        onRemove: (photoId) => {
+          photoQueue.removePhoto(photoId);
+          photoQueueUI.removePhoto(photoId);
+          // Remove from currentFiles
+          const index = currentFiles.findIndex(f => f._queueId === photoId);
+          if (index >= 0) currentFiles.splice(index, 1);
+          updatePhotoCount();
+          saveDraft();
+        }
+      });
+      
+      // Create progress container
+      photoQueueUI.createProgressContainer();
+      
+      // Listen for retry events
+      document.addEventListener('photo-retry', (e) => {
+        photoQueue.retryUpload(e.detail.photoId);
+      });
+    });
+    
+    function updatePhotoCount() {
+      const count = photoQueueUI ? photoQueueUI.getPhotoCount() : currentFiles.length;
+      if (count === 0) {
+        photoCount.style.display = 'none';
+        photoPreviewContainer.style.display = 'none';
+      } else {
+        photoCount.style.display = 'inline-block';
+        photoCount.textContent = `${count} / ${MAX_PHOTOS} photos`;
+        photoCount.className = 'photo-count mt-2';
+        if (count >= MAX_PHOTOS * 0.8) photoCount.classList.add('warning');
+        if (count >= MAX_PHOTOS) photoCount.classList.add('danger');
+        photoPreviewContainer.style.display = 'flex';
+      }
+    }
   </script>
   <script src="{{ url_for('static', filename='form.js') }}"></script>
   <script>
@@ -773,7 +856,7 @@
         });
       }
 
-      // Handle Files with Validation
+      // Handle Files with Validation and Upload Queue
       async function handleFiles(files) {
         if (!files || files.length === 0) return;
         
@@ -797,97 +880,36 @@
           return;
         }
         
-        const totalAfter = currentFiles.length + validFiles.length;
+        const currentCount = photoQueueUI ? photoQueueUI.getPhotoCount() : currentFiles.length;
+        const totalAfter = currentCount + validFiles.length;
         if (totalAfter > MAX_PHOTOS) {
-          alert(`Maximum ${MAX_PHOTOS} photos. You have ${currentFiles.length}, trying to add ${validFiles.length}.`);
+          alert(`Maximum ${MAX_PHOTOS} photos. You have ${currentCount}, trying to add ${validFiles.length}.`);
           return;
         }
         
-        uploadProgress.style.display = 'block';
+        // Add to upload queue (will upload immediately with 3 concurrent)
+        const photoItems = photoQueue.addPhotos(validFiles);
         
-        const BATCH_SIZE = 3;
-        let successCount = 0;
-        let failedFiles = [];
+        // Render immediately (optimistic UI)
+        photoItems.forEach(item => {
+          // Store queue ID for tracking
+          const fileRef = { _queueId: item.id, _uploading: true };
+          currentFiles.push(fileRef);
+          photoQueueUI.renderPhotoItem(item);
+        });
         
-        for (let i = 0; i < validFiles.length; i += BATCH_SIZE) {
-          const batch = validFiles.slice(i, i + BATCH_SIZE);
-          const promises = batch.map(file => compressImage(file));
-          
-          try {
-            const compressed = await Promise.all(promises);
-            compressed.forEach(c => {
-              if (c) {
-                currentFiles.push(c);
-                currentPreviews.push(URL.createObjectURL(c));
-                successCount++;
-              }
-            });
-          } catch (err) {
-            console.error('Batch compression error:', err);
-            batch.forEach(f => failedFiles.push(f.name));
-          }
-          
-          const progress = Math.round(((i + batch.length) / validFiles.length) * 100);
-          uploadProgressBar.style.width = progress + '%';
-          uploadProgressBar.textContent = `Compressing ${Math.min(i + batch.length, validFiles.length)}/${validFiles.length}...`;
-        }
-        
-        uploadProgress.style.display = 'none';
-        
-        if (failedFiles.length > 0) {
-          alert(`⚠️ Failed to process ${failedFiles.length} file(s): ${failedFiles.slice(0, 3).join(', ')}${failedFiles.length > 3 ? '...' : ''}`);
-        }
-        
-        renderPhotoPreview();
-        saveDraft();
+        updatePhotoCount();
       }
 
-      // Render Photo Preview
+      // Legacy function - now handled by PhotoQueueUI
       function renderPhotoPreview() {
-        photoPreviewContainer.innerHTML = '';
-        const count = currentFiles.length;
-        
-        if (count === 0) {
-          photoCount.style.display = 'none';
-          photoPreviewContainer.style.display = 'none';
-          return;
-        }
-        
-        photoPreviewContainer.style.display = 'flex';
-        photoCount.style.display = 'inline-block';
-        photoCount.textContent = `${count} / ${MAX_PHOTOS} photos`;
-        photoCount.className = 'photo-count';
-        if (count >= MAX_PHOTOS * 0.8) photoCount.classList.add('warning');
-        if (count >= MAX_PHOTOS) photoCount.classList.add('danger');
-        
-        currentPreviews.forEach((url, idx) => {
-          const item = document.createElement('div');
-          item.className = 'photo-preview-item';
-          
-          const img = document.createElement('img');
-          img.src = url;
-          img.alt = `Photo ${idx + 1}`;
-          
-          const removeBtn = document.createElement('div');
-          removeBtn.className = 'photo-preview-remove';
-          removeBtn.textContent = '×';
-          removeBtn.title = 'Remove this photo';
-          removeBtn.onclick = () => removePhoto(idx);
-          
-          item.appendChild(img);
-          item.appendChild(removeBtn);
-          photoPreviewContainer.appendChild(item);
-        });
+        // No-op: UI is handled by PhotoQueueUI
+        updatePhotoCount();
       }
       
-      // Remove Photo
+      // Legacy function - now handled by PhotoQueueUI
       function removePhoto(index) {
-        if (index < 0 || index >= currentFiles.length) return;
-        URL.revokeObjectURL(currentPreviews[index]);
-        currentFiles.splice(index, 1);
-        currentPreviews.splice(index, 1);
-        renderPhotoPreview();
-        saveDraft();
+        // No-op: removal is handled by PhotoQueueUI
       }
 
       // Drop Zone Events
@@ -994,6 +1016,25 @@
 
       // Submit Handler
       document.getElementById('submitBtn').addEventListener('click', async () => {
+        // Check if uploads are complete
+        if (photoQueue) {
+          const stats = photoQueue.getStats();
+          
+          if (!stats.isComplete && stats.total > 0) {
+            alert(`⏳ Please wait for photo uploads to complete.\n\n${stats.uploading + stats.queued} photo(s) still uploading...`);
+            return;
+          }
+          
+          if (stats.failed > 0) {
+            const proceed = confirm(`⚠️ ${stats.failed} photo(s) failed to upload.\n\nDo you want to continue without them?\n\nClick "Retry All Failed" to try uploading them again.`);
+            if (!proceed) return;
+          }
+          
+          // Get successfully uploaded URLs
+          const uploadedPhotos = photoQueue.getUploadedUrls();
+          currentFiles = uploadedPhotos.map(p => ({ url: p.url, is_cloud: true }));
+        }
+        
         // Large submission warning
         const totalPhotos = currentFiles.length;
         if (totalPhotos >= 30) {
@@ -1006,7 +1047,7 @@
         // Show upload modal
         if (totalPhotos > 0) {
           uploadModal.style.display = 'flex';
-          uploadModalText.textContent = `Uploading ${totalPhotos} photos...`;
+          uploadModalText.textContent = `Processing ${totalPhotos} photos...`;
           uploadModalProgress.style.width = '50%';
           uploadModalProgress.textContent = '50%';
         }
@@ -1016,9 +1057,12 @@
         try {
           const formData = new FormData(form);
           
-          // Add compressed photos
-          currentFiles.forEach((file, idx) => {
-            formData.append(`photo_${idx}`, file, file.name);
+          // Add photo URLs (already uploaded to cloud)
+          currentFiles.forEach((fileObj, idx) => {
+            if (fileObj.url && fileObj.is_cloud) {
+              // Photos are already uploaded, just send URLs
+              formData.append(`photo_url_${idx}`, fileObj.url);
+            }
           });
           
           // Add signatures

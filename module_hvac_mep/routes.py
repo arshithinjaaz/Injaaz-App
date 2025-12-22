@@ -163,6 +163,19 @@ def submit():
         # Basic form fields
         site_name = request.form.get("site_name", "")
         visit_date = request.form.get("visit_date", "")
+        
+        # Validate required fields
+        if not site_name or not site_name.strip():
+            return jsonify({"error": "Site name is required"}), 400
+        
+        # Validate date
+        if visit_date:
+            try:
+                parsed_date = datetime.strptime(visit_date, '%Y-%m-%d').date()
+                if parsed_date > datetime.now().date():
+                    return jsonify({"error": "Visit date cannot be in the future"}), 400
+            except ValueError:
+                return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
 
         # Signatures (data URLs). We'll persist them to files.
         tech_sig_dataurl = request.form.get("tech_signature") or request.form.get("tech_signature_data") or ""

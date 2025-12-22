@@ -3,9 +3,44 @@ import uuid
 import json
 import time
 import logging
+from functools import wraps
 from werkzeug.utils import secure_filename
 
 logger = logging.getLogger(__name__)
+
+# Try importing fcntl for file locking (Unix only)
+try:
+    import fcntl
+    HAS_FCNTL = True
+except ImportError:
+    HAS_FCNTL = False
+
+# Retry decorator for external service calls
+def retry_on_failure(max_attempts=3, delay=1.0, backoff=2.0, exceptions=(Exception,)):
+    """Retry decorator with exponential backoff"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            attempt = 0
+            current_delay = delay
+            last_exception = None
+            
+            while attempt < max_attempts:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    attempt += 1
+                    if attempt >= max_attempts:
+                        break
+                    logger.warning(f"Attempt {attempt}/{max_attempts} failed for {func.__name__}: {e}. Retrying in {current_delay}s...")
+                    time.sleep(current_delay)
+                    current_delay *= backoff
+            
+            logger.error(f"All {max_attempts} attempts failed for {func.__name__}")
+            raise last_exception
+        return wrapper
+    return decorator
 
 def random_id(prefix="job"):
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
@@ -32,8 +67,25 @@ def save_uploaded_file(file_storage, uploads_dir):
 def write_job_state(jobs_dir, job_id, state_dict):
     ensure_dir(jobs_dir)
     job_file = os.path.join(jobs_dir, f"{job_id}.json")
-    with open(job_file, 'w') as f:
-        json.dump(state_dict, f)
+    
+    # Use file locking to prevent race conditions (Unix only)
+    try:
+        with open(job_file, 'w') as f:
+            if HAS_FCNTL:
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                try:
+                    json.dump(state_dict, f)
+                finally:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+            else:
+                # Windows fallback - no locking available
+                json.dump(state_dict, f)
+    except (IOError, OSError) as e:
+        logger.error(f"Failed to write job state for {job_id}: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error writing job state for {job_id}: {e}")
+        raise
 
 def read_job_state(jobs_dir, job_id):
     job_file = os.path.join(jobs_dir, f"{job_id}.json")
@@ -145,8 +197,8 @@ def upload_file_to_cloud(file_storage, folder="uploads"):
         # Clean up temp file
         try:
             os.remove(temp_path)
-        except:
-            pass
+        except (OSError, IOError, PermissionError) as e:
+            logger.debug(f"Could not remove temp file {temp_path}: {e}")
         
         if url:
             logger.info(f"✅ Uploaded to Cloudinary: {url}")
@@ -161,43 +213,92 @@ def upload_file_to_cloud(file_storage, folder="uploads"):
 
 def save_uploaded_file_cloud(file_storage, uploads_dir, folder="uploads"):
     """
-    Save file to cloud storage (Cloudinary) - CLOUD ONLY, NO LOCAL FALLBACK.
-    Returns dict: {"url": str, "is_cloud": bool, "filename": str or None}
-    Raises exception if cloud storage is not configured or upload fails.
-    """
-    cloud_url, is_cloud = upload_file_to_cloud(file_storage, folder=folder)
+    Upload file to Cloudinary with retry logic and fallback to local storage.
     
-    if is_cloud and cloud_url:
-        return {
-            "url": cloud_url,
-            "is_cloud": True,
-            "filename": None  # Not stored locally
-        }
-    
-    # No fallback - raise error
-    logger.error("❌ CLOUD STORAGE REQUIRED: Cloudinary not configured or upload failed")
-    raise Exception("Cloud storage (Cloudinary) is required. Please configure CLOUDINARY_* environment variables.")
-
-def upload_base64_to_cloud(data_uri, folder="signatures", prefix="sig"):
-    """
-    Upload base64 data URI (signature) to Cloudinary - CLOUD ONLY.
-    Returns (url, is_cloud) tuple.
-    Raises exception if cloud storage fails.
-    """
-    try:
-        from app.services.cloudinary_service import upload_base64_signature
+    Args:
+        file_storage: werkzeug FileStorage object
+        uploads_dir: Local directory for fallback storage
+        folder: Cloudinary folder name
         
-        url = upload_base64_signature(data_uri, f"{folder}/{prefix}")
-        if url:
-            logger.info(f"✅ Uploaded signature to Cloudinary: {url}")
-            return url, True
-        else:
-            logger.error("❌ CLOUD STORAGE REQUIRED: Signature upload to Cloudinary failed")
-            raise Exception("Cloud storage (Cloudinary) signature upload failed. Check credentials.")
+    Returns:
+        dict with 'url', 'public_id', 'is_cloud' keys
+        
+    Raises:
+        Exception if both cloud and local storage fail
+    """
+    import cloudinary.uploader
+    from .retry_utils import upload_to_cloudinary_with_retry
+    
+    # Try cloud upload first with retry
+    try:
+        # Save to temp file first to allow retries
+        temp_filename = save_uploaded_file(file_storage, uploads_dir)
+        temp_path = os.path.join(uploads_dir, temp_filename)
+        
+        try:
+            result = upload_to_cloudinary_with_retry(
+                temp_path,
+                folder=folder,
+                resource_type="auto"
+            )
             
+            # Cleanup temp file after successful upload
+            try:
+                os.remove(temp_path)
+            except OSError as e:
+                logger.warning(f"Could not delete temp file {temp_path}: {e}")
+            
+            return {
+                "url": result.get("secure_url") or result.get("url"),
+                "public_id": result.get("public_id"),
+                "is_cloud": True
+            }
+        except Exception as cloud_error:
+            logger.error(f"Cloud upload failed after retries: {cloud_error}")
+            # Keep local file as fallback
+            logger.info(f"Falling back to local storage: {temp_filename}")
+            return {
+                "url": f"/generated/uploads/{temp_filename}",
+                "public_id": None,
+                "is_cloud": False,
+                "local_path": temp_path
+            }
     except Exception as e:
-        logger.error(f"❌ Cloud signature upload error: {e}")
-        raise Exception(f"Cloud storage required but failed: {e}")
+        logger.exception(f"File upload failed completely: {e}")
+        raise Exception(f"File upload failed: {str(e)}")
+
+def upload_base64_to_cloud(base64_string, folder="base64_uploads"):
+    """
+    Upload a base64-encoded image to Cloudinary with retry logic.
+    
+    Args:
+        base64_string: Base64 data URI string (e.g., "data:image/png;base64,...")
+        folder: Cloudinary folder name
+        
+    Returns:
+        str: Cloudinary URL or None if upload fails
+    """
+    import cloudinary.uploader
+    from .retry_utils import upload_to_cloudinary_with_retry
+    
+    if not base64_string or not isinstance(base64_string, str):
+        return None
+    
+    # Check if it starts with data URI scheme
+    if not base64_string.startswith('data:'):
+        logger.warning("Base64 string doesn't start with 'data:' - skipping upload")
+        return None
+    
+    try:
+        result = upload_to_cloudinary_with_retry(
+            base64_string,
+            folder=folder,
+            resource_type="image"
+        )
+        return result.get("secure_url") or result.get("url")
+    except Exception as e:
+        logger.error(f"Failed to upload base64 to cloud: {e}")
+        return None
 
 def get_image_for_pdf(image_info):
     """
@@ -211,8 +312,8 @@ def get_image_for_pdf(image_info):
         (image_data, is_url) tuple where image_data is path or BytesIO stream
     """
     import io
-    import requests
     import base64
+    from .retry_utils import fetch_url_with_retry
     
     # Handle string path (legacy)
     if isinstance(image_info, str):
@@ -245,14 +346,13 @@ def get_image_for_pdf(image_info):
                 logger.error(f"Failed to decode data URI: {e}")
                 return None, False
         
-        # Try cloud URL
+        # Try cloud URL with retry
         if url and image_info.get('is_cloud'):
             try:
-                response = requests.get(url, timeout=10)
-                response.raise_for_status()
+                response = fetch_url_with_retry(url, timeout=10)
                 return io.BytesIO(response.content), True
             except Exception as e:
-                logger.error(f"Failed to fetch cloud image {url}: {e}")
+                logger.error(f"Failed to fetch cloud image {url} after retries: {e}")
                 # Fall through to try local path
         
         # Try local path

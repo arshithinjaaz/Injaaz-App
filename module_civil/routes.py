@@ -8,7 +8,8 @@ logger = logging.getLogger(__name__)
 
 try:
     from .civil_generators import create_excel_report, create_pdf_report
-except Exception:
+except (ImportError, ModuleNotFoundError) as e:
+    logger.warning(f"Could not import civil_generators: {e}")
     def create_excel_report(data, output_dir):
         basename = f"civil_report_{random_id('')}.xlsx"
         path = os.path.join(output_dir, basename)
@@ -61,7 +62,24 @@ def save_draft():
 @civil_bp.route('/submit', methods=['POST'])
 def submit():
     GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = app_paths()
+    
+    # Validate required fields
     fields = dict(request.form)
+    required_fields = ['project_name', 'location', 'date']
+    missing = [f for f in required_fields if not fields.get(f) or not fields.get(f).strip()]
+    if missing:
+        logger.warning(f"Missing required fields: {missing}")
+        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
+    
+    # Validate date format
+    try:
+        from datetime import datetime
+        visit_date = datetime.strptime(fields.get('date'), '%Y-%m-%d').date()
+        if visit_date > datetime.now().date():
+            return jsonify({"error": "Visit date cannot be in the future"}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+    
     saved_files = []
     for key in request.files:
         f = request.files.get(key)
@@ -74,8 +92,14 @@ def submit():
                     "url": result["url"],
                     "is_cloud": True
                 })
+            except (IOError, OSError) as e:
+                logger.error(f"File system error uploading file: {e}")
+                return jsonify({"error": "File storage error"}), 500
+            except ValueError as e:
+                logger.error(f"Invalid file data: {e}")
+                return jsonify({"error": "Invalid file data"}), 400
             except Exception as e:
-                logger.error(f"Failed to upload file: {e}")
+                logger.error(f"Unexpected error uploading file: {e}")
                 return jsonify({"error": f"Cloud storage error: {str(e)}"}), 500
     sub_id = random_id("sub")
     subs_dir = os.path.join(GENERATED_DIR, "submissions")

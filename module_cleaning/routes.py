@@ -54,6 +54,23 @@ def submit():
         if not data:
             return jsonify({'error': 'No data received'}), 400
         
+        # Validate required fields
+        required_fields = ['client_name', 'project_name', 'date_of_visit']
+        missing = [f for f in required_fields if not data.get(f) or not str(data.get(f)).strip()]
+        if missing:
+            logger.warning(f"Missing required fields: {missing}")
+            return jsonify({'error': f"Missing required fields: {', '.join(missing)}"}), 400
+        
+        # Validate date
+        date_str = data.get('date_of_visit', '')
+        if date_str:
+            try:
+                visit_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                if visit_date > datetime.now().date():
+                    return jsonify({'error': 'Visit date cannot be in the future'}), 400
+            except ValueError:
+                return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+        
         GENERATED_DIR = current_app.config['GENERATED_DIR']
         UPLOADS_DIR = current_app.config['UPLOADS_DIR']
         JOBS_DIR = current_app.config['JOBS_DIR']

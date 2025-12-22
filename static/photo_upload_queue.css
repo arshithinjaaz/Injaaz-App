@@ -1,0 +1,180 @@
+/* Photo Upload Queue Styles */
+
+.upload-queue-container {
+  margin: 15px 0;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.upload-progress-bar {
+  background: #e9ecef;
+  border-radius: 4px;
+  height: 24px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.upload-progress-fill {
+  background: linear-gradient(90deg, #125435 0%, #1a7a4f 100%);
+  height: 100%;
+  transition: width 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.upload-stats {
+  font-size: 13px;
+  color: #6c757d;
+  margin-bottom: 10px;
+}
+
+.upload-stats strong {
+  color: #125435;
+}
+
+.photo-item {
+  position: relative;
+  display: inline-block;
+  margin: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+
+.photo-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.photo-item img {
+  display: block;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+}
+
+.photo-status-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.3s;
+}
+
+.photo-status-overlay.status-completed {
+  background: rgba(18, 84, 53, 0.85);
+}
+
+.photo-status-overlay.status-failed {
+  background: rgba(220, 53, 69, 0.85);
+  cursor: pointer;
+}
+
+.photo-status-overlay.status-uploading {
+  background: rgba(0, 123, 255, 0.85);
+}
+
+.photo-status-overlay.status-queued {
+  background: rgba(108, 117, 125, 0.75);
+}
+
+.photo-status-icon {
+  font-size: 32px;
+  margin-bottom: 5px;
+}
+
+.photo-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.photo-progress-fill {
+  height: 100%;
+  background: #28a745;
+  transition: width 0.3s ease;
+}
+
+.photo-remove-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(220, 53, 69, 0.9);
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  z-index: 10;
+}
+
+.photo-remove-btn:hover {
+  background: rgba(200, 35, 51, 1);
+}
+
+.retry-all-btn {
+  background: #ffc107;
+  color: #000;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.retry-all-btn:hover {
+  background: #e0a800;
+}
+
+.retry-all-btn:disabled {
+  background: #e9ecef;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Animations */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.photo-status-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .photo-item img {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .photo-item {
+    margin: 5px;
+  }
+}
