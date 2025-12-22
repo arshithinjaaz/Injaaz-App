@@ -31,7 +31,23 @@ if ('serviceWorker' in navigator) {
       .catch((error) => {
         console.error('❌ Service Worker registration failed:', error);
       });
+    
+    // For iOS and browsers that don't fire beforeinstallprompt
+    // Show install button after a delay if not already shown
+    setTimeout(() => {
+      if (!document.getElementById('pwa-install-btn') && !isStandalone()) {
+        showIOSInstallButton();
+      }
+    }, 3000);
   });
+}
+
+// Check if app is already installed (running in standalone mode)
+function isStandalone() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  );
 }
 
 // Show update notification
@@ -62,7 +78,7 @@ function showInstallButton() {
     const installBtn = document.createElement('button');
     installBtn.id = 'pwa-install-btn';
     installBtn.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="7 10 12 15 17 10"></polyline>
         <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -71,34 +87,44 @@ function showInstallButton() {
     `;
     installBtn.style.cssText = `
       position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #125435;
+      top: 80px;
+      right: 15px;
+      background: linear-gradient(135deg, #125435 0%, #1a6b47 100%);
       color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 50px;
-      font-family: 'Inter', sans-serif;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 4px 12px rgba(18, 84, 53, 0.3);
+      box-shadow: 0 4px 16px rgba(18, 84, 53, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
       z-index: 9999;
       transition: all 0.3s ease;
-      animation: slideInUp 0.5s ease;
+      animation: slideInRight 0.5s ease, pulse 2s ease-in-out infinite;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     `;
     
+    installBtn.addEventListener('touchstart', () => {
+      installBtn.style.transform = 'scale(0.95)';
+    });
+    
+    installBtn.addEventListener('touchend', () => {
+      installBtn.style.transform = 'scale(1)';
+    });
+    
     installBtn.addEventListener('mouseenter', () => {
-      installBtn.style.transform = 'translateY(-2px)';
-      installBtn.style.boxShadow = '0 6px 16px rgba(18, 84, 53, 0.4)';
+      installBtn.style.transform = 'translateX(-2px) scale(1.05)';
+      installBtn.style.boxShadow = '0 6px 20px rgba(18, 84, 53, 0.5), 0 3px 10px rgba(0, 0, 0, 0.15)';
     });
     
     installBtn.addEventListener('mouseleave', () => {
-      installBtn.style.transform = 'translateY(0)';
-      installBtn.style.boxShadow = '0 4px 12px rgba(18, 84, 53, 0.3)';
+      installBtn.style.transform = 'translateX(0) scale(1)';
+      installBtn.style.boxShadow = '0 4px 16px rgba(18, 84, 53, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1)';
     });
     
     installBtn.addEventListener('click', installApp);
@@ -111,21 +137,30 @@ function showInstallButton() {
       const style = document.createElement('style');
       style.id = 'pwa-animations';
       style.textContent = `
-        @keyframes slideInUp {
+        @keyframes slideInRight {
           from {
-            transform: translateY(100px);
+            transform: translateX(100px);
             opacity: 0;
           }
           to {
-            transform: translateY(0);
+            transform: translateX(0);
             opacity: 1;
+          }
+        }
+        
+        @keyframes pulse {
+          0%, 100% {
+            box-shadow: 0 4px 16px rgba(18, 84, 53, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+          }
+          50% {
+            box-shadow: 0 4px 20px rgba(18, 84, 53, 0.6), 0 2px 12px rgba(0, 0, 0, 0.15), 0 0 0 4px rgba(18, 84, 53, 0.2);
           }
         }
         
         @keyframes fadeOut {
           to {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateX(100px);
           }
         }
         
@@ -133,12 +168,29 @@ function showInstallButton() {
           animation: fadeOut 0.3s ease forwards;
         }
         
+        /* Mobile optimizations */
         @media (max-width: 768px) {
           #pwa-install-btn {
-            bottom: 15px;
-            right: 15px;
-            padding: 10px 20px;
-            font-size: 13px;
+            top: 70px !important;
+            right: 10px !important;
+            padding: 10px 16px !important;
+            font-size: 13px !important;
+            border-radius: 10px !important;
+          }
+          
+          #pwa-install-btn svg {
+            width: 16px !important;
+            height: 16px !important;
+          }
+        }
+        
+        /* Small mobile screens */
+        @media (max-width: 480px) {
+          #pwa-install-btn {
+            top: 60px !important;
+            right: 8px !important;
+            padding: 8px 14px !important;
+            font-size: 12px !important;
           }
         }
       `;
@@ -284,5 +336,166 @@ window.InjaazPWA = {
     console.log('✅ Cache cleared');
   }
 };
+
+// Show iOS install instructions button
+function showIOSInstallButton() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  
+  if (isIOS || isSafari || /Mobile/.test(navigator.userAgent)) {
+    const installBtn = document.createElement('button');
+    installBtn.id = 'pwa-install-btn';
+    installBtn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>
+      <span>Install App</span>
+    `;
+    installBtn.style.cssText = `
+      position: fixed;
+      top: 80px;
+      right: 15px;
+      background: linear-gradient(135deg, #125435 0%, #1a6b47 100%);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(18, 84, 53, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 9999;
+      transition: all 0.3s ease;
+      animation: slideInRight 0.5s ease, pulse 2s ease-in-out infinite;
+    `;
+    
+    installBtn.addEventListener('click', () => {
+      if (isIOS) {
+        showIOSInstructions();
+      } else {
+        showAndroidInstructions();
+      }
+    });
+    
+    document.body.appendChild(installBtn);
+  }
+}
+
+// Show iOS installation instructions
+function showIOSInstructions() {
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+  `;
+  
+  modal.innerHTML = `
+    <div style="
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    ">
+      <h2 style="color: #125435; margin: 0 0 20px 0; font-size: 22px;">Install Injaaz App</h2>
+      <div style="color: #333; line-height: 1.6; text-align: left; margin-bottom: 20px;">
+        <p style="margin: 10px 0;"><strong>1.</strong> Tap the <strong>Share</strong> button 
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#007AFF" style="vertical-align: middle; margin: 0 4px;">
+          <path d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4"/>
+        </svg> at the bottom</p>
+        <p style="margin: 10px 0;"><strong>2.</strong> Scroll and tap <strong>"Add to Home Screen"</strong> 
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#007AFF" style="vertical-align: middle; margin: 0 4px;">
+          <rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="#007AFF" stroke-width="2"/>
+          <path d="M12 8v8m-4-4h8" stroke="#007AFF" stroke-width="2"/>
+        </svg></p>
+        <p style="margin: 10px 0;"><strong>3.</strong> Tap <strong>"Add"</strong> to confirm</p>
+      </div>
+      <button onclick="this.parentElement.parentElement.remove()" style="
+        background: #125435;
+        color: white;
+        border: none;
+        padding: 12px 32px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+      ">Got it!</button>
+    </div>
+  `;
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+  
+  document.body.appendChild(modal);
+}
+
+// Show Android installation instructions
+function showAndroidInstructions() {
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+  `;
+  
+  modal.innerHTML = `
+    <div style="
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    ">
+      <h2 style="color: #125435; margin: 0 0 20px 0; font-size: 22px;">Install Injaaz App</h2>
+      <div style="color: #333; line-height: 1.6; text-align: left; margin-bottom: 20px;">
+        <p style="margin: 10px 0;"><strong>1.</strong> Tap the <strong>Menu</strong> button (⋮) in the browser</p>
+        <p style="margin: 10px 0;"><strong>2.</strong> Select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong></p>
+        <p style="margin: 10px 0;"><strong>3.</strong> Tap <strong>"Install"</strong> to confirm</p>
+      </div>
+      <button onclick="this.parentElement.parentElement.remove()" style="
+        background: #125435;
+        color: white;
+        border: none;
+        padding: 12px 32px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+      ">Got it!</button>
+    </div>
+  `;
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+  
+  document.body.appendChild(modal);
+}
 
 console.log('✅ PWA install script loaded');
