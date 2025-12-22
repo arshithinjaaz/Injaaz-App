@@ -199,6 +199,149 @@
       color: white;
     }
     
+    /* Upload Progress Modal */
+    .upload-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    
+    .upload-modal-content {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    
+    .upload-progress-bar {
+      height: 30px;
+      background: #e9ecef;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+    
+    .upload-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #125435, #1a7a4f);
+      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+    
+    /* Thumbnail Container */
+    .photo-preview-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 1rem;
+      padding: 0.5rem;
+      border: 1px dashed var(--border-light);
+      border-radius: 4px;
+      min-height: 60px;
+    }
+    
+    .photo-preview-item {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 2px solid var(--border-light);
+    }
+    
+    .photo-preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .photo-preview-remove {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 24px;
+      height: 24px;
+      background: #dc3545;
+      color: white;
+      border: 2px solid white;
+      border-radius: 50%;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    
+    .photo-preview-remove:hover {
+      background: #c82333;
+    }
+    
+    /* Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.95);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9998;
+      flex-direction: column;
+    }
+    
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 5px solid #e9ecef;
+      border-top: 5px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      margin-top: 1.5rem;
+      font-size: 1.125rem;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    
+    .loading-subtitle {
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+    
+    /* File size warning */
+    .file-warning {
+      color: #dc3545;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+      display: none;
+    }
+    
     .btn-lg {
       padding: 0.75rem 1.75rem;
       font-size: 0.9375rem;
@@ -500,8 +643,12 @@
           <div id="dropZone" class="drop-zone">
             <div class="drop-zone-content">
               <strong>Drag and drop images here</strong>
-              <small>or click to browse • Maximum 100 images • Auto-compressed to 1920px</small>
+              <small>or click to browse • Maximum 100 images • Auto-compressed to 1280px • Max 10MB per file</small>
             </div>
+          </div>
+          
+          <div id="fileWarning" class="file-warning">
+            ⚠️ Some files are larger than 10MB and will be skipped
           </div>
           
           <div id="uploadProgress" class="upload-progress">
@@ -511,7 +658,9 @@
           </div>
           
           <div id="photoCount" class="photo-count" style="display:none;"></div>
-          <div id="curPreview" class="mt-3"></div>
+          
+          <!-- Photo Preview Container with Remove Buttons -->
+          <div id="photoPreviewContainer" class="photo-preview-container" style="display:none;"></div>
         </div>
 
         <!-- Action Buttons -->
@@ -571,6 +720,30 @@
     </form>
   </div>
 
+  <!-- Upload Progress Modal -->
+  <div id="uploadModal" class="upload-modal">
+    <div class="upload-modal-content">
+      <h4 style="margin-bottom: 1rem;">Uploading Photos</h4>
+      <div id="uploadModalText" style="margin-bottom: 1rem; color: #666;">
+        Preparing images...
+      </div>
+      <div class="upload-progress-bar">
+        <div id="uploadModalProgress" class="upload-progress-fill" style="width: 0%">
+          0%
+        </div>
+      </div>
+      <small style="color: #999; display: block; margin-top: 0.5rem;">Please wait, this may take a few minutes for large batches</small>
+    </div>
+  </div>
+
+  <!-- Loading Overlay for Report Generation -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Generating Reports...</div>
+    <div class="loading-subtitle">This typically takes 2-3 minutes for large submissions</div>
+    <div class="loading-subtitle" style="margin-top: 1.5rem; font-size: 0.8rem;">Creating Excel and PDF reports with all photos</div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
@@ -580,8 +753,11 @@
   <script>
     const modulePrefix = "{{ url_for('hvac_mep_bp.index') }}".replace('/form','');
     const MAX_PHOTOS_PER_ITEM = 100;
-    const MAX_IMAGE_DIMENSION = 1920;
+    const MAX_IMAGE_DIMENSION = 1280; // Reduced from 1920 for faster uploads
     const JPEG_QUALITY = 0.85;
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const UPLOAD_RETRY_ATTEMPTS = 3;
+    const DRAFT_SAVE_INTERVAL = 30000; // 30 seconds
 
     function checkBrowserSupport() {
       if (!window.FileReader) {
@@ -635,11 +811,16 @@
       const curSystem = document.getElementById('curSystem');
       const curDescription = document.getElementById('curDescription');
       const curPhotos = document.getElementById('curPhotos');
-      const curPreview = document.getElementById('curPreview');
       const dropZone = document.getElementById('dropZone');
       const photoCount = document.getElementById('photoCount');
+      const photoPreviewContainer = document.getElementById('photoPreviewContainer');
+      const fileWarning = document.getElementById('fileWarning');
       const uploadProgress = document.getElementById('uploadProgress');
       const uploadProgressBar = document.getElementById('uploadProgressBar');
+      const uploadModal = document.getElementById('uploadModal');
+      const uploadModalText = document.getElementById('uploadModalText');
+      const uploadModalProgress = document.getElementById('uploadModalProgress');
+      const loadingOverlay = document.getElementById('loadingOverlay');
       const addItemBtn = document.getElementById('addItemBtn');
       const clearCurrentBtn = document.getElementById('clearCurrentBtn');
       const clearItemsBtn = document.getElementById('clearItemsBtn');
@@ -658,6 +839,17 @@
       let currentFiles = [];
       let currentPreviews = [];
       let pollingInterval = null;
+
+      // Auto-download helper function
+      function autoDownload(url, filename) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
 
       if (!checkBrowserSupport()) {
         dropZone.style.display = 'none';
@@ -719,47 +911,76 @@
           return;
         }
         
-        const totalAfter = currentFiles.length + imageFiles.length;
+        // File size validation upfront
+        const oversizedFiles = imageFiles.filter(f => f.size > MAX_FILE_SIZE);
+        if (oversizedFiles.length > 0) {
+          fileWarning.style.display = 'block';
+          fileWarning.textContent = `⚠️ ${oversizedFiles.length} file(s) exceed 10MB limit and will be skipped`;
+          setTimeout(() => { fileWarning.style.display = 'none'; }, 5000);
+        }
+        
+        const validFiles = imageFiles.filter(f => f.size <= MAX_FILE_SIZE);
+        if (validFiles.length === 0) {
+          alert('All files exceed 10MB size limit. Please compress them first.');
+          return;
+        }
+        
+        const totalAfter = currentFiles.length + validFiles.length;
         if (totalAfter > MAX_PHOTOS_PER_ITEM) {
-          alert(`Maximum ${MAX_PHOTOS_PER_ITEM} photos per item. You have ${currentFiles.length}, trying to add ${imageFiles.length}.`);
+          alert(`Maximum ${MAX_PHOTOS_PER_ITEM} photos per item. You have ${currentFiles.length}, trying to add ${validFiles.length}.`);
           return;
         }
         
         uploadProgress.style.display = 'block';
         
         const BATCH_SIZE = 3;
-        for (let i = 0; i < imageFiles.length; i += BATCH_SIZE) {
-          const batch = imageFiles.slice(i, i + BATCH_SIZE);
+        let successCount = 0;
+        let failedFiles = [];
+        
+        for (let i = 0; i < validFiles.length; i += BATCH_SIZE) {
+          const batch = validFiles.slice(i, i + BATCH_SIZE);
           const promises = batch.map(file => compressImage(file));
           
           try {
             const compressed = await Promise.all(promises);
             compressed.forEach(c => {
-              currentFiles.push(c);
-              currentPreviews.push(URL.createObjectURL(c));
+              if (c) {
+                currentFiles.push(c);
+                currentPreviews.push(URL.createObjectURL(c));
+                successCount++;
+              }
             });
-            
-            const progress = Math.round(((i + batch.length) / imageFiles.length) * 100);
-            uploadProgressBar.style.width = progress + '%';
-            uploadProgressBar.textContent = `Compressing ${Math.min(i + batch.length, imageFiles.length)}/${imageFiles.length}...`;
           } catch (err) {
             console.error('Batch compression error:', err);
+            batch.forEach(f => failedFiles.push(f.name));
           }
+          
+          const progress = Math.round(((i + batch.length) / validFiles.length) * 100);
+          uploadProgressBar.style.width = progress + '%';
+          uploadProgressBar.textContent = `Compressing ${Math.min(i + batch.length, validFiles.length)}/${validFiles.length}...`;
         }
         
         uploadProgress.style.display = 'none';
+        
+        if (failedFiles.length > 0) {
+          alert(`⚠️ Failed to process ${failedFiles.length} file(s): ${failedFiles.slice(0, 3).join(', ')}${failedFiles.length > 3 ? '...' : ''}`);
+        }
+        
         renderPhotoPreview();
+        saveDraft(); // Auto-save after adding photos
       }
 
       function renderPhotoPreview() {
-        curPreview.innerHTML = '';
+        photoPreviewContainer.innerHTML = '';
         const count = currentFiles.length;
         
         if (count === 0) {
           photoCount.style.display = 'none';
+          photoPreviewContainer.style.display = 'none';
           return;
         }
         
+        photoPreviewContainer.style.display = 'flex';
         photoCount.style.display = 'inline-block';
         photoCount.textContent = `${count} / ${MAX_PHOTOS_PER_ITEM} photos`;
         photoCount.className = 'photo-count mt-2';
@@ -767,33 +988,32 @@
         if (count >= MAX_PHOTOS_PER_ITEM) photoCount.classList.add('danger');
         
         currentPreviews.forEach((url, idx) => {
-          const container = document.createElement('div');
-          container.className = 'thumb-container';
+          const item = document.createElement('div');
+          item.className = 'photo-preview-item';
           
           const img = document.createElement('img');
-          img.className = 'thumb';
           img.src = url;
           img.alt = `Photo ${idx + 1}`;
           
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'thumb-delete';
-          deleteBtn.innerHTML = '×';
-          deleteBtn.type = 'button';
-          deleteBtn.title = 'Remove this photo';
-          deleteBtn.onclick = () => removePhoto(idx);
+          const removeBtn = document.createElement('div');
+          removeBtn.className = 'photo-preview-remove';
+          removeBtn.textContent = '×';
+          removeBtn.title = 'Remove this photo';
+          removeBtn.onclick = () => removePhoto(idx);
           
-          container.appendChild(img);
-          container.appendChild(deleteBtn);
-          curPreview.appendChild(container);
+          item.appendChild(img);
+          item.appendChild(removeBtn);
+          photoPreviewContainer.appendChild(item);
         });
       }
-
+      
       function removePhoto(index) {
         if (index < 0 || index >= currentFiles.length) return;
         URL.revokeObjectURL(currentPreviews[index]);
         currentFiles.splice(index, 1);
         currentPreviews.splice(index, 1);
         renderPhotoPreview();
+        saveDraft(); // Auto-save after removing photo
       }
 
       dropZone.addEventListener('click', () => curPhotos.click());
@@ -869,7 +1089,7 @@
         curDescription.disabled = false;
       });
 
-      addItemBtn.addEventListener('click', () => {
+      addItemBtn.addEventListener('click', async () => {
         const asset = curAsset.value || '';
         const system = curSystem.value || '';
         const description = curDescription.value || '';
@@ -877,17 +1097,88 @@
           alert('Please select Asset, System and Description before adding.');
           return;
         }
-        items.push({ asset, system, description, files: [...currentFiles], previews: [...currentPreviews] });
-        renderItems();
-        resetCurrent();
+        
+        // Check if there are photos to upload
+        if (currentFiles.length === 0) {
+          alert('Please add at least one photo for this item.');
+          return;
+        }
+        
+        // Disable button during upload
+        addItemBtn.disabled = true;
+        addItemBtn.textContent = 'Uploading photos...';
+        
+        // Upload photos immediately to cloud
+        const uploadedPhotoUrls = [];
+        const totalPhotos = currentFiles.length;
+        
+        // Show upload progress
+        uploadModal.style.display = 'flex';
+        uploadModalText.textContent = `Uploading ${totalPhotos} photos for this item...`;
+        
+        try {
+          for (let i = 0; i < currentFiles.length; i++) {
+            const file = currentFiles[i];
+            const formData = new FormData();
+            formData.append('photo', file, file.name);
+            
+            // Update progress
+            const progress = Math.round(((i + 1) / totalPhotos) * 100);
+            uploadModalProgress.style.width = progress + '%';
+            uploadModalProgress.textContent = `${i + 1}/${totalPhotos} (${progress}%)`;
+            
+            try {
+              const uploadUrl = modulePrefix + '/upload-photo';
+              const response = await fetch(uploadUrl, {
+                method: 'POST',
+                body: formData
+              });
+              
+              if (!response.ok) {
+                throw new Error(`Upload failed for ${file.name}`);
+              }
+              
+              const result = await response.json();
+              uploadedPhotoUrls.push(result.url); // Store cloud URL
+            } catch (err) {
+              console.error(`Failed to upload ${file.name}:`, err);
+              if (!confirm(`Failed to upload ${file.name}. Continue anyway?`)) {
+                throw err;
+              }
+            }
+          }
+          
+          // Success - add item with cloud URLs
+          items.push({ 
+            asset, 
+            system, 
+            description, 
+            photoUrls: uploadedPhotoUrls, // Cloud URLs instead of files
+            photoCount: uploadedPhotoUrls.length
+          });
+          
+          renderItems();
+          resetCurrent();
+          saveDraft();
+          
+          statusBox.innerHTML = `<div class="alert alert-success">✅ Item added with ${uploadedPhotoUrls.length} photo(s) uploaded to cloud</div>`;
+          setTimeout(() => { statusBox.innerHTML = ''; }, 3000);
+          
+        } catch (err) {
+          statusBox.innerHTML = `<div class="alert alert-danger">❌ Failed to upload photos: ${err.message}</div>`;
+        } finally {
+          uploadModal.style.display = 'none';
+          addItemBtn.disabled = false;
+          addItemBtn.textContent = 'Add Item';
+        }
       });
 
       clearCurrentBtn.addEventListener('click', resetCurrent);
       clearItemsBtn.addEventListener('click', () => {
-        if (!confirm('Clear all items?')) return;
-        items.forEach(it => (it.previews || []).forEach(u => URL.revokeObjectURL(u)));
+        if (!confirm('Clear all items? (Photos already uploaded to cloud will remain there)')) return;
         items = [];
         renderItems();
+        saveDraft();
       });
 
       function resetCurrent() {
@@ -900,8 +1191,10 @@
         currentPreviews.forEach(u => URL.revokeObjectURL(u));
         currentFiles = [];
         currentPreviews = [];
-        curPreview.innerHTML = '';
+        photoPreviewContainer.innerHTML = '';
+        photoPreviewContainer.style.display = 'none';
         photoCount.style.display = 'none';
+        fileWarning.style.display = 'none';
       }
 
       function renderItems() {
@@ -913,11 +1206,15 @@
         items.forEach((it, idx) => {
           const card = document.createElement('div');
           card.className = 'item-card';
+          
+          const photoCount = it.photoUrls ? it.photoUrls.length : (it.photoCount || 0);
+          const uploadStatus = it.photoUrls ? '☁️ Uploaded to cloud' : '⏳ Not uploaded';
+          
           card.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
               <div style="flex:1;">
                 <div class="meta"><strong>Asset:</strong> ${escapeHtml(it.asset)} &nbsp; <strong>System:</strong> ${escapeHtml(it.system)} &nbsp; <strong>Description:</strong> ${escapeHtml(it.description)}</div>
-                <div class="photo-count mt-1" style="font-size:0.85rem;">📷 ${it.files.length} photo(s)</div>
+                <div class="photo-count mt-1" style="font-size:0.85rem;">📷 ${photoCount} photo(s) ${uploadStatus}</div>
                 <div class="mt-2 thumbs-row"></div>
               </div>
               <div><button data-idx="${idx}" class="btn btn-sm btn-danger remove-item">🗑️ Remove</button></div>
@@ -925,25 +1222,31 @@
           `;
           const thumbsRow = card.querySelector('.thumbs-row');
           const maxShow = 6;
-          (it.previews || []).slice(0, maxShow).forEach(url => {
-            const img = document.createElement('img');
-            img.className = 'thumb';
-            img.src = url;
-            img.style.width = '70px';
-            img.style.height = '50px';
-            img.style.marginRight = '4px';
-            thumbsRow.appendChild(img);
-          });
-          if (it.files.length > maxShow) {
-            const more = document.createElement('span');
-            more.textContent = `+${it.files.length - maxShow} more`;
-            more.className = 'badge bg-secondary';
-            more.style.marginLeft = '8px';
-            thumbsRow.appendChild(more);
+          
+          // Show cloud URLs if available
+          if (it.photoUrls && it.photoUrls.length > 0) {
+            it.photoUrls.slice(0, maxShow).forEach(url => {
+              const img = document.createElement('img');
+              img.className = 'thumb';
+              img.src = url;
+              img.style.width = '70px';
+              img.style.height = '50px';
+              img.style.marginRight = '4px';
+              img.style.objectFit = 'cover';
+              thumbsRow.appendChild(img);
+            });
+            if (it.photoUrls.length > maxShow) {
+              const more = document.createElement('span');
+              more.textContent = `+${it.photoUrls.length - maxShow} more`;
+              more.className = 'badge bg-secondary';
+              more.style.marginLeft = '8px';
+              thumbsRow.appendChild(more);
+            }
           }
+          
           card.querySelector('.remove-item').addEventListener('click', (e) => {
             const i = Number(e.currentTarget.dataset.idx);
-            if (confirm('Remove this item?')) removeItem(i);
+            if (confirm('Remove this item? (Photos remain in cloud storage)')) removeItem(i);
           });
           itemsList.appendChild(card);
         });
@@ -951,9 +1254,9 @@
 
       function removeItem(index) {
         if (index < 0 || index >= items.length) return;
-        (items[index].previews || []).forEach(u => URL.revokeObjectURL(u));
         items.splice(index, 1);
         renderItems();
+        saveDraft();
       }
 
       function escapeHtml(s) {
@@ -976,6 +1279,7 @@
             
             if (job.state === 'done') {
               clearInterval(pollingInterval);
+              loadingOverlay.style.display = 'none'; // Hide loading overlay
               progressBar.classList.remove('progress-bar-animated');
               progressBar.classList.add('bg-success');
               statusBox.innerHTML = '<div class="alert alert-success">✅ Reports generated successfully!</div>';
@@ -1004,12 +1308,11 @@
               }
             } else if (job.state === 'failed') {
               clearInterval(pollingInterval);
+              loadingOverlay.style.display = 'none'; // Hide loading overlay
               progressBar.classList.remove('progress-bar-animated');
               progressBar.classList.add('bg-danger');
               const errorMsg = job.results?.error || 'Unknown error';
               statusBox.innerHTML = `<div class="alert alert-danger">❌ Generation failed: ${errorMsg}</div>`;
-            } else {
-              statusBox.innerHTML = `<div class="alert alert-info">⏳ Generating reports... ${progress}%</div>`;
             }
           } catch (err) {
             console.error('Polling error:', err);
@@ -1035,44 +1338,140 @@
 
         if (items.length === 0 && !confirm('No items added. Submit empty form?')) return;
 
-        statusBox.innerHTML = '<div class="alert alert-info">Preparing submission...</div>';
+        // Count total photos (already uploaded)
+        const totalPhotos = items.reduce((sum, item) => sum + (item.photoUrls?.length || item.photoCount || 0), 0);
+        
+        // Check if all items have photos uploaded
+        const hasUnuploadedItems = items.some(item => !item.photoUrls);
+        if (hasUnuploadedItems) {
+          alert('⚠️ Some items do not have photos uploaded. Please check your items.');
+          return;
+        }
+        
+        if (totalPhotos === 0) {
+          if (!confirm('No photos uploaded. Submit anyway?')) return;
+        }
+
+        // Show loading overlay (photos already uploaded, just generating reports)
+        loadingOverlay.style.display = 'flex';
+        statusBox.innerHTML = '';
         progressContainer.style.display = 'none';
         downloadLinks.style.display = 'none';
         
-        const fd = new FormData();
-        fd.append('site_name', document.getElementById('site_name').value || '');
-        fd.append('visit_date', document.getElementById('visit_date').value || '');
-        fd.append('tech_signature', techData || '');
-        fd.append('opMan_signature', opData || '');
-        fd.append('items_count', items.length.toString());
-        items.forEach((it, idx) => {
-          fd.append(`item_${idx}_asset`, it.asset);
-          fd.append(`item_${idx}_system`, it.system);
-          fd.append(`item_${idx}_description`, it.description);
-          (it.files || []).forEach(f => fd.append(`item_${idx}_photo`, f, f.name));
-        });
+        // Prepare JSON payload (photos already in cloud)
+        const payload = {
+          site_name: document.getElementById('site_name').value || '',
+          visit_date: document.getElementById('visit_date').value || '',
+          tech_signature: techData || '',
+          opMan_signature: opData || '',
+          items: items.map(it => ({
+            asset: it.asset,
+            system: it.system,
+            description: it.description,
+            photo_urls: it.photoUrls || [] // Cloud URLs
+          }))
+        };
 
         try {
-          statusBox.innerHTML = '<div class="alert alert-info">Uploading...</div>';
-          const submitUrl = modulePrefix + '/submit';
-          const res = await fetch(submitUrl, { method: 'POST', body: fd });
+          const submitUrl = modulePrefix + '/submit-with-urls';
+          const res = await fetch(submitUrl, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          
           if (!res.ok) {
             const txt = await res.text();
             throw new Error('Server error: ' + res.status + ' ' + txt);
           }
+          
           const json = await res.json();
+          
+          // Hide upload modal, show loading overlay
+          uploadModal.style.display = 'none';
+          loadingOverlay.style.display = 'flex';
+          
           if (json.job_id) {
-            statusBox.innerHTML = `<div class="alert alert-info">✅ Uploaded! Generating reports...</div>`;
+            clearDraft(); // Clear draft after successful submission
             pollJobStatus(json.job_id);
           } else {
+            loadingOverlay.style.display = 'none';
             statusBox.innerHTML = '<div class="alert alert-warning">Submission accepted but no job ID</div>';
           }
         } catch (err) {
-          statusBox.innerHTML = `<div class="alert alert-danger">Submission failed: ${err.message}</div>`;
+          loadingOverlay.style.display = 'none';
+          statusBox.innerHTML = `<div class="alert alert-danger">❌ Submission failed: ${err.message}</div>`;
         }
       }
 
       submitAllBtn.addEventListener('click', submitAll);
+
+      // Draft Auto-Save Functionality
+      function saveDraft() {
+        try {
+          const draft = {
+            site_name: document.getElementById('site_name').value || '',
+            visit_date: document.getElementById('visit_date').value || '',
+            items: items.map(it => ({
+              asset: it.asset,
+              system: it.system,
+              description: it.description,
+              photoCount: it.files?.length || 0
+            })),
+            timestamp: Date.now()
+          };
+          localStorage.setItem('hvac_mep_draft', JSON.stringify(draft));
+        } catch (err) {
+          console.error('Failed to save draft:', err);
+        }
+      }
+
+      function loadDraft() {
+        try {
+          const draftJson = localStorage.getItem('hvac_mep_draft');
+          if (!draftJson) return false;
+          
+          const draft = JSON.parse(draftJson);
+          const ageMinutes = (Date.now() - draft.timestamp) / 60000;
+          
+          // Only load drafts less than 24 hours old
+          if (ageMinutes > 1440) {
+            clearDraft();
+            return false;
+          }
+          
+          if (confirm(`📋 Found a draft from ${Math.round(ageMinutes)} minutes ago.\n\nLoad it?`)) {
+            document.getElementById('site_name').value = draft.site_name || '';
+            document.getElementById('visit_date').value = draft.visit_date || '';
+            // Note: Can't restore files, only metadata
+            if (draft.items && draft.items.length > 0) {
+              alert(`ℹ️ Draft has ${draft.items.length} items (photos not saved, metadata only)`);
+            }
+            return true;
+          }
+        } catch (err) {
+          console.error('Failed to load draft:', err);
+        }
+        return false;
+      }
+
+      function clearDraft() {
+        try {
+          localStorage.removeItem('hvac_mep_draft');
+        } catch (err) {
+          console.error('Failed to clear draft:', err);
+        }
+      }
+
+      // Auto-save every 30 seconds
+      setInterval(saveDraft, DRAFT_SAVE_INTERVAL);
+
+      // Save on form field changes
+      document.getElementById('site_name').addEventListener('input', saveDraft);
+      document.getElementById('visit_date').addEventListener('change', saveDraft);
+
+      // Load draft on page load
+      window.addEventListener('DOMContentLoaded', loadDraft);
 
       function onDropdownsReady() { 
         fillAssets(); 

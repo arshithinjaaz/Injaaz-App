@@ -371,3 +371,183 @@ def process_job(submission_data, job_id, config):
         logger.error(f"❌ Job {job_id} failed: {str(e)}")
         logger.error(traceback.format_exc())
         mark_job_done(JOBS_DIR, job_id, {'error': str(e)})
+
+
+# ---------- Progressive Upload Endpoints ----------
+
+@hvac_mep_bp.route("/upload-photo", methods=["POST"])
+def upload_photo():
+    """
+    Upload a single photo immediately to cloud storage.
+    Used by progressive upload to upload photos when adding each item.
+    Returns: {"success": true, "url": "cloudinary_url"}
+    """
+    GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+    
+    try:
+        # Expect a single file with field name 'photo'
+        if 'photo' not in request.files:
+            return jsonify({"success": False, "error": "No photo file provided"}), 400
+        
+        photo_file = request.files['photo']
+        if photo_file.filename == '':
+            return jsonify({"success": False, "error": "Empty filename"}), 400
+        
+        # Upload directly to cloud storage
+        result = save_uploaded_file_cloud(photo_file, UPLOADS_DIR)
+        
+        if not result.get("url"):
+            return jsonify({"success": False, "error": "Cloud upload failed"}), 500
+        
+        logger.info(f"✅ Photo uploaded to cloud: {result['url']}")
+        
+        return jsonify({
+            "success": True,
+            "url": result["url"],
+            "filename": result.get("filename")
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Photo upload failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@hvac_mep_bp.route("/submit-with-urls", methods=["POST"])
+def submit_with_urls():
+    """
+    Submit form data where photos are already uploaded to cloud.
+    Expects JSON payload with:
+    {
+        "site_name": "...",
+        "visit_date": "...",
+        "tech_signature": "data:image/png;base64,...",
+        "opMan_signature": "data:image/png;base64,...",
+        "items": [
+            {
+                "asset": "...",
+                "system": "...",
+                "description": "...",
+                "photo_urls": ["cloudinary_url1", "cloudinary_url2", ...]
+            }
+        ]
+    }
+    """
+    GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+    
+    # Ensure directories exist
+    os.makedirs(GENERATED_DIR, exist_ok=True)
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+    os.makedirs(JOBS_DIR, exist_ok=True)
+    
+    try:
+        # Parse JSON payload
+        payload = request.get_json(force=True)
+        
+        site_name = payload.get("site_name", "")
+        visit_date = payload.get("visit_date", "")
+        
+        # Process signatures
+        tech_sig_dataurl = payload.get("tech_signature", "")
+        opman_sig_dataurl = payload.get("opMan_signature", "")
+        
+        tech_sig_file = None
+        opman_sig_file = None
+        
+        if tech_sig_dataurl:
+            fname, fpath, url = save_signature_dataurl(tech_sig_dataurl, UPLOADS_DIR, prefix="tech_sig")
+            if fname:
+                tech_sig_file = {"saved": fname, "path": fpath, "url": url}
+        
+        if opman_sig_dataurl:
+            fname, fpath, url = save_signature_dataurl(opman_sig_dataurl, UPLOADS_DIR, prefix="opman_sig")
+            if fname:
+                opman_sig_file = {"saved": fname, "path": fpath, "url": url}
+        
+        # Process items with photo URLs
+        items_data = payload.get("items", [])
+        items = []
+        
+        for item_data in items_data:
+            asset = item_data.get("asset", "")
+            system = item_data.get("system", "")
+            description = item_data.get("description", "")
+            photo_urls = item_data.get("photo_urls", [])
+            
+            # Convert photo URLs to the format expected by generators
+            photos_saved = []
+            for url in photo_urls:
+                photos_saved.append({
+                    "saved": None,    # No local filename since already in cloud
+                    "path": None,     # No local path
+                    "url": url,       # Cloud URL
+                    "is_cloud": True  # Flag for PDF generator to fetch from cloud
+                })
+            
+            items.append({
+                "asset": asset,
+                "system": system,
+                "description": description,
+                "photos": photos_saved
+            })
+        
+        # Create submission ID and save
+        sub_id = random_id("sub")
+        sub_dir = os.path.join(GENERATED_DIR, "submissions")
+        os.makedirs(sub_dir, exist_ok=True)
+        
+        submission_data = {
+            "submission_id": sub_id,
+            "site_name": site_name,
+            "visit_date": visit_date,
+            "tech_signature": tech_sig_file,
+            "opMan_signature": opman_sig_file,
+            "items": items,
+            "timestamp": datetime.now().isoformat(),
+            "base_url": request.host_url.rstrip('/')
+        }
+        
+        sub_file = os.path.join(sub_dir, f"{sub_id}.json")
+        with open(sub_file, "w", encoding="utf-8") as f:
+            json.dump(submission_data, f, indent=2)
+        
+        logger.info(f"✅ Submission {sub_id} saved with {len(items)} items")
+        
+        # Create job and queue background task
+        job_id = random_id("job")
+        mark_job_started(JOBS_DIR, job_id, meta={
+            "submission_id": sub_id,
+            "module": "hvac_mep",
+            "site_name": site_name,
+            "items_count": len(items),
+            "created_at": datetime.now().isoformat()
+        })
+        
+        logger.info(f"Starting background task for job {job_id}")
+        
+        # Submit to executor
+        executor = current_app.config.get('EXECUTOR')
+        if executor:
+            executor.submit(
+                process_job,
+                submission_data,
+                job_id,
+                current_app.config
+            )
+        else:
+            logger.error("ThreadPoolExecutor not found in app config")
+            return jsonify({'error': 'Background processing not available'}), 500
+        
+        logger.info(f"🚀 Job {job_id} queued for submission {sub_id}")
+        
+        return jsonify({
+            "status": "ok",
+            "submission_id": sub_id,
+            "job_id": job_id,
+            "job_status_url": url_for("hvac_mep_bp.status", job_id=job_id, _external=False)
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Submit with URLs failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"status": "error", "error": str(e)}), 500

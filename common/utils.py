@@ -202,7 +202,7 @@ def upload_base64_to_cloud(data_uri, folder="signatures", prefix="sig"):
 def get_image_for_pdf(image_info):
     """
     Get image data (path or BytesIO) for PDF generation.
-    Handles both cloud URLs and local paths.
+    Handles both cloud URLs, local paths, and data URIs.
     
     Args:
         image_info: Can be a dict with 'url' or 'path' keys, or a string path
@@ -212,23 +212,47 @@ def get_image_for_pdf(image_info):
     """
     import io
     import requests
+    import base64
     
     # Handle string path (legacy)
     if isinstance(image_info, str):
+        # Check if it's a data URI (base64 encoded image)
+        if image_info.startswith('data:image'):
+            try:
+                # Extract base64 data after comma
+                header, encoded = image_info.split(',', 1)
+                image_data = base64.b64decode(encoded)
+                return io.BytesIO(image_data), True
+            except Exception as e:
+                logger.error(f"Failed to decode data URI: {e}")
+                return None, False
+        
         if os.path.exists(image_info):
             return image_info, False
         return None, False
     
     # Handle dict with url or path
     if isinstance(image_info, dict):
-        # Try cloud URL first
-        if image_info.get('url') and image_info.get('is_cloud'):
+        # Try url field first - check if it's a data URI
+        url = image_info.get('url', '')
+        if url and url.startswith('data:image'):
             try:
-                response = requests.get(image_info['url'], timeout=10)
+                # Extract base64 data after comma
+                header, encoded = url.split(',', 1)
+                image_data = base64.b64decode(encoded)
+                return io.BytesIO(image_data), True
+            except Exception as e:
+                logger.error(f"Failed to decode data URI: {e}")
+                return None, False
+        
+        # Try cloud URL
+        if url and image_info.get('is_cloud'):
+            try:
+                response = requests.get(url, timeout=10)
                 response.raise_for_status()
                 return io.BytesIO(response.content), True
             except Exception as e:
-                logger.error(f"Failed to fetch cloud image {image_info['url']}: {e}")
+                logger.error(f"Failed to fetch cloud image {url}: {e}")
                 # Fall through to try local path
         
         # Try local path

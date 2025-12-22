@@ -81,14 +81,22 @@ def submit():
     subs_dir = os.path.join(GENERATED_DIR, "submissions")
     os.makedirs(subs_dir, exist_ok=True)
     submission_path = os.path.join(subs_dir, f"{sub_id}.json")
+    
+    submission_data = {
+        "id": sub_id,
+        "fields": fields,
+        "files": saved_files,
+        "base_url": request.host_url.rstrip('/')
+    }
+    
     with open(submission_path, 'w') as f:
-        json.dump({"id": sub_id, "fields": fields, "files": saved_files}, f)
+        json.dump(submission_data, f)
 
     job_id = random_id("job")
     meta = {"submission_id": sub_id, "module": "civil"}
     mark_job_started(JOBS_DIR, job_id, meta=meta)
 
-    def task_generate_reports(job_id_local, submission_path_local):
+    def task_generate_reports(job_id_local, submission_path_local, base_url):
         try:
             update_job_progress(JOBS_DIR, job_id_local, 10)
             data = {}
@@ -105,15 +113,15 @@ def submit():
 
             results = []
             if excel_name:
-                results.append({"filename": excel_name, "url": url_for('download_generated', filename=excel_name, _external=True)})
+                results.append({"filename": excel_name, "url": f"{base_url}/generated/{excel_name}"})
             if pdf_name:
-                results.append({"filename": pdf_name, "url": url_for('download_generated', filename=pdf_name, _external=True)})
+                results.append({"filename": pdf_name, "url": f"{base_url}/generated/{pdf_name}"})
 
             mark_job_done(JOBS_DIR, job_id_local, results)
         except Exception as e:
             update_job_progress(JOBS_DIR, job_id_local, 0, state='failed', results=[{"error": str(e)}])
 
-    EXECUTOR.submit(task_generate_reports, job_id, submission_path)
+    EXECUTOR.submit(task_generate_reports, job_id, submission_path, request.host_url.rstrip('/'))
     return jsonify({"status": "queued", "job_id": job_id, "submission_id": sub_id, "files": saved_files})
 
 @civil_bp.route('/status/<job_id>', methods=['GET'])
@@ -124,3 +132,146 @@ def status(job_id):
         return jsonify({"error": "unknown job"}), 404
     with open(job_state_file, 'r') as f:
         return jsonify(json.load(f))
+
+
+# ---------- Progressive Upload Endpoints ----------
+
+@civil_bp.route("/upload-photo", methods=["POST"])
+def upload_photo():
+    """Upload a single photo immediately to cloud storage."""
+    GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = app_paths()
+    
+    try:
+        if 'photo' not in request.files:
+            return jsonify({"success": False, "error": "No photo file provided"}), 400
+        
+        photo_file = request.files['photo']
+        if photo_file.filename == '':
+            return jsonify({"success": False, "error": "Empty filename"}), 400
+        
+        result = save_uploaded_file_cloud(photo_file, UPLOADS_DIR, folder="civil_photos")
+        
+        if not result.get("url"):
+            return jsonify({"success": False, "error": "Cloud upload failed"}), 500
+        
+        logger.info(f"✅ Civil photo uploaded to cloud: {result['url']}")
+        
+        return jsonify({
+            "success": True,
+            "url": result["url"],
+            "filename": result.get("filename")
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Civil photo upload failed: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@civil_bp.route("/submit-with-urls", methods=["POST"])
+def submit_with_urls():
+    """Submit form data where photos are already uploaded to cloud."""
+    GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = app_paths()
+    
+    os.makedirs(GENERATED_DIR, exist_ok=True)
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+    os.makedirs(JOBS_DIR, exist_ok=True)
+    
+    try:
+        payload = request.get_json(force=True)
+        
+        # Extract work items with photo URLs
+        work_items = payload.get("work_items", [])
+        processed_items = []
+        
+        for item_data in work_items:
+            photo_urls = item_data.get("photo_urls", [])
+            photos_saved = []
+            
+            for url in photo_urls:
+                photos_saved.append({
+                    "saved": None,
+                    "path": None,
+                    "url": url,
+                    "is_cloud": True
+                })
+            
+            processed_items.append({
+                "item_number": item_data.get("item_number", ""),
+                "description": item_data.get("description", ""),
+                "quantity": item_data.get("quantity", ""),
+                "photos": photos_saved
+            })
+        
+        # Create submission
+        sub_id = random_id("sub")
+        subs_dir = os.path.join(GENERATED_DIR, "submissions")
+        os.makedirs(subs_dir, exist_ok=True)
+        
+        submission_data = {
+            "id": sub_id,
+            "project_name": payload.get("project_name", ""),
+            "location": payload.get("location", ""),
+            "visit_date": payload.get("visit_date", ""),
+            "inspector_name": payload.get("inspector_name", ""),
+            "inspector_signature": payload.get("inspector_signature", ""),
+            "manager_name": payload.get("manager_name", ""),
+            "manager_signature": payload.get("manager_signature", ""),
+            "work_items": processed_items,
+            "estimated_completion": payload.get("estimated_completion", ""),
+            "base_url": request.host_url.rstrip('/')
+        }
+        
+        submission_path = os.path.join(subs_dir, f"{sub_id}.json")
+        with open(submission_path, 'w') as f:
+            json.dump(submission_data, f, indent=2)
+        
+        logger.info(f"✅ Civil submission {sub_id} saved with {len(processed_items)} work items")
+        
+        # Create job and queue background task
+        job_id = random_id("job")
+        meta = {
+            "submission_id": sub_id,
+            "module": "civil",
+            "project_name": payload.get("project_name", ""),
+            "items_count": len(processed_items)
+        }
+        mark_job_started(JOBS_DIR, job_id, meta=meta)
+        
+        base_url = request.host_url.rstrip('/')
+        
+        def task_generate_reports(job_id_local, submission_path_local, base_url):
+            try:
+                update_job_progress(JOBS_DIR, job_id_local, 10)
+                data = {}
+                if submission_path_local and os.path.exists(submission_path_local):
+                    with open(submission_path_local, 'r') as sf:
+                        data = json.load(sf)
+                
+                excel_name = create_excel_report(data, output_dir=GENERATED_DIR)
+                update_job_progress(JOBS_DIR, job_id_local, 60)
+                pdf_name = create_pdf_report(data, output_dir=GENERATED_DIR)
+                
+                results = []
+                if excel_name:
+                    results.append({"filename": excel_name, "url": f"{base_url}/generated/{excel_name}"})
+                if pdf_name:
+                    results.append({"filename": pdf_name, "url": f"{base_url}/generated/{pdf_name}"})
+                
+                mark_job_done(JOBS_DIR, job_id_local, results)
+            except Exception as e:
+                update_job_progress(JOBS_DIR, job_id_local, 0, state='failed', results=[{"error": str(e)}])
+        
+        EXECUTOR.submit(task_generate_reports, job_id, submission_path, base_url)
+        
+        logger.info(f"🚀 Civil job {job_id} queued for submission {sub_id}")
+        
+        return jsonify({
+            "status": "ok",
+            "submission_id": sub_id,
+            "job_id": job_id,
+            "job_status_url": url_for("civil_bp.status", job_id=job_id, _external=False)
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Civil submit with URLs failed: {str(e)}")
+        return jsonify({"status": "error", "error": str(e)}), 500

@@ -259,3 +259,138 @@ def process_job(submission_data, job_id, config):
         
         from common.utils import write_job_state
         write_job_state(JOBS_DIR, job_id, state)
+
+
+# ---------- Progressive Upload Endpoints ----------
+
+@cleaning_bp.route("/upload-photo", methods=["POST"])
+def upload_photo():
+    """Upload a single photo immediately to cloud storage."""
+    try:
+        UPLOADS_DIR = current_app.config['UPLOADS_DIR']
+        
+        if 'photo' not in request.files:
+            return jsonify({"success": False, "error": "No photo file provided"}), 400
+        
+        photo_file = request.files['photo']
+        if photo_file.filename == '':
+            return jsonify({"success": False, "error": "Empty filename"}), 400
+        
+        result = save_uploaded_file_cloud(photo_file, UPLOADS_DIR, folder="cleaning_photos")
+        
+        if not result.get("url"):
+            return jsonify({"success": False, "error": "Cloud upload failed"}), 500
+        
+        logger.info(f"✅ Cleaning photo uploaded to cloud: {result['url']}")
+        
+        return jsonify({
+            "success": True,
+            "url": result["url"],
+            "filename": result.get("filename")
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Cleaning photo upload failed: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@cleaning_bp.route("/submit-with-urls", methods=["POST"])
+def submit_with_urls():
+    """Submit form data where photos are already uploaded to cloud."""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data received'}), 400
+        
+        GENERATED_DIR = current_app.config['GENERATED_DIR']
+        UPLOADS_DIR = current_app.config['UPLOADS_DIR']
+        JOBS_DIR = current_app.config['JOBS_DIR']
+        
+        os.makedirs(GENERATED_DIR, exist_ok=True)
+        os.makedirs(UPLOADS_DIR, exist_ok=True)
+        os.makedirs(JOBS_DIR, exist_ok=True)
+        
+        submission_id = random_id('sub')
+        job_id = random_id('job')
+        
+        # Process photos - convert URLs to expected format
+        photo_urls = data.get('photo_urls', [])
+        saved_photos = []
+        
+        for idx, url in enumerate(photo_urls):
+            if url:
+                saved_photos.append({
+                    'saved': None,
+                    'path': None,
+                    'url': url,
+                    'index': idx,
+                    'is_cloud': True
+                })
+        
+        data['photos'] = saved_photos
+        
+        # Save signatures (base64 data) to cloud
+        tech_signature = data.get('tech_signature', '')
+        contact_signature = data.get('contact_signature', '')
+        
+        if tech_signature:
+            try:
+                cloud_url, is_cloud = upload_base64_to_cloud(tech_signature, folder="signatures", prefix="tech_sig")
+                data['tech_signature_url'] = cloud_url
+            except Exception as e:
+                logger.error(f"Failed to upload tech signature: {e}")
+        
+        if contact_signature:
+            try:
+                cloud_url, is_cloud = upload_base64_to_cloud(contact_signature, folder="signatures", prefix="contact_sig")
+                data['contact_signature_url'] = cloud_url
+            except Exception as e:
+                logger.error(f"Failed to upload contact signature: {e}")
+        
+        # Save submission
+        subs_dir = os.path.join(GENERATED_DIR, 'submissions')
+        os.makedirs(subs_dir, exist_ok=True)
+        
+        submission_data = {
+            'submission_id': submission_id,
+            'data': data,
+            'timestamp': datetime.utcnow().isoformat(),
+            'base_url': request.host_url.rstrip('/')
+        }
+        
+        sub_file = os.path.join(subs_dir, f'{submission_id}.json')
+        with open(sub_file, 'w') as f:
+            json.dump(submission_data, f, indent=2)
+        
+        logger.info(f"✅ Cleaning submission {submission_id} saved with {len(saved_photos)} photos")
+        
+        # Create job
+        mark_job_started(JOBS_DIR, job_id, meta={
+            'submission_id': submission_id,
+            'module': 'cleaning',
+            'project_name': data.get('project_name', ''),
+            'photos_count': len(saved_photos)
+        })
+        
+        # Submit background task
+        executor = current_app.config.get('EXECUTOR')
+        if executor:
+            executor.submit(process_job, submission_data, job_id, current_app.config)
+        else:
+            logger.error("ThreadPoolExecutor not found in app config")
+            return jsonify({'error': 'Background processing not available'}), 500
+        
+        logger.info(f"🚀 Cleaning job {job_id} queued for submission {submission_id}")
+        
+        return jsonify({
+            'status': 'queued',
+            'job_id': job_id,
+            'submission_id': submission_id,
+            'job_status_url': url_for('cleaning.job_status', job_id=job_id, _external=False)
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Cleaning submit with URLs failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500

@@ -15,8 +15,12 @@ from common.utils import get_image_for_pdf
 logger = logging.getLogger(__name__)
 
 def create_excel_report(data, output_dir):
-    """Generate HVAC/MEP Excel report."""
+    """Generate HVAC/MEP Excel report with openpyxl."""
     try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+        from openpyxl.utils import get_column_letter
+        
         logger.info(f"Creating Excel report in {output_dir}")
         
         # Generate filename
@@ -25,10 +29,94 @@ def create_excel_report(data, output_dir):
         excel_filename = f"HVAC_MEP_{site_name}_{timestamp}.xlsx"
         excel_path = os.path.join(output_dir, excel_filename)
         
-        # TODO: Add actual Excel generation logic here
-        # For now, create empty file
-        with open(excel_path, 'wb') as f:
-            f.write(b'')
+        # Create workbook and worksheet
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "HVAC MEP Inspection"
+        
+        # Define styles
+        header_fill = PatternFill(start_color="125435", end_color="125435", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        title_font = Font(bold=True, size=16, color="125435")
+        label_font = Font(bold=True, size=10)
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Title
+        ws['A1'] = "HVAC & MEP INSPECTION REPORT"
+        ws['A1'].font = title_font
+        ws['A1'].alignment = Alignment(horizontal='center')
+        ws.merge_cells('A1:F1')
+        
+        # Site Information
+        row = 3
+        ws[f'A{row}'] = "Site Information"
+        ws[f'A{row}'].font = Font(bold=True, size=12, color="125435")
+        row += 1
+        
+        site_info = [
+            ('Site Name:', data.get('site_name', 'N/A')),
+            ('Visit Date:', data.get('visit_date', 'N/A')),
+            ('Report Generated:', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+            ('Total Items:', str(len(data.get('items', []))))
+        ]
+        
+        for label, value in site_info:
+            ws[f'A{row}'] = label
+            ws[f'A{row}'].font = label_font
+            ws[f'B{row}'] = value
+            row += 1
+        
+        row += 1
+        
+        # Items Header
+        ws[f'A{row}'] = "Inspection Items"
+        ws[f'A{row}'].font = Font(bold=True, size=12, color="125435")
+        row += 2
+        
+        # Column headers
+        headers = ['#', 'Asset Name', 'System Type', 'Description', 'Photos Count']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=row, column=col_num)
+            cell.value = header
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = border
+        
+        row += 1
+        
+        # Items data
+        items = data.get('items', [])
+        for idx, item in enumerate(items, 1):
+            photos = item.get('photos', [])
+            
+            ws.cell(row=row, column=1, value=idx)
+            ws.cell(row=row, column=2, value=item.get('asset', 'N/A'))
+            ws.cell(row=row, column=3, value=item.get('system', 'N/A'))
+            ws.cell(row=row, column=4, value=item.get('description', 'N/A'))
+            ws.cell(row=row, column=5, value=len(photos))
+            
+            # Apply borders
+            for col in range(1, 6):
+                ws.cell(row=row, column=col).border = border
+                ws.cell(row=row, column=col).alignment = Alignment(vertical='top', wrap_text=True)
+            
+            row += 1
+        
+        # Adjust column widths
+        ws.column_dimensions['A'].width = 5
+        ws.column_dimensions['B'].width = 20
+        ws.column_dimensions['C'].width = 15
+        ws.column_dimensions['D'].width = 40
+        ws.column_dimensions['E'].width = 12
+        
+        # Save workbook
+        wb.save(excel_path)
         
         if not os.path.exists(excel_path):
             raise Exception(f"Excel file not created at {excel_path}")
