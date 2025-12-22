@@ -267,38 +267,55 @@ def save_uploaded_file_cloud(file_storage, uploads_dir, folder="uploads"):
         logger.exception(f"File upload failed completely: {e}")
         raise Exception(f"File upload failed: {str(e)}")
 
-def upload_base64_to_cloud(base64_string, folder="base64_uploads"):
+def upload_base64_to_cloud(base64_string, folder="base64_uploads", prefix=None):
     """
     Upload a base64-encoded image to Cloudinary with retry logic.
     
     Args:
         base64_string: Base64 data URI string (e.g., "data:image/png;base64,...")
         folder: Cloudinary folder name
+        prefix: Optional filename prefix for the uploaded file
         
     Returns:
-        str: Cloudinary URL or None if upload fails
+        tuple: (cloudinary_url, True) if successful
+        
+    Raises:
+        Exception: If upload fails (cloud-only mode)
     """
     import cloudinary.uploader
     from .retry_utils import upload_to_cloudinary_with_retry
     
     if not base64_string or not isinstance(base64_string, str):
-        return None
+        raise Exception("Invalid base64 string provided")
     
     # Check if it starts with data URI scheme
     if not base64_string.startswith('data:'):
-        logger.warning("Base64 string doesn't start with 'data:' - skipping upload")
-        return None
+        raise Exception("Base64 string doesn't start with 'data:' - invalid format")
     
     try:
+        upload_options = {
+            "folder": folder,
+            "resource_type": "image"
+        }
+        
+        # Add public_id prefix if provided
+        if prefix:
+            upload_options["public_id"] = f"{prefix}_{random_id('img')}"
+        
         result = upload_to_cloudinary_with_retry(
             base64_string,
-            folder=folder,
-            resource_type="image"
+            **upload_options
         )
-        return result.get("secure_url") or result.get("url")
+        
+        cloud_url = result.get("secure_url") or result.get("url")
+        if not cloud_url:
+            raise Exception("Cloudinary upload succeeded but no URL returned")
+        
+        return cloud_url, True
+        
     except Exception as e:
         logger.error(f"Failed to upload base64 to cloud: {e}")
-        return None
+        raise Exception(f"Cloud upload failed: {str(e)}")
 
 def get_image_for_pdf(image_info):
     """
