@@ -327,27 +327,12 @@ def create_app():
         """Protected dashboard - requires authentication"""
         return render_template('dashboard.html')
     
-    # Root route: redirect to dashboard or login
+    # Root route: Show login page
     @app.route('/')
     def index():
-        # In a real app, check if user is authenticated
-        # For now, redirect to dashboard (which can be protected later)
-        try:
-            return render_template('dashboard.html')
-        except Exception as e:
-            # If template rendering raises, log and return safe fallback.
-            logger.error(f"Error rendering dashboard.html: {e}")
-            return (
-                "<html><body>"
-                "<h1>Injaaz App — Dashboard (Fallback)</h1>"
-                "<ul>"
-                "<li><a href='/hvac-mep/form'>HVAC & MEP</a></li>"
-                "<li><a href='/civil/form'>Civil</a></li>"
-                "<li><a href='/cleaning/form'>Cleaning</a></li>"
-                "</ul>"
-                "<p><a href='/login'>Login</a> | <a href='/register'>Register</a></p>"
-                "<p>Check server logs for template/render or import errors.</p>"
-                "</body></html>"
+        """Redirect to login page"""
+        from flask import redirect, url_for
+        return redirect(url_for('login_page'))
             )
 
     # Serve generated files (downloads) with security checks
