@@ -333,7 +333,6 @@ def create_app():
         """Redirect to login page"""
         from flask import redirect, url_for
         return redirect(url_for('login_page'))
-            )
 
     # Serve generated files (downloads) with security checks
     GENERATED_DIR_NAME = os.path.basename(GENERATED_DIR.rstrip(os.sep))
@@ -390,4 +389,4 @@ def create_app():
 if __name__ == '__main__':
     app = create_app()
     # For local development use debug=True. Remove or set False in production.
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)

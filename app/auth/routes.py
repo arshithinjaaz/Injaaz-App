@@ -144,8 +144,8 @@ def login():
         db.session.commit()
         
         # Create tokens
-        access_token = create_access_token(identity=user.id)
-        refresh_token = create_refresh_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
+        refresh_token = create_refresh_token(identity=str(user.id))
         
         # Store session for token revocation
         from flask_jwt_extended import decode_token
@@ -181,7 +181,7 @@ def refresh():
     """Refresh access token using refresh token"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = User.query.get(int(user_id))
         
         if not user or not user.is_active:
             return jsonify({'error': 'User not found or inactive'}), 404
@@ -195,7 +195,7 @@ def refresh():
         access_exp = datetime.fromtimestamp(decode_token(access_token)['exp'])
         
         session = Session(
-            user_id=user_id,
+            user_id=int(user_id),
             token_jti=access_jti,
             expires_at=access_exp
         )
@@ -226,7 +226,7 @@ def logout():
             db.session.commit()
         
         # Log logout
-        log_audit(user_id, 'logout', 'user', str(user_id))
+        log_audit(int(user_id), 'logout', 'user', user_id)
         
         return jsonify({'message': 'Logout successful'}), 200
         
@@ -241,7 +241,7 @@ def get_current_user():
     """Get current user profile"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = User.query.get(int(user_id))
         
         if not user:
             return jsonify({'error': 'User not found'}), 404
@@ -266,7 +266,7 @@ def change_password():
         if not data.get('current_password') or not data.get('new_password'):
             return jsonify({'error': 'Current and new passwords are required'}), 400
         
-        user = User.query.get(user_id)
+        user = User.query.get(int(user_id))
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
