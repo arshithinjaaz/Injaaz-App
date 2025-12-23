@@ -226,14 +226,33 @@ def save_uploaded_file_cloud(file_storage, uploads_dir, folder="uploads"):
     Raises:
         Exception if both cloud and local storage fail
     """
-    import cloudinary.uploader
-    from .retry_utils import upload_to_cloudinary_with_retry
+    try:
+        import cloudinary.uploader
+        from .retry_utils import upload_to_cloudinary_with_retry
+    except ImportError as ie:
+        logger.warning(f"Cloudinary not available: {ie}. Using local storage only.")
+        # Fallback to local storage immediately
+        temp_filename = save_uploaded_file(file_storage, uploads_dir)
+        return {
+            "url": f"/generated/uploads/{temp_filename}",
+            "public_id": None,
+            "is_cloud": False,
+            "filename": temp_filename
+        }
     
     # Try cloud upload first with retry
     try:
+        # Ensure uploads directory exists
+        ensure_dir(uploads_dir)
+        
         # Save to temp file first to allow retries
         temp_filename = save_uploaded_file(file_storage, uploads_dir)
         temp_path = os.path.join(uploads_dir, temp_filename)
+        
+        if not os.path.exists(temp_path):
+            raise Exception(f"Temporary file not saved: {temp_path}")
+        
+        logger.info(f"Attempting cloud upload of {temp_filename}")
         
         try:
             result = upload_to_cloudinary_with_retry(
@@ -242,16 +261,26 @@ def save_uploaded_file_cloud(file_storage, uploads_dir, folder="uploads"):
                 resource_type="auto"
             )
             
+            if not result:
+                raise Exception("Cloudinary returned empty result")
+            
+            cloud_url = result.get("secure_url") or result.get("url")
+            if not cloud_url:
+                raise Exception("No URL in Cloudinary response")
+            
             # Cleanup temp file after successful upload
             try:
                 os.remove(temp_path)
+                logger.info(f"Removed temp file: {temp_path}")
             except OSError as e:
                 logger.warning(f"Could not delete temp file {temp_path}: {e}")
             
+            logger.info(f"✅ Cloud upload successful: {cloud_url}")
             return {
-                "url": result.get("secure_url") or result.get("url"),
+                "url": cloud_url,
                 "public_id": result.get("public_id"),
-                "is_cloud": True
+                "is_cloud": True,
+                "filename": temp_filename
             }
         except Exception as cloud_error:
             logger.error(f"Cloud upload failed after retries: {cloud_error}")
@@ -261,11 +290,24 @@ def save_uploaded_file_cloud(file_storage, uploads_dir, folder="uploads"):
                 "url": f"/generated/uploads/{temp_filename}",
                 "public_id": None,
                 "is_cloud": False,
-                "local_path": temp_path
+                "local_path": temp_path,
+                "filename": temp_filename
             }
     except Exception as e:
         logger.exception(f"File upload failed completely: {e}")
-        raise Exception(f"File upload failed: {str(e)}")
+        # Last resort: try saving directly without cloud
+        try:
+            fallback_filename = save_uploaded_file(file_storage, uploads_dir)
+            logger.warning(f"Using fallback local save: {fallback_filename}")
+            return {
+                "url": f"/generated/uploads/{fallback_filename}",
+                "public_id": None,
+                "is_cloud": False,
+                "filename": fallback_filename
+            }
+        except Exception as final_error:
+            logger.error(f"Final fallback failed: {final_error}")
+            raise Exception(f"Complete file upload failure: {str(e)}")
 
 def upload_base64_to_cloud(base64_string, folder="base64_uploads", prefix=None):
     """

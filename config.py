@@ -1,4 +1,8 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -14,27 +18,52 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf', 'xlsx', 'csv'}
 MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB total
 
 # ============================================================
-# PRODUCTION CREDENTIALS (Hardcoded)
+# CONFIGURATION FROM ENVIRONMENT VARIABLES
 # ============================================================
 
 # SECRET_KEY - Used for session encryption and CSRF protection
-SECRET_KEY = "VhfEWs6mHfBUVBaY-S01jxFXDdIa3sVANTqnm7LJH9I"
+SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me-jwt-secret")
 
 # CLOUDINARY - Image hosting service
-CLOUDINARY_CLOUD_NAME = "dv7kljagk"
-CLOUDINARY_API_KEY = "863137649681362"
-CLOUDINARY_API_SECRET = "2T8gWf0H--OH2T55rcYS9qXm9Bg"
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
+CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
+CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
+
+# DATABASE - PostgreSQL for production
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'injaaz.db')}")
 
 # FLASK ENVIRONMENT
-FLASK_ENV = "production"  # Set to 'development' for local testing
+FLASK_ENV = os.getenv("FLASK_ENV", "production")
+DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
-# REDIS (Upstash - for rate limiting and background tasks)
-REDIS_URL = "rediss://default:AY6qAAIncDE5ZmJhYTkwN2E3ZWY0ZDY3YTcwZjEyY2E4N2IwMjViM3AxMzY1MjI@casual-wildcat-36522.upstash.io:6379"
+# REDIS (for rate limiting and background tasks)
+REDIS_URL = os.getenv("REDIS_URL")
+
+# JWT Settings
+JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 3600))  # 1 hour
+JWT_REFRESH_TOKEN_EXPIRES = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES", 2592000))  # 30 days
 
 # EMAIL (Optional - for HVAC module email reports)
-MAIL_SERVER = None  # e.g., "smtp.gmail.com"
-MAIL_PORT = 587
-MAIL_USERNAME = None
-MAIL_PASSWORD = None
-MAIL_USE_TLS = True
-MAIL_DEFAULT_SENDER = None
+MAIL_SERVER = os.getenv("MAIL_SERVER")
+MAIL_PORT = int(os.getenv("MAIL_PORT", 587))
+MAIL_USERNAME = os.getenv("MAIL_USERNAME")
+MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
+MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "true").lower() == "true"
+MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "noreply@injaaz.com")
+
+# Application
+APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:5000")
+
+# Security
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+
+# SQLALCHEMY
+SQLALCHEMY_DATABASE_URI = DATABASE_URL
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+SQLALCHEMY_ENGINE_OPTIONS = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}

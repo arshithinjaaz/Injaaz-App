@@ -4,6 +4,10 @@ import logging
 from flask import Flask, send_from_directory, abort, render_template, jsonify, request
 from concurrent.futures import ThreadPoolExecutor
 from werkzeug.exceptions import HTTPException
+from flask_jwt_extended import JWTManager
+
+# Import Flask extensions
+from app.models import db, bcrypt
 
 # App config constants (ensure config.py exists)
 from config import BASE_DIR, GENERATED_DIR, UPLOADS_DIR, JOBS_DIR
@@ -20,6 +24,7 @@ logger = logging.getLogger(__name__)
 hvac_mep_bp = None
 civil_bp = None
 cleaning_bp = None
+auth_bp = None
 
 try:
     from module_hvac_mep.routes import hvac_mep_bp  # noqa: F401
@@ -42,6 +47,13 @@ except Exception as e:
     logger.exception("Could not import module_cleaning.routes.cleaning_bp: %s", e)
     cleaning_bp = None
 
+try:
+    from app.auth.routes import auth_bp  # noqa: F401
+    logger.info("Imported app.auth.routes.auth_bp")
+except Exception as e:
+    logger.exception("Could not import app.auth.routes.auth_bp: %s", e)
+    auth_bp = None
+
 # Ensure required directories exist at startup
 os.makedirs(GENERATED_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -54,49 +66,60 @@ executor = ThreadPoolExecutor(max_workers=2)
 def create_app():
     app = Flask(__name__, static_folder='static', template_folder='templates')
 
-    # Import hardcoded credentials from config
-    import config
+    # Load configuration from config.py
+    app.config.from_object('config')
     
-    # SECURITY: Use hardcoded credentials with validation
-    flask_env = getattr(config, 'FLASK_ENV', 'development')
-    secret_key = getattr(config, 'SECRET_KEY', None)
+    # Validate critical settings
+    flask_env = app.config.get('FLASK_ENV', 'development')
+    secret_key = app.config.get('SECRET_KEY')
+    jwt_secret_key = app.config.get('JWT_SECRET_KEY')
     
     if flask_env == 'production':
-        if not secret_key or secret_key in ['dev-secret', 'dev-secret-change-in-production', 'change-me']:
+        if not secret_key or secret_key in ['dev-secret', 'dev-secret-change-in-production', 'change-me', 'change-me-in-production']:
             logger.error("❌ CRITICAL: SECRET_KEY not set or using default value in production!")
+            sys.exit(1)
+        if not jwt_secret_key or jwt_secret_key in ['change-me', 'change-me-jwt-secret']:
+            logger.error("❌ CRITICAL: JWT_SECRET_KEY not set or using default value in production!")
             sys.exit(1)
         if len(secret_key) < 32:
             logger.error("❌ CRITICAL: SECRET_KEY too short (min 32 characters)!")
             sys.exit(1)
     
-    # Security & Configuration
-    app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB total upload
-    app.config['SECRET_KEY'] = secret_key or 'dev-secret-change-in-production'
-    app.config['FLASK_ENV'] = flask_env
+    # Initialize Flask extensions
+    db.init_app(app)
+    bcrypt.init_app(app)
     
-    # Cloudinary credentials
-    app.config['CLOUDINARY_CLOUD_NAME'] = getattr(config, 'CLOUDINARY_CLOUD_NAME', None)
-    app.config['CLOUDINARY_API_KEY'] = getattr(config, 'CLOUDINARY_API_KEY', None)
-    app.config['CLOUDINARY_API_SECRET'] = getattr(config, 'CLOUDINARY_API_SECRET', None)
+    # Initialize JWT
+    jwt = JWTManager(app)
+    
+    # JWT token verification callback (check if token is revoked)
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        from app.models import Session
+        jti = jwt_payload['jti']
+        session = Session.query.filter_by(token_jti=jti).first()
+        return session is None or session.is_revoked
+    
+    logger.info("✅ Database and JWT initialized")
     
     # Set environment variables for cloudinary library
-    if app.config['CLOUDINARY_CLOUD_NAME']:
+    if app.config.get('CLOUDINARY_CLOUD_NAME'):
         os.environ['CLOUDINARY_CLOUD_NAME'] = app.config['CLOUDINARY_CLOUD_NAME']
-    if app.config['CLOUDINARY_API_KEY']:
+    if app.config.get('CLOUDINARY_API_KEY'):
         os.environ['CLOUDINARY_API_KEY'] = app.config['CLOUDINARY_API_KEY']
-    if app.config['CLOUDINARY_API_SECRET']:
+    if app.config.get('CLOUDINARY_API_SECRET'):
         os.environ['CLOUDINARY_API_SECRET'] = app.config['CLOUDINARY_API_SECRET']
     
     # Set Redis URL for other services
-    redis_url_from_config = getattr(config, 'REDIS_URL', None)
-    if redis_url_from_config:
-        os.environ['REDIS_URL'] = redis_url_from_config
+    redis_url = app.config.get('REDIS_URL')
+    if redis_url:
+        os.environ['REDIS_URL'] = redis_url
     
-    logger.info(f"✅ Cloudinary configured: {app.config['CLOUDINARY_CLOUD_NAME']}")
+    logger.info(f"✅ Cloudinary configured: {app.config.get('CLOUDINARY_CLOUD_NAME')}")
     
     # Warn if using default secret (only in dev)
-    if flask_env != 'production' and app.config['SECRET_KEY'] == 'dev-secret-change-in-production':
-        logger.warning("⚠️  Using default SECRET_KEY! Set SECRET_KEY in config.py for production!")
+    if flask_env != 'production' and app.config['SECRET_KEY'] in ['dev-secret-change-in-production', 'change-me-in-production']:
+        logger.warning("⚠️  Using default SECRET_KEY! Set SECRET_KEY in .env for production!")
 
     # App-wide config used by blueprints and utils
     app.config['BASE_DIR'] = BASE_DIR
@@ -241,6 +264,13 @@ def create_app():
                 "Check server logs for import errors."
             ), 500
 
+    # Register authentication blueprint
+    if auth_bp:
+        app.register_blueprint(auth_bp)  # Already has /api/auth prefix
+        logger.info("✅ Registered authentication blueprint at /api/auth")
+    else:
+        logger.warning("⚠️  Authentication blueprint not available - check imports")
+
     # Security headers middleware
     @app.after_request
     def add_security_headers(response):
@@ -267,9 +297,33 @@ def create_app():
             return jsonify({"error": "Internal server error"}), 500
         return "<h1>500 Internal Server Error</h1><p>Something went wrong. Please try again.</p>", 500
 
-    # Root route: dashboard (fallback to a simple HTML if template is missing)
+    # Authentication routes
+    @app.route('/login')
+    def login_page():
+        """Render login page"""
+        return render_template('login.html')
+    
+    @app.route('/register')
+    def register_page():
+        """Render register page"""
+        return render_template('register.html')
+    
+    @app.route('/logout')
+    def logout_page():
+        """Logout and redirect to login"""
+        # Clear any local storage via JS or just redirect
+        return render_template('logout.html')
+    
+    @app.route('/dashboard')
+    def dashboard():
+        """Protected dashboard - requires authentication"""
+        return render_template('dashboard.html')
+    
+    # Root route: redirect to dashboard or login
     @app.route('/')
     def index():
+        # In a real app, check if user is authenticated
+        # For now, redirect to dashboard (which can be protected later)
         try:
             return render_template('dashboard.html')
         except Exception as e:
@@ -283,6 +337,7 @@ def create_app():
                 "<li><a href='/civil/form'>Civil</a></li>"
                 "<li><a href='/cleaning/form'>Cleaning</a></li>"
                 "</ul>"
+                "<p><a href='/login'>Login</a> | <a href='/register'>Register</a></p>"
                 "<p>Check server logs for template/render or import errors.</p>"
                 "</body></html>"
             )

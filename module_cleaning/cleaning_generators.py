@@ -4,6 +4,7 @@ Replace with your real generators or import them here.
 """
 import logging
 import os
+import sys
 import time
 from datetime import datetime
 from io import BytesIO
@@ -22,10 +23,43 @@ from common.utils import get_image_for_pdf
 
 logger = logging.getLogger(__name__)
 
+# Try importing professional PDF service, fall back if unavailable
+try:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from app.services.professional_pdf_service import (
+        create_professional_pdf,
+        create_header_with_logo,
+        create_info_table,
+        create_data_table,
+        add_photo_grid,
+        add_signatures_section,
+        add_section_heading,
+        add_item_heading,
+        add_paragraph,
+        get_professional_styles
+    )
+    USE_PROFESSIONAL_PDF = True
+    logger.info("✅ Professional PDF service loaded successfully")
+except Exception as e:
+    logger.warning(f"⚠️ Professional PDF service not available: {e}. Using basic PDF generation.")
+    USE_PROFESSIONAL_PDF = False
+
 def create_excel_report(data, output_dir):
-    """Generate Cleaning Assessment Excel report."""
+    """Generate Cleaning Assessment Excel report with professional formatting."""
     try:
-        logger.info(f"Creating Excel report in {output_dir}")
+        # Import professional Excel service
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from app.services.professional_excel_service import (
+            create_professional_excel_workbook,
+            add_logo_and_title,
+            add_info_section,
+            add_data_table,
+            add_section_header,
+            add_signature_section,
+            finalize_workbook
+        )
+        
+        logger.info(f"Creating professional Cleaning Excel report in {output_dir}")
         
         # Generate filename
         site_name = data.get('client_name', 'Unknown_Client').replace(' ', '_')
@@ -33,187 +67,143 @@ def create_excel_report(data, output_dir):
         excel_filename = f"Cleaning_Assessment_{site_name}_{timestamp}.xlsx"
         excel_path = os.path.join(output_dir, excel_filename)
         
-        # Create workbook
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Assessment Report"
-        
-        # Styles
-        header_font = Font(bold=True, size=14, color="FFFFFF")
-        header_fill = PatternFill(start_color="125435", end_color="125435", fill_type="solid")
-        subheader_font = Font(bold=True, size=12)
-        subheader_fill = PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid")
-        border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
+        # Create professional workbook
+        wb, ws = create_professional_excel_workbook(
+            title="Site Assessment Report - Cleaning",
+            sheet_name="Assessment Report"
         )
         
-        row = 1
+        # Add logo and title
+        current_row = add_logo_and_title(
+            ws,
+            title="SITE ASSESSMENT REPORT - CLEANING",
+            subtitle=f"Client: {site_name.replace('_', ' ')}"
+        )
         
-        # Title
-        ws.merge_cells(f'A{row}:D{row}')
-        cell = ws[f'A{row}']
-        cell.value = "SITE ASSESSMENT REPORT - CLEANING"
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-        ws.row_dimensions[row].height = 25
-        row += 2
-        
-        # Project & Client Details
-        ws[f'A{row}'] = "PROJECT & CLIENT DETAILS"
-        ws[f'A{row}'].font = subheader_font
-        ws[f'A{row}'].fill = subheader_fill
-        ws.merge_cells(f'A{row}:D{row}')
-        row += 1
-        
-        details = [
-            ('Client Name:', data.get('client_name', 'N/A')),
-            ('Project Name:', data.get('project_name', 'N/A')),
-            ('Site Address:', data.get('site_address', 'N/A')),
-            ('Date of Visit:', data.get('date_of_visit', 'N/A')),
-            ('Key Person:', data.get('key_person_name', 'N/A')),
-            ('Contact Number:', data.get('contact_number', 'N/A')),
+        # Site Information Section
+        site_info = [
+            ('Client Name', data.get('client_name', 'N/A')),
+            ('Site Location', data.get('site_location', 'N/A')),
+            ('Assessment Date', data.get('assessment_date', 'N/A')),
+            ('Report Generated', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         ]
         
-        for label, value in details:
-            ws[f'A{row}'] = label
-            ws[f'A{row}'].font = Font(bold=True)
-            ws[f'B{row}'] = value
-            ws.merge_cells(f'B{row}:D{row}')
-            row += 1
+        current_row = add_info_section(ws, site_info, current_row, title="Site Information")
         
-        row += 1
-        
-        # Site Count & Operations
-        ws[f'A{row}'] = "SITE COUNT & CURRENT OPERATIONS"
-        ws[f'A{row}'].font = subheader_font
-        ws[f'A{row}'].fill = subheader_fill
-        ws.merge_cells(f'A{row}:D{row}')
-        row += 1
-        
-        operations = [
-            ('Room Count:', data.get('room_count', 'N/A')),
-            ('Current Team Size:', data.get('current_team_size', 'N/A')),
-            ('Lift Count:', data.get('lift_count_total', 'N/A')),
-            ('Team Description:', data.get('current_team_desc', 'N/A')),
+        # Project & Client Details Section
+        client_details = [
+            ('Project Name', data.get('project_name', 'N/A')),
+            ('Site Address', data.get('site_address', 'N/A')),
+            ('Date of Visit', data.get('date_of_visit', 'N/A')),
+            ('Key Person', data.get('key_person_name', 'N/A')),
+            ('Contact Number', data.get('contact_number', 'N/A'))
         ]
         
-        for label, value in operations:
-            ws[f'A{row}'] = label
-            ws[f'A{row}'].font = Font(bold=True)
-            ws[f'B{row}'] = value
-            ws.merge_cells(f'B{row}:D{row}')
-            row += 1
+        current_row = add_info_section(ws, client_details, current_row, title="Project & Client Details")
         
-        row += 1
-        
-        # Facility Areas
-        ws[f'A{row}'] = "FACILITY AREA COUNTS"
-        ws[f'A{row}'].font = subheader_font
-        ws[f'A{row}'].fill = subheader_fill
-        ws.merge_cells(f'A{row}:D{row}')
-        row += 1
-        
-        facilities = [
-            ('Floor:', data.get('facility_floor', 'N/A')),
-            ('Ground Parking:', data.get('facility_ground_parking', 'N/A')),
-            ('Basement:', data.get('facility_basement', 'N/A')),
-            ('Podium:', data.get('facility_podium', 'N/A')),
-            ('Gym Room:', data.get('facility_gym_room', 'N/A')),
-            ('Swimming Pool:', data.get('facility_swimming_pool', 'N/A')),
-            ('Washroom (Male):', data.get('facility_washroom_male', 'N/A')),
-            ('Washroom (Female):', data.get('facility_washroom_female', 'N/A')),
-            ('Changing Room:', data.get('facility_changing_room', 'N/A')),
-            ('Kids Play Area:', data.get('facility_play_kids_place', 'N/A')),
-            ('Garbage Room:', data.get('facility_garbage_room', 'N/A')),
-            ('Floor Chute Room:', data.get('facility_floor_chute_room', 'N/A')),
-            ('Staircase:', data.get('facility_staircase', 'N/A')),
-            ('Floor Service Room:', data.get('facility_floor_service_room', 'N/A')),
-            ('Cleaner Count:', data.get('facility_cleaner_count', 'N/A')),
+        # Site Count & Operations Section
+        operations_data = [
+            ('Room Count', str(data.get('room_count', 'N/A'))),
+            ('Current Team Size', str(data.get('current_team_size', 'N/A'))),
+            ('Lift Count', str(data.get('lift_count_total', 'N/A'))),
+            ('Team Description', data.get('current_team_desc', 'N/A'))
         ]
         
-        for label, value in facilities:
-            ws[f'A{row}'] = label
-            ws[f'A{row}'].font = Font(bold=True)
-            ws[f'B{row}'] = value
-            row += 1
+        current_row = add_info_section(ws, operations_data, current_row, title="Site Count & Current Operations")
         
-        row += 1
-        
-        # Cleaning Scope
-        ws[f'A{row}'] = "CLEANING REQUIREMENTS & SCOPE"
-        ws[f'A{row}'].font = subheader_font
-        ws[f'A{row}'].fill = subheader_fill
-        ws.merge_cells(f'A{row}:D{row}')
-        row += 1
-        
-        scope_items = [
-            ('Offices', data.get('scope_offices', 'False')),
-            ('Toilets/Washrooms', data.get('scope_toilets', 'False')),
-            ('Corridors/Hallways', data.get('scope_hallways', 'False')),
-            ('Kitchen/Pantry', data.get('scope_kitchen', 'False')),
-            ('Building Exterior', data.get('scope_exterior', 'False')),
-            ('Special Care Areas', data.get('scope_special_care', 'False')),
+        # Facility Areas Section
+        facility_data = [
+            ('Floor', data.get('facility_floor', 'N/A')),
+            ('Ground Parking', data.get('facility_ground_parking', 'N/A')),
+            ('Basement', data.get('facility_basement', 'N/A')),
+            ('Podium', data.get('facility_podium', 'N/A')),
+            ('Gym Room', data.get('facility_gym_room', 'N/A')),
+            ('Swimming Pool', data.get('facility_swimming_pool', 'N/A')),
+            ('Washroom (Male)', data.get('facility_washroom_male', 'N/A')),
+            ('Washroom (Female)', data.get('facility_washroom_female', 'N/A')),
+            ('Changing Room', data.get('facility_changing_room', 'N/A')),
+            ('Kids Play Area', data.get('facility_play_kids_place', 'N/A')),
+            ('Garbage Room', data.get('facility_garbage_room', 'N/A')),
+            ('Floor Chute Room', data.get('facility_floor_chute_room', 'N/A')),
+            ('Staircase', data.get('facility_staircase', 'N/A')),
+            ('Floor Service Room', data.get('facility_floor_service_room', 'N/A')),
+            ('Cleaner Count', data.get('facility_cleaner_count', 'N/A'))
         ]
         
-        for label, value in scope_items:
-            ws[f'A{row}'] = label
-            ws[f'B{row}'] = '✓' if value == 'True' else '✗'
-            row += 1
+        current_row = add_info_section(ws, facility_data, current_row, title="Facility Area Counts")
         
-        row += 1
-        
-        # Deep Cleaning
-        ws[f'A{row}'] = "DEEP CLEANING"
-        ws[f'A{row}'].font = subheader_font
-        ws[f'A{row}'].fill = subheader_fill
-        ws.merge_cells(f'A{row}:D{row}')
-        row += 1
-        
-        ws[f'A{row}'] = 'Deep Cleaning Required:'
-        ws[f'A{row}'].font = Font(bold=True)
-        ws[f'B{row}'] = data.get('deep_clean_required', 'No')
-        row += 1
-        
-        ws[f'A{row}'] = 'Areas to Deep Clean:'
-        ws[f'A{row}'].font = Font(bold=True)
-        ws[f'B{row}'] = data.get('deep_clean_areas', 'N/A')
-        ws.merge_cells(f'B{row}:D{row}')
-        row += 2
-        
-        # Safety & Staffing
-        ws[f'A{row}'] = "SAFETY & STAFFING"
-        ws[f'A{row}'].font = subheader_font
-        ws[f'A{row}'].fill = subheader_fill
-        ws.merge_cells(f'A{row}:D{row}')
-        row += 1
-        
-        safety_items = [
-            ('Working Hours:', data.get('working_hours', 'N/A')),
-            ('Required Team Size:', data.get('required_team_size', 'N/A')),
-            ('Site Access Requirements:', data.get('site_access_requirements', 'N/A')),
-            ('Equipment Condition:', data.get('facility_equipment_condition', 'N/A')),
-            ('Required Equipment:', data.get('required_equipment', 'N/A')),
-            ('High-Risk Areas:', data.get('high_risk_areas', 'N/A')),
-            ('Safety Measures/PPE:', data.get('suggested_safety_ppe', 'N/A')),
+        # Cleaning Scope Section
+        scope_data = [
+            ('Offices', '✓' if data.get('scope_offices') == 'True' else '✗'),
+            ('Toilets/Washrooms', '✓' if data.get('scope_toilets') == 'True' else '✗'),
+            ('Corridors/Hallways', '✓' if data.get('scope_hallways') == 'True' else '✗'),
+            ('Kitchen/Pantry', '✓' if data.get('scope_kitchen') == 'True' else '✗'),
+            ('Building Exterior', '✓' if data.get('scope_exterior') == 'True' else '✗'),
+            ('Special Care Areas', '✓' if data.get('scope_special_care') == 'True' else '✗')
         ]
         
-        for label, value in safety_items:
-            ws[f'A{row}'] = label
-            ws[f'A{row}'].font = Font(bold=True)
-            ws[f'B{row}'] = value
-            ws.merge_cells(f'B{row}:D{row}')
-            row += 1
+        current_row = add_info_section(ws, scope_data, current_row, title="Cleaning Requirements & Scope")
         
-        row += 1
+        # Deep Cleaning Section
+        deep_clean_data = [
+            ('Deep Cleaning Required', data.get('deep_clean_required', 'No')),
+            ('Areas to Deep Clean', data.get('deep_clean_areas', 'N/A'))
+        ]
         
-        # General Comments
-        ws[f'A{row}'] = "GENERAL COMMENTS"
-        ws[f'A{row}'].font = subheader_font
-        ws[f'A{row}'].fill = subheader_fill
+        current_row = add_info_section(ws, deep_clean_data, current_row, title="Deep Cleaning")
+        
+        # Safety & Staffing Section
+        safety_data = [
+            ('Working Hours', data.get('working_hours', 'N/A')),
+            ('Required Team Size', data.get('required_team_size', 'N/A')),
+            ('Site Access Requirements', data.get('site_access_requirements', 'N/A')),
+            ('Equipment Condition', data.get('facility_equipment_condition', 'N/A')),
+            ('Required Equipment', data.get('required_equipment', 'N/A')),
+            ('High-Risk Areas', data.get('high_risk_areas', 'N/A')),
+            ('Safety Measures/PPE', data.get('suggested_safety_ppe', 'N/A'))
+        ]
+        
+        current_row = add_info_section(ws, safety_data, current_row, title="Safety & Staffing")
+        
+        # General Comments Section
+        comments_data = [
+            ('Comments', data.get('general_comments', 'N/A'))
+        ]
+        
+        current_row = add_info_section(ws, comments_data, current_row, title="General Comments")
+        
+        # Signatures Section
+        signatures = {}
+        tech_sig = data.get('tech_signature', '')
+        contact_sig = data.get('contact_signature', '')
+        
+        if tech_sig:
+            signatures['Technician'] = tech_sig
+        else:
+            signatures['Technician'] = None
+            
+        if contact_sig:
+            signatures['Contact Person'] = contact_sig
+        else:
+            signatures['Contact Person'] = None
+        
+        current_row = add_signature_section(ws, signatures, current_row)
+        
+        # Finalize formatting
+        finalize_workbook(ws)
+        
+        # Save workbook
+        wb.save(excel_path)
+        
+        if not os.path.exists(excel_path):
+            raise Exception(f"Excel file not created at {excel_path}")
+        
+        logger.info(f"✅ Professional Cleaning Excel report created: {excel_path}")
+        return excel_path
+        
+    except Exception as e:
+        logger.error(f"❌ Cleaning Excel generation error: {str(e)}")
+        raise
         ws.merge_cells(f'A{row}:D{row}')
         row += 1
         
@@ -243,9 +233,9 @@ def create_excel_report(data, output_dir):
 
 
 def create_pdf_report(data, output_dir):
-    """Generate comprehensive Cleaning Assessment PDF report."""
+    """Generate comprehensive professional Cleaning Assessment PDF report."""
     try:
-        logger.info(f"Creating PDF report in {output_dir}")
+        logger.info(f"Creating professional Cleaning PDF report in {output_dir}")
         
         # Generate filename
         site_name = data.get('client_name', 'Unknown_Client').replace(' ', '_')
@@ -253,60 +243,15 @@ def create_pdf_report(data, output_dir):
         pdf_filename = f"Cleaning_Assessment_{site_name}_{timestamp}.pdf"
         pdf_path = os.path.join(output_dir, pdf_filename)
         
-        # Create PDF document
-        doc = SimpleDocTemplate(
-            pdf_path,
-            pagesize=A4,
-            rightMargin=1.5*cm,
-            leftMargin=1.5*cm,
-            topMargin=2*cm,
-            bottomMargin=2*cm
-        )
-        
         story = []
-        styles = getSampleStyleSheet()
+        styles = get_professional_styles()
         
-        # Custom styles
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=24,
-            textColor=colors.HexColor('#125435'),
-            spaceAfter=0.3*inch,
-            alignment=TA_CENTER,
-            fontName='Helvetica-Bold'
+        # HEADER WITH LOGO
+        create_header_with_logo(
+            story,
+            "SITE ASSESSMENT REPORT",
+            "Cleaning Services"
         )
-        
-        heading_style = ParagraphStyle(
-            'CustomHeading',
-            parent=styles['Heading2'],
-            fontSize=16,
-            textColor=colors.HexColor('#125435'),
-            spaceAfter=0.2*inch,
-            spaceBefore=0.3*inch,
-            fontName='Helvetica-Bold'
-        )
-        
-        subheading_style = ParagraphStyle(
-            'CustomSubHeading',
-            parent=styles['Heading3'],
-            fontSize=12,
-            textColor=colors.HexColor('#1a7a4d'),
-            spaceAfter=0.15*inch,
-            fontName='Helvetica-Bold'
-        )
-        
-        normal_style = ParagraphStyle(
-            'CustomNormal',
-            parent=styles['Normal'],
-            fontSize=10,
-            spaceAfter=0.1*inch
-        )
-        
-        # TITLE
-        story.append(Paragraph("SITE ASSESSMENT REPORT", title_style))
-        story.append(Paragraph("Cleaning Services", subheading_style))
-        story.append(Spacer(1, 0.2*inch))
         
         # PROJECT & CLIENT DETAILS
         story.append(Paragraph("Project & Client Details", heading_style))
@@ -363,81 +308,54 @@ def create_pdf_report(data, output_dir):
         story.append(Spacer(1, 0.3*inch))
         
         # GENERAL COMMENTS
-        story.append(Paragraph("General Comments", heading_style))
+        add_section_heading(story, "General Comments")
         comments = data.get('general_comments', 'No comments provided.')
-        story.append(Paragraph(comments, normal_style))
+        add_paragraph(story, comments)
         story.append(Spacer(1, 0.3*inch))
         
         # PHOTOS
         photos = data.get('photos', [])
         if photos:
-            story.append(Paragraph("Site Photos", heading_style))
-            for i, photo_info in enumerate(photos):
-                try:
-                    img_data, is_url = get_image_for_pdf(photo_info)
-                    if img_data:
-                        img = Image(img_data, width=4*inch, height=3*inch)
-                        story.append(img)
-                        story.append(Spacer(1, 0.1*inch))
-                        if (i + 1) % 2 == 0:
-                            story.append(Spacer(1, 0.2*inch))
-                except Exception as e:
-                    logger.error(f"Failed to add photo {i}: {e}")
+            add_section_heading(story, f"Site Photos ({len(photos)} total)")
+            add_photo_grid(story, photos)
         
-        # SIGNATURES
-        story.append(Paragraph("Signatures", heading_style))
-        
-        sig_data = []
-        
-        # Technician signature
+        # SIGNATURES - Professional format
         tech_sig = data.get('tech_signature', {})
-        try:
-            img_data, is_url = get_image_for_pdf(tech_sig)
-            if img_data:
-                tech_img = Image(img_data, width=2*inch, height=1*inch)
-                sig_data.append(['Technician Signature:', tech_img])
-            else:
-                sig_data.append(['Technician Signature:', 'Not provided'])
-        except Exception as e:
-            logger.error(f"Failed to load tech signature: {e}")
-            sig_data.append(['Technician Signature:', 'Signature not available'])
-        
-        # Contact signature
         contact_sig = data.get('contact_signature', {})
-        try:
-            img_data, is_url = get_image_for_pdf(contact_sig)
-            if img_data:
-                contact_img = Image(img_data, width=2*inch, height=1*inch)
-                sig_data.append(['Contact Person Signature:', contact_img])
-            else:
-                sig_data.append(['Contact Person Signature:', 'Not provided'])
-        except Exception as e:
-            logger.error(f"Failed to load contact signature: {e}")
-            sig_data.append(['Contact Person Signature:', 'Signature not available'])
         
-        if sig_data:
-            sig_table = Table(sig_data, colWidths=[4*cm, 8*cm])
-            sig_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E8F5E9')),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, -1), 10),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('ALIGN', (1, 0), (1, -1), 'CENTER'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 6),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-                ('TOPPADDING', (0, 0), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-            ]))
-            story.append(sig_table)
+        signatures = {}
         
-        # Build PDF
-        doc.build(story)
+        # Handle tech signature - can be dict with url or string
+        if tech_sig:
+            if isinstance(tech_sig, dict) and tech_sig.get('url'):
+                signatures['Technician'] = tech_sig
+            elif isinstance(tech_sig, str) and tech_sig.startswith('data:image'):
+                signatures['Technician'] = {'url': tech_sig, 'is_cloud': False}
         
-        if not os.path.exists(pdf_path):
-            raise Exception(f"PDF file not created at {pdf_path}")
+        # Handle contact signature - can be dict with url or string
+        if contact_sig:
+            if isinstance(contact_sig, dict) and contact_sig.get('url'):
+                signatures['Contact Person'] = contact_sig
+            elif isinstance(contact_sig, str) and contact_sig.startswith('data:image'):
+                signatures['Contact Person'] = {'url': contact_sig, 'is_cloud': False}
         
-        logger.info(f"✅ PDF report created: {pdf_path}")
+        # Always show signature section
+        if not signatures:
+            signatures = {
+                'Technician': None,
+                'Contact Person': None
+            }
+        
+        add_signatures_section(story, signatures)
+        
+        # Build professional PDF with logo and branding
+        create_professional_pdf(
+            pdf_path, 
+            story, 
+            report_title=f"Cleaning Assessment - {data.get('client_name', 'N/A')}"
+        )
+        
+        logger.info(f"✅ Professional Cleaning PDF created successfully: {pdf_path}")
         return pdf_path
         
     except Exception as e:

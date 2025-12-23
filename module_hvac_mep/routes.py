@@ -184,14 +184,14 @@ def submit():
         tech_sig_file = None
         opman_sig_file = None
         if tech_sig_dataurl:
-            # CRITICAL FIX: Now captures path
+            # Upload to cloud and get URL
             fname, fpath, url = save_signature_dataurl(tech_sig_dataurl, UPLOADS_DIR, prefix="tech_sig")
-            if fname:
-                tech_sig_file = {"saved": fname, "path": fpath, "url": url}
+            if url:  # Check for URL, not fname (cloud upload returns None for fname)
+                tech_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
         if opman_sig_dataurl:
             fname, fpath, url = save_signature_dataurl(opman_sig_dataurl, UPLOADS_DIR, prefix="opman_sig")
-            if fname:
-                opman_sig_file = {"saved": fname, "path": fpath, "url": url}
+            if url:  # Check for URL, not fname (cloud upload returns None for fname)
+                opman_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
 
         # Determine items_count
         try:
@@ -400,28 +400,57 @@ def upload_photo():
     try:
         # Expect a single file with field name 'photo'
         if 'photo' not in request.files:
+            logger.error("No photo file in request")
             return jsonify({"success": False, "error": "No photo file provided"}), 400
         
         photo_file = request.files['photo']
         if photo_file.filename == '':
+            logger.error("Empty filename provided")
             return jsonify({"success": False, "error": "Empty filename"}), 400
         
-        # Upload directly to cloud storage
-        result = save_uploaded_file_cloud(photo_file, UPLOADS_DIR)
+        logger.info(f"Uploading photo: {photo_file.filename}")
         
-        if not result.get("url"):
-            return jsonify({"success": False, "error": "Cloud upload failed"}), 500
-        
-        logger.info(f"✅ Photo uploaded to cloud: {result['url']}")
-        
-        return jsonify({
-            "success": True,
-            "url": result["url"],
-            "filename": result.get("filename")
-        })
+        # Upload directly to cloud storage with proper error handling
+        try:
+            result = save_uploaded_file_cloud(photo_file, UPLOADS_DIR)
+            
+            if not result or not result.get("url"):
+                logger.error("Upload returned no URL")
+                return jsonify({"success": False, "error": "Upload failed - no URL returned"}), 500
+            
+            logger.info(f"✅ Photo uploaded successfully: {result['url']}")
+            
+            return jsonify({
+                "success": True,
+                "url": result["url"],
+                "is_cloud": result.get("is_cloud", False),
+                "filename": photo_file.filename
+            })
+            
+        except Exception as upload_error:
+            logger.error(f"Upload error: {str(upload_error)}")
+            logger.error(traceback.format_exc())
+            
+            # Try to save locally as fallback
+            try:
+                logger.info("Attempting local fallback save...")
+                local_filename = save_uploaded_file(photo_file, UPLOADS_DIR)
+                local_url = url_for('download_generated', filename=f"uploads/{local_filename}", _external=False)
+                
+                logger.info(f"✅ Saved locally as fallback: {local_url}")
+                return jsonify({
+                    "success": True,
+                    "url": local_url,
+                    "is_cloud": False,
+                    "filename": local_filename,
+                    "warning": "Saved locally (cloud upload failed)"
+                })
+            except Exception as local_error:
+                logger.error(f"Local fallback also failed: {str(local_error)}")
+                return jsonify({"success": False, "error": f"Both cloud and local upload failed: {str(local_error)}"}), 500
         
     except Exception as e:
-        logger.error(f"❌ Photo upload failed: {str(e)}")
+        logger.error(f"❌ Photo upload failed completely: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -469,13 +498,13 @@ def submit_with_urls():
         
         if tech_sig_dataurl:
             fname, fpath, url = save_signature_dataurl(tech_sig_dataurl, UPLOADS_DIR, prefix="tech_sig")
-            if fname:
-                tech_sig_file = {"saved": fname, "path": fpath, "url": url}
+            if url:  # Check for URL, not fname (cloud upload returns None for fname)
+                tech_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
         
         if opman_sig_dataurl:
             fname, fpath, url = save_signature_dataurl(opman_sig_dataurl, UPLOADS_DIR, prefix="opman_sig")
-            if fname:
-                opman_sig_file = {"saved": fname, "path": fpath, "url": url}
+            if url:  # Check for URL, not fname (cloud upload returns None for fname)
+                opman_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
         
         # Process items with photo URLs
         items_data = payload.get("items", [])

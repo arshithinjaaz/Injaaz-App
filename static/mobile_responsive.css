@@ -1,0 +1,345 @@
+/* Mobile Responsive Styles for Injaaz Forms */
+
+/* Base Mobile Improvements */
+@media (max-width: 768px) {
+  /* Better touch targets */
+  .btn, .form-control, .form-select, .form-check-input {
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  /* Container adjustments */
+  .container {
+    padding: 1rem 0.75rem !important;
+    margin: 0.5rem !important;
+    border-radius: 8px !important;
+    max-width: 100% !important;
+  }
+  
+  /* Navbar */
+  .navbar-container {
+    padding: 0 1rem !important;
+  }
+  
+  .navbar-brand {
+    font-size: 1.1rem !important;
+  }
+  
+  .navbar-brand img {
+    height: 24px !important;
+  }
+  
+  .module-badge {
+    font-size: 0.7rem !important;
+    padding: 0.25rem 0.625rem !important;
+  }
+  
+  /* Form Headings */
+  h2 {
+    font-size: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  h5 {
+    font-size: 1.1rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  /* Form Labels */
+  .form-label {
+    font-size: 0.9rem !important;
+    margin-bottom: 0.375rem !important;
+    font-weight: 500 !important;
+  }
+  
+  /* Form Grid - Stack on mobile */
+  .row.g-3 {
+    --bs-gutter-x: 0.75rem !important;
+    --bs-gutter-y: 0.75rem !important;
+  }
+  
+  .col-md-6, .col-md-4, .col-md-3 {
+    width: 100% !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  /* Buttons */
+  .btn {
+    padding: 0.75rem 1.25rem !important;
+    font-size: 1rem !important;
+    width: 100% !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .btn-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  /* Drop Zone */
+  .drop-zone {
+    min-height: 120px !important;
+    padding: 1rem !important;
+  }
+  
+  .drop-zone-content {
+    font-size: 0.9rem !important;
+  }
+  
+  .drop-zone-content strong {
+    font-size: 1rem !important;
+  }
+  
+  .drop-zone-content small {
+    font-size: 0.75rem !important;
+    display: block !important;
+    margin-top: 0.5rem !important;
+  }
+  
+  /* Photo Preview */
+  .photo-preview-container {
+    gap: 0.5rem !important;
+  }
+  
+  .photo-item {
+    width: calc(50% - 0.25rem) !important; /* 2 photos per row on mobile */
+    max-width: none !important;
+  }
+  
+  .photo-item img {
+    height: 120px !important;
+    object-fit: cover !important;
+  }
+  
+  /* Items List */
+  .item-card {
+    padding: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .item-badge {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+  }
+  
+  /* Signature Pads */
+  .signature-pad {
+    height: 150px !important; /* Smaller on mobile */
+  }
+  
+  .signature-container {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Status Box */
+  #statusBox {
+    font-size: 0.9rem !important;
+    padding: 0.75rem !important;
+  }
+  
+  /* Progress Container */
+  #progressContainer {
+    margin: 1rem 0 !important;
+  }
+  
+  /* Download Links */
+  #downloadLinks {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  #downloadLinks a {
+    width: 100% !important;
+    text-align: center !important;
+  }
+  
+  /* Table Responsive */
+  .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  table {
+    font-size: 0.85rem !important;
+  }
+  
+  table th, table td {
+    padding: 0.5rem 0.375rem !important;
+  }
+  
+  /* Modal Improvements */
+  .modal-dialog {
+    margin: 0.5rem !important;
+    max-width: calc(100% - 1rem) !important;
+  }
+  
+  .modal-content {
+    border-radius: 12px !important;
+  }
+  
+  /* Alert Messages */
+  .alert {
+    font-size: 0.9rem !important;
+    padding: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  /* Form Sections */
+  .mb-section {
+    margin-bottom: 1rem !important;
+    padding-bottom: 0.5rem !important;
+    border-bottom: 1px solid var(--border-light, #e5e7eb) !important;
+  }
+  
+  /* Photo Count Badge */
+  .photo-count {
+    font-size: 0.9rem !important;
+    padding: 0.5rem !important;
+  }
+  
+  /* Upload Progress */
+  .upload-progress {
+    margin: 0.75rem 0 !important;
+  }
+  
+  .progress {
+    height: 8px !important;
+  }
+  
+  /* File Warning */
+  .file-warning {
+    font-size: 0.85rem !important;
+    padding: 0.5rem !important;
+  }
+}
+
+/* Extra Small Devices (phones in portrait) */
+@media (max-width: 576px) {
+  /* Even smaller adjustments */
+  .container {
+    padding: 0.75rem 0.5rem !important;
+    margin: 0.25rem !important;
+  }
+  
+  h2 {
+    font-size: 1.35rem !important;
+  }
+  
+  /* Single photo per row on very small screens */
+  .photo-item {
+    width: 100% !important;
+  }
+  
+  /* Stack signature pads */
+  .signature-container {
+    width: 100% !important;
+  }
+  
+  /* Smaller navbar */
+  .navbar {
+    padding: 0.75rem 0 !important;
+  }
+  
+  .navbar-brand span {
+    display: none; /* Hide text, show only logo on very small screens */
+  }
+  
+  /* Buttons even more prominent */
+  .btn {
+    font-size: 1.05rem !important;
+    padding: 0.875rem 1.5rem !important;
+  }
+}
+
+/* Landscape Phone Adjustments */
+@media (max-width: 896px) and (orientation: landscape) {
+  .signature-pad {
+    height: 120px !important;
+  }
+  
+  .container {
+    max-height: none !important;
+  }
+  
+  .navbar {
+    position: relative !important; /* Don't stick on landscape */
+  }
+}
+
+/* Touch-specific improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger tap targets for touch devices */
+  .btn, button, a {
+    min-height: 44px !important;
+  }
+  
+  /* Remove hover effects on touch devices */
+  .btn:hover,
+  .form-control:hover,
+  .form-select:hover {
+    transform: none !important;
+  }
+  
+  /* Better focus states for accessibility */
+  .btn:focus,
+  .form-control:focus,
+  .form-select:focus {
+    box-shadow: 0 0 0 3px rgba(18, 84, 53, 0.25) !important;
+  }
+  
+  /* Prevent accidental zooming */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* PWA Safe Area Adjustments (notch support) */
+@supports (padding: max(0px)) {
+  .navbar {
+    padding-left: max(1rem, env(safe-area-inset-left)) !important;
+    padding-right: max(1rem, env(safe-area-inset-right)) !important;
+  }
+  
+  .container {
+    padding-left: max(0.75rem, env(safe-area-inset-left)) !important;
+    padding-right: max(0.75rem, env(safe-area-inset-right)) !important;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+  }
+  
+  .btn {
+    margin-bottom: max(0.5rem, env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* Print Styles (prevent printing form controls) */
+@media print {
+  .navbar,
+  .btn,
+  .drop-zone,
+  #uploadProgress,
+  .photo-preview-container {
+    display: none !important;
+  }
+}
+
+/* Dark Mode Support (if system prefers) */
+@media (prefers-color-scheme: dark) {
+  /* Add dark mode styles if needed in future */
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
