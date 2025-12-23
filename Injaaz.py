@@ -271,13 +271,14 @@ def create_app():
     else:
         logger.warning("⚠️  Authentication blueprint not available - check imports")
     
-    # Temporary initialization endpoint (DELETE AFTER USE!)
-    try:
-        from temp_init import init_bp
-        app.register_blueprint(init_bp)
-        logger.warning("⚠️  TEMP INIT ENDPOINT ACTIVE - Visit /init-database-temp-delete-me once, then delete temp_init.py!")
-    except:
-        pass  # File doesn't exist or already deleted (good!)
+    # Temporary initialization endpoint - DISABLED FOR PRODUCTION SECURITY
+    # Database already initialized on Render - no need for this endpoint
+    # try:
+    #     from temp_init import init_bp
+    #     app.register_blueprint(init_bp)
+    #     logger.warning("⚠️  TEMP INIT ENDPOINT ACTIVE - Visit /init-database-temp-delete-me once, then delete temp_init.py!")
+    # except:
+    #     pass  # File doesn't exist or already deleted (good!)
 
     # Security headers middleware
     @app.after_request
