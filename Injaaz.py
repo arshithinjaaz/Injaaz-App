@@ -202,6 +202,13 @@ def create_app():
         logger.exception(f"Internal server error: {e}")
         return jsonify({"error": "Internal server error", "request_id": request.headers.get('X-Request-ID', 'unknown')}), 500
     
+    @app.errorhandler(400)
+    def bad_request(e):
+        """Handle 400 errors - return JSON for API routes"""
+        if request.path.startswith('/api/'):
+            return jsonify({"error": "Bad request", "message": str(e)}), 400
+        return str(e), 400
+    
     @app.errorhandler(Exception)
     def handle_exception(e):
         # Pass through HTTP errors

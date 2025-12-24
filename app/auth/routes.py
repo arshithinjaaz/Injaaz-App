@@ -55,7 +55,10 @@ def log_audit(user_id, action, resource_type=None, resource_id=None, details=Non
 def register():
     """Register a new user"""
     try:
-        data = request.get_json()
+        data = request.get_json(force=True, silent=True)
+        
+        if not data:
+            return jsonify({'error': 'Invalid JSON or missing request body'}), 400
         
         # Validate required fields
         required_fields = ['username', 'email', 'password', 'full_name']
@@ -117,7 +120,10 @@ def register():
 def login():
     """Authenticate user and return JWT tokens"""
     try:
-        data = request.get_json()
+        data = request.get_json(force=True, silent=True)
+        
+        if not data:
+            return jsonify({'error': 'Invalid JSON or missing request body'}), 400
         
         # Validate required fields
         if not data.get('username') or not data.get('password'):
