@@ -52,8 +52,8 @@ try:
 except ImportError:
     # Fallback if generator.py doesn't exist
     def process_submission(submission_data, job_id, config):
-        from common.utils import mark_job_done
-        mark_job_done(job_id, False, error="Generator not implemented", config=config)
+        from common.db_utils import fail_job_db
+        fail_job_db(job_id, "Generator not implemented")
 
 BLUEPRINT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(BLUEPRINT_DIR)
@@ -557,21 +557,20 @@ def submit_with_urls():
             "base_url": request.host_url.rstrip('/')
         }
         
-        sub_file = os.path.join(sub_dir, f"{sub_id}.json")
-        with open(sub_file, "w", encoding="utf-8") as f:
-            json.dump(submission_data, f, indent=2)
+        # Save submission to database
+        submission_db = create_submission_db(
+            module_type='hvac_mep',
+            form_data=submission_data,
+            site_name=site_name,
+            visit_date=visit_date
+        )
+        sub_id = submission_db.submission_id
         
-        logger.info(f"✅ Submission {sub_id} saved with {len(items)} items")
+        logger.info(f"✅ Submission {sub_id} saved to database with {len(items)} items")
         
-        # Create job and queue background task
-        job_id = random_id("job")
-        mark_job_started(JOBS_DIR, job_id, meta={
-            "submission_id": sub_id,
-            "module": "hvac_mep",
-            "site_name": site_name,
-            "items_count": len(items),
-            "created_at": datetime.now().isoformat()
-        })
+        # Create job in database
+        job = create_job_db(submission_db)
+        job_id = job.job_id
         
         logger.info(f"Starting background task for job {job_id}")
         
@@ -580,7 +579,7 @@ def submit_with_urls():
         if executor:
             executor.submit(
                 process_job,
-                submission_data,
+                sub_id,
                 job_id,
                 current_app.config
             )

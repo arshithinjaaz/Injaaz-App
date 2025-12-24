@@ -377,24 +377,25 @@ def submit_with_urls():
             'base_url': request.host_url.rstrip('/')
         }
         
-        sub_file = os.path.join(subs_dir, f'{submission_id}.json')
-        with open(sub_file, 'w') as f:
-            json.dump(submission_data, f, indent=2)
+        # Save submission to database
+        submission_db = create_submission_db(
+            module_type='cleaning',
+            form_data=submission_data,
+            site_name=data.get('project_name', 'Cleaning Assessment'),
+            visit_date=data.get('date', datetime.utcnow().strftime('%Y-%m-%d'))
+        )
+        submission_id = submission_db.submission_id
         
-        logger.info(f"✅ Cleaning submission {submission_id} saved with {len(saved_photos)} photos")
+        logger.info(f"✅ Cleaning submission {submission_id} saved to database with {len(saved_photos)} photos")
         
-        # Create job
-        mark_job_started(JOBS_DIR, job_id, meta={
-            'submission_id': submission_id,
-            'module': 'cleaning',
-            'project_name': data.get('project_name', ''),
-            'photos_count': len(saved_photos)
-        })
+        # Create job in database
+        job = create_job_db(submission_db)
+        job_id = job.job_id
         
         # Submit background task
         executor = current_app.config.get('EXECUTOR')
         if executor:
-            executor.submit(process_job, submission_data, job_id, current_app.config)
+            executor.submit(process_job, submission_id, job_id, current_app.config)
         else:
             logger.error("ThreadPoolExecutor not found in app config")
             return jsonify({'error': 'Background processing not available'}), 500
