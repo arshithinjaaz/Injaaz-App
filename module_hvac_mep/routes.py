@@ -341,74 +341,75 @@ def download_generated(filename):
     # allow nested paths like uploads/<name>
     return send_from_directory(GENERATED_DIR, filename, as_attachment=True)
 
-def process_job(sub_id, job_id, config):
+def process_job(sub_id, job_id, config, app):
     """Background worker: Generate BOTH Excel AND PDF reports"""
-    try:
-        GENERATED_DIR = config.get('GENERATED_DIR')
+    with app.app_context():
+        try:
+            GENERATED_DIR = config.get('GENERATED_DIR')
+            
+            logger.info(f"🔄 Processing job {job_id}")
+            
+            # Update progress: Starting
+            update_job_progress_db(job_id, 10, status='processing')
         
-        logger.info(f"🔄 Processing job {job_id}")
-        
-        # Update progress: Starting
-        update_job_progress_db(job_id, 10, status='processing')
-        
-        # Get submission data from database
-        submission_data = get_submission_db(sub_id)
-        if not submission_data:
-            fail_job_db(job_id, "Submission not found")
-            return
-        
-        # Use form_data from database
-        submission_record = submission_data.get('form_data', {})
-        
-        # Generate Excel
-        logger.info("📊 Generating Excel report...")
-        update_job_progress_db(job_id, 30)
-        excel_path = create_excel_report(submission_record, GENERATED_DIR)
-        excel_filename = os.path.basename(excel_path)
-        logger.info(f"✅ Excel created: {excel_filename}")
-        
-        # Upload Excel to Cloudinary
-        update_job_progress_db(job_id, 45)
-        excel_url = upload_local_file(excel_path, f"hvac_excel_{sub_id}")
-        if not excel_url:
-            base_url = submission_record.get('base_url', '')
-            excel_url = f"{base_url}/generated/{excel_filename}"
-            logger.warning("⚠️ Excel cloud upload failed, using local URL")
-        else:
-            logger.info(f"✅ Excel uploaded to cloud: {excel_url}")
-        
-        # Generate PDF
-        logger.info("📄 Generating PDF report...")
-        update_job_progress_db(job_id, 60)
-        pdf_path = create_pdf_report(submission_record, GENERATED_DIR)
-        pdf_filename = os.path.basename(pdf_path)
-        logger.info(f"✅ PDF created: {pdf_filename}")
-        
-        # Upload PDF to Cloudinary
-        update_job_progress_db(job_id, 80)
-        pdf_url = upload_local_file(pdf_path, f"hvac_pdf_{sub_id}")
-        if not pdf_url:
-            base_url = submission_record.get('base_url', '')
-            pdf_url = f"{base_url}/generated/{pdf_filename}"
-            logger.warning("⚠️ PDF cloud upload failed, using local URL")
-        else:
-            logger.info(f"✅ PDF uploaded to cloud: {pdf_url}")
-        
-        # Mark complete
-        results = {
-            'excel': excel_url,
-            'pdf': pdf_url,
-            'excel_filename': excel_filename,
-            'pdf_filename': pdf_filename
-        }
-        
-        complete_job_db(job_id, results)
-        logger.info(f"✅ Job {job_id} completed successfully")
-        
-    except Exception as e:
-        logger.error(f"❌ Job {job_id} failed: {str(e)}")
-        logger.error(traceback.format_exc())
-        fail_job_db(job_id, str(e))
+            # Get submission data from database
+            submission_data = get_submission_db(sub_id)
+            if not submission_data:
+                fail_job_db(job_id, "Submission not found")
+                return
+            
+            # Use form_data from database
+            submission_record = submission_data.get('form_data', {})
+            
+            # Generate Excel
+            logger.info("📊 Generating Excel report...")
+            update_job_progress_db(job_id, 30)
+            excel_path = create_excel_report(submission_record, GENERATED_DIR)
+            excel_filename = os.path.basename(excel_path)
+            logger.info(f"✅ Excel created: {excel_filename}")
+            
+            # Upload Excel to Cloudinary
+            update_job_progress_db(job_id, 45)
+            excel_url = upload_local_file(excel_path, f"hvac_excel_{sub_id}")
+            if not excel_url:
+                base_url = submission_record.get('base_url', '')
+                excel_url = f"{base_url}/generated/{excel_filename}"
+                logger.warning("⚠️ Excel cloud upload failed, using local URL")
+            else:
+                logger.info(f"✅ Excel uploaded to cloud: {excel_url}")
+            
+            # Generate PDF
+            logger.info("📄 Generating PDF report...")
+            update_job_progress_db(job_id, 60)
+            pdf_path = create_pdf_report(submission_record, GENERATED_DIR)
+            pdf_filename = os.path.basename(pdf_path)
+            logger.info(f"✅ PDF created: {pdf_filename}")
+            
+            # Upload PDF to Cloudinary
+            update_job_progress_db(job_id, 80)
+            pdf_url = upload_local_file(pdf_path, f"hvac_pdf_{sub_id}")
+            if not pdf_url:
+                base_url = submission_record.get('base_url', '')
+                pdf_url = f"{base_url}/generated/{pdf_filename}"
+                logger.warning("⚠️ PDF cloud upload failed, using local URL")
+            else:
+                logger.info(f"✅ PDF uploaded to cloud: {pdf_url}")
+            
+            # Mark complete
+            results = {
+                'excel': excel_url,
+                'pdf': pdf_url,
+                'excel_filename': excel_filename,
+                'pdf_filename': pdf_filename
+            }
+            
+            complete_job_db(job_id, results)
+            logger.info(f"✅ Job {job_id} completed successfully")
+            
+        except Exception as e:
+            logger.error(f"❌ Job {job_id} failed: {str(e)}")
+            logger.error(traceback.format_exc())
+            fail_job_db(job_id, str(e))
 
 
 # ---------- Progressive Upload Endpoints ----------
@@ -598,7 +599,9 @@ def submit_with_urls():
                 process_job,
                 sub_id,
                 job_id,
-                current_app.config
+                current_app.config,
+                current_app._get_current_object(),
+                current_app._get_current_object()
             )
         else:
             logger.error("ThreadPoolExecutor not found in app config")

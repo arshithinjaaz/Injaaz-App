@@ -123,55 +123,56 @@ def submit():
     job = create_job_db(submission)
     job_id = job.job_id
 
-    def task_generate_reports(job_id_local, sub_id_local, base_url):
-        try:
-            update_job_progress_db(job_id_local, 10, status='processing')
-            
-            # Get submission data from database
-            data = get_submission_db(sub_id_local)
-            if not data:
-                fail_job_db(job_id_local, "Submission not found")
-                return
+    def task_generate_reports(job_id_local, sub_id_local, base_url, app):
+        with app.app_context():
+            try:
+                update_job_progress_db(job_id_local, 10, status='processing')
+                
+                # Get submission data from database
+                data = get_submission_db(sub_id_local)
+                if not data:
+                    fail_job_db(job_id_local, "Submission not found")
+                    return
 
-            excel_name = create_excel_report(data, output_dir=GENERATED_DIR)
-            update_job_progress_db(job_id_local, 40)
-            
-            pdf_name = create_pdf_report(data, output_dir=GENERATED_DIR)
-            update_job_progress_db(job_id_local, 60)
+                excel_name = create_excel_report(data, output_dir=GENERATED_DIR)
+                update_job_progress_db(job_id_local, 40)
+                
+                pdf_name = create_pdf_report(data, output_dir=GENERATED_DIR)
+                update_job_progress_db(job_id_local, 60)
 
-            results = {}
-            # Upload Excel to Cloudinary
-            if excel_name:
-                excel_path = os.path.join(GENERATED_DIR, excel_name)
-                excel_url = upload_local_file(excel_path, f"civil_excel_{sub_id_local}")
-                if excel_url:
-                    results["excel"] = excel_url
-                    results["excel_filename"] = excel_name
-                    logger.info(f"✅ Excel uploaded to cloud: {excel_url}")
-                else:
-                    results["excel"] = f"{base_url}/generated/{excel_name}"
-                    results["excel_filename"] = excel_name
-                    logger.warning("⚠️ Excel cloud upload failed, using local URL")
-            
-            # Upload PDF to Cloudinary
-            if pdf_name:
-                pdf_path = os.path.join(GENERATED_DIR, pdf_name)
-                pdf_url = upload_local_file(pdf_path, f"civil_pdf_{sub_id_local}")
-                if pdf_url:
-                    results["pdf"] = pdf_url
-                    results["pdf_filename"] = pdf_name
-                    logger.info(f"✅ PDF uploaded to cloud: {pdf_url}")
-                else:
-                    results["pdf"] = f"{base_url}/generated/{pdf_name}"
-                    results["pdf_filename"] = pdf_name
-                    logger.warning("⚠️ PDF cloud upload failed, using local URL")
+                results = {}
+                # Upload Excel to Cloudinary
+                if excel_name:
+                    excel_path = os.path.join(GENERATED_DIR, excel_name)
+                    excel_url = upload_local_file(excel_path, f"civil_excel_{sub_id_local}")
+                    if excel_url:
+                        results["excel"] = excel_url
+                        results["excel_filename"] = excel_name
+                        logger.info(f"✅ Excel uploaded to cloud: {excel_url}")
+                    else:
+                        results["excel"] = f"{base_url}/generated/{excel_name}"
+                        results["excel_filename"] = excel_name
+                        logger.warning("⚠️ Excel cloud upload failed, using local URL")
+                
+                # Upload PDF to Cloudinary
+                if pdf_name:
+                    pdf_path = os.path.join(GENERATED_DIR, pdf_name)
+                    pdf_url = upload_local_file(pdf_path, f"civil_pdf_{sub_id_local}")
+                    if pdf_url:
+                        results["pdf"] = pdf_url
+                        results["pdf_filename"] = pdf_name
+                        logger.info(f"✅ PDF uploaded to cloud: {pdf_url}")
+                    else:
+                        results["pdf"] = f"{base_url}/generated/{pdf_name}"
+                        results["pdf_filename"] = pdf_name
+                        logger.warning("⚠️ PDF cloud upload failed, using local URL")
 
-            complete_job_db(job_id_local, results)
-        except Exception as e:
-            logger.exception(f"Report generation failed: {e}")
-            fail_job_db(job_id_local, str(e))
+                complete_job_db(job_id_local, results)
+            except Exception as e:
+                logger.exception(f"Report generation failed: {e}")
+                fail_job_db(job_id_local, str(e))
 
-    EXECUTOR.submit(task_generate_reports, job_id, sub_id, request.host_url.rstrip('/'))
+    EXECUTOR.submit(task_generate_reports, job_id, sub_id, request.host_url.rstrip('/'), current_app._get_current_object())
     return jsonify({"status": "queued", "job_id": job_id, "submission_id": sub_id, "files": saved_files})
 
 @civil_bp.route('/status/<job_id>', methods=['GET'])
@@ -307,7 +308,7 @@ def submit_with_urls():
                 logger.exception(f"Report generation failed: {e}")
                 fail_job_db(job_id_local, str(e))
         
-        EXECUTOR.submit(task_generate_reports, job_id, sub_id, base_url)
+        EXECUTOR.submit(task_generate_reports, job_id, sub_id, base_url, current_app._get_current_object())
         
         logger.info(f"🚀 Civil job {job_id} queued for submission {sub_id}")
         
