@@ -202,21 +202,31 @@
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             
+            console.log('Login attempt:', { username, passwordLength: password.length });
+            
+            const requestBody = JSON.stringify({ username, password });
+            console.log('Request body:', requestBody);
+            
             try {
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ username, password })
+                    body: requestBody
                 });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
                 
                 // Check if response is JSON
                 const contentType = response.headers.get('content-type');
+                console.log('Content-Type:', contentType);
+                
                 if (!contentType || !contentType.includes('application/json')) {
                     const text = await response.text();
-                    console.error('Non-JSON response:', text.substring(0, 200));
-                    errorMessage.textContent = 'Server error: Expected JSON response. Please check if the server is running correctly.';
+                    console.error('Non-JSON response:', text.substring(0, 500));
+                    errorMessage.textContent = 'Server error: Expected JSON response. Check console for details.';
                     errorMessage.style.display = 'block';
                     loginBtn.disabled = false;
                     loading.style.display = 'none';
@@ -224,6 +234,7 @@
                 }
                 
                 const data = await response.json();
+                console.log('Response data:', data);
                 
                 if (response.ok) {
                     // Store tokens

@@ -173,7 +173,7 @@ def create_app():
         if enable_csrf:
             csrf = CSRFProtect(app)
             app.csrf = csrf
-            logger.info("✓ CSRF protection enabled")
+            logger.info("✓ CSRF protection enabled (API routes will be exempted)")
         else:
             logger.warning("⚠️  CSRF protection disabled (development mode)")
             app.csrf = None
@@ -273,6 +273,10 @@ def create_app():
 
     # Register authentication blueprint
     if auth_bp:
+        # Exempt auth blueprint from CSRF (uses JWT instead)
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(auth_bp)
+        
         app.register_blueprint(auth_bp)  # Already has /api/auth prefix
         logger.info("✅ Registered authentication blueprint at /api/auth")
     else:
@@ -281,6 +285,11 @@ def create_app():
     # Register reports API blueprint for on-demand regeneration
     try:
         from app.reports_api import reports_bp
+        
+        # Exempt reports API from CSRF (uses JWT if needed)
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(reports_bp)
+        
         app.register_blueprint(reports_bp)
         logger.info("✅ Registered reports API at /api/reports")
     except Exception as e:

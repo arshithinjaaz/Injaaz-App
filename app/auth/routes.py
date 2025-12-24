@@ -120,13 +120,19 @@ def register():
 def login():
     """Authenticate user and return JWT tokens"""
     try:
+        # Debug logging
+        current_app.logger.info(f"Login attempt - Content-Type: {request.content_type}")
+        current_app.logger.info(f"Request data: {request.get_data(as_text=True)[:200]}")
+        
         data = request.get_json(force=True, silent=True)
         
         if not data:
+            current_app.logger.error("Failed to parse JSON from request")
             return jsonify({'error': 'Invalid JSON or missing request body'}), 400
         
         # Validate required fields
         if not data.get('username') or not data.get('password'):
+            current_app.logger.warning(f"Missing credentials - username: {bool(data.get('username'))}, password: {bool(data.get('password'))}")
             return jsonify({'error': 'Username and password are required'}), 400
         
         username = data['username'].strip()
