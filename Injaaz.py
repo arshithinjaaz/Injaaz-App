@@ -238,6 +238,10 @@ def create_app():
 
     # Register blueprints only if they were imported successfully.
     if hvac_mep_bp:
+        # Exempt from CSRF (handles file uploads via API)
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(hvac_mep_bp)
+        
         app.register_blueprint(hvac_mep_bp, url_prefix='/hvac-mep')  # Must be /hvac-mep with dash
         logger.info("✓ Registered HVAC/MEP blueprint at /hvac-mep")
     else:
@@ -250,6 +254,10 @@ def create_app():
             ), 500
 
     if civil_bp:
+        # Exempt from CSRF (handles file uploads via API)
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(civil_bp)
+        
         app.register_blueprint(civil_bp, url_prefix='/civil')
         logger.info("Registered blueprint: /civil")
     else:
@@ -261,6 +269,10 @@ def create_app():
             ), 500
 
     if cleaning_bp:
+        # Exempt from CSRF (handles file uploads via API)
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(cleaning_bp)
+        
         app.register_blueprint(cleaning_bp, url_prefix='/cleaning')
         logger.info("Registered blueprint: /cleaning")
     else:
