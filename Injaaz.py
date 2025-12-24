@@ -271,6 +271,14 @@ def create_app():
     else:
         logger.warning("⚠️  Authentication blueprint not available - check imports")
     
+    # Register reports API blueprint for on-demand regeneration
+    try:
+        from app.reports_api import reports_bp
+        app.register_blueprint(reports_bp)
+        logger.info("✅ Registered reports API at /api/reports")
+    except Exception as e:
+        logger.warning(f"⚠️  Reports API not available: {e}")
+    
     # Temporary initialization endpoint - DISABLED FOR PRODUCTION SECURITY
     # Database already initialized on Render - no need for this endpoint
     # try:

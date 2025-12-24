@@ -2,7 +2,9 @@ import os
 import json
 import logging
 from flask import Blueprint, current_app, render_template, request, jsonify, url_for
-from common.utils import random_id, save_uploaded_file_cloud, mark_job_started, update_job_progress, mark_job_done
+from common.utils import random_id, save_uploaded_file_cloud
+from common.db_utils import create_submission_db, create_job_db, update_job_progress_db, complete_job_db, fail_job_db, get_job_status_db, get_submission_db
+from app.models import db
 
 logger = logging.getLogger(__name__)
 
@@ -101,61 +103,61 @@ def submit():
             except Exception as e:
                 logger.error(f"Unexpected error uploading file: {e}")
                 return jsonify({"error": f"Cloud storage error: {str(e)}"}), 500
-    sub_id = random_id("sub")
-    subs_dir = os.path.join(GENERATED_DIR, "submissions")
-    os.makedirs(subs_dir, exist_ok=True)
-    submission_path = os.path.join(subs_dir, f"{sub_id}.json")
-    
+    # Create submission in database
     submission_data = {
-        "id": sub_id,
         "fields": fields,
         "files": saved_files,
         "base_url": request.host_url.rstrip('/')
     }
     
-    with open(submission_path, 'w') as f:
-        json.dump(submission_data, f)
+    submission = create_submission_db(
+        module_type='civil',
+        form_data=submission_data,
+        site_name=fields.get('project_name'),
+        visit_date=fields.get('date')
+    )
+    sub_id = submission.submission_id
 
-    job_id = random_id("job")
-    meta = {"submission_id": sub_id, "module": "civil"}
-    mark_job_started(JOBS_DIR, job_id, meta=meta)
+    # Create job in database
+    job = create_job_db(submission)
+    job_id = job.job_id
 
-    def task_generate_reports(job_id_local, submission_path_local, base_url):
+    def task_generate_reports(job_id_local, sub_id_local, base_url):
         try:
-            update_job_progress(JOBS_DIR, job_id_local, 10)
-            data = {}
-            try:
-                if submission_path_local and os.path.exists(submission_path_local):
-                    with open(submission_path_local, 'r') as sf:
-                        data = json.load(sf)
-            except Exception:
-                data = {}
+            update_job_progress_db(job_id_local, 10, status='processing')
+            
+            # Get submission data from database
+            data = get_submission_db(sub_id_local)
+            if not data:
+                fail_job_db(job_id_local, "Submission not found")
+                return
 
             excel_name = create_excel_report(data, output_dir=GENERATED_DIR)
-            update_job_progress(JOBS_DIR, job_id_local, 60)
+            update_job_progress_db(job_id_local, 60)
             pdf_name = create_pdf_report(data, output_dir=GENERATED_DIR)
 
-            results = []
+            results = {}
             if excel_name:
-                results.append({"filename": excel_name, "url": f"{base_url}/generated/{excel_name}"})
+                results["excel"] = f"{base_url}/generated/{excel_name}"
+                results["excel_filename"] = excel_name
             if pdf_name:
-                results.append({"filename": pdf_name, "url": f"{base_url}/generated/{pdf_name}"})
+                results["pdf"] = f"{base_url}/generated/{pdf_name}"
+                results["pdf_filename"] = pdf_name
 
-            mark_job_done(JOBS_DIR, job_id_local, results)
+            complete_job_db(job_id_local, results)
         except Exception as e:
-            update_job_progress(JOBS_DIR, job_id_local, 0, state='failed', results=[{"error": str(e)}])
+            logger.exception(f"Report generation failed: {e}")
+            fail_job_db(job_id_local, str(e))
 
-    EXECUTOR.submit(task_generate_reports, job_id, submission_path, request.host_url.rstrip('/'))
+    EXECUTOR.submit(task_generate_reports, job_id, sub_id, request.host_url.rstrip('/'))
     return jsonify({"status": "queued", "job_id": job_id, "submission_id": sub_id, "files": saved_files})
 
 @civil_bp.route('/status/<job_id>', methods=['GET'])
 def status(job_id):
-    GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = app_paths()
-    job_state_file = os.path.join(JOBS_DIR, f"{job_id}.json")
-    if not os.path.exists(job_state_file):
+    job_data = get_job_status_db(job_id)
+    if not job_data:
         return jsonify({"error": "unknown job"}), 404
-    with open(job_state_file, 'r') as f:
-        return jsonify(json.load(f))
+    return jsonify(job_data)
 
 
 # ---------- Progressive Upload Endpoints ----------
@@ -226,13 +228,8 @@ def submit_with_urls():
                 "photos": photos_saved
             })
         
-        # Create submission
-        sub_id = random_id("sub")
-        subs_dir = os.path.join(GENERATED_DIR, "submissions")
-        os.makedirs(subs_dir, exist_ok=True)
-        
+        # Create submission in database
         submission_data = {
-            "id": sub_id,
             "project_name": payload.get("project_name", ""),
             "location": payload.get("location", ""),
             "visit_date": payload.get("visit_date", ""),
@@ -245,47 +242,50 @@ def submit_with_urls():
             "base_url": request.host_url.rstrip('/')
         }
         
-        submission_path = os.path.join(subs_dir, f"{sub_id}.json")
-        with open(submission_path, 'w') as f:
-            json.dump(submission_data, f, indent=2)
+        submission = create_submission_db(
+            module_type='civil',
+            form_data=submission_data,
+            site_name=payload.get("project_name"),
+            visit_date=payload.get("visit_date")
+        )
+        sub_id = submission.submission_id
         
         logger.info(f"✅ Civil submission {sub_id} saved with {len(processed_items)} work items")
         
-        # Create job and queue background task
-        job_id = random_id("job")
-        meta = {
-            "submission_id": sub_id,
-            "module": "civil",
-            "project_name": payload.get("project_name", ""),
-            "items_count": len(processed_items)
-        }
-        mark_job_started(JOBS_DIR, job_id, meta=meta)
+        # Create job in database
+        job = create_job_db(submission)
+        job_id = job.job_id
         
         base_url = request.host_url.rstrip('/')
         
-        def task_generate_reports(job_id_local, submission_path_local, base_url):
+        def task_generate_reports(job_id_local, sub_id_local, base_url):
             try:
-                update_job_progress(JOBS_DIR, job_id_local, 10)
-                data = {}
-                if submission_path_local and os.path.exists(submission_path_local):
-                    with open(submission_path_local, 'r') as sf:
-                        data = json.load(sf)
+                update_job_progress_db(job_id_local, 10, status='processing')
+                
+                # Get submission data from database
+                data = get_submission_db(sub_id_local)
+                if not data:
+                    fail_job_db(job_id_local, "Submission not found")
+                    return
                 
                 excel_name = create_excel_report(data, output_dir=GENERATED_DIR)
-                update_job_progress(JOBS_DIR, job_id_local, 60)
+                update_job_progress_db(job_id_local, 60)
                 pdf_name = create_pdf_report(data, output_dir=GENERATED_DIR)
                 
-                results = []
+                results = {}
                 if excel_name:
-                    results.append({"filename": excel_name, "url": f"{base_url}/generated/{excel_name}"})
+                    results["excel"] = f"{base_url}/generated/{excel_name}"
+                    results["excel_filename"] = excel_name
                 if pdf_name:
-                    results.append({"filename": pdf_name, "url": f"{base_url}/generated/{pdf_name}"})
+                    results["pdf"] = f"{base_url}/generated/{pdf_name}"
+                    results["pdf_filename"] = pdf_name
                 
-                mark_job_done(JOBS_DIR, job_id_local, results)
+                complete_job_db(job_id_local, results)
             except Exception as e:
-                update_job_progress(JOBS_DIR, job_id_local, 0, state='failed', results=[{"error": str(e)}])
+                logger.exception(f"Report generation failed: {e}")
+                fail_job_db(job_id_local, str(e))
         
-        EXECUTOR.submit(task_generate_reports, job_id, submission_path, base_url)
+        EXECUTOR.submit(task_generate_reports, job_id, sub_id, base_url)
         
         logger.info(f"🚀 Civil job {job_id} queued for submission {sub_id}")
         

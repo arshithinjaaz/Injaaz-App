@@ -2,7 +2,7 @@ services:
   - type: web
     name: injaaz-app
     env: python
-    buildCommand: pip install -r requirements-prods.txt
+    buildCommand: pip install -r requirements-prods.txt && python scripts/init_db.py
     startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
       - key: PYTHON_VERSION

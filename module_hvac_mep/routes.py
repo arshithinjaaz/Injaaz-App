@@ -18,11 +18,17 @@ from common.utils import (
     save_uploaded_file,
     save_uploaded_file_cloud,
     upload_base64_to_cloud,
-    mark_job_started,
-    read_job_state,
-    update_job_progress,
-    mark_job_done,
 )
+from common.db_utils import (
+    create_submission_db,
+    create_job_db,
+    update_job_progress_db,
+    complete_job_db,
+    fail_job_db,
+    get_job_status_db,
+    get_submission_db
+)
+from app.models import db
 
 # Import BOTH report generators
 try:
@@ -273,41 +279,37 @@ def submit():
                     }
                 )
 
-        # Persist submission JSON (include base_url so background worker can build absolute links)
-        sub_id = random_id("sub")
-        subs_dir = os.path.join(GENERATED_DIR, "submissions")
-        os.makedirs(subs_dir, exist_ok=True)
-        submission_path = os.path.join(subs_dir, f"{sub_id}.json")
-
+        # Create submission in database
         submission_record = {
-            "id": sub_id,
             "site_name": site_name,
             "visit_date": visit_date,
             "tech_signature": tech_sig_file,
             "opman_signature": opman_sig_file,
             "items": items,
-            "base_url": request.host_url.rstrip('/'),   # <- record request origin here
+            "base_url": request.host_url.rstrip('/'),
             "created_at": datetime.utcnow().isoformat(),
         }
 
-        with open(submission_path, "w", encoding="utf-8") as sf:
-            json.dump(submission_record, sf, indent=2)
+        submission = create_submission_db(
+            module_type='hvac_mep',
+            form_data=submission_record,
+            site_name=site_name,
+            visit_date=visit_date
+        )
+        sub_id = submission.submission_id
 
-        # Create job record and enqueue background task
-        os.makedirs(JOBS_DIR, exist_ok=True)
-        job_id = random_id("job")
-        
-        # Use JOBS_DIR directly
-        mark_job_started(JOBS_DIR, job_id, meta={"submission_id": sub_id, "module": "hvac_mep", "created_at": datetime.utcnow().isoformat()})
+        # Create job in database
+        job = create_job_db(submission)
+        job_id = job.job_id
 
         logger.info(f"Starting background task for job {job_id}")
 
-        # Submit to executor - FIXED: Use process_job instead of process_submission
+        # Submit to executor with submission_id instead of record
         executor = current_app.config.get('EXECUTOR')
         if executor:
             executor.submit(
                 process_job,
-                submission_record,
+                sub_id,
                 job_id,
                 current_app.config
             )
@@ -325,12 +327,10 @@ def submit():
 
 @hvac_mep_bp.route("/status/<job_id>", methods=["GET"])
 def status(job_id):
-    GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
-    # Use JOBS_DIR directly
-    state = read_job_state(JOBS_DIR, job_id)
-    if not state:
+    job_data = get_job_status_db(job_id)
+    if not job_data:
         return jsonify({"error": "unknown job"}), 404
-    return jsonify(state)
+    return jsonify(job_data)
 
 
 @hvac_mep_bp.route("/generated/<path:filename>", methods=["GET"])
@@ -339,51 +339,59 @@ def download_generated(filename):
     # allow nested paths like uploads/<name>
     return send_from_directory(GENERATED_DIR, filename, as_attachment=True)
 
-def process_job(submission_data, job_id, config):
+def process_job(sub_id, job_id, config):
     """Background worker: Generate BOTH Excel AND PDF reports"""
     try:
         GENERATED_DIR = config.get('GENERATED_DIR')
-        JOBS_DIR = config.get('JOBS_DIR')
         
         logger.info(f"🔄 Processing job {job_id}")
         
         # Update progress: Starting
-        update_job_progress(JOBS_DIR, job_id, 10)
+        update_job_progress_db(job_id, 10, status='processing')
+        
+        # Get submission data from database
+        submission_data = get_submission_db(sub_id)
+        if not submission_data:
+            fail_job_db(job_id, "Submission not found")
+            return
+        
+        # Use form_data from database
+        submission_record = submission_data.get('form_data', {})
         
         # Generate Excel
         logger.info("📊 Generating Excel report...")
-        update_job_progress(JOBS_DIR, job_id, 30)
-        excel_path = create_excel_report(submission_data, GENERATED_DIR)
+        update_job_progress_db(job_id, 30)
+        excel_path = create_excel_report(submission_record, GENERATED_DIR)
         excel_filename = os.path.basename(excel_path)
         logger.info(f"✅ Excel created: {excel_filename}")
         
         # Generate PDF
         logger.info("📄 Generating PDF report...")
-        update_job_progress(JOBS_DIR, job_id, 60)
-        pdf_path = create_pdf_report(submission_data, GENERATED_DIR)
+        update_job_progress_db(job_id, 60)
+        pdf_path = create_pdf_report(submission_record, GENERATED_DIR)
         pdf_filename = os.path.basename(pdf_path)
         logger.info(f"✅ PDF created: {pdf_filename}")
         
         # Build URLs using base_url from submission
-        base_url = submission_data.get('base_url', '')
+        base_url = submission_record.get('base_url', '')
         excel_url = f"{base_url}/generated/{excel_filename}"
         pdf_url = f"{base_url}/generated/{pdf_filename}"
         
         # Mark complete
-        update_job_progress(JOBS_DIR, job_id, 100)
-        
         results = {
-            'excel_url': excel_url,
-            'pdf_url': pdf_url
+            'excel': excel_url,
+            'pdf': pdf_url,
+            'excel_filename': excel_filename,
+            'pdf_filename': pdf_filename
         }
         
-        mark_job_done(JOBS_DIR, job_id, results)
+        complete_job_db(job_id, results)
         logger.info(f"✅ Job {job_id} completed successfully")
         
     except Exception as e:
         logger.error(f"❌ Job {job_id} failed: {str(e)}")
         logger.error(traceback.format_exc())
-        mark_job_done(JOBS_DIR, job_id, {'error': str(e)})
+        fail_job_db(job_id, str(e))
 
 
 # ---------- Progressive Upload Endpoints ----------
