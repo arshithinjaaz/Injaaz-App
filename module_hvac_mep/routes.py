@@ -29,6 +29,8 @@ from common.db_utils import (
     get_submission_db
 )
 from app.models import db
+from app.services.cloudinary_service import upload_local_file
+from app.services.cloudinary_service import upload_local_file
 
 # Import BOTH report generators
 try:
@@ -365,6 +367,16 @@ def process_job(sub_id, job_id, config):
         excel_filename = os.path.basename(excel_path)
         logger.info(f"✅ Excel created: {excel_filename}")
         
+        # Upload Excel to Cloudinary
+        update_job_progress_db(job_id, 45)
+        excel_url = upload_local_file(excel_path, f"hvac_excel_{sub_id}")
+        if not excel_url:
+            base_url = submission_record.get('base_url', '')
+            excel_url = f"{base_url}/generated/{excel_filename}"
+            logger.warning("⚠️ Excel cloud upload failed, using local URL")
+        else:
+            logger.info(f"✅ Excel uploaded to cloud: {excel_url}")
+        
         # Generate PDF
         logger.info("📄 Generating PDF report...")
         update_job_progress_db(job_id, 60)
@@ -372,10 +384,15 @@ def process_job(sub_id, job_id, config):
         pdf_filename = os.path.basename(pdf_path)
         logger.info(f"✅ PDF created: {pdf_filename}")
         
-        # Build URLs using base_url from submission
-        base_url = submission_record.get('base_url', '')
-        excel_url = f"{base_url}/generated/{excel_filename}"
-        pdf_url = f"{base_url}/generated/{pdf_filename}"
+        # Upload PDF to Cloudinary
+        update_job_progress_db(job_id, 80)
+        pdf_url = upload_local_file(pdf_path, f"hvac_pdf_{sub_id}")
+        if not pdf_url:
+            base_url = submission_record.get('base_url', '')
+            pdf_url = f"{base_url}/generated/{pdf_filename}"
+            logger.warning("⚠️ PDF cloud upload failed, using local URL")
+        else:
+            logger.info(f"✅ PDF uploaded to cloud: {pdf_url}")
         
         # Mark complete
         results = {
