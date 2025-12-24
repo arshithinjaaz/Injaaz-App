@@ -343,6 +343,7 @@ def download_generated(filename):
 
 def process_job(sub_id, job_id, config, app):
     """Background worker: Generate BOTH Excel AND PDF reports"""
+    logger.info(f"🔴 DEBUG: process_job called for {job_id}")
     with app.app_context():
         try:
             GENERATED_DIR = config.get('GENERATED_DIR')

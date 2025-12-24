@@ -124,6 +124,7 @@ def submit():
     job_id = job.job_id
 
     def task_generate_reports(job_id_local, sub_id_local, base_url, app):
+        logger.info(f"🔴 DEBUG: task_generate_reports called for {job_id_local}")
         with app.app_context():
             try:
                 update_job_progress_db(job_id_local, 10, status='processing')
