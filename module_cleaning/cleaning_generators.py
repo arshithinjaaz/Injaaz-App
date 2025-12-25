@@ -254,7 +254,7 @@ def create_pdf_report(data, output_dir):
         )
         
         # PROJECT & CLIENT DETAILS
-        story.append(Paragraph("Project & Client Details", heading_style))
+        add_section_heading(story, "Project & Client Details")
         
         client_info = [
             ['Client Name:', data.get('client_name', 'N/A')],
@@ -284,7 +284,7 @@ def create_pdf_report(data, output_dir):
         story.append(Spacer(1, 0.3*inch))
         
         # SITE COUNT & OPERATIONS
-        story.append(Paragraph("Site Count & Current Operations", heading_style))
+        add_section_heading(story, "Site Count & Current Operations")
         operations_data = [
             ['Room Count:', str(data.get('room_count', 'N/A'))],
             ['Current Team Size:', str(data.get('current_team_size', 'N/A'))],
