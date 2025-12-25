@@ -309,13 +309,25 @@ def submit():
         # Submit to executor with submission_id instead of record
         executor = current_app.config.get('EXECUTOR')
         if executor:
-            executor.submit(
+            # Add callback to catch any errors
+            future = executor.submit(
                 process_job,
                 sub_id,
                 job_id,
                 current_app.config,
                 current_app._get_current_object()
             )
+            
+            # Add error callback
+            def log_exception(fut):
+                try:
+                    fut.result()  # This will raise if the worker had an exception
+                except Exception as e:
+                    logger.error(f"❌ FATAL: Background job {job_id} crashed: {e}")
+                    logger.error(traceback.format_exc())
+            
+            future.add_done_callback(log_exception)
+            logger.info(f"✅ Background job {job_id} submitted to executor")
         else:
             logger.error("ThreadPoolExecutor not found in app config")
             return jsonify({'error': 'Background processing not available'}), 500
