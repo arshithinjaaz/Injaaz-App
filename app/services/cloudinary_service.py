@@ -55,10 +55,16 @@ def upload_local_file(path, public_id_prefix):
             folder="injaaz_reports", 
             public_id=public_id_prefix, 
             resource_type='auto',
-            access_mode='public',  # Make publicly accessible
-            flags='attachment'  # Force download instead of display
+            access_mode='public'  # Make publicly accessible
         )
         url = res.get('secure_url')
+        
+        # Add fl_attachment flag to force download
+        # Convert: https://res.cloudinary.com/.../upload/v123/.../file.pdf
+        # To: https://res.cloudinary.com/.../upload/fl_attachment/v123/.../file.pdf
+        if url and '/upload/' in url:
+            url = url.replace('/upload/', '/upload/fl_attachment/')
+        
         logger.info(f"Cloudinary file upload success: {url}")
         return url
     except Exception as e:
