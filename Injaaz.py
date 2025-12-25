@@ -128,6 +128,16 @@ def create_app():
     app.config['JOBS_DIR'] = JOBS_DIR
     app.config['EXECUTOR'] = executor
     
+    # Ensure directories exist (critical for Render deployment)
+    try:
+        os.makedirs(GENERATED_DIR, exist_ok=True)
+        os.makedirs(UPLOADS_DIR, exist_ok=True)
+        os.makedirs(JOBS_DIR, exist_ok=True)
+        logger.info("✅ Directory structure verified")
+    except Exception as e:
+        logger.error(f"❌ Failed to create directories: {e}")
+        # Don't fail, continue anyway (may be permissions issue)
+    
     # Setup rate limiting with Redis
     try:
         from flask_limiter import Limiter
@@ -323,24 +333,6 @@ def create_app():
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         return response
-
-    # Global error handlers
-    @app.errorhandler(404)
-    def not_found(error):
-        if request.path.startswith('/api/') or request.accept_mimetypes.accept_json:
-            return jsonify({"error": "Resource not found"}), 404
-        return "<h1>404 Not Found</h1><p>The page you're looking for doesn't exist.</p>", 404
-    
-    @app.errorhandler(413)
-    def request_entity_too_large(error):
-        return jsonify({"error": "File too large. Maximum 100MB total."}), 413
-
-    @app.errorhandler(500)
-    def internal_error(error):
-        logger.error(f"Internal server error: {error}")
-        if request.path.startswith('/api/') or request.accept_mimetypes.accept_json:
-            return jsonify({"error": "Internal server error"}), 500
-        return "<h1>500 Internal Server Error</h1><p>Something went wrong. Please try again.</p>", 500
 
     # Authentication routes
     @app.route('/login')

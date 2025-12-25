@@ -31,7 +31,10 @@ CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
 CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 
 # DATABASE - PostgreSQL for production
+# Fix for Render: Replace postgres:// with postgresql:// for SQLAlchemy compatibility
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'injaaz.db')}")
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # FLASK ENVIRONMENT
 FLASK_ENV = os.getenv("FLASK_ENV", "production")
