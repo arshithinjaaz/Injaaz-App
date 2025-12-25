@@ -52,20 +52,23 @@ def upload_local_file(path, public_id_prefix):
         # Extract original filename for download
         original_filename = os.path.basename(path)
         
-        logger.info(f"Attempting Cloudinary file upload: {path}")
+        # Determine resource type - use 'raw' for PDFs to force download
+        file_ext = os.path.splitext(path)[1].lower()
+        resource_type = 'raw' if file_ext == '.pdf' else 'auto'
+        
+        logger.info(f"Attempting Cloudinary file upload: {path} (resource_type={resource_type})")
         res = cloudinary.uploader.upload(
             path, 
             folder="injaaz_reports", 
             public_id=public_id_prefix, 
-            resource_type='auto',
+            resource_type=resource_type,
             access_mode='public'  # Make publicly accessible
         )
         url = res.get('secure_url')
         
-        # Add fl_attachment with filename to force download with proper filename
-        # Convert: https://res.cloudinary.com/.../upload/v123/.../file.pdf
-        # To: https://res.cloudinary.com/.../upload/fl_attachment:filename.pdf/v123/.../file.pdf
-        if url and '/upload/' in url:
+        # For raw PDFs, fl_attachment is automatically applied
+        # For other files, add fl_attachment with filename
+        if url and resource_type != 'raw' and '/upload/' in url:
             url = url.replace('/upload/', f'/upload/fl_attachment:{original_filename}/')
         
         logger.info(f"Cloudinary file upload success: {url}")
