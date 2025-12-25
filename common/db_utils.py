@@ -208,14 +208,24 @@ def get_job_status_db(job_id):
         Dictionary with job status, or None if not found
     """
     try:
+        from flask import has_app_context, current_app
+        
+        # Ensure we're in app context
+        if not has_app_context():
+            logger.error(f"❌ get_job_status_db called outside app context for {job_id}")
+            return None
+        
         job = Job.query.filter_by(job_id=job_id).first()
         if not job:
+            logger.warning(f"Job not found in database: {job_id}")
             return None
         
         return job.to_dict()
         
     except Exception as e:
-        logger.error(f"❌ Failed to get job status: {e}")
+        logger.error(f"❌ Failed to get job status for {job_id}: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return None
 
 

@@ -329,10 +329,15 @@ def submit():
 
 @hvac_mep_bp.route("/status/<job_id>", methods=["GET"])
 def status(job_id):
-    job_data = get_job_status_db(job_id)
-    if not job_data:
-        return jsonify({"error": "unknown job"}), 404
-    return jsonify(job_data)
+    try:
+        job_data = get_job_status_db(job_id)
+        if not job_data:
+            return jsonify({"error": "unknown job"}), 404
+        return jsonify(job_data)
+    except Exception as e:
+        logger.error(f"Status check failed for {job_id}: {e}")
+        logger.error(traceback.format_exc())
+        return jsonify({"error": "Status check failed", "details": str(e)}), 500
 
 
 @hvac_mep_bp.route("/generated/<path:filename>", methods=["GET"])
