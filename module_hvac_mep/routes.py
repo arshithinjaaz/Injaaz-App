@@ -640,9 +640,8 @@ def submit_with_urls():
         logger.info(f"Starting background task for job {job_id}")
         
         # Submit to executor
-        executor = current_app.config.get('EXECUTOR')
-        if executor:
-            executor.submit(
+        if EXECUTOR:
+            EXECUTOR.submit(
                 process_job,
                 sub_id,
                 job_id,
@@ -650,6 +649,7 @@ def submit_with_urls():
                 current_app._get_current_object(),
                 current_app._get_current_object()
             )
+            logger.info(f"✅ Background job {job_id} submitted to executor")
         else:
             logger.error("ThreadPoolExecutor not found in app config")
             return jsonify({'error': 'Background processing not available'}), 500
