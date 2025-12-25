@@ -1261,21 +1261,28 @@
                     const jobResponse = await fetch(`${modulePrefix}/job-status/${result.job_id}`);
                     const jobData = await jobResponse.json();
                     
-                    if (jobData.state === 'done') {
+                    // Check both legacy 'state' and current 'status'
+                    const isDone = jobData.state === 'done' || jobData.status === 'completed';
+                    const isFailed = jobData.state === 'failed' || jobData.status === 'failed';
+                    // Support both 'results' and 'result_data'
+                    const results = jobData.results || jobData.result_data || {};
+                    
+                    if (isDone) {
                         clearInterval(pollInterval);
                         loadingOverlay.style.display = 'none';
                         statusDiv.className = 'alert alert-success';
                         statusDiv.innerHTML = `
                             <strong>✅ Success!</strong> Reports generated.<br>
-                            <a href="${jobData.results.excel}" class="btn btn-sm btn-success mt-2" download>Download Excel</a>
-                            <a href="${jobData.results.pdf}" class="btn btn-sm btn-danger mt-2" download>Download PDF</a>
+                            <a href="${results.excel_url || results.excel || ''}" class="btn btn-sm btn-success mt-2" download>Download Excel</a>
+                            <a href="${results.pdf_url || results.pdf || ''}" class="btn btn-sm btn-danger mt-2" download>Download PDF</a>
                         `;
                         
                         // Auto-download both files with delay
-                        if (jobData.results.excel) {
+                        const excelUrl = results.excel_url || results.excel;
+                        if (excelUrl) {
                             setTimeout(() => {
                                 const link = document.createElement('a');
-                                link.href = jobData.results.excel;
+                                link.href = excelUrl;
                                 link.download = 'cleaning_report.xlsx';
                                 document.body.appendChild(link);
                                 link.click();
@@ -1283,21 +1290,22 @@
                             }, 500);
                         }
                         
-                        if (jobData.results.pdf) {
+                        const pdfUrl = results.pdf_url || results.pdf;
+                        if (pdfUrl) {
                             setTimeout(() => {
                                 const link = document.createElement('a');
-                                link.href = jobData.results.pdf;
+                                link.href = pdfUrl;
                                 link.download = 'cleaning_report.pdf';
                                 document.body.appendChild(link);
                                 link.click();
                                 document.body.removeChild(link);
                             }, 1500);
                         }
-                    } else if (jobData.state === 'failed') {
+                    } else if (isFailed) {
                         clearInterval(pollInterval);
                         loadingOverlay.style.display = 'none';
                         statusDiv.className = 'alert alert-danger';
-                        statusDiv.textContent = "❌ Failed: " + (jobData.error || 'Unknown');
+                        statusDiv.textContent = "❌ Failed: " + (results.error || jobData.error_message || 'Unknown');
                     } else {
                         statusDiv.textContent = `Progress: ${jobData.progress}%`;
                     }

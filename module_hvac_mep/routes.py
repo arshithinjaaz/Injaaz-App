@@ -641,14 +641,24 @@ def submit_with_urls():
         
         # Submit to executor
         if EXECUTOR:
-            EXECUTOR.submit(
+            future = EXECUTOR.submit(
                 process_job,
                 sub_id,
                 job_id,
                 current_app.config,
-                current_app._get_current_object(),
                 current_app._get_current_object()
             )
+            
+            # Add error callback to catch silent failures
+            def log_exception(fut):
+                try:
+                    fut.result()
+                except Exception as e:
+                    logger.error(f"❌ FATAL: Background job {job_id} crashed: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+            
+            future.add_done_callback(log_exception)
             logger.info(f"✅ Background job {job_id} submitted to executor")
         else:
             logger.error("ThreadPoolExecutor not found in app config")

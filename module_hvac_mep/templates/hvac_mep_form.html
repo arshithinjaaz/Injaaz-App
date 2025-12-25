@@ -1391,41 +1391,51 @@
             progressBar.style.width = progress + '%';
             progressBar.textContent = progress + '%';
             
-            if (job.state === 'done') {
+            // Check both legacy 'state' and current 'status'
+            const isDone = job.state === 'done' || job.status === 'completed';
+            const isFailed = job.state === 'failed' || job.status === 'failed';
+            // Support both 'results' and 'result_data'
+            const results = job.results || job.result_data || {};
+            
+            if (isDone) {
               clearInterval(pollingInterval);
               loadingOverlay.style.display = 'none'; // Hide loading overlay
               progressBar.classList.remove('progress-bar-animated');
               progressBar.classList.add('bg-success');
               statusBox.innerHTML = '<div class="alert alert-success">✅ Reports generated successfully!</div>';
               
-              if (job.results && (job.results.excel_url || job.results.pdf_url)) {
+              // Support both excel_url/pdf_url AND excel/pdf field names
+              const excelUrl = results.excel_url || results.excel;
+              const pdfUrl = results.pdf_url || results.pdf;
+              
+              if (excelUrl || pdfUrl) {
                 // Show download links
                 downloadLinks.style.display = 'block';
                 
-                if (job.results.excel_url) {
-                  excelLink.href = job.results.excel_url;
+                if (excelUrl) {
+                  excelLink.href = excelUrl;
                   excelLink.style.display = 'block';
                   // Auto-download Excel immediately
-                  autoDownload(job.results.excel_url, 'hvac_mep_report.xlsx');
+                  autoDownload(excelUrl, 'hvac_mep_report.xlsx');
                 } else {
                   excelLink.style.display = 'none';
                 }
                 
-                if (job.results.pdf_url) {
-                  pdfLink.href = job.results.pdf_url;
+                if (pdfUrl) {
+                  pdfLink.href = pdfUrl;
                   pdfLink.style.display = 'block';
                   // Auto-download PDF after 1 second
-                  setTimeout(() => autoDownload(job.results.pdf_url, 'hvac_mep_report.pdf'), 1000);
+                  setTimeout(() => autoDownload(pdfUrl, 'hvac_mep_report.pdf'), 1000);
                 } else {
                   pdfLink.style.display = 'none';
                 }
               }
-            } else if (job.state === 'failed') {
+            } else if (isFailed) {
               clearInterval(pollingInterval);
               loadingOverlay.style.display = 'none'; // Hide loading overlay
               progressBar.classList.remove('progress-bar-animated');
               progressBar.classList.add('bg-danger');
-              const errorMsg = job.results?.error || 'Unknown error';
+              const errorMsg = results.error || job.error_message || 'Unknown error';
               statusBox.innerHTML = `<div class="alert alert-danger">❌ Generation failed: ${errorMsg}</div>`;
             }
           } catch (err) {
