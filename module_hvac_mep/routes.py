@@ -305,14 +305,12 @@ def submit():
         job_id = job.job_id
 
         logger.info(f"Starting background task for job {job_id}")
-        logger.info(f"🔴 DEBUG: Executor object: {executor}")
-        logger.info(f"🔴 DEBUG: current_app.config keys: {list(current_app.config.keys())[:10]}")
-
+        logger.info(f"🔴 DEBUG: Executor object: {EXECUTOR}")
+        
         # Submit to executor with submission_id instead of record
-        executor = current_app.config.get('EXECUTOR')
-        if executor:
+        if EXECUTOR:
             # Add callback to catch any errors
-            future = executor.submit(
+            future = EXECUTOR.submit(
                 process_job,
                 sub_id,
                 job_id,
