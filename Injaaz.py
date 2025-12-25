@@ -143,8 +143,8 @@ def create_app():
         from flask_limiter import Limiter
         from flask_limiter.util import get_remote_address
         
-        # Get Redis URL from config (Upstash with TLS)
-        redis_url = getattr(config, 'REDIS_URL', None) or os.environ.get('RATELIMIT_STORAGE_URL') or os.environ.get('REDIS_URL')
+        # Get Redis URL from app config or environment
+        redis_url = app.config.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL') or os.environ.get('REDIS_URL')
         
         if redis_url:
             try:
