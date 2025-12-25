@@ -148,6 +148,12 @@ def create_app():
         
         if redis_url:
             try:
+                # Test Redis connection first
+                import redis
+                r = redis.from_url(redis_url, socket_connect_timeout=2)
+                r.ping()
+                logger.info("✓ Redis connection test successful")
+                
                 limiter = Limiter(
                     app=app,
                     key_func=get_remote_address,
@@ -161,7 +167,7 @@ def create_app():
                 logger.warning(f"⚠️  Redis connection failed - Rate limiting disabled: {redis_error}")
                 app.limiter = None
         else:
-            logger.info("✓ Rate limiting disabled (local development mode)")
+            logger.info("✓ Rate limiting disabled (no Redis URL configured)")
             app.limiter = None
     except ImportError:
         logger.warning("⚠️  Flask-Limiter not installed - rate limiting disabled")
