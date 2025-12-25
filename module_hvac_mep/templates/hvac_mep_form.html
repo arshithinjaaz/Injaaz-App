@@ -727,8 +727,8 @@
           </div>
           <div id="downloadLinks" class="download-links" style="display:none;">
             <h5>Reports Ready!</h5>
-            <a id="excelLink" href="#" target="_blank">Download Excel Report</a>
-            <a id="pdfLink" href="#" target="_blank">Download PDF Report</a>
+            <a id="excelLink" href="#" download="hvac_mep_report.xlsx" target="_blank">Download Excel Report</a>
+            <a id="pdfLink" href="#" download="hvac_mep_report.pdf" target="_blank">Download PDF Report</a>
           </div>
         </div>
       </div>
@@ -1448,6 +1448,8 @@
         const a = document.createElement('a');
         a.href = url;
         a.download = filename || '';
+        a.target = '_blank';  // Open in new tab if download fails
+        a.rel = 'noopener noreferrer';
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();

@@ -55,7 +55,8 @@ def upload_local_file(path, public_id_prefix):
             folder="injaaz_reports", 
             public_id=public_id_prefix, 
             resource_type='auto',
-            access_mode='public'  # Make publicly accessible
+            access_mode='public',  # Make publicly accessible
+            flags='attachment'  # Force download instead of display
         )
         url = res.get('secure_url')
         logger.info(f"Cloudinary file upload success: {url}")
