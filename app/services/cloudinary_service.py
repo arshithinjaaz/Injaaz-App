@@ -49,6 +49,9 @@ def upload_local_file(path, public_id_prefix):
         logger.error("Cloudinary initialization failed")
         return None
     try:
+        # Extract original filename for download
+        original_filename = os.path.basename(path)
+        
         logger.info(f"Attempting Cloudinary file upload: {path}")
         res = cloudinary.uploader.upload(
             path, 
@@ -59,11 +62,11 @@ def upload_local_file(path, public_id_prefix):
         )
         url = res.get('secure_url')
         
-        # Add fl_attachment flag to force download
+        # Add fl_attachment with filename to force download with proper filename
         # Convert: https://res.cloudinary.com/.../upload/v123/.../file.pdf
-        # To: https://res.cloudinary.com/.../upload/fl_attachment/v123/.../file.pdf
+        # To: https://res.cloudinary.com/.../upload/fl_attachment:filename.pdf/v123/.../file.pdf
         if url and '/upload/' in url:
-            url = url.replace('/upload/', '/upload/fl_attachment/')
+            url = url.replace('/upload/', f'/upload/fl_attachment:{original_filename}/')
         
         logger.info(f"Cloudinary file upload success: {url}")
         return url
