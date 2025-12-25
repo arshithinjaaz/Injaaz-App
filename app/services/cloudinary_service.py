@@ -52,9 +52,9 @@ def upload_local_file(path, public_id_prefix):
         # Extract original filename for download
         original_filename = os.path.basename(path)
         
-        # Determine resource type - use 'raw' for PDFs to force download
+        # Use 'raw' for Excel and PDF to force download (raw files download automatically)
         file_ext = os.path.splitext(path)[1].lower()
-        resource_type = 'raw' if file_ext == '.pdf' else 'auto'
+        resource_type = 'raw' if file_ext in ['.pdf', '.xlsx', '.xls'] else 'auto'
         
         logger.info(f"Attempting Cloudinary file upload: {path} (resource_type={resource_type})")
         res = cloudinary.uploader.upload(
@@ -66,11 +66,7 @@ def upload_local_file(path, public_id_prefix):
         )
         url = res.get('secure_url')
         
-        # For raw PDFs, fl_attachment is automatically applied
-        # For other files, add fl_attachment with filename
-        if url and resource_type != 'raw' and '/upload/' in url:
-            url = url.replace('/upload/', f'/upload/fl_attachment:{original_filename}/')
-        
+        # Raw files automatically download - no transformations needed or supported
         logger.info(f"Cloudinary file upload success: {url}")
         return url
     except Exception as e:
