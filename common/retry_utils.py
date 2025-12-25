@@ -38,6 +38,10 @@ def upload_to_cloudinary_with_retry(file_obj, **kwargs):
         Exception after 3 failed attempts
     """
     try:
+        # Ensure files are publicly accessible by default
+        if 'access_mode' not in kwargs:
+            kwargs['access_mode'] = 'public'
+        
         result = cloudinary.uploader.upload(file_obj, **kwargs)
         logger.info(f"Successfully uploaded to Cloudinary: {result.get('public_id')}")
         return result

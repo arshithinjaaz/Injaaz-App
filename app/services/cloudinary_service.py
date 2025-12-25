@@ -34,7 +34,8 @@ def upload_base64_signature(data_uri, public_id_prefix):
         res = cloudinary.uploader.upload(
             file=data_uri,
             folder="signatures",
-            public_id=f"{public_id_prefix}_{int(time.time())}"
+            public_id=f"{public_id_prefix}_{int(time.time())}",
+            access_mode='public'  # Make publicly accessible
         )
         url = res.get('secure_url')
         logger.info(f"Cloudinary upload success: {url}")
@@ -49,7 +50,13 @@ def upload_local_file(path, public_id_prefix):
         return None
     try:
         logger.info(f"Attempting Cloudinary file upload: {path}")
-        res = cloudinary.uploader.upload(path, folder="injaaz_reports", public_id=public_id_prefix, resource_type='auto')
+        res = cloudinary.uploader.upload(
+            path, 
+            folder="injaaz_reports", 
+            public_id=public_id_prefix, 
+            resource_type='auto',
+            access_mode='public'  # Make publicly accessible
+        )
         url = res.get('secure_url')
         logger.info(f"Cloudinary file upload success: {url}")
         return url
