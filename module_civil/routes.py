@@ -142,33 +142,16 @@ def submit():
                 update_job_progress_db(job_id_local, 60)
 
                 results = {}
-                # Upload Excel to Cloudinary
+                # Always use local download route for Excel
                 if excel_name:
-                    excel_path = os.path.join(GENERATED_DIR, excel_name)
-                    excel_url = upload_local_file(excel_path, f"civil_excel_{sub_id_local}")
-                    if excel_url:
-                        results["excel"] = excel_url
-                        results["excel_filename"] = excel_name
-                        logger.info(f"✅ Excel uploaded to cloud: {excel_url}")
-                    else:
-                        # Use Flask route for download
-                        results["excel"] = url_for('download_generated', filename=excel_name, _external=True)
-                        results["excel_filename"] = excel_name
-                        logger.warning("⚠️ Excel cloud upload failed, using local URL")
-                
-                # Upload PDF to Cloudinary
+                    results["excel"] = url_for('download_generated', filename=excel_name, _external=True)
+                    results["excel_filename"] = excel_name
+                    logger.info(f"✅ Excel generated: {excel_name}")
+                # Always use local download route for PDF
                 if pdf_name:
-                    pdf_path = os.path.join(GENERATED_DIR, pdf_name)
-                    pdf_url = upload_local_file(pdf_path, f"civil_pdf_{sub_id_local}")
-                    if pdf_url:
-                        results["pdf"] = pdf_url
-                        results["pdf_filename"] = pdf_name
-                        logger.info(f"✅ PDF uploaded to cloud: {pdf_url}")
-                    else:
-                        # Use Flask route for download
-                        results["pdf"] = url_for('download_generated', filename=pdf_name, _external=True)
-                        results["pdf_filename"] = pdf_name
-                        logger.warning("⚠️ PDF cloud upload failed, using local URL")
+                    results["pdf"] = url_for('download_generated', filename=pdf_name, _external=True)
+                    results["pdf_filename"] = pdf_name
+                    logger.info(f"✅ PDF generated: {pdf_name}")
 
                 complete_job_db(job_id_local, results)
             except Exception as e:
@@ -290,7 +273,7 @@ def submit_with_urls():
         
         base_url = request.host_url.rstrip('/')
         
-        def task_generate_reports(job_id_local, sub_id_local, base_url):
+        def task_generate_reports(job_id_local, sub_id_local, base_url, app):
             try:
                 update_job_progress_db(job_id_local, 10, status='processing')
                 
@@ -305,9 +288,11 @@ def submit_with_urls():
                 pdf_name = create_pdf_report(data, output_dir=GENERATED_DIR)
                 
                 results = {}
+                # Always use local download route for Excel
                 if excel_name:
                     results["excel"] = url_for('download_generated', filename=excel_name, _external=True)
                     results["excel_filename"] = excel_name
+                # Always use local download route for PDF
                 if pdf_name:
                     results["pdf"] = url_for('download_generated', filename=pdf_name, _external=True)
                     results["pdf_filename"] = pdf_name
