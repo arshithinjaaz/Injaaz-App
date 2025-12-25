@@ -313,7 +313,8 @@ def submit():
                 process_job,
                 sub_id,
                 job_id,
-                current_app.config
+                current_app.config,
+                current_app._get_current_object()
             )
         else:
             logger.error("ThreadPoolExecutor not found in app config")

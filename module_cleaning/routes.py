@@ -190,7 +190,8 @@ def submit():
                 process_job, 
                 submission_id, 
                 job_id, 
-                current_app.config
+                current_app.config,
+                current_app._get_current_object()
             )
             logger.info(f"Job {job_id} submitted to executor")
         else:
