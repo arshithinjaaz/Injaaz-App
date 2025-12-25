@@ -151,7 +151,8 @@ def submit():
                         results["excel_filename"] = excel_name
                         logger.info(f"✅ Excel uploaded to cloud: {excel_url}")
                     else:
-                        results["excel"] = f"{base_url}/generated/{excel_name}"
+                        # Use Flask route for download
+                        results["excel"] = url_for('download_generated', filename=excel_name, _external=True)
                         results["excel_filename"] = excel_name
                         logger.warning("⚠️ Excel cloud upload failed, using local URL")
                 
@@ -164,7 +165,8 @@ def submit():
                         results["pdf_filename"] = pdf_name
                         logger.info(f"✅ PDF uploaded to cloud: {pdf_url}")
                     else:
-                        results["pdf"] = f"{base_url}/generated/{pdf_name}"
+                        # Use Flask route for download
+                        results["pdf"] = url_for('download_generated', filename=pdf_name, _external=True)
                         results["pdf_filename"] = pdf_name
                         logger.warning("⚠️ PDF cloud upload failed, using local URL")
 
@@ -304,10 +306,10 @@ def submit_with_urls():
                 
                 results = {}
                 if excel_name:
-                    results["excel"] = f"{base_url}/generated/{excel_name}"
+                    results["excel"] = url_for('download_generated', filename=excel_name, _external=True)
                     results["excel_filename"] = excel_name
                 if pdf_name:
-                    results["pdf"] = f"{base_url}/generated/{pdf_name}"
+                    results["pdf"] = url_for('download_generated', filename=pdf_name, _external=True)
                     results["pdf_filename"] = pdf_name
                 
                 complete_job_db(job_id_local, results)
