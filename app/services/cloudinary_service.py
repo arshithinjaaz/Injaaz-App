@@ -66,7 +66,10 @@ def upload_local_file(path, public_id_prefix):
         )
         url = res.get('secure_url')
         
-        # Raw files automatically download - no transformations needed or supported
+        # For PDFs, add attachment query parameter to force download
+        if url and file_ext == '.pdf':
+            url = f"{url}?attachment=true"
+        
         logger.info(f"Cloudinary file upload success: {url}")
         return url
     except Exception as e:
