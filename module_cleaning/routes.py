@@ -1,3 +1,4 @@
+
 import os
 import json
 import logging
@@ -25,6 +26,17 @@ from app.services.cloudinary_service import upload_local_file
 logger = logging.getLogger(__name__)
 
 cleaning_bp = Blueprint('cleaning', __name__, url_prefix='/cleaning', template_folder='templates')
+
+@cleaning_bp.route('/generated/<path:filename>')
+def download_generated_cleaning(filename):
+    """Serve generated files inline (not as attachment) for cleaning module."""
+    GENERATED_DIR = current_app.config['GENERATED_DIR']
+    safe_path = os.path.join(GENERATED_DIR, filename)
+    if not os.path.exists(safe_path):
+        logger.warning(f"File not found: {filename}")
+        return "File not found", 404
+    # Use send_file for more control; set as_attachment=False
+    return send_file(safe_path, as_attachment=False)
 
 try:
     from .cleaning_generators import create_excel_report, create_pdf_report
@@ -253,34 +265,18 @@ def process_job(sub_id, job_id, config, app):
             excel_path = create_excel_report(submission_data, GENERATED_DIR)
             excel_filename = os.path.basename(excel_path)
             logger.info(f"✅ Excel created: {excel_filename}")
-            
-            # Upload Excel to Cloudinary
-            update_job_progress_db(job_id, 45)
-            excel_url = upload_local_file(excel_path, f"cleaning_excel_{sub_id}")
-            if not excel_url:
-                base_url = submission_data.get('base_url', '')
-                excel_url = f"{base_url}/generated/{excel_filename}"
-                logger.warning("⚠️ Excel cloud upload failed, using local URL")
-            else:
-                logger.info(f"✅ Excel uploaded to cloud: {excel_url}")
-            
+            # Only use local Excel URL, skip Cloudinary upload
+            base_url = submission_data.get('base_url', '')
+            excel_url = f"{base_url}/generated/{excel_filename}"
+
             # Generate PDF
             logger.info("📄 Generating PDF report...")
             update_job_progress_db(job_id, 60)
             pdf_path = create_pdf_report(submission_data, GENERATED_DIR)
             pdf_filename = os.path.basename(pdf_path)
             logger.info(f"✅ PDF created: {pdf_filename}")
-            
-            # Upload PDF to Cloudinary
-            update_job_progress_db(job_id, 80)
-            pdf_url = upload_local_file(pdf_path, f"cleaning_pdf_{sub_id}")
-            if not pdf_url:
-                base_url = submission_data.get('base_url', '')
-                pdf_url = f"{base_url}/generated/{pdf_filename}"
-                logger.warning("⚠️ PDF cloud upload failed, using local URL")
-            else:
-                logger.info(f"✅ PDF uploaded to cloud: {pdf_url}")
-            
+            pdf_url = f"{base_url}/generated/{pdf_filename}"
+
             # Mark complete
             results = {
                 'excel': excel_url,
@@ -288,7 +284,7 @@ def process_job(sub_id, job_id, config, app):
                 'excel_filename': excel_filename,
                 'pdf_filename': pdf_filename
             }
-            
+
             complete_job_db(job_id, results)
             logger.info(f"✅ Job {job_id} completed successfully")
             

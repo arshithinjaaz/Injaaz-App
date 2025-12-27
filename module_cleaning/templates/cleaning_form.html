@@ -1271,36 +1271,17 @@
                         clearInterval(pollInterval);
                         loadingOverlay.style.display = 'none';
                         statusDiv.className = 'alert alert-success';
+                        // Rewrite URLs to use the cleaning module's inline file route
+                        const excelUrlRaw = results.excel_url || results.excel || '';
+                        const pdfUrlRaw = results.pdf_url || results.pdf || '';
+                        const excelUrl = excelUrlRaw ? excelUrlRaw.replace(/\/generated\//, '/cleaning/generated/') : '';
+                        const pdfUrl = pdfUrlRaw ? pdfUrlRaw.replace(/\/generated\//, '/cleaning/generated/') : '';
                         statusDiv.innerHTML = `
                             <strong>✅ Success!</strong> Reports generated.<br>
-                            <a href="${results.excel_url || results.excel || ''}" class="btn btn-sm btn-success mt-2" download>Download Excel</a>
-                            <a href="${results.pdf_url || results.pdf || ''}" class="btn btn-sm btn-danger mt-2" download>Download PDF</a>
+                            <a href="${excelUrl}" class="btn btn-sm btn-success mt-2" target="_blank" rel="noopener">View Excel Report</a>
+                            <a href="${pdfUrl}" class="btn btn-sm btn-danger mt-2" target="_blank" rel="noopener">View PDF Report</a>
+                            <div class="mt-2 text-muted" style="font-size:0.95em;">Click to view or right-click to save.</div>
                         `;
-                        
-                        // Auto-download both files with delay
-                        const excelUrl = results.excel_url || results.excel;
-                        if (excelUrl) {
-                            setTimeout(() => {
-                                const link = document.createElement('a');
-                                link.href = excelUrl;
-                                link.download = 'cleaning_report.xlsx';
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                            }, 500);
-                        }
-                        
-                        const pdfUrl = results.pdf_url || results.pdf;
-                        if (pdfUrl) {
-                            setTimeout(() => {
-                                const link = document.createElement('a');
-                                link.href = pdfUrl;
-                                link.download = 'cleaning_report.pdf';
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                            }, 1500);
-                        }
                     } else if (isFailed) {
                         clearInterval(pollInterval);
                         loadingOverlay.style.display = 'none';

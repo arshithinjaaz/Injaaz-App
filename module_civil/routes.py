@@ -135,23 +135,29 @@ def submit():
                     fail_job_db(job_id_local, "Submission not found")
                     return
 
-                excel_name = create_excel_report(data, output_dir=GENERATED_DIR)
+                # Generate Excel
+                logger.info("📊 Generating Excel report...")
+                excel_path = create_excel_report(data, output_dir=GENERATED_DIR)
+                excel_filename = os.path.basename(excel_path)
+                logger.info(f"✅ Excel created: {excel_filename}")
+                excel_url = f"{base_url}/generated/{excel_filename}"
                 update_job_progress_db(job_id_local, 40)
-                
-                pdf_name = create_pdf_report(data, output_dir=GENERATED_DIR)
+
+                # Generate PDF
+                logger.info("📄 Generating PDF report...")
+                pdf_path = create_pdf_report(data, output_dir=GENERATED_DIR)
+                pdf_filename = os.path.basename(pdf_path)
+                logger.info(f"✅ PDF created: {pdf_filename}")
+                pdf_url = f"{base_url}/generated/{pdf_filename}"
                 update_job_progress_db(job_id_local, 60)
 
-                results = {}
-                # Always use local download route for Excel
-                if excel_name:
-                    results["excel"] = url_for('download_generated', filename=excel_name, _external=True)
-                    results["excel_filename"] = excel_name
-                    logger.info(f"✅ Excel generated: {excel_name}")
-                # Always use local download route for PDF
-                if pdf_name:
-                    results["pdf"] = url_for('download_generated', filename=pdf_name, _external=True)
-                    results["pdf_filename"] = pdf_name
-                    logger.info(f"✅ PDF generated: {pdf_name}")
+                # Set results
+                results = {
+                    "excel": excel_url,
+                    "excel_filename": excel_filename,
+                    "pdf": pdf_url,
+                    "pdf_filename": pdf_filename
+                }
 
                 complete_job_db(job_id_local, results)
             except Exception as e:

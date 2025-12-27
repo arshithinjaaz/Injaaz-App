@@ -381,7 +381,7 @@ def create_app():
                 logger.warning(f"File not found: {filename}")
                 abort(404)
             logger.info(f"Serving file: {filename}")
-            return send_from_directory(GENERATED_DIR, filename, as_attachment=True)
+            return send_from_directory(GENERATED_DIR, filename, as_attachment=False)
         except ValueError as e:
             logger.warning(f"Path traversal attempt blocked: {filename}")
             abort(403)
