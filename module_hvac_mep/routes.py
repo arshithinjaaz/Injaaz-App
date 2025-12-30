@@ -28,9 +28,11 @@ from common.db_utils import (
     get_job_status_db,
     get_submission_db
 )
-from app.models import db
+from app.models import db, User
+from app.middleware import token_required, module_access_required
 from app.services.cloudinary_service import upload_local_file
 from app.services.cloudinary_service import upload_local_file
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
 # Import BOTH report generators
 try:
@@ -104,8 +106,31 @@ def get_paths():
 
 
 @hvac_mep_bp.route("/form", methods=["GET"])
+@jwt_required()
 def index():
-    return render_template("hvac_mep_form.html")
+    """HVAC&MEP form - requires authentication and module access"""
+    from flask import redirect, url_for
+    from flask_jwt_extended import get_jwt_identity
+    
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if not user or not user.is_active:
+            return render_template('access_denied.html', 
+                                 module='HVAC & MEP',
+                                 message='Your account is inactive. Please contact an administrator.'), 403
+        
+        if not user.has_module_access('hvac_mep'):
+            return render_template('access_denied.html',
+                                 module='HVAC & MEP',
+                                 message='You do not have access to this module. Please contact an administrator to grant access.'), 403
+        
+        return render_template("hvac_mep_form.html")
+    except Exception as e:
+        logger.error(f"Error checking module access: {str(e)}")
+        # If JWT check fails, redirect to login
+        return redirect(url_for('login_page'))
 
 
 @hvac_mep_bp.route("/dropdowns", methods=["GET"])

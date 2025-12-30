@@ -54,6 +54,13 @@ except Exception as e:
     logger.exception("Could not import app.auth.routes.auth_bp: %s", e)
     auth_bp = None
 
+try:
+    from app.admin.routes import admin_bp  # noqa: F401
+    logger.info("Imported app.admin.routes.admin_bp")
+except Exception as e:
+    logger.exception("Could not import app.admin.routes.admin_bp: %s", e)
+    admin_bp = None
+
 # Ensure required directories exist at startup
 os.makedirs(GENERATED_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -91,6 +98,15 @@ def create_app():
     
     # Initialize JWT
     jwt = JWTManager(app)
+    
+    # Configure JWT to read from both headers and cookies
+    # This allows HTML links to work (cookies) and API calls to work (headers)
+    app.config.setdefault('JWT_TOKEN_LOCATION', ['headers', 'cookies'])
+    app.config.setdefault('JWT_COOKIE_SECURE', app.config.get('SESSION_COOKIE_SECURE', False))
+    app.config.setdefault('JWT_COOKIE_HTTPONLY', True)
+    app.config.setdefault('JWT_COOKIE_SAMESITE', 'Lax')
+    app.config.setdefault('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
+    app.config.setdefault('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
     
     # JWT token verification callback (check if token is revoked)
     @jwt.token_in_blocklist_loader
@@ -310,6 +326,13 @@ def create_app():
     else:
         logger.warning("⚠️  Authentication blueprint not available - check imports")
     
+    # Register admin blueprint
+    if admin_bp:
+        app.register_blueprint(admin_bp)  # Already has /api/admin prefix
+        logger.info("✅ Registered admin blueprint at /api/admin")
+    else:
+        logger.warning("⚠️  Admin blueprint not available - check imports")
+    
     # Register reports API blueprint for on-demand regeneration
     try:
         from app.reports_api import reports_bp
@@ -361,6 +384,11 @@ def create_app():
     def dashboard():
         """Protected dashboard - requires authentication"""
         return render_template('dashboard.html')
+    
+    @app.route('/admin/dashboard')
+    def admin_dashboard():
+        """Admin dashboard - requires admin authentication"""
+        return render_template('admin_dashboard.html')
     
     # Root route: Show login page
     @app.route('/')

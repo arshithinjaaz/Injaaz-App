@@ -55,12 +55,19 @@ def create_excel_report(data, output_dir):
         
         logger.info(f"Creating professional Civil Excel report in {output_dir}")
         
-        # Extract data from fields dict (FormData submission)
-        fields = data.get('fields', {})
-        files = data.get('files', [])
-        
-        project_name = fields.get('project_name', ['Unknown_Project'])[0] if isinstance(fields.get('project_name'), list) else fields.get('project_name', 'Unknown_Project')
+        # Extract data - data is already in the correct format from submit_with_urls
+        project_name = data.get('project_name', 'Unknown_Project')
         project_name = project_name.replace(' ', '_') if project_name else 'Unknown_Project'
+        
+        # Collect all photos from work items
+        work_items = data.get('work_items', [])
+        logger.info(f"📸 Processing {len(work_items)} work items for Excel")
+        all_photos = []
+        for idx, item in enumerate(work_items):
+            photos = item.get('photos', [])
+            logger.info(f"  Work item {idx + 1}: {len(photos)} photos")
+            all_photos.extend(photos)
+        logger.info(f"📸 Total photos collected: {len(all_photos)}")
         
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         excel_filename = f"Civil_{project_name}_{timestamp}.xlsx"
@@ -81,70 +88,75 @@ def create_excel_report(data, output_dir):
         
         # Project Information Section
         project_info = [
-            ('Project Name', project_name.replace('_', ' ')),
-            ('Date', fields.get('date', ['N/A'])[0] if isinstance(fields.get('date'), list) else fields.get('date', 'N/A')),
-            ('Location', fields.get('location', ['N/A'])[0] if isinstance(fields.get('location'), list) else fields.get('location', 'N/A')),
+            ('Project Name', data.get('project_name', 'N/A')),
+            ('Visit Date', data.get('visit_date', 'N/A')),
+            ('Location', data.get('location', 'N/A')),
+            ('Inspector', data.get('inspector_name', 'N/A')),
+            ('Manager', data.get('manager_name', 'N/A')),
             ('Report Generated', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-            ('Total Files', str(len(files)))
+            ('Total Photos', str(len(all_photos)))
         ]
         
         current_row = add_info_section(ws, project_info, current_row, title="Project Information")
         
-        # Work Items Section - Reconstruct from FormData parallel arrays
-        def ensure_list(val):
-            if val is None:
-                return []
-            return [val] if isinstance(val, str) else val
-        
-        descriptions = ensure_list(fields.get('description', []))
-        quantities = ensure_list(fields.get('quantity', []))
-        materials = ensure_list(fields.get('material', []))
-        prices = ensure_list(fields.get('price', []))
-        labours = ensure_list(fields.get('labour', []))
-        
-        max_items = max(len(descriptions), len(quantities), len(materials), len(prices), len(labours))
-        
-        if max_items > 0:
+        # Work Items Section - Use work_items array directly
+        if work_items:
             current_row = add_section_header(ws, "Work Items", current_row)
             
-            headers = ['#', 'Description', 'Quantity', 'Material', 'Price', 'Labour']
+            headers = ['#', 'Description', 'Quantity', 'Material', 'Material Qty', 'Price', 'Labour', 'Photos']
             table_data = []
             
-            for i in range(max_items):
+            for idx, item in enumerate(work_items, 1):
+                photos = item.get('photos', [])
                 table_data.append([
-                    str(i + 1),
-                    descriptions[i] if i < len(descriptions) else '',
-                    quantities[i] if i < len(quantities) else '',
-                    materials[i] if i < len(materials) else '',
-                    prices[i] if i < len(prices) else '',
-                    labours[i] if i < len(labours) else ''
+                    str(idx),
+                    item.get('description', 'N/A'),
+                    item.get('quantity', 'N/A'),
+                    item.get('material', 'N/A'),
+                    item.get('material_qty', 'N/A'),
+                    item.get('price', 'N/A'),
+                    item.get('labour', 'N/A'),
+                    str(len(photos))
                 ])
             
             col_widths = {
                 'A': 6,
-                'B': 40,
+                'B': 35,
                 'C': 12,
                 'D': 20,
                 'E': 12,
-                'F': 12
+                'F': 12,
+                'G': 15,
+                'H': 10
             }
             
             current_row = add_data_table(ws, headers, table_data, current_row, col_widths=col_widths)
         
         # Signatures Section
         signatures = {}
-        tech_sig = data.get('tech_signature', '') or data.get('op_signature', '')
-        op_sig = data.get('op_signature', '')
+        inspector_sig = data.get('inspector_signature', {})
+        manager_sig = data.get('manager_signature', {})
         
-        if tech_sig:
-            signatures['Technical Engineer'] = tech_sig
+        # Handle signature dict with url or direct string
+        if inspector_sig:
+            if isinstance(inspector_sig, dict) and inspector_sig.get('url'):
+                signatures['Inspector'] = inspector_sig.get('url')
+            elif isinstance(inspector_sig, str):
+                signatures['Inspector'] = inspector_sig
+            else:
+                signatures['Inspector'] = None
         else:
-            signatures['Technical Engineer'] = None
+            signatures['Inspector'] = None
             
-        if op_sig:
-            signatures['Operation/Maintenance'] = op_sig
+        if manager_sig:
+            if isinstance(manager_sig, dict) and manager_sig.get('url'):
+                signatures['Manager'] = manager_sig.get('url')
+            elif isinstance(manager_sig, str):
+                signatures['Manager'] = manager_sig
+            else:
+                signatures['Manager'] = None
         else:
-            signatures['Operation/Maintenance'] = None
+            signatures['Manager'] = None
         
         current_row = add_signature_section(ws, signatures, current_row)
         
@@ -163,61 +175,39 @@ def create_excel_report(data, output_dir):
     except Exception as e:
         logger.error(f"❌ Civil Excel generation error: {str(e)}")
         raise
-        work_descriptions = ensure_list(fields.get('work_desc[]'))
-        work_quantities = ensure_list(fields.get('work_qty[]'))
-        work_materials = ensure_list(fields.get('material[]'))
-        work_prices = ensure_list(fields.get('price[]'))
-        work_labours = ensure_list(fields.get('labour[]'))
-        
-        num_items = len(work_descriptions) if work_descriptions else 0
-        
-        for idx in range(num_items):
-            ws.cell(row=row, column=1, value=idx + 1)
-            ws.cell(row=row, column=2, value=work_descriptions[idx] if idx < len(work_descriptions) else '')
-            ws.cell(row=row, column=3, value=work_quantities[idx] if idx < len(work_quantities) else '')
-            ws.cell(row=row, column=4, value=work_materials[idx] if idx < len(work_materials) else '')
-            ws.cell(row=row, column=5, value=work_prices[idx] if idx < len(work_prices) else '')
-            ws.cell(row=row, column=6, value=work_labours[idx] if idx < len(work_labours) else '')
-            
-            for col in range(1, 7):
-                ws.cell(row=row, column=col).border = border
-                ws.cell(row=row, column=col).alignment = Alignment(vertical='top', wrap_text=True)
-            
-            row += 1
-        
-        # Column widths
-        ws.column_dimensions['A'].width = 8
-        ws.column_dimensions['B'].width = 30
-        ws.column_dimensions['C'].width = 12
-        ws.column_dimensions['D'].width = 15
-        ws.column_dimensions['E'].width = 12
-        ws.column_dimensions['F'].width = 12
-        
-        wb.save(excel_path)
-        logger.info(f"✅ Civil Excel report created: {excel_path}")
-        return os.path.basename(excel_path)
-        
-    except Exception as e:
-        logger.error(f"❌ Civil Excel generation error: {str(e)}")
-        raise
 
 def create_pdf_report(data, output_dir):
     """Generate professional Civil Works PDF report with branding."""
     try:
         logger.info(f"Creating professional Civil PDF report in {output_dir}")
         
-        # Extract data
-        fields = data.get('fields', {})
-        files = data.get('files', [])
-        
-        def get_field(name, default='N/A'):
-            val = fields.get(name, default)
-            return val[0] if isinstance(val, list) and val else (val or default)
-        
-        project_name = get_field('project_name', 'Unknown_Project')
+        # Extract data - data is already in the correct format from submit_with_urls
+        project_name = data.get('project_name', 'Unknown_Project')
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         pdf_filename = f"Civil_{project_name.replace(' ', '_')}_{timestamp}.pdf"
         pdf_path = os.path.join(output_dir, pdf_filename)
+        
+        # Collect all photos from work items
+        work_items = data.get('work_items', [])
+        logger.info(f"📸 Processing {len(work_items)} work items for PDF")
+        logger.info(f"📸 Full data structure keys: {list(data.keys())}")
+        all_photos = []
+        for idx, item in enumerate(work_items):
+            photos = item.get('photos', [])
+            logger.info(f"  Work item {idx + 1}: {len(photos)} photos")
+            logger.info(f"    Work item keys: {list(item.keys())}")
+            for pidx, photo in enumerate(photos):
+                if isinstance(photo, dict):
+                    photo_url = photo.get('url', 'NO URL KEY')
+                    logger.info(f"    Photo {pidx + 1} (dict): url={photo_url[:80] if photo_url else 'NONE'}..., is_cloud={photo.get('is_cloud', 'N/A')}")
+                else:
+                    logger.info(f"    Photo {pidx + 1} (not dict): {str(photo)[:80]}...")
+            all_photos.extend(photos)
+        logger.info(f"📸 Total photos collected: {len(all_photos)}")
+        if len(all_photos) == 0:
+            logger.warning("⚠️ NO PHOTOS FOUND! Checking data structure...")
+            logger.warning(f"   Work items: {work_items}")
+            logger.warning(f"   First work item structure: {work_items[0] if work_items else 'NO ITEMS'}")
         
         # Container for PDF elements
         story = []
@@ -234,87 +224,100 @@ def create_pdf_report(data, output_dir):
         add_section_heading(story, "Project Information")
         
         project_data = [
-            ['Project Name:', get_field('project_name')],
-            ['Location:', get_field('location')],
-            ['Visit Date:', get_field('visit_date')],
-            ['Inspector:', get_field('inspector_name')],
-            ['Manager:', get_field('manager_name')],
+            ['Project Name:', data.get('project_name', 'N/A')],
+            ['Location:', data.get('location', 'N/A')],
+            ['Visit Date:', data.get('visit_date', 'N/A')],
+            ['Inspector:', data.get('inspector_name', 'N/A')],
+            ['Manager:', data.get('manager_name', 'N/A')],
+            ['Description of Work:', data.get('description_of_work', 'N/A')],
+            ['Floor:', data.get('floor', 'N/A')],
+            ['Developer/Client:', data.get('developer_client', 'N/A')],
+            ['City/Area:', data.get('city_area', 'N/A')],
+            ['Estimated Time:', data.get('estimated_time', 'N/A')],
             ['Report Generated:', datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
-            ['Total Photos:', str(len(files))]
+            ['Total Photos:', str(len(all_photos))]
         ]
         
         project_table = create_info_table(project_data)
         story.append(project_table)
         story.append(Spacer(1, 0.3*inch))
         
-        # WORK ITEMS - Reconstruct from FormData parallel arrays
+        # WORK ITEMS - Use work_items array directly
         add_section_heading(story, "Work Items")
         
-        # Extract work item parallel arrays
-        def ensure_list(val):
-            if val is None:
-                return []
-            return [val] if isinstance(val, str) else val
-        
-        work_descriptions = ensure_list(fields.get('work_desc[]'))
-        work_quantities = ensure_list(fields.get('work_qty[]'))
-        work_materials = ensure_list(fields.get('material[]'))
-        work_prices = ensure_list(fields.get('price[]'))
-        work_labours = ensure_list(fields.get('labour[]'))
-        
-        num_items = len(work_descriptions) if work_descriptions else 0
-        
-        if num_items > 0:
-            for idx in range(num_items):
-                add_item_heading(story, f"Work Item {idx + 1}")
+        if work_items:
+            for idx, item in enumerate(work_items, 1):
+                add_item_heading(story, f"Work Item {idx}")
                 
                 item_data = [
-                    ['Description:', work_descriptions[idx] if idx < len(work_descriptions) else 'N/A'],
-                    ['Quantity:', work_quantities[idx] if idx < len(work_quantities) else 'N/A'],
-                    ['Material:', work_materials[idx] if idx < len(work_materials) else 'N/A'],
-                    ['Price:', work_prices[idx] if idx < len(work_prices) else 'N/A'],
-                    ['Labour:', work_labours[idx] if idx < len(work_labours) else 'N/A']
+                    ['Description:', item.get('description', 'N/A')],
+                    ['Quantity:', item.get('quantity', 'N/A')],
+                    ['Material:', item.get('material', 'N/A')],
+                    ['Material Quantity:', item.get('material_qty', 'N/A')],
+                    ['Price:', item.get('price', 'N/A')],
+                    ['Labour:', item.get('labour', 'N/A')],
+                    ['Photos:', str(len(item.get('photos', [])))]
                 ]
                 
                 item_table = create_info_table(item_data, col_widths=[1.8*inch, 4.2*inch])
                 story.append(item_table)
-                story.append(Spacer(1, 0.2*inch))
+                
+                # Add photos for this work item
+                photos = item.get('photos', [])
+                logger.info(f"    Adding photos for work item {idx}: {len(photos)} photos")
+                if photos:
+                    story.append(Spacer(1, 0.15*inch))
+                    add_paragraph(story, f"<b>Photos for Work Item {idx} ({len(photos)} total):</b>")
+                    story.append(Spacer(1, 0.1*inch))
+                    logger.info(f"    Calling add_photo_grid with {len(photos)} photos")
+                    add_photo_grid(story, photos)
+                else:
+                    logger.warning(f"    ⚠️ No photos found for work item {idx}")
+                
+                # Add page break after each item (except last)
+                if idx < len(work_items):
+                    story.append(PageBreak())
         else:
             add_paragraph(story, "No work items recorded.")
         
-        # PHOTOS SECTION - Show all uploaded photos
-        if files:
+        # PHOTOS SECTION - Show all photos if not already shown per item
+        if all_photos and not work_items:
             story.append(Spacer(1, 0.2*inch))
-            add_section_heading(story, f"Attached Photos ({len(files)} total)")
-            add_photo_grid(story, files)
-        else:
+            add_section_heading(story, f"Attached Photos ({len(all_photos)} total)")
+            add_photo_grid(story, all_photos)
+        elif not all_photos:
+            story.append(Spacer(1, 0.2*inch))
             add_paragraph(story, "No photos attached.")
         
         # SIGNATURES SECTION - Professional format
-        tech_sig = get_field('tech_signature', None)
-        op_sig = get_field('op_signature', None)
+        inspector_sig = data.get('inspector_signature', {})
+        manager_sig = data.get('manager_signature', {})
         
         signatures = {}
         
-        # Handle tech signature - can be dict with url or string
-        if tech_sig:
-            if isinstance(tech_sig, dict) and tech_sig.get('url'):
-                signatures['Technical Engineer'] = tech_sig
-            elif isinstance(tech_sig, str) and tech_sig.startswith('data:image'):
-                signatures['Technical Engineer'] = {'url': tech_sig, 'is_cloud': False}
+        # Handle inspector signature - can be dict with url or string
+        if inspector_sig:
+            if isinstance(inspector_sig, dict) and inspector_sig.get('url'):
+                signatures['Inspector'] = inspector_sig
+            elif isinstance(inspector_sig, str) and inspector_sig.startswith('data:image'):
+                signatures['Inspector'] = {'url': inspector_sig, 'is_cloud': False}
+            elif isinstance(inspector_sig, str):
+                signatures['Inspector'] = {'url': inspector_sig, 'is_cloud': True}
         
-        # Handle op signature - can be dict with url or string
-        if op_sig:
-            if isinstance(op_sig, dict) and op_sig.get('url'):
-                signatures['Operation/Maintenance'] = op_sig
-            elif isinstance(op_sig, str) and op_sig.startswith('data:image'):
-                signatures['Operation/Maintenance'] = {'url': op_sig, 'is_cloud': False}
+        # Handle manager signature - can be dict with url or string
+        if manager_sig:
+            if isinstance(manager_sig, dict) and manager_sig.get('url'):
+                signatures['Manager'] = manager_sig
+            elif isinstance(manager_sig, str) and manager_sig.startswith('data:image'):
+                signatures['Manager'] = {'url': manager_sig, 'is_cloud': False}
+            elif isinstance(manager_sig, str):
+                signatures['Manager'] = {'url': manager_sig, 'is_cloud': True}
         
         # Always show signature section
         if not signatures:
             signatures = {
-                'Technical Engineer': None,
-                'Operation/Maintenance': None
+                'Inspector': None,
+                'Manager': None
             }
         
         add_signatures_section(story, signatures)

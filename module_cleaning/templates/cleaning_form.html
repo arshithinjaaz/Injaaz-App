@@ -4,13 +4,14 @@
   <meta charset="utf-8">
   <title>Cleaning Services - Site Assessment Form</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='photo_upload_queue.css') }}">
   <script src="{{ url_for('static', filename='photo_upload_queue.js') }}"></script>
   <script src="{{ url_for('static', filename='photo_queue_ui.js') }}"></script>
+  <script src="{{ url_for('static', filename='form.js') }}"></script>
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -41,17 +42,16 @@
       -moz-osx-font-smoothing: grayscale;
     }
     
-    /* Ultra-minimal navigation */
+    /* Clean Navigation Bar */
     .navbar {
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(20px) saturate(180%);
-      box-shadow: 0 1px 0 rgba(18, 84, 53, 0.06);
-      padding: 1rem 0;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      padding: 0.875rem 0;
       margin-bottom: 0;
       position: sticky;
       top: 0;
       z-index: 100;
-      border-bottom: 1px solid rgba(18, 84, 53, 0.04);
+      border-bottom: 1px solid rgba(18, 84, 53, 0.1);
     }
     
     .navbar-container {
@@ -59,39 +59,158 @@
       margin: 0 auto;
       padding: 0 2rem;
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 2rem;
     }
     
     .navbar-brand {
       display: flex;
       align-items: center;
-      gap: 0.625rem;
-      font-size: 1.25rem;
-      font-weight: 600;
+      gap: 0.75rem;
+      font-size: 1.4rem;
+      font-weight: 700;
       color: var(--primary) !important;
       text-decoration: none;
-      letter-spacing: -0.3px;
-      transition: opacity 0.2s ease;
+      letter-spacing: -0.5px;
+      transition: all 0.3s ease;
+      cursor: pointer;
     }
     
     .navbar-brand img {
-      height: 28px;
+      height: 32px;
       width: auto;
     }
     
     .navbar-brand:hover {
-      opacity: 0.8;
+      transform: translateY(-1px);
+      opacity: 0.85;
     }
     
     .module-badge {
-      font-size: 0.8125rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-      padding: 0.375rem 0.875rem;
-      background: #f5f5f5;
-      border-radius: 4px;
-      letter-spacing: 0.3px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #6c757d;
+      padding: 0.5rem 1rem;
+      background: #f8f9fa;
+      border-radius: 6px;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+    
+    .navbar-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-left: auto;
+    }
+    
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #495057;
+      background: #ffffff;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    
+    .nav-btn:hover {
+      background: #f8f9fa;
+      border-color: #dee2e6;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .nav-btn.prev-btn {
+      color: #6c757d;
+      border-color: #ced4da;
+    }
+    
+    .nav-btn.prev-btn:hover {
+      background: #6c757d;
+      color: white;
+      border-color: #6c757d;
+    }
+    
+    @media (max-width: 768px) {
+      .navbar-container {
+        padding: 0.75rem 1rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      
+      .navbar-brand {
+        font-size: 1.2rem;
+      }
+      
+      .navbar-brand img {
+        height: 28px;
+      }
+      
+      .module-badge {
+        font-size: 0.8125rem;
+        padding: 0.375rem 0.75rem;
+      }
+      
+      .navbar-brand span {
+        font-size: 1rem;
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      .navbar-nav {
+        width: 100%;
+        justify-content: flex-end;
+        margin-left: 0;
+        margin-top: 0.5rem;
+        gap: 0.5rem;
+      }
+      
+      .nav-btn {
+        flex: 0 0 auto;
+        justify-content: center;
+        font-size: 0.8125rem;
+        padding: 0.625rem 0.75rem;
+        min-height: 44px;
+      }
+      
+      .container {
+        padding: 1.25rem 1rem;
+        margin: 0.75rem auto;
+      }
+      
+      h2 {
+        font-size: 1.5rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .navbar-brand span {
+        font-size: 0.9rem;
+        max-width: 140px;
+      }
+      
+      .nav-btn {
+        font-size: 0.75rem;
+        padding: 0.5rem;
+      }
+      
+      .container {
+        padding: 1rem 0.75rem;
+      }
+      
+      h2 {
+        font-size: 1.35rem;
+      }
     }
     
     /* Clean, spacious container */
@@ -238,14 +357,28 @@
       border-bottom-color: var(--border-light);
     }
     
-    /* Signature pad */
-    .signature-pad, canvas {
-      border: 1px solid var(--border-light);
-      border-radius: 4px;
+    /* Signature pad - Standardized size */
+    .signature-pad,
+    canvas.signature-pad,
+    #tech_signature_canvas,
+    #contact_signature_canvas {
+      border: 2px solid var(--border-light);
+      border-radius: 6px;
       width: 100%;
-      height: 100px;
-      background: #fafafa;
+      max-width: 500px;
+      height: 180px;
+      min-height: 180px;
+      background: #ffffff;
       cursor: crosshair;
+      display: block;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    /* Ensure canvas doesn't stretch */
+    .signature-pad,
+    canvas.signature-pad {
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
     }
     
     .signature-label {
@@ -431,13 +564,31 @@
     /* Responsive */
     @media (max-width: 768px) {
       .container {
-        padding: 1.5rem 1.25rem;
-        margin: 1rem;
+        padding: 1.25rem 1rem;
+        margin: 0.75rem auto;
         border-radius: 6px;
       }
       
       .navbar-container {
-        padding: 0 1.25rem;
+        padding: 0 1rem;
+      }
+      
+      .d-flex {
+        flex-direction: column;
+      }
+      
+      .gap-2 > * {
+        width: 100%;
+      }
+      
+      .row.g-3 > [class*="col-"] {
+        margin-bottom: 1rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .container {
+        padding: 1rem 0.75rem;
       }
     }
   </style>
@@ -446,11 +597,14 @@
   <!-- Navigation Bar -->
   <nav class="navbar">
     <div class="navbar-container">
-      <a class="navbar-brand" href="/">
+      <a class="navbar-brand" href="/dashboard">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz">
         <span>Injaaz</span>
       </a>
       <div class="module-badge">Cleaning Services</div>
+      <div class="navbar-nav">
+        <a href="/civil/form" class="nav-btn prev-btn">← Previous</a>
+      </div>
     </div>
   </nav>
 
@@ -654,15 +808,15 @@
                             <h4 class="section-heading">Visual Evidence</h4>
                             
                             <div class="mb-3">
-                                <label for="photo_upload" class="form-label">Upload Images (Maximum 100)</label>
+                                <label for="photo_upload" class="form-label"><strong>PHOTOS (MAXIMUM 100)</strong></label>
                                 <input class="form-control d-none" type="file" id="photo_upload" multiple accept="image/*">
                                 
                                 <div id="dropZone" class="photo-container" style="border: 2px dashed var(--border-light); padding: 2rem; text-align: center; cursor: pointer; border-radius: 4px; background: #fafafa;">
                                     <strong>Drag and drop images here</strong><br>
-                                    <small style="color: var(--text-light);">or click to browse • Max 100 images • Auto-compressed to 1280px • Max 10MB per file</small>
+                                    <small style="color: var(--text-light);">or click to browse • Maximum 100 images • Auto-compressed to 1280px • Max 10MB per file</small>
                                 </div>
                                 
-                                <div id="fileWarning" class="file-warning">
+                                <div id="fileWarning" class="file-warning" style="display:none; margin-top: 0.5rem; padding: 0.5rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404;">
                                     ⚠️ Some files are larger than 10MB and will be skipped
                                 </div>
                                 
@@ -672,14 +826,20 @@
                                     </div>
                                 </div>
                                 
-                                <div id="photoCountBadge" class="photo-count-badge" style="display:none;"></div>
+                                <div id="photoCount" class="photo-count alert alert-info" style="display:none; padding: 0.5rem 1rem; margin-top: 0.5rem; border-radius: 4px; font-weight: 600; background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460;"></div>
                             </div>
 
-                            <div id="photo-previews" class="d-flex flex-wrap"></div>
+                            <!-- Photo Preview Container with Remove Buttons -->
+                            <div id="photoPreviewContainer" class="photo-preview-container" style="display:none; min-height: 140px;"></div>
                             
-                            <div class="mt-3">
+                            <div class="mt-3 d-flex gap-2">
+                                <button type="button" id="uploadImagesBtn" class="btn btn-success btn-lg">
+                                    <span id="uploadImagesBtnText">📤 Upload Images</span>
+                                    <span id="uploadImagesBtnSpinner" class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
+                                </button>
                                 <button type="button" id="clear-photos-btn" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Clear All</button>
                             </div>
+                            <div id="uploadStatus" class="alert mt-3 d-none"></div>
                             
                             <hr class="my-4">
                             
@@ -778,9 +938,16 @@
         const form = document.getElementById('site-assessment-form');
         const statusDiv = document.getElementById('status-message');
         const photoUpload = document.getElementById('photo_upload');
-        const photoPreviews = document.getElementById('photo-previews');
+        const photoPreviewContainer = document.getElementById('photoPreviewContainer');
+        const photoCount = document.getElementById('photoCount');
         const clearPhotosBtn = document.getElementById('clear-photos-btn');
+        const uploadImagesBtn = document.getElementById('uploadImagesBtn');
+        const uploadImagesBtnText = document.getElementById('uploadImagesBtnText');
+        const uploadImagesBtnSpinner = document.getElementById('uploadImagesBtnSpinner');
+        const uploadStatus = document.getElementById('uploadStatus');
         let photoBase64 = [];
+        let photosUploaded = false;
+        let uploadedPhotoUrls = [];
 
         // Signature Pads
         const techCanvas = document.getElementById('tech_signature_canvas');
@@ -789,25 +956,59 @@
         let contactSignaturePad = null;
         
         function resizeCanvas() {
-            const ratio = Math.max(window.devicePixelRatio || 1, 1);
-            
             function setupCanvas(canvas, signaturePad) {
-                if (!signaturePad || canvas.offsetWidth === 0) return;
-                const data = signaturePad.toData(); 
-                canvas.width = canvas.offsetWidth * ratio;
-                canvas.height = canvas.offsetHeight * ratio;
-                canvas.getContext('2d').scale(ratio, ratio);
-                canvas.getContext('2d').fillStyle = 'white';
-                canvas.getContext('2d').fillRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
-                signaturePad.fromData(data); 
+                if (!signaturePad || !canvas || canvas.offsetWidth === 0) return;
+                
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                const rect = canvas.getBoundingClientRect();
+                
+                // Save signature data if exists
+                const data = signaturePad.isEmpty() ? null : signaturePad.toData();
+                
+                // Set display size
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+                
+                // Set actual size in memory (scaled for DPI)
+                canvas.width = rect.width * ratio;
+                canvas.height = rect.height * ratio;
+                
+                // Scale the drawing context so everything draws at correct size
+                const ctx = canvas.getContext('2d');
+                ctx.scale(ratio, ratio);
+                
+                // Fill white background
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, rect.width, rect.height);
+                
+                // Restore signature if it existed
+                if (data) {
+                    signaturePad.fromData(data);
+                }
             }
 
             if (techCanvas) setupCanvas(techCanvas, techSignaturePad);
             if (contactCanvas) setupCanvas(contactCanvas, contactSignaturePad);
         }
         
-        if (techCanvas) techSignaturePad = new SignaturePad(techCanvas, { backgroundColor: 'white' });
-        if (contactCanvas) contactSignaturePad = new SignaturePad(contactCanvas, { backgroundColor: 'white' });
+        if (techCanvas) {
+            techSignaturePad = new SignaturePad(techCanvas, { 
+                backgroundColor: 'rgb(255, 255, 255)',
+                penColor: 'rgb(0, 0, 0)',
+                minWidth: 1,
+                maxWidth: 3,
+                throttle: 16
+            });
+        }
+        if (contactCanvas) {
+            contactSignaturePad = new SignaturePad(contactCanvas, { 
+                backgroundColor: 'rgb(255, 255, 255)',
+                penColor: 'rgb(0, 0, 0)',
+                minWidth: 1,
+                maxWidth: 3,
+                throttle: 16
+            });
+        }
         
         document.getElementById('tab-5-link').addEventListener('shown.bs.tab', resizeCanvas);
         window.addEventListener('resize', resizeCanvas);
@@ -845,7 +1046,7 @@
             });
 
             photoQueueUI = new window.PhotoQueueUI({
-                containerId: 'photo-previews',
+                containerId: 'photoPreviewContainer',
                 onRetry: (photoId) => {
                     photoQueue.retryUpload(photoId);
                 },
@@ -859,7 +1060,7 @@
             const progressDiv = document.createElement('div');
             progressDiv.id = 'queue-progress-container';
             progressDiv.className = 'mb-3';
-            photoPreviews.parentNode.insertBefore(progressDiv, photoPreviews);
+            photoPreviewContainer.parentNode.insertBefore(progressDiv, photoPreviewContainer);
 
             // Add retry all button event listener
             document.addEventListener('click', (e) => {
@@ -870,12 +1071,28 @@
         }
 
         function updatePhotoCount() {
-            const stats = photoQueue ? photoQueue.getStats() : { completed: photoBase64.length };
-            const count = stats.completed || photoBase64.length;
-            photoCountBadge.textContent = `${count} / ${MAX_PHOTOS}`;
-            photoCountBadge.style.display = count > 0 ? 'inline-block' : 'none';
-            if (count >= MAX_PHOTOS * 0.8) photoCountBadge.classList.add('warning');
-            if (count >= MAX_PHOTOS) photoCountBadge.classList.add('danger');
+            let count = 0;
+            
+            if (photoQueue) {
+                const stats = photoQueue.getStats();
+                count = stats.total || 0;
+            } else {
+                count = photoBase64.length;
+            }
+            
+            // Also count visible thumbnails as fallback
+            if (photoPreviewContainer && count === 0) {
+                count = photoPreviewContainer.querySelectorAll('.photo-item').length;
+            }
+            
+            if (count > 0) {
+                photoCount.style.display = 'block';
+                photoCount.textContent = `📸 ${count} / ${MAX_PHOTOS} photos added`;
+                photoCount.className = 'photo-count alert alert-info';
+                photoCount.style.cssText = 'display: block !important; padding: 0.5rem 1rem; margin-top: 0.5rem; border-radius: 4px; font-weight: 600; background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460;';
+            } else {
+                photoCount.style.display = 'none';
+            }
         }
 
         // Photo Handling with Enhancements
@@ -957,19 +1174,81 @@
                 return;
             }
             
-            const totalAfter = (photoQueue ? photoQueue.getStats().completed : photoBase64.length) + validFiles.length;
+            const totalAfter = (photoQueue ? photoQueue.getStats().total : photoBase64.length) + validFiles.length;
             if (totalAfter > MAX_PHOTOS) {
-                alert(`Maximum ${MAX_PHOTOS} photos. You have ${photoQueue ? photoQueue.getStats().completed : photoBase64.length}, trying to add ${validFiles.length}.`);
+                alert(`Maximum ${MAX_PHOTOS} photos. You have ${photoQueue ? photoQueue.getStats().total : photoBase64.length}, trying to add ${validFiles.length}.`);
                 return;
             }
             
             // Use upload queue if available
             if (photoQueue && photoQueueUI) {
+                console.log('📸 Adding photos to queue:', validFiles.length);
                 const addedItems = await photoQueue.addPhotos(validFiles);
-                addedItems.forEach(item => {
+                console.log('📸 Added items to queue:', addedItems.length);
+                
+                // Show preview container
+                if (photoPreviewContainer) {
+                    photoPreviewContainer.style.display = 'flex';
+                    photoPreviewContainer.style.flexWrap = 'wrap';
+                    photoPreviewContainer.style.gap = '10px';
+                    photoPreviewContainer.style.marginTop = '1rem';
+                    photoPreviewContainer.style.padding = '0.5rem';
+                    photoPreviewContainer.style.minHeight = '140px';
+                    photoPreviewContainer.style.border = '1px dashed #dee2e6';
+                    photoPreviewContainer.style.borderRadius = '4px';
+                    photoPreviewContainer.style.backgroundColor = '#f8f9fa';
+                }
+                
+                addedItems.forEach((item, idx) => {
+                    console.log(`📸 Rendering item ${idx + 1}:`, {
+                        id: item.id,
+                        preview: item.preview ? 'exists' : 'missing',
+                        previewUrl: item.preview,
+                        status: item.status,
+                        fileName: item.file?.name
+                    });
                     currentFiles.push({ _queueId: item.id, url: null, is_cloud: false });
-                    photoQueueUI.renderPhotoItem(item);
+                    
+                    // Try to render with photoQueueUI
+                    let rendered = null;
+                    if (photoQueueUI) {
+                        rendered = photoQueueUI.renderPhotoItem(item);
+                    }
+                    
+                    // Fallback: render directly if photoQueueUI failed
+                    if (!rendered && photoPreviewContainer && item.preview) {
+                        const photoDiv = document.createElement('div');
+                        photoDiv.className = 'photo-item';
+                        photoDiv.dataset.photoId = item.id;
+                        photoDiv.style.cssText = 'position: relative; display: inline-block; margin: 8px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #f8f9fa; border: 2px solid #dee2e6;';
+                        
+                        const img = document.createElement('img');
+                        img.src = item.preview;
+                        img.alt = 'Photo';
+                        img.style.cssText = 'display: block !important; width: 120px !important; height: 120px !important; object-fit: cover; background: #fff;';
+                        
+                        const removeBtn = document.createElement('button');
+                        removeBtn.textContent = '×';
+                        removeBtn.className = 'photo-remove-btn';
+                        removeBtn.style.cssText = 'position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; background: rgba(220, 53, 69, 0.9); border: none; color: white; font-size: 16px; cursor: pointer; z-index: 10;';
+                        removeBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            photoQueue.removePhoto(item.id);
+                            photoDiv.remove();
+                            updatePhotoCount();
+                        };
+                        
+                        photoDiv.appendChild(img);
+                        photoDiv.appendChild(removeBtn);
+                        photoPreviewContainer.appendChild(photoDiv);
+                    }
                 });
+                
+                // Force container visibility
+                if (photoPreviewContainer && addedItems.length > 0) {
+                    photoPreviewContainer.style.display = 'flex';
+                }
+                
                 updatePhotoCount();
                 saveDraft();
                 return;
@@ -1081,6 +1360,90 @@
             handlePhotoFiles(e.target.files);
         });
 
+        // Upload Images Button Handler
+        uploadImagesBtn.addEventListener('click', async () => {
+            if (!photoQueue) {
+                alert('⚠️ Photo upload system not available. Please refresh the page.');
+                return;
+            }
+
+            const stats = photoQueue.getStats();
+            if (stats.total === 0) {
+                alert('⚠️ Please add photos first before uploading.');
+                return;
+            }
+
+            // Check if already uploaded
+            if (photosUploaded && uploadedPhotoUrls.length > 0) {
+                // Auto-reset if already uploaded
+                    photosUploaded = false;
+                    uploadedPhotoUrls = [];
+                } else {
+                    return;
+                }
+            }
+
+            // Disable button and show spinner
+            uploadImagesBtn.disabled = true;
+            uploadImagesBtnText.textContent = 'Uploading...';
+            uploadImagesBtnSpinner.classList.remove('d-none');
+            uploadStatus.classList.remove('d-none');
+            uploadStatus.className = 'alert alert-info';
+            uploadStatus.innerHTML = `Uploading ${stats.total} photo(s)...`;
+
+            try {
+                // Wait for all uploads to complete
+                const maxWaitTime = 300000; // 5 minutes max
+                const startTime = Date.now();
+
+                while (!stats.isComplete && (Date.now() - startTime) < maxWaitTime) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    const currentStats = photoQueue.getStats();
+                    const progress = Math.round((currentStats.completed / currentStats.total) * 100);
+                    uploadStatus.innerHTML = `Uploading ${currentStats.completed}/${currentStats.total} photos (${progress}%)...`;
+
+                    if (currentStats.isComplete) break;
+                }
+
+                // Get uploaded URLs
+                const uploadedPhotos = photoQueue.getUploadedUrls();
+                uploadedPhotoUrls = uploadedPhotos.map(p => {
+                    if (typeof p === 'string') return p;
+                    return p.url || p;
+                }).filter(Boolean);
+
+                // Fallback: check queue items directly
+                if (uploadedPhotoUrls.length === 0 && stats.total > 0) {
+                    const allItems = photoQueue.queue || [];
+                    const completedItems = allItems.filter(item => item.status === 'completed' && item.url);
+                    if (completedItems.length > 0) {
+                        uploadedPhotoUrls = completedItems.map(item => item.url).filter(Boolean);
+                    }
+                }
+
+                if (uploadedPhotoUrls.length === 0) {
+                    throw new Error('No photos were uploaded successfully. Please check for errors and try again.');
+                }
+
+                photosUploaded = true;
+                uploadStatus.className = 'alert alert-success';
+                uploadStatus.innerHTML = `✅ Successfully uploaded ${uploadedPhotoUrls.length} photo(s)! You can now generate reports.`;
+
+                console.log('✅ Photos uploaded:', uploadedPhotoUrls);
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                uploadStatus.className = 'alert alert-danger';
+                uploadStatus.innerHTML = `❌ Upload failed: ${error.message}`;
+                photosUploaded = false;
+                uploadedPhotoUrls = [];
+            } finally {
+                uploadImagesBtn.disabled = false;
+                uploadImagesBtnText.textContent = '📤 Upload Images';
+                uploadImagesBtnSpinner.classList.add('d-none');
+            }
+        });
+
         clearPhotosBtn.addEventListener('click', () => {
             photoBase64 = [];
             renderPhotoPreviews();
@@ -1116,16 +1479,15 @@
                     return false;
                 }
                 
-                if (confirm(`📋 Found a draft from ${Math.round(ageMinutes)} minutes ago.\n\nLoad it?`)) {
-                    if (draft.client_name) document.getElementById('client_name').value = draft.client_name;
-                    if (draft.project_name) document.getElementById('project_name').value = draft.project_name;
-                    if (draft.date_of_visit) document.getElementById('date_of_visit').value = draft.date_of_visit;
-                    
-                    if (draft.photoCount > 0) {
-                        alert(`ℹ️ Draft had ${draft.photoCount} photos (not saved, metadata only)`);
-                    }
-                    return true;
+                // Auto-load draft without confirmation
+                if (draft.client_name) document.getElementById('client_name').value = draft.client_name;
+                if (draft.project_name) document.getElementById('project_name').value = draft.project_name;
+                if (draft.date_of_visit) document.getElementById('date_of_visit').value = draft.date_of_visit;
+                
+                if (draft.photoCount > 0) {
+                    console.log(`ℹ️ Draft loaded: ${draft.photoCount} photos`);
                 }
+                return true;
             } catch (err) {
                 console.error('Failed to load draft:', err);
             }
@@ -1169,40 +1531,13 @@
                 return;
             }
             
-            // Check if uploads are complete (if using queue)
-            if (photoQueue) {
-                const stats = photoQueue.getStats();
-                
-                if (!stats.isComplete && stats.total > 0) {
-                    alert(`⏳ Please wait for photo uploads to complete.\n\n${stats.uploading + stats.queued} photo(s) still uploading...`);
-                    return;
-                }
-                
-                if (stats.failed > 0) {
-                    const proceed = confirm(`⚠️ ${stats.failed} photo(s) failed to upload.\n\nDo you want to continue without them?\n\nClick "Retry All Failed" to try uploading them again.`);
-                    if (!proceed) return;
-                }
-                
-                // Get successfully uploaded URLs
-                const uploadedPhotos = photoQueue.getUploadedUrls();
-                currentFiles = uploadedPhotos.map(p => ({ url: p.url, is_cloud: true }));
-            }
-            
-            // Large submission warning
-            const totalPhotos = photoQueue ? currentFiles.length : photoBase64.length;
-            if (totalPhotos >= 30) {
-                const estimatedTime = Math.ceil(totalPhotos / 10);
-                if (!confirm(`⏰ You're submitting ${totalPhotos} photos.\n\nThis may take ${estimatedTime}-${estimatedTime + 1} minutes to process.\n\nDo you want to continue?`)) {
-                    return;
-                }
-            }
-            
-            // Show upload modal if photos exist
-            if (totalPhotos > 0) {
-                uploadModal.style.display = 'flex';
-                uploadModalText.textContent = `Processing ${totalPhotos} photos...`;
-                uploadModalProgress.style.width = '50%';
-                uploadModalProgress.textContent = '50%';
+            // Check if photos have been uploaded
+            if (photoQueue && (!photosUploaded || uploadedPhotoUrls.length === 0)) {
+                statusDiv.className = 'alert alert-warning';
+                statusDiv.textContent = '⚠️ Please upload images first using the "Upload Images" button before generating reports.';
+                statusDiv.classList.remove('d-none');
+                return;
+                return;
             }
 
             const formData = new FormData(form);
@@ -1213,20 +1548,20 @@
                 data[cb.name] = formData.has(cb.name) ? 'True' : 'False';
             });
             
-            // Use uploaded URLs if available, otherwise use base64
-            if (photoQueue && currentFiles.length > 0) {
-                // Send photo URLs instead of base64
-                currentFiles.forEach((fileObj, idx) => {
-                    if (fileObj.url && fileObj.is_cloud) {
-                        data[`photo_url_${idx}`] = fileObj.url;
-                    }
-                });
-            } else {
-                data['photos'] = photoBase64;
-            }
+            // Get signatures
+            const techSig = techSignaturePad && !techSignaturePad.isEmpty() ? techSignaturePad.toDataURL() : '';
+            const contactSig = contactSignaturePad && !contactSignaturePad.isEmpty() ? contactSignaturePad.toDataURL() : '';
             
-            data['tech_signature'] = techSignaturePad && !techSignaturePad.isEmpty() ? techSignaturePad.toDataURL() : '';
-            data['contact_signature'] = contactSignaturePad && !contactSignaturePad.isEmpty() ? contactSignaturePad.toDataURL() : '';
+            // Prepare payload with photo URLs array
+            const payload = {
+                ...data,
+                photo_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : [],
+                tech_signature: techSig,
+                contact_signature: contactSig
+            };
+            
+            console.log('📸 Submitting with photo URLs:', uploadedPhotoUrls.length);
+            console.log('📋 Payload:', { ...payload, photo_urls: `[${uploadedPhotoUrls.length} URLs]` });
 
             const submitButton = form.querySelector('button[type="submit"]');
             submitButton.disabled = true;
@@ -1235,16 +1570,13 @@
             statusDiv.classList.remove('d-none');
             
             try {
-                // Choose endpoint based on whether we have cloud URLs or base64
-                const submitUrl = (photoQueue && currentFiles.length > 0) 
-                    ? `${modulePrefix}/submit-with-urls`
-                    : `${modulePrefix}/submit`;
+                const submitUrl = `${modulePrefix}/submit-with-urls`;
                 console.log('Submitting to:', submitUrl);
                 
                 const response = await fetch(submitUrl, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(payload)
                 });
                 
                 const result = await response.json();
@@ -1257,40 +1589,78 @@
                 clearDraft(); // Clear draft after successful submission
                 statusDiv.textContent = `Job queued: ${result.job_id}`;
                 
-                const pollInterval = setInterval(async () => {
-                    const jobResponse = await fetch(`${modulePrefix}/job-status/${result.job_id}`);
-                    const jobData = await jobResponse.json();
+                // Use pollJobStatus function like civil form
+                // The function signature is: pollJobStatus(modulePrefix, jobId, onUpdate, interval)
+                let pollJobStatusFn = null;
+                
+                // Try multiple fallbacks to get the function
+                if (typeof window !== 'undefined' && typeof window.pollJobStatus === 'function') {
+                    pollJobStatusFn = window.pollJobStatus;
+                } else if (typeof window !== 'undefined' && typeof window.pollJobStatusFn === 'function') {
+                    pollJobStatusFn = window.pollJobStatusFn;
+                } else {
+                    // Define inline as last resort - use /status/ to match form.js and other modules
+                    pollJobStatusFn = async function(modulePrefix, jobId, onUpdate, interval = 2000) {
+                        const statusUrl = `${modulePrefix}/status/${jobId}`;
+                        return new Promise((resolve, reject) => {
+                            const id = setInterval(async () => {
+                                try {
+                                    const r = await fetch(statusUrl);
+                                    if (!r.ok) throw new Error('Job not found');
+                                    const js = await r.json();
+                                    if (onUpdate) onUpdate(js);
+                                    const isDone = js.state === 'done' || js.status === 'completed';
+                                    const isFailed = js.state === 'failed' || js.status === 'failed';
+                                    if (isDone || isFailed) {
+                                        clearInterval(id);
+                                        resolve(js);
+                                    }
+                                } catch (e) {
+                                    clearInterval(id);
+                                    reject(e);
+                                }
+                            }, interval);
+                        });
+                    };
+                }
+                
+                if (!pollJobStatusFn || typeof pollJobStatusFn !== 'function') {
+                    throw new Error('pollJobStatus function not available');
+                }
+                
+                const jobData = await pollJobStatusFn(modulePrefix, result.job_id, (update) => {
+                    statusDiv.textContent = `Progress: ${update.progress || 0}%`;
+                });
+                
+                loadingOverlay.style.display = 'none';
+                const isDone = jobData.state === 'done' || jobData.status === 'completed';
+                const isFailed = jobData.state === 'failed' || jobData.status === 'failed';
+                const results = jobData.results || jobData.result_data || {};
+                
+                if (isDone) {
+                    statusDiv.className = 'alert alert-success';
+                    const excelUrl = results.excel || results.excel_url || '';
+                    const pdfUrl = results.pdf || results.pdf_url || '';
+                    const excelFilename = results.excel_filename || 'cleaning_report.xlsx';
+                    const pdfFilename = results.pdf_filename || 'cleaning_report.pdf';
                     
-                    // Check both legacy 'state' and current 'status'
-                    const isDone = jobData.state === 'done' || jobData.status === 'completed';
-                    const isFailed = jobData.state === 'failed' || jobData.status === 'failed';
-                    // Support both 'results' and 'result_data'
-                    const results = jobData.results || jobData.result_data || {};
+                    let linksHtml = '<strong>✅ Success!</strong> Reports generated.<br><br>';
                     
-                    if (isDone) {
-                        clearInterval(pollInterval);
-                        loadingOverlay.style.display = 'none';
-                        statusDiv.className = 'alert alert-success';
-                        // Rewrite URLs to use the cleaning module's inline file route
-                        const excelUrlRaw = results.excel_url || results.excel || '';
-                        const pdfUrlRaw = results.pdf_url || results.pdf || '';
-                        const excelUrl = excelUrlRaw ? excelUrlRaw.replace(/\/generated\//, '/cleaning/generated/') : '';
-                        const pdfUrl = pdfUrlRaw ? pdfUrlRaw.replace(/\/generated\//, '/cleaning/generated/') : '';
-                        statusDiv.innerHTML = `
-                            <strong>✅ Success!</strong> Reports generated.<br>
-                            <a href="${excelUrl}" class="btn btn-sm btn-success mt-2" target="_blank" rel="noopener">View Excel Report</a>
-                            <a href="${pdfUrl}" class="btn btn-sm btn-danger mt-2" target="_blank" rel="noopener">View PDF Report</a>
-                            <div class="mt-2 text-muted" style="font-size:0.95em;">Click to view or right-click to save.</div>
-                        `;
-                    } else if (isFailed) {
-                        clearInterval(pollInterval);
-                        loadingOverlay.style.display = 'none';
-                        statusDiv.className = 'alert alert-danger';
-                        statusDiv.textContent = "❌ Failed: " + (results.error || jobData.error_message || 'Unknown');
-                    } else {
-                        statusDiv.textContent = `Progress: ${jobData.progress}%`;
+                    if (excelUrl) {
+                      linksHtml += `<a href="${excelUrl}" download="${excelFilename}" class="btn btn-success me-2 mt-2" style="text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">📥 Download Excel Report</a>`;
                     }
-                }, 2000);
+                    
+                    if (pdfUrl) {
+                      linksHtml += `<a href="${pdfUrl}" download="${pdfFilename}" class="btn btn-danger me-2 mt-2" style="text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">📥 Download PDF Report</a>`;
+                    }
+                    
+                    linksHtml += '<div class="mt-2 text-muted" style="font-size:0.9em;">Click the buttons above to download your reports.</div>';
+                    
+                    statusDiv.innerHTML = linksHtml;
+                } else if (isFailed) {
+                    statusDiv.className = 'alert alert-danger';
+                    statusDiv.textContent = "❌ Failed: " + (results.error || jobData.error_message || 'Unknown');
+                }
                 
             } catch (e) {
                 console.error('Submission error:', e);

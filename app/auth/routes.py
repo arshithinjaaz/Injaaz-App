@@ -175,12 +175,20 @@ def login():
         # Log successful login
         log_audit(user.id, 'login', 'user', str(user.id))
         
-        return jsonify({
+        # Create response
+        response = jsonify({
             'message': 'Login successful',
             'access_token': access_token,
             'refresh_token': refresh_token,
             'user': user.to_dict()
-        }), 200
+        })
+        
+        # Set JWT tokens in cookies for HTML link access
+        from flask_jwt_extended import set_access_cookies, set_refresh_cookies
+        set_access_cookies(response, access_token)
+        set_refresh_cookies(response, refresh_token)
+        
+        return response, 200
         
     except Exception as e:
         current_app.logger.error(f"Login error: {str(e)}")
@@ -240,7 +248,12 @@ def logout():
         # Log logout
         log_audit(int(user_id), 'logout', 'user', user_id)
         
-        return jsonify({'message': 'Logout successful'}), 200
+        # Create response and unset cookies
+        response = jsonify({'message': 'Logout successful'})
+        from flask_jwt_extended import unset_jwt_cookies
+        unset_jwt_cookies(response)
+        
+        return response, 200
         
     except Exception as e:
         current_app.logger.error(f"Logout error: {str(e)}")

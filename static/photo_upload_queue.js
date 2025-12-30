@@ -297,3 +297,8 @@ class PhotoUploadQueue {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = PhotoUploadQueue;
 }
+
+// Make available globally
+if (typeof window !== 'undefined') {
+  window.PhotoUploadQueue = PhotoUploadQueue;
+}

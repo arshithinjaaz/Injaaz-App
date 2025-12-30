@@ -5,7 +5,7 @@
   <title>Civil Works - Site Assessment Form</title>
   <meta name="description" content="Civil works site assessment form - Works offline">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
   
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#125435">
@@ -52,17 +52,16 @@
       -moz-osx-font-smoothing: grayscale;
     }
     
-    /* Ultra-minimal navigation */
+    /* Clean Navigation Bar */
     .navbar {
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(20px) saturate(180%);
-      box-shadow: 0 1px 0 rgba(18, 84, 53, 0.06);
-      padding: 1rem 0;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      padding: 0.875rem 0;
       margin-bottom: 0;
       position: sticky;
       top: 0;
       z-index: 100;
-      border-bottom: 1px solid rgba(18, 84, 53, 0.04);
+      border-bottom: 1px solid rgba(18, 84, 53, 0.1);
     }
     
     .navbar-container {
@@ -70,39 +69,191 @@
       margin: 0 auto;
       padding: 0 2rem;
       display: flex;
-      justify-content: space-between;
+      flex-direction: row;
       align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+      flex-wrap: nowrap;
     }
     
     .navbar-brand {
       display: flex;
       align-items: center;
-      gap: 0.625rem;
-      font-size: 1.25rem;
-      font-weight: 600;
+      gap: 0.75rem;
+      font-size: 1.4rem;
+      font-weight: 700;
       color: var(--primary) !important;
       text-decoration: none;
-      letter-spacing: -0.3px;
-      transition: opacity 0.2s ease;
+      letter-spacing: -0.5px;
+      transition: all 0.3s ease;
+      cursor: pointer;
     }
     
     .navbar-brand img {
-      height: 28px;
+      height: 32px;
       width: auto;
     }
     
     .navbar-brand:hover {
-      opacity: 0.8;
+      transform: translateY(-1px);
+      opacity: 0.85;
     }
     
     .module-badge {
-      font-size: 0.8125rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-      padding: 0.375rem 0.875rem;
-      background: #f5f5f5;
-      border-radius: 4px;
-      letter-spacing: 0.3px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #6c757d;
+      padding: 0.5rem 1rem;
+      background: #f8f9fa;
+      border-radius: 6px;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+    
+    .navbar-nav {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-left: auto;
+      flex-wrap: nowrap;
+    }
+    
+    .nav-btn {
+      display: inline-flex;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #495057;
+      background: #ffffff;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      white-space: nowrap;
+      min-width: fit-content;
+    }
+    
+    .nav-btn:hover {
+      background: #f8f9fa;
+      border-color: #dee2e6;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .nav-btn.prev-btn {
+      color: #6c757d;
+      border-color: #ced4da;
+    }
+    
+    .nav-btn.prev-btn:hover {
+      background: #6c757d;
+      color: white;
+      border-color: #6c757d;
+    }
+    
+    .nav-btn.next-btn {
+      color: #0d6efd;
+      border-color: #0d6efd;
+    }
+    
+    .nav-btn.next-btn:hover {
+      background: #0d6efd;
+      color: white;
+      border-color: #0d6efd;
+    }
+    
+    @media (max-width: 768px) {
+      .navbar-container {
+        padding: 0.75rem 1rem;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+      
+      .navbar-brand {
+        font-size: 1.1rem;
+        flex: 0 0 auto;
+      }
+      
+      .navbar-brand img {
+        height: 28px;
+      }
+      
+      .navbar-brand span {
+        font-size: 1rem;
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      .module-badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+        flex: 0 0 auto;
+      }
+      
+      .navbar-nav {
+        width: 100%;
+        justify-content: space-between;
+        margin-left: 0;
+        margin-top: 0.5rem;
+        gap: 0.5rem;
+        flex-wrap: nowrap;
+      }
+      
+      .nav-btn {
+        flex: 1;
+        justify-content: center;
+        font-size: 0.8125rem;
+        padding: 0.625rem 0.75rem;
+        min-height: 44px;
+      }
+      
+      .container {
+        padding: 1.25rem 1rem;
+        margin: 0.75rem auto;
+      }
+      
+      h2 {
+        font-size: 1.5rem;
+      }
+      
+      .row.g-3 > [class*="col-"] {
+        margin-bottom: 1rem;
+      }
+      
+      #uploadImagesBtn,
+      #submitBtn {
+        width: 100%;
+        margin-bottom: 0.75rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .navbar-brand span {
+        font-size: 0.9rem;
+        max-width: 140px;
+      }
+      
+      .nav-btn {
+        font-size: 0.75rem;
+        padding: 0.5rem;
+      }
+      
+      .container {
+        padding: 1rem 0.75rem;
+      }
+      
+      h2 {
+        font-size: 1.35rem;
+      }
     }
     
     /* Clean, spacious container */
@@ -204,14 +355,28 @@
       background: #fafafa;
     }
     
-    /* Signature pad */
-    canvas {
-      border: 1px solid var(--border-light);
-      border-radius: 4px;
+    /* Signature pad - Standardized size */
+    canvas.signature-pad,
+    #techSignaturePad,
+    #opManSignaturePad {
+      border: 2px solid var(--border-light);
+      border-radius: 6px;
       width: 100%;
-      height: 100px;
-      background: #fafafa;
+      max-width: 500px;
+      height: 180px;
+      min-height: 180px;
+      background: #ffffff;
       cursor: crosshair;
+      display: block;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    /* Ensure canvas doesn't stretch */
+    canvas.signature-pad,
+    #techSignaturePad,
+    #opManSignaturePad {
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
     }
     
     .signature-label {
@@ -467,6 +632,38 @@
       padding: 0.375rem 0.5rem;
     }
     
+    /* Button states */
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .spinner-border-sm {
+      width: 1rem;
+      height: 1rem;
+      border-width: 0.15em;
+    }
+    
+    .gap-2 {
+      gap: 0.5rem;
+    }
+    
+    .d-flex {
+      display: flex;
+    }
+    
+    .d-none {
+      display: none !important;
+    }
+    
+    .ms-2 {
+      margin-left: 0.5rem;
+    }
+    
+    .mb-3 {
+      margin-bottom: 1rem;
+    }
+    
     /* Responsive */
     @media (max-width: 768px) {
       .container {
@@ -478,6 +675,14 @@
       .navbar-container {
         padding: 0 1.25rem;
       }
+      
+      .d-flex {
+        flex-direction: column;
+      }
+      
+      .gap-2 > * {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -485,11 +690,15 @@
   <!-- Navigation Bar -->
   <nav class="navbar">
     <div class="navbar-container">
-      <a class="navbar-brand" href="/">
+      <a class="navbar-brand" href="/dashboard">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz">
         <span>Injaaz</span>
       </a>
       <div class="module-badge">Civil Works</div>
+      <div class="navbar-nav">
+        <a href="/hvac-mep/form" class="nav-btn prev-btn">← Previous</a>
+        <a href="/cleaning/form" class="nav-btn next-btn">Next →</a>
+      </div>
     </div>
   </nav>
 
@@ -572,9 +781,10 @@
 
       <h5>Pictures from Site</h5>
       
-      <div class="mb-3">
-        <label for="photoUpload" class="form-label">Upload Photos (Maximum 100)</label>
-        <input id="photoUpload" type="file" class="form-control d-none" accept="image/*" multiple>
+      <!-- Photos - Matching HVAC structure exactly -->
+      <div class="col-12 mb-3">
+        <label class="form-label">Photos (Maximum 100)</label>
+        <input id="curPhotos" type="file" class="form-control d-none" accept="image/*" multiple>
         
         <div id="dropZone" class="drop-zone">
           <div class="drop-zone-content">
@@ -593,10 +803,10 @@
           </div>
         </div>
         
-        <div id="photoCount" class="photo-count" style="display:none;"></div>
+        <div id="photoCount" class="photo-count alert alert-info" style="display:none; padding: 0.5rem 1rem; margin-top: 0.5rem; border-radius: 4px; font-weight: 600; background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460;"></div>
         
         <!-- Photo Preview Container with Remove Buttons -->
-        <div id="photoPreviewContainer" class="photo-preview-container" style="display:none;"></div>
+        <div id="photoPreviewContainer" class="photo-preview-container" style="display:none; min-height: 140px;"></div>
       </div>
       
       <div class="mb-3">
@@ -620,7 +830,7 @@
             <label class="mb-0">Inspector Signature</label>
             <span class="signature-hint">Draw signature with mouse/touch</span>
           </div>
-          <canvas id="techSignaturePad"></canvas>
+          <canvas id="techSignaturePad" class="signature-pad"></canvas>
           <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="pads.techPad.clear()">Clear</button>
         </div>
 
@@ -629,12 +839,21 @@
             <label class="mb-0">Manager Approval Signature</label>
             <span class="signature-hint">Draw signature with mouse/touch</span>
           </div>
-          <canvas id="opManSignaturePad"></canvas>
+          <canvas id="opManSignaturePad" class="signature-pad"></canvas>
           <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="pads.opPad.clear()">Clear</button>
         </div>
       </div>
 
-      <button type="button" id="submitBtn" class="btn btn-primary btn-lg">Submit</button>
+      <div class="d-flex gap-2 mb-3">
+        <button type="button" id="uploadImagesBtn" class="btn btn-success btn-lg">
+          <span id="uploadImagesBtnText">📤 Upload Images</span>
+          <span id="uploadImagesBtnSpinner" class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
+        </button>
+        <button type="button" id="submitBtn" class="btn btn-primary btn-lg" disabled>
+          <span id="submitBtnText">📄 Generate Reports</span>
+        </button>
+      </div>
+      <div id="uploadStatus" class="alert alert-info d-none mb-3"></div>
       <div id="statusBox" class="mt-3"></div>
     </form>
   </div>
@@ -663,6 +882,46 @@
     <div class="loading-subtitle" style="margin-top: 1.5rem; font-size: 0.8rem;">Creating Excel and PDF reports with all photos</div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="{{ url_for('static', filename='dropdown_init.js') }}"></script>
+  <script src="{{ url_for('static', filename='form.js') }}"></script>
+  
+  <script>
+    // ALWAYS define pollJobStatus globally to ensure it's available
+    // This will override form.js if it loaded, or serve as fallback if it didn't
+    window.pollJobStatus = window.pollJobStatus || async function(modulePrefix, jobId, onUpdate, interval=1500) {
+      const statusUrl = `${modulePrefix}/status/${jobId}`;
+      return new Promise((resolve, reject) => {
+        const id = setInterval(async () => {
+          try {
+            const r = await fetch(statusUrl);
+            if (!r.ok) throw new Error('Job not found');
+            const js = await r.json();
+            if (onUpdate) onUpdate(js);
+            // Check both 'state' (legacy) and 'status' (current)
+            const isDone = js.state === 'done' || js.status === 'completed';
+            const isFailed = js.state === 'failed' || js.status === 'failed';
+            if (isDone || isFailed) {
+              clearInterval(id);
+              resolve(js);
+            }
+          } catch (e) {
+            clearInterval(id);
+            reject(e);
+          }
+        }, interval);
+      });
+    };
+    
+    // Also define it without window prefix for compatibility
+    if (typeof pollJobStatus === 'undefined') {
+      var pollJobStatus = window.pollJobStatus;
+    }
+    
+    console.log('✅ pollJobStatus is now available globally');
+  </script>
+
   <script>
     const modulePrefix = "{{ url_for('civil_bp.index') }}".replace('/form','');
     const MAX_PHOTOS = 100;
@@ -670,85 +929,111 @@
     const JPEG_QUALITY = 0.85;
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     const DRAFT_SAVE_INTERVAL = 30000; // 30 seconds
-    
-    let currentFiles = [];
-    let currentPreviews = [];
-    
-    // Initialize Upload Queue with Optimistic UI
-    let photoQueue, photoQueueUI;
-    
-    document.addEventListener('DOMContentLoaded', () => {
-      // Initialize upload queue
-      photoQueue = new PhotoUploadQueue({
-        maxConcurrent: 3,
-        uploadEndpoint: modulePrefix + '/upload-photo',
-        onProgress: (stats) => {
-          if (photoQueueUI) photoQueueUI.updateProgress(stats);
-        },
-        onItemComplete: (item, success) => {
-          if (photoQueueUI) photoQueueUI.updatePhotoStatus(item);
-          if (success && item.url) {
-            // Store successful uploads
-            const fileObj = { url: item.url, is_cloud: true };
-            const existingIndex = currentFiles.findIndex(f => f._queueId === item.id);
-            if (existingIndex >= 0) {
-              currentFiles[existingIndex] = fileObj;
-            } else {
-              currentFiles.push(fileObj);
-            }
+
+    // Define initSignaturePads if not already defined in form.js
+    function initSignaturePads() {
+      const techPadEl = document.getElementById('techSignaturePad');
+      const opPadEl = document.getElementById('opManSignaturePad');
+      
+      function setupSignaturePad(canvas, padName) {
+        if (!canvas) return null;
+        
+        const pad = new SignaturePad(canvas, {
+          backgroundColor: 'rgb(255, 255, 255)',
+          penColor: 'rgb(0, 0, 0)',
+          minWidth: 1,
+          maxWidth: 3,
+          throttle: 16
+        });
+        
+        // Properly resize canvas to prevent stretching
+        function resizeCanvas() {
+          const ratio = Math.max(window.devicePixelRatio || 1, 1);
+          const rect = canvas.getBoundingClientRect();
+          
+          // Set display size
+          canvas.style.width = rect.width + 'px';
+          canvas.style.height = rect.height + 'px';
+          
+          // Set actual size in memory (scaled for DPI)
+          canvas.width = rect.width * ratio;
+          canvas.height = rect.height * ratio;
+          
+          // Scale the drawing context so everything draws at correct size
+          const ctx = canvas.getContext('2d');
+          ctx.scale(ratio, ratio);
+          
+          // Redraw signature if it exists
+          if (!pad.isEmpty()) {
+            const data = pad.toData();
+            pad.clear();
+            pad.fromData(data);
           }
-        },
-        onQueueComplete: (stats) => {
-          console.log(`Upload complete: ${stats.completed} uploaded, ${stats.failed} failed`);
-          saveDraft(); // Save after all uploads complete
         }
-      });
-      
-      // Initialize UI helper
-      photoQueueUI = new PhotoQueueUI('photoPreviewContainer', {
-        maxPhotos: MAX_PHOTOS,
-        onRetryAll: () => photoQueue.retryAllFailed(),
-        onRemove: (photoId) => {
-          photoQueue.removePhoto(photoId);
-          photoQueueUI.removePhoto(photoId);
-          // Remove from currentFiles
-          const index = currentFiles.findIndex(f => f._queueId === photoId);
-          if (index >= 0) currentFiles.splice(index, 1);
-          updatePhotoCount();
-          saveDraft();
-        }
-      });
-      
-      // Create progress container
-      photoQueueUI.createProgressContainer();
-      
-      // Listen for retry events
-      document.addEventListener('photo-retry', (e) => {
-        photoQueue.retryUpload(e.detail.photoId);
-      });
-    });
-    
-    function updatePhotoCount() {
-      const count = photoQueueUI ? photoQueueUI.getPhotoCount() : currentFiles.length;
-      if (count === 0) {
-        photoCount.style.display = 'none';
-        photoPreviewContainer.style.display = 'none';
-      } else {
-        photoCount.style.display = 'inline-block';
-        photoCount.textContent = `${count} / ${MAX_PHOTOS} photos`;
-        photoCount.className = 'photo-count mt-2';
-        if (count >= MAX_PHOTOS * 0.8) photoCount.classList.add('warning');
-        if (count >= MAX_PHOTOS) photoCount.classList.add('danger');
-        photoPreviewContainer.style.display = 'flex';
+        
+        // Initial resize
+        resizeCanvas();
+        
+        // Resize on window resize
+        window.addEventListener('resize', resizeCanvas);
+        
+        return pad;
       }
+      
+      const techPad = setupSignaturePad(techPadEl, 'tech');
+      const opPad = setupSignaturePad(opPadEl, 'op');
+      
+      if (techPad) {
+        document.getElementById('clearTech')?.addEventListener('click', () => techPad.clear());
+      }
+      if (opPad) {
+        document.getElementById('clearOp')?.addEventListener('click', () => opPad.clear());
+      }
+
+      return { techPad, opPad, tech: techPad, op: opPad };
     }
-  </script>
-  <script src="{{ url_for('static', filename='form.js') }}"></script>
-  <script>
+    
+    // Define checkBrowserSupport function
+    function checkBrowserSupport() {
+      return !!(window.FileReader && window.File && window.FileList && window.Blob);
+    }
+
     (function(){
+      // Ensure pollJobStatus is available inside this IIFE
+      // Use window.pollJobStatus if available, otherwise define it inline
+      const pollJobStatusFn = (typeof window !== 'undefined' && window.pollJobStatus) 
+        ? window.pollJobStatus 
+        : async function(modulePrefix, jobId, onUpdate, interval=1500) {
+            const statusUrl = `${modulePrefix}/status/${jobId}`;
+            return new Promise((resolve, reject) => {
+              const id = setInterval(async () => {
+                try {
+                  const r = await fetch(statusUrl);
+                  if (!r.ok) throw new Error('Job not found');
+                  const js = await r.json();
+                  if (onUpdate) onUpdate(js);
+                  const isDone = js.state === 'done' || js.status === 'completed';
+                  const isFailed = js.state === 'failed' || js.status === 'failed';
+                  if (isDone || isFailed) {
+                    clearInterval(id);
+                    resolve(js);
+                  }
+                } catch (e) {
+                  clearInterval(id);
+                  reject(e);
+                }
+              }, interval);
+            });
+          };
+      
+      // Make it available globally as well
+      if (typeof window !== 'undefined') {
+        window.pollJobStatusFn = pollJobStatusFn;
+      }
+      
       const form = document.getElementById('mainForm');
       const statusBox = document.getElementById('statusBox');
-      const photoUpload = document.getElementById('photoUpload');
+      const curPhotos = document.getElementById('curPhotos');
       const dropZone = document.getElementById('dropZone');
       const photoPreviewContainer = document.getElementById('photoPreviewContainer');
       const photoCount = document.getElementById('photoCount');
@@ -759,9 +1044,118 @@
       const uploadModalText = document.getElementById('uploadModalText');
       const uploadModalProgress = document.getElementById('uploadModalProgress');
       const loadingOverlay = document.getElementById('loadingOverlay');
+      const uploadImagesBtn = document.getElementById('uploadImagesBtn');
+      const uploadImagesBtnText = document.getElementById('uploadImagesBtnText');
+      const uploadImagesBtnSpinner = document.getElementById('uploadImagesBtnSpinner');
+      const uploadStatus = document.getElementById('uploadStatus');
+      const submitBtn = document.getElementById('submitBtn');
+      const submitBtnText = document.getElementById('submitBtnText');
+      
+      // Track uploaded photos
+      let photosUploaded = false;
+      let uploadedPhotoUrls = [];
       
       const pads = initSignaturePads();
+
+      // Initialize Upload Queue System - Matching HVAC exactly
+      let photoQueue = null;
+      let photoQueueUI = null;
       
+      // Wait for scripts to load, then initialize
+      function initPhotoQueue() {
+        console.log('🔍 Checking PhotoUploadQueue availability:', {
+          PhotoUploadQueue: typeof window.PhotoUploadQueue,
+          PhotoQueueUI: typeof window.PhotoQueueUI
+        });
+        
+        if (window.PhotoUploadQueue && window.PhotoQueueUI) {
+          console.log('✅ Initializing photo queue system...');
+          photoQueue = new window.PhotoUploadQueue({
+            uploadEndpoint: modulePrefix + '/upload-photo',
+            maxConcurrent: 3,
+            onProgress: (stats) => {
+              if (photoQueueUI) photoQueueUI.updateProgress(stats);
+            },
+            onComplete: (stats) => {
+              console.log('✅ All uploads complete:', stats);
+              updatePhotoCount();
+            },
+            onError: (error) => {
+              console.error('Upload error:', error);
+            }
+          });
+
+          photoQueueUI = new window.PhotoQueueUI({
+            containerId: 'photoPreviewContainer',
+            onRetry: (photoId) => {
+              photoQueue.retryUpload(photoId);
+            },
+            onRemove: (photoId) => {
+              photoQueue.removePhoto(photoId);
+              updatePhotoCount();
+            }
+          });
+          console.log('✅ Photo queue system initialized');
+          
+          // Create progress container
+          const progressDiv = document.createElement('div');
+          progressDiv.id = 'queue-progress-container';
+          progressDiv.className = 'mb-3';
+          photoPreviewContainer.parentNode.insertBefore(progressDiv, photoPreviewContainer);
+
+          // Add retry all button event listener
+          document.addEventListener('click', (e) => {
+            if (e.target.id === 'retry-all-failed-btn' || e.target.closest('#retry-all-failed-btn')) {
+              photoQueue.retryAllFailed();
+            }
+          });
+        } else {
+          console.error('❌ PhotoUploadQueue or PhotoQueueUI not available!');
+          console.error('Available window properties:', Object.keys(window).filter(k => k.includes('Photo')));
+        }
+      }
+      
+      // Try to initialize immediately
+      initPhotoQueue();
+      
+      // If not available, wait a bit and try again (scripts might still be loading)
+      if (!photoQueue) {
+        setTimeout(() => {
+          console.log('⏳ Retrying photo queue initialization...');
+          initPhotoQueue();
+        }, 500);
+      }
+
+      function updatePhotoCount() {
+        let count = 0;
+        
+        if (photoQueue) {
+          const stats = photoQueue.getStats();
+          count = stats.total || 0;
+          console.log('📊 Queue stats:', stats);
+        } else {
+          count = currentFiles.length;
+        }
+        
+        // Also count visible thumbnails as fallback
+        if (photoPreviewContainer && count === 0) {
+          count = photoPreviewContainer.querySelectorAll('.photo-item').length;
+        }
+        
+        if (count > 0) {
+          photoCount.style.display = 'block';
+          photoCount.textContent = `📸 ${count} / ${MAX_PHOTOS} photos added`;
+          photoCount.className = 'photo-count alert alert-info';
+          photoCount.style.cssText = 'display: block !important; padding: 0.5rem 1rem; margin-top: 0.5rem; border-radius: 4px; font-weight: 600; background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460;';
+        } else {
+          photoCount.style.display = 'none';
+        }
+        
+        console.log('📊 Photo count updated:', count, 'visible thumbnails:', photoPreviewContainer?.querySelectorAll('.photo-item').length);
+      }
+
+      let currentFiles = [];
+      let currentPreviews = [];
       let workItemCounter = 1;
 
       // Auto-download helper function
@@ -807,7 +1201,8 @@
             workItemCounter = tbody.children.length;
             saveDraft();
           } else {
-            alert('At least one work item is required');
+            statusBox.innerHTML = '<div class="alert alert-warning">⚠️ At least one work item is required</div>';
+            return;
           }
         }
       });
@@ -857,13 +1252,22 @@
         });
       }
 
-      // Handle Files with Validation and Upload Queue
+      if (!checkBrowserSupport()) {
+        dropZone.style.display = 'none';
+        curPhotos.classList.remove('d-none');
+        uploadProgress.innerHTML = '<div class="alert alert-warning">Using fallback mode</div>';
+        uploadProgress.style.display = 'block';
+      }
+
       async function handleFiles(files) {
         if (!files || files.length === 0) return;
         
         const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
         if (imageFiles.length === 0) {
-          alert('Please select image files only.');
+          uploadStatus.classList.remove('d-none');
+          uploadStatus.className = 'alert alert-warning';
+          uploadStatus.innerHTML = '⚠️ Please select image files only.';
+          return;
           return;
         }
         
@@ -877,61 +1281,229 @@
         
         const validFiles = imageFiles.filter(f => f.size <= MAX_FILE_SIZE);
         if (validFiles.length === 0) {
-          alert('All files exceed 10MB size limit. Please compress them first.');
+          uploadStatus.classList.remove('d-none');
+          uploadStatus.className = 'alert alert-warning';
+          uploadStatus.innerHTML = '⚠️ All files exceed 10MB size limit. Please compress them first.';
+          return;
           return;
         }
         
-        const currentCount = photoQueueUI ? photoQueueUI.getPhotoCount() : currentFiles.length;
-        const totalAfter = currentCount + validFiles.length;
+        const totalAfter = currentFiles.length + validFiles.length;
         if (totalAfter > MAX_PHOTOS) {
-          alert(`Maximum ${MAX_PHOTOS} photos. You have ${currentCount}, trying to add ${validFiles.length}.`);
+          uploadStatus.classList.remove('d-none');
+          uploadStatus.className = 'alert alert-warning';
+          uploadStatus.innerHTML = `⚠️ Maximum ${MAX_PHOTOS} photos. You have ${currentFiles.length}, trying to add ${validFiles.length}.`;
+          return;
           return;
         }
         
-        // Add to upload queue (will upload immediately with 3 concurrent)
-        const photoItems = photoQueue.addPhotos(validFiles);
+        // Use upload queue if available
+        if (photoQueue && photoQueueUI) {
+          console.log('📸 Adding photos to queue:', validFiles.length);
+          const addedItems = await photoQueue.addPhotos(validFiles);
+          console.log('📸 Added items to queue:', addedItems.length);
+          console.log('📸 Preview container element:', photoPreviewContainer);
+          console.log('📸 Preview container display:', photoPreviewContainer?.style.display);
+          
+          // Show preview container
+          if (photoPreviewContainer) {
+            photoPreviewContainer.style.display = 'flex';
+            photoPreviewContainer.style.flexWrap = 'wrap';
+            photoPreviewContainer.style.gap = '10px';
+            photoPreviewContainer.style.marginTop = '1rem';
+            photoPreviewContainer.style.padding = '0.5rem';
+            photoPreviewContainer.style.minHeight = '140px';
+            photoPreviewContainer.style.border = '1px dashed #dee2e6';
+            photoPreviewContainer.style.borderRadius = '4px';
+            photoPreviewContainer.style.backgroundColor = '#f8f9fa';
+            console.log('✅ Preview container made visible');
+          } else {
+            console.error('❌ photoPreviewContainer not found!');
+          }
+          
+          // Render each photo
+          addedItems.forEach((item, idx) => {
+            console.log(`📸 Rendering item ${idx + 1}:`, {
+              id: item.id,
+              preview: item.preview ? 'exists' : 'missing',
+              previewUrl: item.preview,
+              status: item.status,
+              fileName: item.file?.name
+            });
+            currentFiles.push({ _queueId: item.id, url: null, is_cloud: false });
+            
+            // Try to render with photoQueueUI
+            let rendered = null;
+            if (photoQueueUI) {
+              rendered = photoQueueUI.renderPhotoItem(item);
+              console.log(`✅ Rendered via photoQueueUI item ${idx + 1}:`, rendered);
+            }
+            
+            // Fallback: render directly if photoQueueUI failed
+            if (!rendered && photoPreviewContainer && item.preview) {
+              console.log(`⚠️ photoQueueUI failed, rendering directly for item ${idx + 1}`);
+              const photoDiv = document.createElement('div');
+              photoDiv.className = 'photo-item';
+              photoDiv.dataset.photoId = item.id;
+              photoDiv.style.cssText = 'position: relative; display: inline-block; margin: 8px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #f8f9fa; border: 2px solid #dee2e6;';
+              
+              const img = document.createElement('img');
+              img.src = item.preview;
+              img.alt = 'Photo';
+              img.style.cssText = 'display: block !important; width: 120px !important; height: 120px !important; object-fit: cover; background: #fff;';
+              img.onerror = () => console.error('❌ Image failed to load:', item.preview);
+              img.onload = () => console.log('✅ Image loaded:', item.id);
+              
+              const removeBtn = document.createElement('button');
+              removeBtn.textContent = '×';
+              removeBtn.className = 'photo-remove-btn';
+              removeBtn.style.cssText = 'position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; background: rgba(220, 53, 69, 0.9); border: none; color: white; font-size: 16px; cursor: pointer; z-index: 10;';
+              removeBtn.onclick = (e) => {
+                e.stopPropagation();
+                photoQueue.removePhoto(item.id);
+                photoDiv.remove();
+                updatePhotoCount();
+              };
+              
+              photoDiv.appendChild(img);
+              photoDiv.appendChild(removeBtn);
+              photoPreviewContainer.appendChild(photoDiv);
+              rendered = photoDiv;
+              console.log(`✅ Rendered directly item ${idx + 1}:`, rendered);
+            }
+          });
+          
+          // Force container visibility
+          if (photoPreviewContainer && addedItems.length > 0) {
+            photoPreviewContainer.style.display = 'flex';
+            const computedStyle = window.getComputedStyle(photoPreviewContainer);
+            console.log('📸 Container computed display:', computedStyle.display);
+            console.log('📸 Container computed visibility:', computedStyle.visibility);
+            
+            // If still not visible, force it
+            if (computedStyle.display === 'none') {
+              console.warn('⚠️ Container still hidden, forcing visibility');
+              photoPreviewContainer.style.display = 'flex !important';
+            }
+          }
+          
+          console.log('📸 Total items in container:', photoPreviewContainer?.children.length);
+          console.log('📸 Container display:', photoPreviewContainer?.style.display);
+          console.log('📸 Container visibility:', window.getComputedStyle(photoPreviewContainer).display);
+          
+          // Update count immediately and after a short delay
+          updatePhotoCount();
+          setTimeout(() => {
+            updatePhotoCount();
+            console.log('📸 Delayed count check - visible thumbnails:', photoPreviewContainer?.querySelectorAll('.photo-item img').length);
+          }, 100);
+          
+          saveDraft();
+          
+          // Log queue state after adding
+          setTimeout(() => {
+            const stats = photoQueue.getStats();
+            const uploaded = photoQueue.getUploadedUrls();
+            console.log('📸 Queue stats after adding:', stats);
+            console.log('📸 Uploaded URLs:', uploaded);
+          }, 2000);
+          
+          return;
+        }
         
-        // Render immediately (optimistic UI)
-        photoItems.forEach(item => {
-          // Store queue ID for tracking
-          const fileRef = { _queueId: item.id, _uploading: true };
-          currentFiles.push(fileRef);
-          photoQueueUI.renderPhotoItem(item);
-        });
+        // Fallback to original compression logic
+        uploadProgress.style.display = 'block';
         
-        updatePhotoCount();
+        const BATCH_SIZE = 3;
+        let successCount = 0;
+        let failedFiles = [];
+        
+        for (let i = 0; i < validFiles.length; i += BATCH_SIZE) {
+          const batch = validFiles.slice(i, i + BATCH_SIZE);
+          const promises = batch.map(file => compressImage(file));
+          
+          try {
+            const compressed = await Promise.all(promises);
+            compressed.forEach(c => {
+              if (c) {
+                currentFiles.push(c);
+                currentPreviews.push(URL.createObjectURL(c));
+                successCount++;
+              }
+            });
+          } catch (err) {
+            console.error('Batch compression error:', err);
+            batch.forEach(f => failedFiles.push(f.name));
+          }
+          
+          const progress = Math.round(((i + batch.length) / validFiles.length) * 100);
+          uploadProgressBar.style.width = progress + '%';
+          uploadProgressBar.textContent = `Compressing ${Math.min(i + batch.length, validFiles.length)}/${validFiles.length}...`;
+        }
+        
+        uploadProgress.style.display = 'none';
+        
+        if (failedFiles.length > 0) {
+          uploadStatus.classList.remove('d-none');
+          uploadStatus.className = 'alert alert-danger';
+          uploadStatus.innerHTML = `⚠️ Failed to process ${failedFiles.length} file(s): ${failedFiles.slice(0, 3).join(', ')}${failedFiles.length > 3 ? '...' : ''}`;
+        }
+        
+        renderPhotoPreview();
+        saveDraft();
       }
 
-      // Legacy function - now handled by PhotoQueueUI
       function renderPhotoPreview() {
-        // No-op: UI is handled by PhotoQueueUI
-        updatePhotoCount();
+        photoPreviewContainer.innerHTML = '';
+        const count = currentFiles.length;
+        
+        if (count === 0) {
+          photoCount.style.display = 'none';
+          photoPreviewContainer.style.display = 'none';
+          return;
+        }
+        
+        photoPreviewContainer.style.display = 'flex';
+        photoCount.style.display = 'inline-block';
+        photoCount.textContent = `${count} / ${MAX_PHOTOS} photos`;
+        photoCount.className = 'photo-count mt-2';
+        if (count >= MAX_PHOTOS * 0.8) photoCount.classList.add('warning');
+        if (count >= MAX_PHOTOS) photoCount.classList.add('danger');
+        
+        currentPreviews.forEach((url, idx) => {
+          const item = document.createElement('div');
+          item.className = 'photo-preview-item';
+          
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = `Photo ${idx + 1}`;
+          
+          const removeBtn = document.createElement('div');
+          removeBtn.className = 'photo-preview-remove';
+          removeBtn.textContent = '×';
+          removeBtn.title = 'Remove this photo';
+          removeBtn.onclick = () => removePhoto(idx);
+          
+          item.appendChild(img);
+          item.appendChild(removeBtn);
+          photoPreviewContainer.appendChild(item);
+        });
       }
       
-      // Legacy function - now handled by PhotoQueueUI
       function removePhoto(index) {
-        // No-op: removal is handled by PhotoQueueUI
+        if (index < 0 || index >= currentFiles.length) return;
+        URL.revokeObjectURL(currentPreviews[index]);
+        currentFiles.splice(index, 1);
+        currentPreviews.splice(index, 1);
+        renderPhotoPreview();
+        saveDraft();
       }
 
-      // Drop Zone Events
-      dropZone.addEventListener('click', () => photoUpload.click());
-      dropZone.addEventListener('dragover', (e) => { 
-        e.preventDefault(); 
-        e.stopPropagation(); 
-        dropZone.classList.add('drag-over'); 
-      });
-      dropZone.addEventListener('dragleave', (e) => { 
-        e.preventDefault(); 
-        e.stopPropagation(); 
-        dropZone.classList.remove('drag-over'); 
-      });
-      dropZone.addEventListener('drop', (e) => { 
-        e.preventDefault(); 
-        e.stopPropagation(); 
-        dropZone.classList.remove('drag-over'); 
-        handleFiles(e.dataTransfer.files); 
-      });
-      photoUpload.addEventListener('change', () => handleFiles(photoUpload.files));
+      dropZone.addEventListener('click', () => curPhotos.click());
+      dropZone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag-over'); });
+      dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('drag-over'); });
+      dropZone.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
+      curPhotos.addEventListener('change', () => handleFiles(curPhotos.files));
 
       // Draft Auto-Save
       function saveDraft() {
@@ -969,22 +1541,22 @@
             return false;
           }
           
-          if (confirm(`📋 Found a draft from ${Math.round(ageMinutes)} minutes ago.\n\nLoad it?`)) {
-            document.getElementById('date').value = draft.date || '';
-            document.getElementById('project_name').value = draft.project_name || '';
-            document.getElementById('description_of_work').value = draft.description_of_work || '';
-            document.getElementById('location_name').value = draft.location_name || '';
-            document.getElementById('floor').value = draft.floor || '';
-            document.getElementById('developer_client').value = draft.developer_client || '';
-            document.getElementById('city_area').value = draft.city_area || '';
-            document.getElementById('estimated_time').value = draft.estimated_time || '';
-            document.getElementById('inspector_name').value = draft.inspector_name || '';
-            
-            if (draft.workItemsCount > 0 || draft.photoCount > 0) {
-              alert(`ℹ️ Draft had ${draft.workItemsCount} work items and ${draft.photoCount} photos (work items not restored, photos not saved)`);
-            }
-            return true;
+          // Auto-load draft without confirmation
+          document.getElementById('date').value = draft.date || '';
+          document.getElementById('project_name').value = draft.project_name || '';
+          document.getElementById('description_of_work').value = draft.description_of_work || '';
+          document.getElementById('location_name').value = draft.location_name || '';
+          document.getElementById('floor').value = draft.floor || '';
+          document.getElementById('developer_client').value = draft.developer_client || '';
+          document.getElementById('city_area').value = draft.city_area || '';
+          document.getElementById('estimated_time').value = draft.estimated_time || '';
+          document.getElementById('inspector_name').value = draft.inspector_name || '';
+          
+          // Draft loaded silently
+          if (draft.workItemsCount > 0 || draft.photoCount > 0) {
+            console.log(`ℹ️ Draft loaded: ${draft.workItemsCount} work items and ${draft.photoCount} photos`);
           }
+          return true;
         } catch (err) {
           console.error('Failed to load draft:', err);
         }
@@ -1015,106 +1587,317 @@
       // Load draft on page load
       window.addEventListener('DOMContentLoaded', loadDraft);
 
-      // Submit Handler
-      document.getElementById('submitBtn').addEventListener('click', async () => {
-        // Check if uploads are complete
-        if (photoQueue) {
-          const stats = photoQueue.getStats();
-          
-          if (!stats.isComplete && stats.total > 0) {
-            alert(`⏳ Please wait for photo uploads to complete.\n\n${stats.uploading + stats.queued} photo(s) still uploading...`);
-            return;
-          }
-          
-          if (stats.failed > 0) {
-            const proceed = confirm(`⚠️ ${stats.failed} photo(s) failed to upload.\n\nDo you want to continue without them?\n\nClick "Retry All Failed" to try uploading them again.`);
-            if (!proceed) return;
-          }
-          
-          // Get successfully uploaded URLs
-          const uploadedPhotos = photoQueue.getUploadedUrls();
-          currentFiles = uploadedPhotos.map(p => ({ url: p.url, is_cloud: true }));
+      // Upload Images Button Handler
+      uploadImagesBtn.addEventListener('click', async () => {
+        console.log('📤 Upload button clicked. photoQueue:', photoQueue);
+        if (!photoQueue) {
+          console.error('❌ Photo queue not initialized!');
+          console.error('Window.PhotoUploadQueue:', typeof window.PhotoUploadQueue);
+          console.error('Window.PhotoQueueUI:', typeof window.PhotoQueueUI);
+          uploadStatus.classList.remove('d-none');
+          uploadStatus.className = 'alert alert-danger';
+          uploadStatus.innerHTML = '⚠️ Photo upload system not available. Please refresh the page.';
+          return;
+          return;
         }
         
-        // Large submission warning
-        const totalPhotos = currentFiles.length;
-        if (totalPhotos >= 30) {
-          const estimatedTime = Math.ceil(totalPhotos / 10);
-          if (!confirm(`⏰ You're submitting ${totalPhotos} photos.\n\nThis may take ${estimatedTime}-${estimatedTime + 1} minutes to process.\n\nDo you want to continue?`)) {
-            return;
-          }
+        const stats = photoQueue.getStats();
+        if (stats.total === 0) {
+          uploadStatus.classList.remove('d-none');
+          uploadStatus.className = 'alert alert-warning';
+          uploadStatus.innerHTML = '⚠️ Please add photos first before uploading.';
+          return;
+          return;
         }
-
-        // Show upload modal
-        if (totalPhotos > 0) {
-          uploadModal.style.display = 'flex';
-          uploadModalText.textContent = `Processing ${totalPhotos} photos...`;
-          uploadModalProgress.style.width = '50%';
-          uploadModalProgress.textContent = '50%';
+        
+        // Check if already uploaded
+        if (photosUploaded && uploadedPhotoUrls.length > 0) {
+          // Auto-reset if already uploaded
+          photosUploaded = false;
+          uploadedPhotoUrls = [];
         }
-
-        statusBox.innerText = "Submitting...";
+        
+        // Disable button and show spinner
+        uploadImagesBtn.disabled = true;
+        uploadImagesBtnText.textContent = 'Uploading...';
+        uploadImagesBtnSpinner.classList.remove('d-none');
+        uploadStatus.classList.remove('d-none');
+        uploadStatus.className = 'alert alert-info';
+        uploadStatus.innerHTML = `Uploading ${stats.total} photo(s)...`;
         
         try {
-          const formData = new FormData(form);
+          // Wait for all uploads to complete
+          const maxWaitTime = 300000; // 5 minutes max
+          const startTime = Date.now();
           
-          // Add photo URLs (already uploaded to cloud)
-          currentFiles.forEach((fileObj, idx) => {
-            if (fileObj.url && fileObj.is_cloud) {
-              // Photos are already uploaded, just send URLs
-              formData.append(`photo_url_${idx}`, fileObj.url);
-            }
-          });
-          
-          // Add signatures
-          const techSig = (pads.tech && !pads.tech.isEmpty()) ? pads.tech.toDataURL('image/png') : '';
-          const opSig = (pads.op && !pads.op.isEmpty()) ? pads.op.toDataURL('image/png') : '';
-          formData.set('tech_signature', techSig);
-          formData.set('op_signature', opSig);
-          
-          const submitUrl = modulePrefix + '/submit';
-          const res = await fetch(submitUrl, { method: 'POST', body: formData });
-          
-          if (!res.ok) {
-            throw new Error('Server error: ' + res.status);
+          while (!stats.isComplete && (Date.now() - startTime) < maxWaitTime) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const currentStats = photoQueue.getStats();
+            const progress = Math.round((currentStats.completed / currentStats.total) * 100);
+            uploadStatus.innerHTML = `Uploading ${currentStats.completed}/${currentStats.total} photos (${progress}%)...`;
+            
+            if (currentStats.isComplete) break;
           }
           
-          const data = await res.json();
+          // Get uploaded URLs
+          const uploadedPhotos = photoQueue.getUploadedUrls();
+          uploadedPhotoUrls = uploadedPhotos.map(p => {
+            if (typeof p === 'string') return p;
+            return p.url || p;
+          }).filter(Boolean);
+          
+          // Fallback: check queue items directly
+          if (uploadedPhotoUrls.length === 0 && stats.total > 0) {
+            const allItems = photoQueue.queue || [];
+            const completedItems = allItems.filter(item => item.status === 'completed' && item.url);
+            if (completedItems.length > 0) {
+              uploadedPhotoUrls = completedItems.map(item => item.url).filter(Boolean);
+            }
+          }
+          
+          if (uploadedPhotoUrls.length === 0) {
+            throw new Error('No photos were uploaded successfully. Please check for errors and try again.');
+          }
+          
+          photosUploaded = true;
+          uploadStatus.className = 'alert alert-success';
+          uploadStatus.innerHTML = `✅ Successfully uploaded ${uploadedPhotoUrls.length} photo(s)! You can now generate reports.`;
+          
+          // Enable submit button
+          submitBtn.disabled = false;
+          submitBtnText.textContent = `📄 Generate Reports (${uploadedPhotoUrls.length} photos)`;
+          
+          console.log('✅ Photos uploaded:', uploadedPhotoUrls);
+          
+        } catch (error) {
+          console.error('Upload error:', error);
+          uploadStatus.className = 'alert alert-danger';
+          uploadStatus.innerHTML = `❌ Upload failed: ${error.message}`;
+          photosUploaded = false;
+          uploadedPhotoUrls = [];
+        } finally {
+          uploadImagesBtn.disabled = false;
+          uploadImagesBtnText.textContent = '📤 Upload Images';
+          uploadImagesBtnSpinner.classList.add('d-none');
+        }
+      });
+
+      // Submit Handler - Using HVAC method with JSON payload
+      submitBtn.addEventListener('click', async () => {
+        // Get signatures
+        const techSig = (pads.tech && !pads.tech.isEmpty()) ? pads.tech.toDataURL('image/png') : '';
+        const opSig = (pads.op && !pads.op.isEmpty()) ? pads.op.toDataURL('image/png') : '';
+        
+        // Check if photos have been uploaded
+        if (!photosUploaded || uploadedPhotoUrls.length === 0) {
+          statusBox.innerHTML = '<div class="alert alert-warning">⚠️ Please upload images first using the "Upload Images" button before generating reports.</div>';
+          return;
+          return;
+        }
+        
+        console.log('📸 Using pre-uploaded photo URLs:', uploadedPhotoUrls);
+        console.log('📸 Total photos to submit:', uploadedPhotoUrls.length);
+        
+        // Collect work items from table
+        const workItemsBody = document.getElementById('workItemsBody');
+        const workItems = [];
+        const rows = workItemsBody.querySelectorAll('tr');
+        
+        rows.forEach((row, index) => {
+          const inputs = row.querySelectorAll('input');
+          if (inputs.length >= 6) {
+            workItems.push({
+              item_number: index + 1,
+              description: inputs[0].value || '', // work_desc
+              quantity: inputs[1].value || '', // work_qty
+              material: inputs[2].value || '', // material
+              material_qty: inputs[3].value || '', // material_qty
+              price: inputs[4].value || '', // price
+              labour: inputs[5].value || '', // labour
+              photo_urls: uploadedPhotoUrls // All photos attached to each work item
+            });
+          }
+        });
+        
+        if (workItems.length === 0) {
+          statusBox.innerHTML = '<div class="alert alert-warning">⚠️ Please add at least one work item before submitting.</div>';
+          return;
+          return;
+        }
+        
+        // Count total photos
+        const totalPhotos = uploadedPhotoUrls.length;
+        if (totalPhotos >= 30) {
+          const estimatedTime = Math.ceil(totalPhotos / 10);
+          // Show info message instead of confirmation
+          if (totalPhotos >= 30) {
+            const estimatedTime = Math.ceil(totalPhotos / 10);
+            statusBox.innerHTML = `<div class="alert alert-info">⏰ Processing ${totalPhotos} photos. This may take ${estimatedTime}-${estimatedTime + 1} minutes...</div>`;
+          }
+        }
+
+        // Show loading overlay (photos already uploaded, just generating reports)
+        loadingOverlay.style.display = 'flex';
+        statusBox.innerHTML = '';
+        
+        // Prepare JSON payload (photos already in cloud)
+        const payload = {
+          project_name: document.getElementById('project_name').value || '',
+          location: document.getElementById('location_name').value || '',
+          visit_date: document.getElementById('date').value || '',
+          inspector_name: document.getElementById('inspector_name').value || '',
+          inspector_signature: techSig || '',
+          manager_name: document.getElementById('manager_name')?.value || '',
+          manager_signature: opSig || '',
+          description_of_work: document.getElementById('description_of_work').value || '',
+          floor: document.getElementById('floor').value || '',
+          developer_client: document.getElementById('developer_client').value || '',
+          city_area: document.getElementById('city_area').value || '',
+          estimated_time: document.getElementById('estimated_time').value || '',
+          estimated_completion: document.getElementById('estimated_completion')?.value || '',
+          work_items: workItems
+        };
+        
+        console.log('📤 Submitting payload with work items:', workItems);
+        console.log('📤 Each work item photo_urls:', workItems.map(wi => ({ item: wi.item_number, photo_count: wi.photo_urls?.length || 0, urls: wi.photo_urls })));
+
+        try {
+          const submitUrl = modulePrefix + '/submit-with-urls';
+          const res = await fetch(submitUrl, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error('Server error: ' + res.status + ' ' + txt);
+          }
+          
+          const json = await res.json();
           
           // Hide upload modal, show loading overlay
           uploadModal.style.display = 'none';
           loadingOverlay.style.display = 'flex';
           
-          if (data.job_id) {
+          if (json.job_id) {
             clearDraft(); // Clear draft after successful submission
-            statusBox.innerText = "Queued job: " + data.job_id;
             
-            const result = await pollJobStatus(modulePrefix, data.job_id, (js) => {
-              statusBox.innerText = `State: ${js.state}, progress: ${js.progress}%`;
-            });
-            
-            loadingOverlay.style.display = 'none';
-            
-            if (result.state === 'done') {
-              const links = result.results.map(r => `<a href="${r.url}" target="_blank">${r.filename}</a>`).join('<br>');
-              statusBox.innerHTML = `✅ Done.<br>${links}`;
-              
-              // Auto-download files
-              result.results.forEach((r, idx) => {
-                setTimeout(() => autoDownload(r.url, r.filename), idx * 1000);
-              });
-            } else {
-              statusBox.innerText = "❌ Job failed: " + JSON.stringify(result.results);
+            // Ensure pollJobStatusFn is available - use multiple fallbacks
+            let pollFn = null;
+            try {
+              // First try: use the pollJobStatusFn defined at the top of the IIFE
+              if (typeof pollJobStatusFn !== 'undefined') {
+                pollFn = pollJobStatusFn;
+              }
+              // Second try: use window.pollJobStatusFn
+              else if (typeof window !== 'undefined' && typeof window.pollJobStatusFn !== 'undefined') {
+                pollFn = window.pollJobStatusFn;
+              }
+              // Third try: use window.pollJobStatus
+              else if (typeof window !== 'undefined' && typeof window.pollJobStatus !== 'undefined') {
+                pollFn = window.pollJobStatus;
+              }
+              // Fourth try: define it inline as last resort
+              else {
+                pollFn = async function(modulePrefix, jobId, onUpdate, interval=1500) {
+                  const statusUrl = `${modulePrefix}/status/${jobId}`;
+                  return new Promise((resolve, reject) => {
+                    const id = setInterval(async () => {
+                      try {
+                        const r = await fetch(statusUrl);
+                        if (!r.ok) throw new Error('Job not found');
+                        const js = await r.json();
+                        if (onUpdate) onUpdate(js);
+                        const isDone = js.state === 'done' || js.status === 'completed';
+                        const isFailed = js.state === 'failed' || js.status === 'failed';
+                        if (isDone || isFailed) {
+                          clearInterval(id);
+                          resolve(js);
+                        }
+                      } catch (e) {
+                        clearInterval(id);
+                        reject(e);
+                      }
+                    }, interval);
+                  });
+                };
+              }
+            } catch (e) {
+              console.error('Error getting pollJobStatus function:', e);
             }
+            
+            if (!pollFn || typeof pollFn !== 'function') {
+              loadingOverlay.style.display = 'none';
+              statusBox.innerHTML = '<div class="alert alert-danger">❌ Error: pollJobStatus function not available. Please refresh the page.</div>';
+              console.error('pollFn is not a function. pollJobStatusFn:', typeof pollJobStatusFn, 'window.pollJobStatusFn:', typeof (window && window.pollJobStatusFn), 'window.pollJobStatus:', typeof (window && window.pollJobStatus));
+              return;
+            }
+            
+            pollFn(modulePrefix, json.job_id, (js) => {
+              statusBox.innerHTML = `<div class="alert alert-info">Generating reports... ${js.progress || 0}%</div>`;
+            }).then(result => {
+              loadingOverlay.style.display = 'none';
+              
+              // Debug logging
+              console.log('Job polling completed. Full result:', result);
+              
+              // Check both 'state' (legacy) and 'status' (current)
+              const isDone = result.state === 'done' || result.status === 'completed';
+              const isFailed = result.state === 'failed' || result.status === 'failed';
+              
+              // Support both 'results' and 'result_data'
+              const results = result.results || result.result_data || {};
+              
+              console.log('Extracted results:', results);
+              console.log('Is done?', isDone, 'Status:', result.status, 'State:', result.state);
+              
+              if (isDone) {
+                const links = [];
+                
+                // Check for Excel file (try multiple possible field names)
+                const excelUrl = results.excel || results.excel_url || results.excelUrl;
+                const excelFilename = results.excel_filename || results.excelFilename || 'civil_report.xlsx';
+                console.log('Excel URL:', excelUrl, 'Filename:', excelFilename);
+                
+                if (excelUrl) {
+                  const excelLinkHtml = `<a href="${excelUrl}" download="${excelFilename}" class="btn btn-success me-2 mt-2" style="text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">📥 Download Excel Report</a>`;
+                  links.push(excelLinkHtml);
+                }
+                
+                // Check for PDF file (try multiple possible field names)
+                const pdfUrl = results.pdf || results.pdf_url || results.pdfUrl;
+                const pdfFilename = results.pdf_filename || results.pdfFilename || 'civil_report.pdf';
+                console.log('PDF URL:', pdfUrl, 'Filename:', pdfFilename);
+                
+                if (pdfUrl) {
+                  const pdfLinkHtml = `<a href="${pdfUrl}" download="${pdfFilename}" class="btn btn-danger me-2 mt-2" style="text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">📥 Download PDF Report</a>`;
+                  links.push(pdfLinkHtml);
+                }
+                
+                if (links.length > 0) {
+                  statusBox.innerHTML = `<div class="alert alert-success"><strong>✅ Reports generated successfully!</strong><br><br>${links.join(' ')}<div class="mt-2 text-muted" style="font-size:0.9em;">Click the buttons above to download your reports.</div></div>`;
+                  statusBox.style.display = 'block';
+                } else {
+                  statusBox.innerHTML = `<div class="alert alert-warning"><strong>⚠️ Job completed but no download links found.</strong><br><br>Result data: <pre style="font-size: 0.8rem; margin-top: 0.5rem;">${JSON.stringify(results, null, 2)}</pre><br>Full result: <pre style="font-size: 0.8rem; margin-top: 0.5rem;">${JSON.stringify(result, null, 2)}</pre></div>`;
+                  statusBox.style.display = 'block';
+                }
+              } else if (isFailed) {
+                statusBox.innerText = "❌ Job failed: " + (result.error || JSON.stringify(results));
+              } else {
+                statusBox.innerText = "❌ Unknown job state: " + JSON.stringify(result);
+              }
+            }).catch(err => {
+              loadingOverlay.style.display = 'none';
+              statusBox.innerText = "❌ Error polling job status: " + err.message;
+            });
           } else {
-            uploadModal.style.display = 'none';
             loadingOverlay.style.display = 'none';
-            statusBox.innerText = "Submission accepted but no job ID";
+            statusBox.innerHTML = '<div class="alert alert-warning">Submission accepted but no job ID</div>';
           }
-        } catch (e) {
-          uploadModal.style.display = 'none';
+        } catch (err) {
           loadingOverlay.style.display = 'none';
-          statusBox.innerText = "❌ Error: " + e.message;
+          statusBox.innerHTML = `<div class="alert alert-danger">❌ Submission failed: ${err.message}</div>`;
         }
       });
     })();

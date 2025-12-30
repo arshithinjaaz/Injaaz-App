@@ -6,6 +6,15 @@
 class PhotoQueueUI {
   constructor(containerId, options = {}) {
     this.container = document.getElementById(containerId);
+    
+    if (!this.container) {
+      console.error('❌ PhotoQueueUI: Container not found with ID:', containerId);
+      console.error('Available elements with "photo" in ID:', 
+        Array.from(document.querySelectorAll('[id*="photo"]')).map(el => el.id));
+    } else {
+      console.log('✅ PhotoQueueUI: Container found:', containerId, this.container);
+    }
+    
     this.options = {
       maxPhotos: options.maxPhotos || 100,
       showOverallProgress: options.showOverallProgress !== false,
@@ -98,12 +107,44 @@ class PhotoQueueUI {
    * Render a photo item with status overlay
    */
   renderPhotoItem(item) {
+    if (!this.container) {
+      console.error('❌ PhotoQueueUI: Container not found!', this.container);
+      return null;
+    }
+    
+    if (!item.preview) {
+      console.error('❌ PhotoQueueUI: Item has no preview!', item);
+      return null;
+    }
+    
+    // Ensure container is visible
+    this.container.style.display = 'flex';
+    this.container.style.flexWrap = 'wrap';
+    this.container.style.gap = '10px';
+    this.container.style.marginTop = '1rem';
+    this.container.style.padding = '0.5rem';
+    
     const photoDiv = document.createElement('div');
     photoDiv.className = 'photo-item';
     photoDiv.dataset.photoId = item.id;
     
+    // Create image element with error handling
+    const img = document.createElement('img');
+    img.src = item.preview;
+    img.alt = 'Photo';
+    img.style.display = 'block';
+    img.style.width = '120px';
+    img.style.height = '120px';
+    img.style.objectFit = 'cover';
+    img.onerror = () => {
+      console.error('❌ Failed to load image preview:', item.preview);
+      img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=';
+    };
+    img.onload = () => {
+      console.log('✅ Image preview loaded:', item.id);
+    };
+    
     photoDiv.innerHTML = `
-      <img src="${item.preview}" alt="Photo">
       <div class="photo-status-overlay status-${item.status}">
         ${this.getStatusContent(item.status, item.progress)}
       </div>
@@ -113,15 +154,22 @@ class PhotoQueueUI {
       <button class="photo-remove-btn" title="Remove photo">×</button>
     `;
     
+    // Insert image as first child
+    photoDiv.insertBefore(img, photoDiv.firstChild);
+    
     // Add remove button handler
     const removeBtn = photoDiv.querySelector('.photo-remove-btn');
-    removeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.options.onRemove(item.id);
-    });
+    if (removeBtn) {
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.options.onRemove(item.id);
+      });
+    }
     
     this.container.appendChild(photoDiv);
     this.photoElements.set(item.id, photoDiv);
+    
+    console.log('✅ PhotoQueueUI: Rendered photo item', item.id, 'in container', this.container.id);
     
     return photoDiv;
   }
@@ -202,4 +250,9 @@ class PhotoQueueUI {
 // Export for use in forms
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = PhotoQueueUI;
+}
+
+// Make available globally
+if (typeof window !== 'undefined') {
+  window.PhotoQueueUI = PhotoQueueUI;
 }
