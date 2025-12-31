@@ -28,6 +28,59 @@
             margin: 20px;
         }
         
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem !important;
+            }
+            
+            .register-container {
+                padding: 2rem 1.5rem !important;
+                margin: 1rem !important;
+                max-width: 100% !important;
+            }
+            
+            .logo img {
+                width: 90px !important;
+                height: 90px !important;
+            }
+            
+            h1 {
+                font-size: 24px !important;
+            }
+            
+            .subtitle {
+                font-size: 13px !important;
+            }
+            
+            input[type="text"],
+            input[type="email"],
+            input[type="password"] {
+                font-size: 16px !important; /* Prevents zoom on iOS */
+                padding: 14px 16px !important;
+            }
+            
+            .btn-register {
+                padding: 16px !important;
+                font-size: 16px !important;
+                min-height: 48px !important;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .register-container {
+                padding: 1.5rem 1.25rem !important;
+            }
+            
+            .logo img {
+                width: 80px !important;
+                height: 80px !important;
+            }
+            
+            h1 {
+                font-size: 22px !important;
+            }
+        }
+        
         .logo {
             text-align: center;
             margin-bottom: 25px;
