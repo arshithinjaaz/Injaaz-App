@@ -561,61 +561,85 @@
     
     @media (max-width: 768px) {
       .nav-container {
-        padding: 0.75rem 1rem !important;
-        flex-wrap: nowrap !important;
+        padding: 1rem 1.25rem !important;
+        flex-wrap: wrap !important;
         gap: 0.75rem !important;
         align-items: center !important;
-        min-height: 56px !important;
+        min-height: auto !important;
       }
       
       .logo {
         flex: 0 0 auto !important;
         gap: 0.5rem !important;
+        order: 1 !important;
       }
       
       .logo img {
-        height: 32px !important;
+        height: 36px !important;
         flex-shrink: 0 !important;
         width: auto !important;
       }
       
-      .logo-text {
-        font-size: 1.1rem !important;
+      .logo span {
+        font-size: 1.2rem !important;
         display: block !important;
       }
       
-      .welcome-text-desktop {
-        display: none !important;
-      }
-      
-      .welcome-text-mobile {
-        display: none !important;
+      #welcome-text {
+        font-size: 1rem !important;
+        order: 2 !important;
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        text-align: left !important;
+        margin-top: 0.25rem !important;
+        padding-left: 0 !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
       }
       
       .nav-right {
-        gap: 0.75rem !important;
-        flex-shrink: 0 !important;
-        margin-left: auto !important;
+        order: 3 !important;
+        flex: 1 1 auto !important;
+        gap: 0.5rem !important;
+        justify-content: flex-end !important;
+        margin-top: 0.25rem !important;
       }
       
       .nav-menu {
-        display: none !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        list-style: none !important;
+      }
+      
+      .nav-menu li {
+        margin: 0 !important;
+      }
+      
+      .nav-menu a {
+        font-size: 0.875rem !important;
+        padding: 0.375rem 0.75rem !important;
+        white-space: nowrap !important;
       }
       
       .logout-btn {
-        display: none !important;
+        font-size: 0.875rem !important;
+        padding: 0.5rem 0.75rem !important;
+        min-height: 36px !important;
+        flex-shrink: 0 !important;
       }
       
-      .mobile-menu-btn {
-        display: flex !important;
+      .logout-btn svg {
+        width: 16px !important;
+        height: 16px !important;
       }
       
-      .mobile-menu {
-        display: block !important;
-      }
-      
-      .mobile-menu-overlay {
-        display: block !important;
+      .logout-btn span {
+        display: inline !important;
       }
       
       .module-card {
@@ -639,9 +663,8 @@
     
     @media (max-width: 480px) {
       .nav-container {
-        padding: 0.625rem 0.75rem !important;
+        padding: 0.75rem 1rem !important;
         gap: 0.5rem !important;
-        min-height: 52px !important;
       }
       
       .logo {
@@ -649,25 +672,39 @@
       }
       
       .logo img {
-        height: 28px !important;
+        height: 32px !important;
       }
       
-      .logo-text {
-        font-size: 1rem !important;
+      .logo span {
+        font-size: 1.1rem !important;
       }
       
-      .mobile-menu {
-        width: 100vw !important;
-        max-width: 100vw !important;
+      #welcome-text {
+        font-size: 0.9rem !important;
       }
       
-      .mobile-menu-btn {
-        width: 28px !important;
-        height: 28px !important;
+      .nav-menu {
+        gap: 0.375rem !important;
       }
       
-      .mobile-menu-btn span {
-        height: 2.5px !important;
+      .nav-menu a {
+        font-size: 0.8rem !important;
+        padding: 0.375rem 0.5rem !important;
+      }
+      
+      .logout-btn {
+        padding: 0.5rem !important;
+        min-width: 36px !important;
+        font-size: 0.8rem !important;
+      }
+      
+      .logout-btn span {
+        display: none !important;
+      }
+      
+      .logout-btn svg {
+        width: 18px !important;
+        height: 18px !important;
       }
       
       .module-card {
@@ -698,8 +735,7 @@
     <div class="nav-container">
       <a href="/" class="logo">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
-        <span class="logo-text" id="logo-text">Injaaz</span>
-        <span class="welcome-text-mobile" id="welcome-text-mobile"></span>
+        <span id="welcome-text">Injaaz</span>
       </a>
       <div class="nav-right">
         <ul class="nav-menu">
@@ -710,50 +746,14 @@
             <a href="/admin/dashboard" style="color: var(--primary); font-weight: 600;">Administrative</a>
           </li>
         </ul>
-        <div class="welcome-text-desktop" id="welcome-text">Injaaz</div>
         <button class="logout-btn" id="logoutBtn" type="button">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3h12.75" />
           </svg>
           <span>Logout</span>
         </button>
-        <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Menu">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
       </div>
     </div>
-    
-    <!-- Mobile Menu Overlay -->
-    <div class="mobile-menu" id="mobileMenu">
-      <div class="mobile-menu-header">
-        <div class="mobile-welcome" id="mobileWelcome">Welcome</div>
-        <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <ul class="mobile-menu-list">
-        <li><a href="#modules" class="mobile-menu-link">Modules</a></li>
-        <li><a href="#about" class="mobile-menu-link">About</a></li>
-        <li><a href="#contact" class="mobile-menu-link">Contact</a></li>
-        <li id="admin-menu-item-mobile" style="display: none;">
-          <a href="/admin/dashboard" class="mobile-menu-link" style="color: var(--primary); font-weight: 600;">Administrative</a>
-        </li>
-        <li class="mobile-menu-divider"></li>
-        <li>
-          <button class="mobile-logout-btn" id="mobileLogoutBtn" type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3h12.75" />
-            </svg>
-            <span>Logout</span>
-          </button>
-        </li>
-      </ul>
-    </div>
-    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
   </nav>
 
   <div class="hero">
@@ -816,16 +816,10 @@
           // Use full_name if available, otherwise username
           const displayName = user.full_name || user.username;
           
-          // Update desktop welcome text
+          // Update welcome text
           const welcomeText = document.getElementById('welcome-text');
           if (welcomeText) {
             welcomeText.textContent = `Injaaz welcomes, ${displayName}!`;
-          }
-          
-          // Update mobile welcome text
-          const mobileWelcome = document.getElementById('mobileWelcome');
-          if (mobileWelcome) {
-            mobileWelcome.textContent = `Injaaz welcomes, ${displayName}!`;
           }
           
           // Show admin menu if user is admin
@@ -846,17 +840,9 @@
               if (data.user) {
                 localStorage.setItem('user', JSON.stringify(data.user));
                 const displayName = data.user.full_name || data.user.username;
-                
-                // Update desktop welcome text
                 const welcomeText = document.getElementById('welcome-text');
                 if (welcomeText) {
                   welcomeText.textContent = `Injaaz welcomes, ${displayName}!`;
-                }
-                
-                // Update mobile welcome text
-                const mobileWelcome = document.getElementById('mobileWelcome');
-                if (mobileWelcome) {
-                  mobileWelcome.textContent = `Injaaz welcomes, ${displayName}!`;
                 }
                 
                 // Show admin menu if user is admin
@@ -997,73 +983,9 @@
       }
     }
     
-    // Mobile menu toggle
-    function initMobileMenu() {
-      const menuBtn = document.getElementById('mobileMenuBtn');
-      const mobileMenu = document.getElementById('mobileMenu');
-      const menuOverlay = document.getElementById('mobileMenuOverlay');
-      const menuClose = document.getElementById('mobileMenuClose');
-      const mobileLogoutBtn = document.getElementById('mobileLogoutBtn');
-      const logoutBtn = document.getElementById('logoutBtn');
-      
-      function openMenu() {
-        menuBtn.classList.add('active');
-        mobileMenu.classList.add('active');
-        menuOverlay.classList.add('active');
-        document.body.style.overflow = 'hidden';
-      }
-      
-      function closeMenu() {
-        menuBtn.classList.remove('active');
-        mobileMenu.classList.remove('active');
-        menuOverlay.classList.remove('active');
-        document.body.style.overflow = '';
-      }
-      
-      if (menuBtn) {
-        menuBtn.addEventListener('click', openMenu);
-      }
-      
-      if (menuClose) {
-        menuClose.addEventListener('click', closeMenu);
-      }
-      
-      if (menuOverlay) {
-        menuOverlay.addEventListener('click', closeMenu);
-      }
-      
-      // Close menu when clicking on links
-      const menuLinks = document.querySelectorAll('.mobile-menu-link');
-      menuLinks.forEach(link => {
-        link.addEventListener('click', () => {
-          setTimeout(closeMenu, 300);
-        });
-      });
-      
-      // Sync logout buttons
-      if (mobileLogoutBtn && logoutBtn) {
-        mobileLogoutBtn.addEventListener('click', () => {
-          logoutBtn.click();
-          closeMenu();
-        });
-      }
-      
-      // Sync admin menu items
-      const adminMenuItem = document.getElementById('admin-menu-item');
-      const adminMenuItemMobile = document.getElementById('admin-menu-item-mobile');
-      if (adminMenuItem && adminMenuItemMobile) {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        if (user.role === 'admin') {
-          adminMenuItem.style.display = 'block';
-          adminMenuItemMobile.style.display = 'block';
-        }
-      }
-    }
-    
     // Load welcome message on page load
     document.addEventListener('DOMContentLoaded', function() {
       loadUserWelcome();
-      initMobileMenu();
       
       // Also check immediately if user data exists
       const userStr = localStorage.getItem('user');
