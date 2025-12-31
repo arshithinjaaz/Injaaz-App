@@ -94,13 +94,27 @@
 }
 
 .photo-status-overlay.status-completed {
-  background: rgba(18, 84, 53, 0.3);
+  background: rgba(18, 84, 53, 0.4);
   opacity: 0;
+  transition: opacity 0.5s ease;
 }
 
 .photo-status-overlay.status-completed:hover {
   opacity: 1;
-  background: rgba(18, 84, 53, 0.85);
+  background: rgba(18, 84, 53, 0.9);
+}
+
+/* Show completed badge briefly after upload */
+.photo-item.just-completed .photo-status-overlay.status-completed {
+  opacity: 1;
+  background: rgba(18, 84, 53, 0.9);
+  animation: fadeOut 2s ease 1s forwards;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
 }
 
 .photo-status-overlay.status-failed {

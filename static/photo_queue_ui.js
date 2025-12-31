@@ -230,7 +230,13 @@ class PhotoQueueUI {
    */
   updatePhotoStatus(item) {
     const photoDiv = this.photoElements.get(item.id);
-    if (!photoDiv) return;
+    if (!photoDiv) {
+      // If photo item doesn't exist yet, render it
+      if (item.preview) {
+        this.renderPhotoItem(item);
+      }
+      return;
+    }
     
     const overlay = photoDiv.querySelector('.photo-status-overlay');
     if (overlay) {
@@ -244,13 +250,46 @@ class PhotoQueueUI {
           const event = new CustomEvent('photo-retry', { detail: { photoId: item.id } });
           document.dispatchEvent(event);
         };
+      } else {
+        overlay.style.cursor = 'default';
+        overlay.onclick = null;
       }
     }
     
     const progressFill = photoDiv.querySelector('.photo-progress-fill');
     if (progressFill) {
       progressFill.style.width = item.progress + '%';
+      // Hide progress bar when complete
+      if (item.status === 'completed') {
+        progressFill.style.opacity = '0';
+        setTimeout(() => {
+          if (progressFill) progressFill.style.display = 'none';
+        }, 500);
+      }
     }
+    
+    // Update image source if URL is available and different
+    if (item.status === 'completed' && item.url) {
+      const img = photoDiv.querySelector('img');
+      if (img && img.src !== item.url) {
+        // Only update if not already using the cloud URL
+        const oldSrc = img.src;
+        img.src = item.url;
+        img.onerror = () => {
+          // Fallback to preview if cloud URL fails
+          console.warn('Failed to load cloud URL, using preview:', item.url);
+          img.src = oldSrc;
+        };
+      }
+      
+      // Add "just-completed" class for animation
+      photoDiv.classList.add('just-completed');
+      setTimeout(() => {
+        photoDiv.classList.remove('just-completed');
+      }, 3000);
+    }
+    
+    console.log(`✅ PhotoQueueUI: Updated status for ${item.id} to ${item.status} (${item.progress}%)`);
   }
 
   /**

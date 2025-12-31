@@ -1077,9 +1077,28 @@
             onProgress: (stats) => {
               if (photoQueueUI) photoQueueUI.updateProgress(stats);
             },
-            onComplete: (stats) => {
+            onItemComplete: (item, success) => {
+              // Update UI when individual items complete
+              if (photoQueueUI) {
+                photoQueueUI.updatePhotoStatus(item);
+              }
+              // Update the currentFiles array with the uploaded URL
+              if (success && item.url) {
+                const fileIndex = currentFiles.findIndex(f => f._queueId === item.id);
+                if (fileIndex !== -1) {
+                  currentFiles[fileIndex].url = item.url;
+                  currentFiles[fileIndex].is_cloud = true;
+                }
+              }
+              updatePhotoCount();
+            },
+            onQueueComplete: (stats) => {
               console.log('✅ All uploads complete:', stats);
               updatePhotoCount();
+              // Show success message if all completed
+              if (stats.completed === stats.total && stats.failed === 0) {
+                console.log(`✅ Successfully uploaded ${stats.completed} photo(s)`);
+              }
             },
             onError: (error) => {
               console.error('Upload error:', error);
