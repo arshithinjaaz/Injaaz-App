@@ -85,3 +85,34 @@ def inspector_required(fn):
             return jsonify({'error': 'Unauthorized'}), 401
     
     return wrapper
+
+
+def module_access_required(module):
+    """Decorator factory to check if user has access to a specific module"""
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                verify_jwt_in_request()
+                
+                from flask_jwt_extended import get_jwt_identity
+                user_id = get_jwt_identity()
+                user = User.query.get(user_id)
+                
+                if not user or not user.is_active:
+                    return jsonify({'error': 'User is inactive'}), 403
+                
+                if not user.has_module_access(module):
+                    return jsonify({
+                        'error': f'Access denied to {module} module',
+                        'module': module
+                    }), 403
+                
+                return fn(*args, **kwargs)
+                
+            except Exception as e:
+                current_app.logger.error(f"Module access check error: {str(e)}")
+                return jsonify({'error': 'Unauthorized'}), 401
+        
+        return wrapper
+    return decorator

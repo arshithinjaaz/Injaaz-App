@@ -37,7 +37,7 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # FLASK ENVIRONMENT
-FLASK_ENV = os.getenv("FLASK_ENV", "production")
+FLASK_ENV = os.getenv("FLASK_ENV", "development")
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
 # REDIS (for rate limiting and background tasks)
@@ -46,6 +46,13 @@ REDIS_URL = os.getenv("REDIS_URL")
 # JWT Settings
 JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 3600))  # 1 hour
 JWT_REFRESH_TOKEN_EXPIRES = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES", 2592000))  # 30 days
+# JWT Cookie Settings - Enable cookie-based authentication for HTML links
+JWT_TOKEN_LOCATION = ['headers', 'cookies']  # Read from both headers and cookies
+JWT_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"  # HTTPS only in production
+JWT_COOKIE_HTTPONLY = True  # Prevent XSS attacks
+JWT_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+JWT_ACCESS_COOKIE_NAME = 'access_token_cookie'
+JWT_REFRESH_COOKIE_NAME = 'refresh_token_cookie'
 
 # EMAIL (Optional - for HVAC module email reports)
 MAIL_SERVER = os.getenv("MAIL_SERVER")

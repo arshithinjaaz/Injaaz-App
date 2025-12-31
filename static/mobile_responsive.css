@@ -16,22 +16,52 @@
     max-width: 100% !important;
   }
   
-  /* Navbar */
+  /* Navbar - Mobile Optimized */
+  .navbar {
+    padding: 0.75rem 0 !important;
+  }
+  
   .navbar-container {
     padding: 0 1rem !important;
+    flex-wrap: wrap !important;
+    gap: 0.75rem !important;
   }
   
   .navbar-brand {
     font-size: 1.1rem !important;
+    flex: 0 0 auto !important;
   }
   
   .navbar-brand img {
     height: 24px !important;
   }
   
+  .navbar-brand span {
+    font-size: 1rem !important;
+    white-space: normal !important;
+    line-height: 1.2 !important;
+  }
+  
   .module-badge {
     font-size: 0.7rem !important;
     padding: 0.25rem 0.625rem !important;
+    flex: 0 0 auto !important;
+  }
+  
+  .navbar-nav {
+    width: 100% !important;
+    justify-content: space-between !important;
+    margin-left: 0 !important;
+    margin-top: 0.5rem !important;
+    gap: 0.5rem !important;
+  }
+  
+  .nav-btn {
+    flex: 1 !important;
+    min-width: 0 !important;
+    font-size: 0.875rem !important;
+    padding: 0.625rem 0.75rem !important;
+    text-align: center !important;
   }
   
   /* Form Headings */
@@ -53,22 +83,52 @@
   }
   
   /* Form Grid - Stack on mobile */
+  .row {
+    margin-left: -0.5rem !important;
+    margin-right: -0.5rem !important;
+  }
+  
   .row.g-3 {
     --bs-gutter-x: 0.75rem !important;
     --bs-gutter-y: 0.75rem !important;
   }
   
-  .col-md-6, .col-md-4, .col-md-3 {
+  .col-md-6, .col-md-4, .col-md-3, .col-md-12 {
     width: 100% !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
     margin-bottom: 0.75rem !important;
   }
   
-  /* Buttons */
+  /* Force single column on mobile */
+  [class*="col-"] {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Buttons - Mobile Optimized */
   .btn {
-    padding: 0.75rem 1.25rem !important;
+    padding: 0.875rem 1.5rem !important;
     font-size: 1rem !important;
     width: 100% !important;
-    margin-bottom: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+    min-height: 48px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: rgba(18, 84, 53, 0.2) !important;
+  }
+  
+  .btn-lg {
+    padding: 1rem 1.5rem !important;
+    font-size: 1.1rem !important;
+    min-height: 52px !important;
+  }
+  
+  .btn-sm {
+    padding: 0.625rem 1rem !important;
+    font-size: 0.9rem !important;
+    min-height: 44px !important;
   }
   
   .btn-group {
@@ -97,19 +157,35 @@
     margin-top: 0.5rem !important;
   }
   
-  /* Photo Preview */
-  .photo-preview-container {
+  /* Photo Preview - Mobile Optimized */
+  .photo-preview-container,
+  #photoPreviewContainer {
+    display: flex !important;
+    flex-wrap: wrap !important;
     gap: 0.5rem !important;
+    margin-top: 1rem !important;
+    padding: 0.5rem !important;
   }
   
-  .photo-item {
-    width: calc(50% - 0.25rem) !important; /* 2 photos per row on mobile */
+  .photo-item,
+  .photo-container {
+    width: calc(50% - 0.25rem) !important;
     max-width: none !important;
+    flex: 0 0 calc(50% - 0.25rem) !important;
   }
   
-  .photo-item img {
+  .photo-item img,
+  .photo-container img {
     height: 120px !important;
+    width: 100% !important;
     object-fit: cover !important;
+    border-radius: 4px !important;
+  }
+  
+  .photo-count {
+    width: 100% !important;
+    text-align: center !important;
+    margin: 0.5rem 0 !important;
   }
   
   /* Items List */
@@ -123,13 +199,24 @@
     padding: 0.25rem 0.5rem !important;
   }
   
-  /* Signature Pads */
-  .signature-pad {
-    height: 150px !important; /* Smaller on mobile */
+  /* Signature Pads - Mobile Optimized */
+  canvas.signature-pad,
+  #techSignaturePad,
+  #opManSignaturePad,
+  #tech_signature_canvas,
+  #contact_signature_canvas {
+    height: 160px !important;
+    max-width: 100% !important;
+    touch-action: none !important;
   }
   
-  .signature-container {
+  .signature-container,
+  .signature-label {
     margin-bottom: 1rem !important;
+  }
+  
+  .signature-hint {
+    font-size: 0.7rem !important;
   }
   
   /* Status Box */
@@ -155,18 +242,53 @@
     text-align: center !important;
   }
   
-  /* Table Responsive */
+  /* Table Responsive - Mobile Optimized */
   .table-responsive {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 1rem !important;
   }
   
   table {
     font-size: 0.85rem !important;
+    width: 100% !important;
+    min-width: 600px !important; /* Allow horizontal scroll */
   }
   
   table th, table td {
-    padding: 0.5rem 0.375rem !important;
+    padding: 0.625rem 0.5rem !important;
+    white-space: nowrap !important;
+  }
+  
+  table th {
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+  }
+  
+  /* Work Items Table - Mobile */
+  #workItemsBody tr {
+    display: flex !important;
+    flex-direction: column !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 8px !important;
+    padding: 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  #workItemsBody td {
+    display: block !important;
+    width: 100% !important;
+    padding: 0.5rem 0 !important;
+    border: none !important;
+  }
+  
+  #workItemsBody td:before {
+    content: attr(data-label) ": " !important;
+    font-weight: 600 !important;
+    display: inline-block !important;
+    width: 40% !important;
   }
   
   /* Modal Improvements */
@@ -239,17 +361,34 @@
   
   /* Smaller navbar */
   .navbar {
-    padding: 0.75rem 0 !important;
+    padding: 0.625rem 0 !important;
   }
   
   .navbar-brand span {
-    display: none; /* Hide text, show only logo on very small screens */
+    font-size: 0.9rem !important;
+    max-width: 150px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
   
   /* Buttons even more prominent */
   .btn {
     font-size: 1.05rem !important;
-    padding: 0.875rem 1.5rem !important;
+    padding: 1rem 1.5rem !important;
+    min-height: 52px !important;
+  }
+  
+  /* Stack button groups vertically */
+  .d-flex.gap-2 {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+  
+  /* Upload and Submit buttons */
+  #uploadImagesBtn,
+  #submitBtn {
+    width: 100% !important;
+    margin: 0 !important;
   }
 }
 
@@ -271,39 +410,70 @@
 /* Touch-specific improvements */
 @media (hover: none) and (pointer: coarse) {
   /* Larger tap targets for touch devices */
-  .btn, button, a {
+  .btn, button, a, .nav-btn {
     min-height: 44px !important;
+    min-width: 44px !important;
   }
   
   /* Remove hover effects on touch devices */
   .btn:hover,
   .form-control:hover,
-  .form-select:hover {
+  .form-select:hover,
+  .nav-btn:hover {
     transform: none !important;
   }
   
   /* Better focus states for accessibility */
   .btn:focus,
   .form-control:focus,
-  .form-select:focus {
+  .form-select:focus,
+  .nav-btn:focus {
     box-shadow: 0 0 0 3px rgba(18, 84, 53, 0.25) !important;
+    outline: none !important;
   }
   
-  /* Prevent accidental zooming */
+  /* Prevent accidental zooming on iOS */
   input[type="text"],
   input[type="email"],
   input[type="tel"],
   input[type="number"],
   input[type="date"],
+  input[type="password"],
   select,
   textarea {
     font-size: 16px !important;
+  }
+  
+  /* Better touch feedback */
+  .btn:active,
+  .nav-btn:active {
+    opacity: 0.8 !important;
+    transform: scale(0.98) !important;
+  }
+  
+  /* Signature pad touch improvements */
+  canvas.signature-pad {
+    touch-action: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
   }
 }
 
 /* PWA Safe Area Adjustments (notch support) */
 @supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left) !important;
+    padding-right: env(safe-area-inset-right) !important;
+  }
+  
   .navbar {
+    padding-left: max(1rem, env(safe-area-inset-left)) !important;
+    padding-right: max(1rem, env(safe-area-inset-right)) !important;
+    padding-top: max(0.75rem, env(safe-area-inset-top)) !important;
+  }
+  
+  .navbar-container {
     padding-left: max(1rem, env(safe-area-inset-left)) !important;
     padding-right: max(1rem, env(safe-area-inset-right)) !important;
   }

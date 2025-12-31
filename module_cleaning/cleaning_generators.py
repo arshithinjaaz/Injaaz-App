@@ -315,9 +315,38 @@ def create_pdf_report(data, output_dir):
         
         # PHOTOS
         photos = data.get('photos', [])
+        logger.info(f"📸 PDF Generator: Looking for photos in data")
+        logger.info(f"📸 PDF Generator: photos key exists: {'photos' in data}")
+        logger.info(f"📸 PDF Generator: photos value: {photos}")
+        logger.info(f"📸 PDF Generator: photos type: {type(photos)}")
+        logger.info(f"📸 PDF Generator: photos length: {len(photos) if photos else 0}")
+        
         if photos:
-            add_section_heading(story, f"Site Photos ({len(photos)} total)")
-            add_photo_grid(story, photos)
+            logger.info(f"📸 PDF Generator: Processing {len(photos)} photos")
+            # Ensure photos are in the correct format (list of dicts with 'url' key)
+            formatted_photos = []
+            for idx, photo in enumerate(photos):
+                if isinstance(photo, dict):
+                    photo_url = photo.get('url')
+                    if photo_url:
+                        formatted_photos.append(photo)
+                        logger.info(f"📸 PDF Generator: Photo {idx + 1}: {photo_url[:80]}...")
+                    else:
+                        logger.warning(f"📸 PDF Generator: Photo {idx + 1} has no URL: {photo}")
+                elif isinstance(photo, str):
+                    # If it's a string URL, convert to dict format
+                    formatted_photos.append({'url': photo, 'is_cloud': True})
+                    logger.info(f"📸 PDF Generator: Photo {idx + 1} (string): {photo[:80]}...")
+                else:
+                    logger.warning(f"📸 PDF Generator: Photo {idx + 1} has unexpected format: {type(photo)}")
+            
+            if formatted_photos:
+                add_section_heading(story, f"Site Photos ({len(formatted_photos)} total)")
+                add_photo_grid(story, formatted_photos)
+            else:
+                logger.warning("📸 PDF Generator: No valid photos found after formatting")
+        else:
+            logger.warning("📸 PDF Generator: No photos found in data")
         
         # SIGNATURES - Professional format
         tech_sig = data.get('tech_signature', {})

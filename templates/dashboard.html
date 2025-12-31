@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
   <title>Injaaz - Site Reporting Platform</title>
   <meta name="description" content="Professional site visit inspection and reporting platform for HVAC, Civil, and Cleaning services">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
@@ -127,6 +127,17 @@
       color: var(--primary);
       letter-spacing: -1px;
       transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+    
+    #welcome-text {
+      font-size: 1.6rem;
+    }
+    
+    @media (max-width: 768px) {
+      #welcome-text {
+        font-size: 1.2rem;
+      }
     }
     
     .logo:hover img {
@@ -174,6 +185,59 @@
     
     .nav-menu a:hover::before {
       width: 100%;
+    }
+    
+    /* Logout Button - Matching UI Style */
+    .logout-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: white;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      border: none;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(18, 84, 53, 0.2);
+      letter-spacing: 0.3px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .logout-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+    
+    .logout-btn:hover::before {
+      left: 100%;
+    }
+    
+    .logout-btn:hover {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(18, 84, 53, 0.35);
+    }
+    
+    .logout-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(18, 84, 53, 0.2);
+    }
+    
+    .logout-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
     }
     
     /* Hero Section with animated elements */
@@ -264,6 +328,19 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 2rem;
+      transition: grid-template-columns 0.3s ease;
+    }
+    
+    @media (max-width: 1024px) {
+      .modules-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .modules-grid {
+        grid-template-columns: 1fr;
+      }
     }
     
     .module-card {
@@ -477,24 +554,102 @@
     }
     
     @media (max-width: 768px) {
+      .nav-container {
+        padding: 1rem 1.5rem !important;
+        flex-wrap: wrap !important;
+      }
+      
+      .logo {
+        flex: 0 0 auto !important;
+      }
+      
       .logo img {
-        height: 40px;
+        height: 36px;
       }
       
       .logo span {
-        font-size: 1.4rem;
+        font-size: 1.2rem;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       
       .nav-menu {
         display: none;
       }
       
+      .logout-btn {
+        font-size: 0.875rem;
+        padding: 0.625rem 1rem;
+        min-height: 44px;
+      }
+      
+      .logout-btn svg {
+        width: 18px;
+        height: 18px;
+      }
+      
+      .logout-btn span {
+        display: inline;
+      }
+      
       .module-card {
-        padding: 2rem 1.5rem;
+        padding: 1.5rem 1.25rem;
       }
       
       .hero-title {
         letter-spacing: -2px;
+        font-size: clamp(2rem, 8vw, 3.5rem) !important;
+      }
+      
+      .hero-subtitle {
+        font-size: 1rem !important;
+      }
+      
+      .modules-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .nav-container {
+        padding: 0.75rem 1rem !important;
+      }
+      
+      .logo span {
+        font-size: 0.95rem;
+        max-width: 150px;
+      }
+      
+      #welcome-text {
+        font-size: 0.9rem;
+      }
+      
+      .logout-btn span {
+        display: none;
+      }
+      
+      .logout-btn {
+        padding: 0.625rem;
+        min-width: 44px;
+      }
+      
+      .module-card {
+        padding: 1.25rem 1rem;
+      }
+      
+      .module-title {
+        font-size: 1.5rem !important;
+      }
+      
+      .module-description {
+        font-size: 0.9rem !important;
+      }
+      
+      .hero-title {
+        font-size: 2rem !important;
       }
     }
     
@@ -509,13 +664,24 @@
     <div class="nav-container">
       <a href="/" class="logo">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
-        <span>Injaaz</span>
+        <span id="welcome-text">Injaaz</span>
       </a>
-      <ul class="nav-menu">
-        <li><a href="#modules">Modules</a></li>
-        <li><a href="#about">About</a></li>
-        <li><a href="#contact">Contact</a></li>
-      </ul>
+      <div style="display: flex; align-items: center; gap: 2rem;">
+        <ul class="nav-menu">
+          <li><a href="#modules">Modules</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#contact">Contact</a></li>
+          <li id="admin-menu-item" style="display: none;">
+            <a href="/admin/dashboard" style="color: var(--primary); font-weight: 600;">Administrative</a>
+          </li>
+        </ul>
+        <button class="logout-btn" id="logoutBtn" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3h12.75" />
+          </svg>
+          <span>Logout</span>
+        </button>
+      </div>
     </div>
   </nav>
 
@@ -530,8 +696,8 @@
       </div>
 
       <section class="modules-section" id="modules">
-        <div class="modules-grid">
-          <a href="/hvac-mep/form" class="module-card">
+        <div class="modules-grid" id="modulesGrid">
+          <a href="/hvac-mep/form" class="module-card" id="module-hvac" style="display: none;">
             <span class="module-number">01 — Module</span>
             <div class="module-icon">🔧</div>
             <h2 class="module-title">HVAC & MEP</h2>
@@ -541,7 +707,7 @@
             <span class="module-arrow">Start Inspection →</span>
           </a>
 
-          <a href="/civil/form" class="module-card">
+          <a href="/civil/form" class="module-card" id="module-civil" style="display: none;">
             <span class="module-number">02 — Module</span>
             <div class="module-icon">🏢</div>
             <h2 class="module-title">Civil Works</h2>
@@ -551,7 +717,7 @@
             <span class="module-arrow">Start Inspection →</span>
           </a>
 
-          <a href="/cleaning/form" class="module-card">
+          <a href="/cleaning/form" class="module-card" id="module-cleaning" style="display: none;">
             <span class="module-number">03 — Module</span>
             <div class="module-icon">🧹</div>
             <h2 class="module-title">Cleaning Services</h2>
@@ -570,28 +736,282 @@
   </footer>
 
   <script>
-    // Enhanced scroll effect
-    const nav = document.getElementById('nav');
-    window.addEventListener('scroll', () => {
-      if (window.pageYOffset > 50) {
-        nav.classList.add('scrolled');
-      } else {
-        nav.classList.remove('scrolled');
+    // Load and display user welcome message
+    function loadUserWelcome() {
+      try {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          const welcomeText = document.getElementById('welcome-text');
+          if (welcomeText && user) {
+            // Use full_name if available, otherwise username
+            const displayName = user.full_name || user.username;
+            welcomeText.textContent = `Injaaz welcomes, ${displayName}!`;
+          }
+          
+          // Show admin menu if user is admin
+          checkAndShowAdminMenu(user);
+          // Update module visibility based on access
+          updateModuleVisibility(user);
+        } else {
+          // Try to fetch user from API if not in localStorage
+          const token = localStorage.getItem('access_token');
+          if (token) {
+            fetch('/api/auth/me', {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.user) {
+                localStorage.setItem('user', JSON.stringify(data.user));
+                const welcomeText = document.getElementById('welcome-text');
+                if (welcomeText) {
+                  const displayName = data.user.full_name || data.user.username;
+                  welcomeText.textContent = `Injaaz welcomes, ${displayName}!`;
+                }
+                
+                // Show admin menu if user is admin
+                checkAndShowAdminMenu(data.user);
+                // Update module visibility based on access
+                updateModuleVisibility(data.user);
+              }
+            })
+            .catch(error => {
+              console.error('Failed to fetch user:', error);
+            });
+          } else {
+            // Check localStorage for user role
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+              try {
+                const user = JSON.parse(userStr);
+                checkAndShowAdminMenu(user);
+                updateModuleVisibility(user);
+              } catch (e) {
+                console.error('Error parsing user from localStorage:', e);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user welcome:', error);
       }
-    });
-
-    // Smooth scroll for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-          target.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
+    }
+    
+    // Function to check and show admin menu
+    function checkAndShowAdminMenu(user) {
+      if (user && user.role === 'admin') {
+        const adminMenuItem = document.getElementById('admin-menu-item');
+        if (adminMenuItem) {
+          adminMenuItem.style.display = 'list-item';
+          console.log('Admin menu item shown');
+        }
+      } else if (user && !user.role) {
+        // If user object doesn't have role, fetch fresh data
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          fetch('/api/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.user) {
+              localStorage.setItem('user', JSON.stringify(data.user));
+              checkAndShowAdminMenu(data.user);
+              updateModuleVisibility(data.user);
+            }
+          })
+          .catch(error => {
+            console.error('Failed to fetch user role:', error);
           });
         }
+      }
+    }
+    
+    // Function to show/hide modules based on user access
+    function updateModuleVisibility(user) {
+      if (!user) return;
+      
+      // Admins have access to all modules
+      const isAdmin = user.role === 'admin';
+      
+      // Check HVAC access
+      const hvacCard = document.getElementById('module-hvac');
+      if (hvacCard) {
+        const hasHvacAccess = isAdmin || user.access_hvac === true;
+        hvacCard.style.display = hasHvacAccess ? 'block' : 'none';
+      }
+      
+      // Check Civil access
+      const civilCard = document.getElementById('module-civil');
+      if (civilCard) {
+        const hasCivilAccess = isAdmin || user.access_civil === true;
+        civilCard.style.display = hasCivilAccess ? 'block' : 'none';
+      }
+      
+      // Check Cleaning access
+      const cleaningCard = document.getElementById('module-cleaning');
+      if (cleaningCard) {
+        const hasCleaningAccess = isAdmin || user.access_cleaning === true;
+        cleaningCard.style.display = hasCleaningAccess ? 'block' : 'none';
+      }
+      
+      // Update grid layout based on visible modules
+      const modulesGrid = document.getElementById('modulesGrid');
+      const modulesSection = document.getElementById('modules');
+      
+      if (modulesGrid) {
+        const visibleModules = Array.from(modulesGrid.children).filter(card => 
+          card.style.display !== 'none'
+        );
+        
+        // Adjust grid columns based on number of visible modules
+        if (visibleModules.length === 1) {
+          modulesGrid.style.gridTemplateColumns = '1fr';
+          modulesGrid.style.maxWidth = '600px';
+          modulesGrid.style.margin = '0 auto';
+        } else if (visibleModules.length === 2) {
+          modulesGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+          modulesGrid.style.maxWidth = 'none';
+          modulesGrid.style.margin = '0';
+        } else {
+          modulesGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+          modulesGrid.style.maxWidth = 'none';
+          modulesGrid.style.margin = '0';
+        }
+        
+        // Show message if no modules are accessible
+        if (modulesSection && visibleModules.length === 0) {
+          // Remove existing no-access message if any
+          const existingMsg = modulesSection.querySelector('.no-access-message');
+          if (existingMsg) {
+            existingMsg.remove();
+          }
+          
+          const noAccessMsg = document.createElement('div');
+          noAccessMsg.className = 'no-access-message';
+          noAccessMsg.style.cssText = 'text-align: center; padding: 3rem; color: var(--text-light);';
+          noAccessMsg.innerHTML = `
+            <h3 style="margin-bottom: 1rem; color: var(--text-dark);">No Module Access</h3>
+            <p>You don't have access to any modules yet. Please contact an administrator to grant access.</p>
+          `;
+          modulesSection.appendChild(noAccessMsg);
+        } else if (modulesSection) {
+          // Remove no-access message if modules are visible
+          const existingMsg = modulesSection.querySelector('.no-access-message');
+          if (existingMsg) {
+            existingMsg.remove();
+          }
+        }
+      }
+    }
+    
+    // Load welcome message on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      loadUserWelcome();
+      
+      // Also check immediately if user data exists
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          checkAndShowAdminMenu(user);
+          updateModuleVisibility(user);
+        } catch (e) {
+          console.error('Error parsing user from localStorage:', e);
+        }
+      } else {
+        // If no user data, fetch it
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          fetch('/api/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.user) {
+              localStorage.setItem('user', JSON.stringify(data.user));
+              checkAndShowAdminMenu(data.user);
+              updateModuleVisibility(data.user);
+            }
+          })
+          .catch(error => {
+            console.error('Failed to fetch user data:', error);
+          });
+        }
+      }
+      
+      // Enhanced scroll effect
+      const nav = document.getElementById('nav');
+      window.addEventListener('scroll', () => {
+        if (window.pageYOffset > 50) {
+          nav.classList.add('scrolled');
+        } else {
+          nav.classList.remove('scrolled');
+        }
       });
+      
+      // Smooth scroll for anchor links
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          e.preventDefault();
+          const target = document.querySelector(this.getAttribute('href'));
+          if (target) {
+            target.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }
+        });
+      });
+      
+      // Logout functionality
+      const logoutBtn = document.getElementById('logoutBtn');
+      
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', async function() {
+          try {
+            // Get token from localStorage
+            const token = localStorage.getItem('access_token');
+            
+            if (!token) {
+              // No token, just redirect to login
+              localStorage.clear();
+              window.location.href = '/login';
+              return;
+            }
+            
+            // Call logout API
+            const response = await fetch('/api/auth/logout', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            // Clear local storage regardless of API response
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Redirect to login page
+            window.location.href = '/login';
+            
+          } catch (error) {
+            console.error('Logout error:', error);
+            // Clear storage and redirect even if API call fails
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = '/login';
+          }
+        });
+      }
     });
   </script>
 </body>

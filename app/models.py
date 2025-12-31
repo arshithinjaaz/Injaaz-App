@@ -22,6 +22,10 @@ class User(db.Model):
     full_name = db.Column(db.String(120))
     role = db.Column(db.String(20), default='user')  # 'admin', 'inspector', 'user'
     is_active = db.Column(db.Boolean, default=True)
+    # Module access permissions (admin has access to all by default)
+    access_hvac = db.Column(db.Boolean, default=False)  # HVAC&MEP form access
+    access_civil = db.Column(db.Boolean, default=False)  # Civil works form access
+    access_cleaning = db.Column(db.Boolean, default=False)  # Cleaning form access
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     
@@ -38,6 +42,17 @@ class User(db.Model):
         """Verify password against hash"""
         return bcrypt.check_password_hash(self.password_hash, password)
     
+    def has_module_access(self, module):
+        """Check if user has access to a specific module"""
+        if self.role == 'admin':
+            return True  # Admins have access to all modules
+        module_map = {
+            'hvac_mep': self.access_hvac,
+            'civil': self.access_civil,
+            'cleaning': self.access_cleaning
+        }
+        return module_map.get(module, False)
+    
     def to_dict(self, include_sensitive=False):
         """Convert to dictionary"""
         data = {
@@ -47,6 +62,9 @@ class User(db.Model):
             'full_name': self.full_name,
             'role': self.role,
             'is_active': self.is_active,
+            'access_hvac': self.access_hvac if self.role != 'admin' else True,
+            'access_civil': self.access_civil if self.role != 'admin' else True,
+            'access_cleaning': self.access_cleaning if self.role != 'admin' else True,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None
         }
