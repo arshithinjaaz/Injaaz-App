@@ -118,6 +118,58 @@ def create_app():
     
     logger.info("✅ Database and JWT initialized")
     
+    # Auto-migrate: Add missing permission columns to users table if needed
+    with app.app_context():
+        try:
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            
+            # Check if users table exists and get its columns
+            if 'users' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('users')]
+                
+                # Track if any columns were added
+                columns_added = False
+                
+                # Add missing columns if they don't exist
+                with db.engine.connect() as conn:
+                    if 'access_hvac' not in columns:
+                        logger.info("Adding access_hvac column to users table...")
+                        conn.execute(db.text("ALTER TABLE users ADD COLUMN access_hvac BOOLEAN DEFAULT 0"))
+                        columns_added = True
+                        logger.info("✅ Added access_hvac column")
+                    
+                    if 'access_civil' not in columns:
+                        logger.info("Adding access_civil column to users table...")
+                        conn.execute(db.text("ALTER TABLE users ADD COLUMN access_civil BOOLEAN DEFAULT 0"))
+                        columns_added = True
+                        logger.info("✅ Added access_civil column")
+                    
+                    if 'access_cleaning' not in columns:
+                        logger.info("Adding access_cleaning column to users table...")
+                        conn.execute(db.text("ALTER TABLE users ADD COLUMN access_cleaning BOOLEAN DEFAULT 0"))
+                        columns_added = True
+                        logger.info("✅ Added access_cleaning column")
+                    
+                    # Commit all ALTER TABLE statements
+                    if columns_added:
+                        conn.commit()
+                    
+                    # If any columns were added, grant full access to existing admin users
+                    if columns_added:
+                        from app.models import User
+                        admin_users = User.query.filter_by(role='admin').all()
+                        for admin in admin_users:
+                            admin.access_hvac = True
+                            admin.access_civil = True
+                            admin.access_cleaning = True
+                        db.session.commit()
+                        if admin_users:
+                            logger.info(f"✅ Granted full access to {len(admin_users)} admin user(s)")
+        except Exception as e:
+            # Log but don't fail startup - migration can be run manually if needed
+            logger.warning(f"⚠️  Auto-migration check failed (non-critical): {e}")
+    
     # Set environment variables for cloudinary library
     if app.config.get('CLOUDINARY_CLOUD_NAME'):
         os.environ['CLOUDINARY_CLOUD_NAME'] = app.config['CLOUDINARY_CLOUD_NAME']
