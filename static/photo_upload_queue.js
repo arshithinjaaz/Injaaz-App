@@ -8,7 +8,8 @@ class PhotoUploadQueue {
     this.uploadEndpoint = options.uploadEndpoint || '/upload-photo';
     this.onProgress = options.onProgress || (() => {});
     this.onItemComplete = options.onItemComplete || (() => {});
-    this.onQueueComplete = options.onQueueComplete || (() => {});
+    this.onQueueComplete = options.onQueueComplete || options.onComplete || (() => {}); // Support both names
+    this.onError = options.onError || (() => {});
     
     this.queue = [];
     this.activeUploads = 0;
@@ -64,13 +65,22 @@ class PhotoUploadQueue {
       this.notifyProgress();
       
       this.uploadPhoto(item)
-        .then(() => {
+        .then((response) => {
           this.activeUploads--;
           this.completed++;
           item.status = 'completed';
+          item.progress = 100;
+          // Update URL from response if available
+          if (response && response.url) {
+            item.url = response.url;
+          }
+          // Notify item completion (for UI updates)
           this.onItemComplete(item, true);
+          // Notify progress update
           this.notifyProgress();
+          // Continue processing queue
           this.processQueue();
+          // Check if all done
           this.checkComplete();
         })
         .catch((error) => {
@@ -78,9 +88,16 @@ class PhotoUploadQueue {
           this.failed++;
           item.status = 'failed';
           item.error = error.message || 'Upload failed';
+          item.progress = 0;
+          // Notify error callback
+          if (this.onError) this.onError(error);
+          // Notify item completion (for UI updates)
           this.onItemComplete(item, false);
+          // Notify progress update
           this.notifyProgress();
+          // Continue processing queue
           this.processQueue();
+          // Check if all done
           this.checkComplete();
         });
     }

@@ -191,8 +191,13 @@ def login():
         return response, 200
         
     except Exception as e:
-        current_app.logger.error(f"Login error: {str(e)}")
-        return jsonify({'error': 'Login failed'}), 500
+        current_app.logger.error(f"Login error: {str(e)}", exc_info=True)
+        # Provide more helpful error message for database schema issues
+        error_msg = 'Login failed'
+        if 'does not exist' in str(e) or 'UndefinedColumn' in str(e):
+            error_msg = 'Database schema error - please contact administrator'
+            current_app.logger.error("Database schema appears to be out of date. Migration may be needed.")
+        return jsonify({'error': error_msg, 'details': str(e) if current_app.debug else None}), 500
 
 
 @auth_bp.route('/refresh', methods=['POST'])

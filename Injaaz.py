@@ -118,6 +118,133 @@ def create_app():
     
     logger.info("✅ Database and JWT initialized")
     
+    # Automatic database initialization and migration (fully self-contained for Render)
+    with app.app_context():
+        try:
+            import time
+            from sqlalchemy import inspect, text
+            
+            # Retry logic for database connection (Render databases may need a moment)
+            max_retries = 5
+            retry_delay = 2
+            inspector = None
+            
+            for attempt in range(max_retries):
+                try:
+                    inspector = inspect(db.engine)
+                    # Test connection by getting table names
+                    inspector.get_table_names()
+                    logger.info("✅ Database connection verified")
+                    break
+                except Exception as conn_error:
+                    if attempt < max_retries - 1:
+                        logger.info(f"Database connection attempt {attempt + 1}/{max_retries} failed, retrying in {retry_delay}s...")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2
+                    else:
+                        logger.error(f"❌ Failed to connect to database after {max_retries} attempts: {conn_error}")
+                        raise
+            
+            # Step 1: Create all tables if they don't exist (fully automatic)
+            logger.info("Ensuring all database tables exist...")
+            try:
+                db.create_all()
+                logger.info("✅ All database tables verified/created")
+            except Exception as create_error:
+                logger.warning(f"Table creation check: {create_error}")
+                # Continue anyway - tables might already exist
+            
+            # Step 2: Check and migrate user permission columns
+            inspector = inspect(db.engine)
+            if 'users' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('users')]
+                logger.info(f"Found users table with {len(columns)} columns")
+                
+                missing_columns = []
+                if 'access_hvac' not in columns:
+                    missing_columns.append('access_hvac')
+                if 'access_civil' not in columns:
+                    missing_columns.append('access_civil')
+                if 'access_cleaning' not in columns:
+                    missing_columns.append('access_cleaning')
+                
+                if missing_columns:
+                    logger.info(f"Missing columns detected: {', '.join(missing_columns)}. Adding them...")
+                    
+                    # Use a transaction to add all columns
+                    with db.engine.begin() as conn:  # begin() automatically commits or rolls back
+                        for col_name in missing_columns:
+                            try:
+                                logger.info(f"Adding {col_name} column to users table...")
+                                # Use FALSE for PostgreSQL compatibility
+                                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} BOOLEAN DEFAULT FALSE"))
+                                logger.info(f"✅ Added {col_name} column")
+                            except Exception as col_error:
+                                # Column might already exist (race condition)
+                                error_str = str(col_error).lower()
+                                if 'already exists' in error_str or 'duplicate' in error_str or 'column' in error_str and 'exists' in error_str:
+                                    logger.info(f"Column {col_name} already exists, skipping")
+                                else:
+                                    logger.error(f"Failed to add {col_name}: {col_error}")
+                                    raise
+                    
+                    # Refresh inspector to see new columns
+                    inspector = inspect(db.engine)
+                    columns = [col['name'] for col in inspector.get_columns('users')]
+                    
+                    # If all columns now exist, grant full access to existing admin users
+                    if all(col in columns for col in ['access_hvac', 'access_civil', 'access_cleaning']):
+                        try:
+                            from app.models import User
+                            admin_users = User.query.filter_by(role='admin').all()
+                            for admin in admin_users:
+                                admin.access_hvac = True
+                                admin.access_civil = True
+                                admin.access_cleaning = True
+                            db.session.commit()
+                            if admin_users:
+                                logger.info(f"✅ Granted full access to {len(admin_users)} admin user(s)")
+                        except Exception as admin_error:
+                            logger.warning(f"Could not update admin users (non-critical): {admin_error}")
+                else:
+                    logger.info("✅ All permission columns already exist")
+                
+                # Step 3: Ensure default admin user exists (fully automatic for Render)
+                try:
+                    from app.models import User
+                    admin = User.query.filter_by(username='admin').first()
+                    if not admin:
+                        logger.info("Creating default admin user...")
+                        admin = User(
+                            username='admin',
+                            email='admin@injaaz.com',
+                            full_name='System Administrator',
+                            role='admin',
+                            is_active=True,
+                            access_hvac=True,
+                            access_civil=True,
+                            access_cleaning=True
+                        )
+                        admin.set_password('Admin@123')  # Default password - should be changed!
+                        db.session.add(admin)
+                        db.session.commit()
+                        logger.info("✅ Default admin user created")
+                        logger.warning("⚠️  Default admin credentials: username='admin', password='Admin@123' - CHANGE IMMEDIATELY!")
+                    else:
+                        logger.info("✅ Admin user already exists")
+                except Exception as admin_create_error:
+                    logger.warning(f"Could not create admin user (non-critical): {admin_create_error}")
+            else:
+                logger.info("Users table will be created when first user is registered")
+            
+            logger.info("✅ Database initialization and migration complete")
+            
+        except Exception as e:
+            # Log the full error for debugging
+            logger.error(f"❌ Database initialization failed: {str(e)}", exc_info=True)
+            # Don't fail startup - app might still work if tables exist
+            logger.warning("⚠️  App will continue, but some features may not work until database is initialized")
+    
     # Set environment variables for cloudinary library
     if app.config.get('CLOUDINARY_CLOUD_NAME'):
         os.environ['CLOUDINARY_CLOUD_NAME'] = app.config['CLOUDINARY_CLOUD_NAME']
@@ -328,6 +455,9 @@ def create_app():
     
     # Register admin blueprint
     if admin_bp:
+        # Exempt admin API from CSRF (uses JWT instead)
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(admin_bp)
         app.register_blueprint(admin_bp)  # Already has /api/admin prefix
         logger.info("✅ Registered admin blueprint at /api/admin")
     else:

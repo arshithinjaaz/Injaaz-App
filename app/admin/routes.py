@@ -133,12 +133,38 @@ def update_user_access(user_id):
         admin_id = get_jwt_identity()
         user = User.query.get_or_404(user_id)
         
-        data = request.get_json()
-        access_hvac = data.get('access_hvac', user.access_hvac)
-        access_civil = data.get('access_civil', user.access_civil)
-        access_cleaning = data.get('access_cleaning', user.access_cleaning)
+        # Parse JSON with better error handling
+        current_app.logger.info(f"Update access request for user {user_id}, Content-Type: {request.content_type}")
         
-        # Update permissions
+        try:
+            data = request.get_json(force=True, silent=True)
+        except Exception as json_error:
+            current_app.logger.error(f"JSON parsing error: {json_error}")
+            return jsonify({'error': 'Invalid JSON format'}), 400
+        
+        if data is None:
+            body_text = request.get_data(as_text=True)
+            current_app.logger.error(f"Invalid JSON in update-access request for user {user_id}. Content-Type: {request.content_type}, Body: {body_text[:200]}")
+            return jsonify({'error': 'Invalid JSON or missing request body'}), 400
+        
+        current_app.logger.info(f"Received access data: {data}")
+        
+        # Get access values from request, defaulting to current values if not provided
+        # Handle case where columns might not exist yet (use getattr with default)
+        try:
+            current_access_hvac = getattr(user, 'access_hvac', False)
+            current_access_civil = getattr(user, 'access_civil', False)
+            current_access_cleaning = getattr(user, 'access_cleaning', False)
+        except AttributeError as attr_error:
+            current_app.logger.error(f"User model missing access attributes: {attr_error}")
+            return jsonify({'error': 'Database schema error - access columns missing. Please run migration.'}), 500
+        
+        # Get values from request, use current values as defaults
+        access_hvac = data.get('access_hvac', current_access_hvac)
+        access_civil = data.get('access_civil', current_access_civil)
+        access_cleaning = data.get('access_cleaning', current_access_cleaning)
+        
+        # Convert to boolean (handles string "true"/"false", None, etc.)
         user.access_hvac = bool(access_hvac)
         user.access_civil = bool(access_civil)
         user.access_cleaning = bool(access_cleaning)
@@ -161,8 +187,8 @@ def update_user_access(user_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error updating user access: {str(e)}")
-        return jsonify({'error': 'Failed to update user access'}), 500
+        current_app.logger.error(f"Error updating user access: {str(e)}", exc_info=True)
+        return jsonify({'error': f'Failed to update user access: {str(e)}'}), 500
 
 
 @admin_bp.route('/users/<int:user_id>', methods=['PUT'])
