@@ -1339,23 +1339,37 @@
         }
         
         function renderPhotoPreviews() {
-            photoPreviews.innerHTML = '';
-            const count = photoBase64.length;
-            
-            if (count === 0) {
-                photoCountBadge.style.display = 'none';
+            // Use photoPreviewContainer if available, otherwise skip (using queue system)
+            const container = photoPreviewContainer || document.getElementById('photoPreviews');
+            if (!container) {
+                // Photo queue system is being used, skip this fallback
                 return;
             }
             
-            photoCountBadge.style.display = 'inline-block';
-            photoCountBadge.textContent = `${count} / ${MAX_PHOTOS} photos`;
-            photoCountBadge.className = 'photo-count-badge';
-            if (count >= MAX_PHOTOS * 0.8) photoCountBadge.classList.add('warning');
-            if (count >= MAX_PHOTOS) photoCountBadge.classList.add('danger');
+            container.innerHTML = '';
+            const count = photoBase64.length;
+            
+            if (count === 0) {
+                if (photoCountBadge) photoCountBadge.style.display = 'none';
+                container.style.display = 'none';
+                return;
+            }
+            
+            if (photoCountBadge) {
+                photoCountBadge.style.display = 'inline-block';
+                photoCountBadge.textContent = `${count} / ${MAX_PHOTOS} photos`;
+                photoCountBadge.className = 'photo-count-badge';
+                if (count >= MAX_PHOTOS * 0.8) photoCountBadge.classList.add('warning');
+                if (count >= MAX_PHOTOS) photoCountBadge.classList.add('danger');
+            }
+            
+            container.style.display = 'flex';
+            container.style.flexWrap = 'wrap';
+            container.style.gap = '10px';
             
             photoBase64.forEach((base64, index) => {
-                const container = document.createElement('div');
-                container.className = 'photo-container';
+                const photoContainer = document.createElement('div');
+                photoContainer.className = 'photo-container';
                 const img = document.createElement('img');
                 img.src = base64;
                 img.className = 'image-preview';
@@ -1368,9 +1382,9 @@
                     renderPhotoPreviews();
                     saveDraft();
                 });
-                container.appendChild(img);
-                container.appendChild(removeBtn);
-                photoPreviews.appendChild(container);
+                photoContainer.appendChild(img);
+                photoContainer.appendChild(removeBtn);
+                container.appendChild(photoContainer);
             });
         }
         
@@ -1415,12 +1429,9 @@
 
             // Check if already uploaded
             if (photosUploaded && uploadedPhotoUrls.length > 0) {
-                // Auto-reset if already uploaded
-                    photosUploaded = false;
-                    uploadedPhotoUrls = [];
-                } else {
-                    return;
-                }
+                // Photos already uploaded, allow re-upload
+                photosUploaded = false;
+                uploadedPhotoUrls = [];
             }
 
             // Disable button and show spinner
@@ -1485,8 +1496,37 @@
         });
 
         clearPhotosBtn.addEventListener('click', () => {
-            photoBase64 = [];
-            renderPhotoPreviews();
+            if (photoQueue) {
+                // Clear photo queue
+                const stats = photoQueue.getStats();
+                if (stats.total > 0) {
+                    const confirmClear = confirm(`Are you sure you want to remove all ${stats.total} photo(s)?`);
+                    if (!confirmClear) return;
+                    
+                    // Remove all photos from queue
+                    const queueItems = [...photoQueue.queue];
+                    queueItems.forEach(item => {
+                        photoQueue.removePhoto(item.id);
+                    });
+                    
+                    // Clear preview container
+                    if (photoPreviewContainer) {
+                        photoPreviewContainer.innerHTML = '';
+                        photoPreviewContainer.style.display = 'none';
+                    }
+                    
+                    photosUploaded = false;
+                    uploadedPhotoUrls = [];
+                    currentFiles = [];
+                    updatePhotoCount();
+                }
+            } else {
+                // Fallback: clear base64 array
+                photoBase64 = [];
+                if (typeof renderPhotoPreviews === 'function') {
+                    renderPhotoPreviews();
+                }
+            }
             saveDraft();
         });
         
@@ -1576,7 +1616,7 @@
                 statusDiv.className = 'alert alert-warning';
                 statusDiv.textContent = '⚠️ Please upload images first using the "Upload Images" button before generating reports.';
                 statusDiv.classList.remove('d-none');
-                return;
+                goToTab(4); // Go to photos tab
                 return;
             }
 
