@@ -1056,11 +1056,13 @@
                 }
             });
 
-            // Create progress container
-            const progressDiv = document.createElement('div');
-            progressDiv.id = 'queue-progress-container';
-            progressDiv.className = 'mb-3';
-            photoPreviewContainer.parentNode.insertBefore(progressDiv, photoPreviewContainer);
+            // Create progress container (only if photoPreviewContainer exists)
+            if (photoPreviewContainer && photoPreviewContainer.parentNode) {
+              const progressDiv = document.createElement('div');
+              progressDiv.id = 'queue-progress-container';
+              progressDiv.className = 'mb-3';
+              photoPreviewContainer.parentNode.insertBefore(progressDiv, photoPreviewContainer);
+            }
 
             // Add retry all button event listener
             document.addEventListener('click', (e) => {

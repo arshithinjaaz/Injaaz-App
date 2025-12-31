@@ -10,6 +10,7 @@
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#125435">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Injaaz HVAC">
   <link rel="manifest" href="/manifest.json">
@@ -1070,11 +1071,13 @@
           }
         });
 
-        // Create progress container
-        const progressDiv = document.createElement('div');
-        progressDiv.id = 'queue-progress-container';
-        progressDiv.className = 'mb-3';
-        photoPreviewContainer.parentNode.insertBefore(progressDiv, photoPreviewContainer);
+        // Create progress container (only if photoPreviewContainer exists)
+        if (photoPreviewContainer && photoPreviewContainer.parentNode) {
+          const progressDiv = document.createElement('div');
+          progressDiv.id = 'queue-progress-container';
+          progressDiv.className = 'mb-3';
+          photoPreviewContainer.parentNode.insertBefore(progressDiv, photoPreviewContainer);
+        }
 
         // Add retry all button event listener
         document.addEventListener('click', (e) => {
@@ -1239,11 +1242,17 @@
       }
 
       function renderPhotoPreview() {
+        // Ensure container exists
+        if (!photoPreviewContainer) {
+          console.warn('⚠️ photoPreviewContainer not found, skipping preview render');
+          return;
+        }
+        
         photoPreviewContainer.innerHTML = '';
         const count = currentFiles.length;
         
         if (count === 0) {
-          photoCount.style.display = 'none';
+          if (photoCount) photoCount.style.display = 'none';
           photoPreviewContainer.style.display = 'none';
           return;
         }
@@ -1271,7 +1280,9 @@
           
           item.appendChild(img);
           item.appendChild(removeBtn);
-          photoPreviewContainer.appendChild(item);
+          if (photoPreviewContainer) {
+            photoPreviewContainer.appendChild(item);
+          }
         });
       }
       
@@ -1494,9 +1505,11 @@
         currentPreviews.forEach(u => URL.revokeObjectURL(u));
         currentFiles = [];
         currentPreviews = [];
-        photoPreviewContainer.innerHTML = '';
-        photoPreviewContainer.style.display = 'none';
-        photoCount.style.display = 'none';
+        if (photoPreviewContainer) {
+          photoPreviewContainer.innerHTML = '';
+          photoPreviewContainer.style.display = 'none';
+        }
+        if (photoCount) photoCount.style.display = 'none';
         fileWarning.style.display = 'none';
       }
 

@@ -4,23 +4,50 @@
  */
 
 class PhotoQueueUI {
-  constructor(containerId, options = {}) {
+  constructor(containerIdOrOptions, options = {}) {
+    // Handle both calling patterns:
+    // 1. new PhotoQueueUI('containerId', {options})
+    // 2. new PhotoQueueUI({containerId: 'id', ...options}) - for backward compatibility
+    let containerId;
+    let finalOptions = {};
+    
+    if (typeof containerIdOrOptions === 'string') {
+      // Pattern 1: containerId is first parameter
+      containerId = containerIdOrOptions;
+      finalOptions = options || {};
+    } else if (containerIdOrOptions && typeof containerIdOrOptions === 'object') {
+      // Pattern 2: options object with containerId property
+      containerId = containerIdOrOptions.containerId;
+      finalOptions = { ...containerIdOrOptions };
+    } else {
+      console.error('❌ PhotoQueueUI: Invalid constructor arguments:', containerIdOrOptions);
+      containerId = 'photoPreviewContainer'; // Default fallback
+    }
+    
+    // Try to find container, create if it doesn't exist
     this.container = document.getElementById(containerId);
     
     if (!this.container) {
-      console.error('❌ PhotoQueueUI: Container not found with ID:', containerId);
-      console.error('Available elements with "photo" in ID:', 
-        Array.from(document.querySelectorAll('[id*="photo"]')).map(el => el.id));
+      console.warn(`⚠️ PhotoQueueUI: Container "${containerId}" not found. Creating it...`);
+      // Try to find a parent container or create one
+      const formContainer = document.querySelector('form') || document.body;
+      this.container = document.createElement('div');
+      this.container.id = containerId;
+      this.container.className = 'photo-preview-container';
+      this.container.style.display = 'none';
+      formContainer.appendChild(this.container);
+      console.log('✅ PhotoQueueUI: Created container:', containerId);
     } else {
       console.log('✅ PhotoQueueUI: Container found:', containerId, this.container);
     }
     
+    // Merge options with defaults
     this.options = {
-      maxPhotos: options.maxPhotos || 100,
-      showOverallProgress: options.showOverallProgress !== false,
-      showRetryButton: options.showRetryButton !== false,
-      onRetryAll: options.onRetryAll || (() => {}),
-      onRemove: options.onRemove || (() => {})
+      maxPhotos: finalOptions.maxPhotos || 100,
+      showOverallProgress: finalOptions.showOverallProgress !== false,
+      showRetryButton: finalOptions.showRetryButton !== false,
+      onRetryAll: finalOptions.onRetryAll || finalOptions.onRetry || (() => {}),
+      onRemove: finalOptions.onRemove || (() => {})
     };
     
     this.photoElements = new Map(); // photoId -> DOM element
@@ -109,7 +136,13 @@ class PhotoQueueUI {
   renderPhotoItem(item) {
     if (!this.container) {
       console.error('❌ PhotoQueueUI: Container not found!', this.container);
-      return null;
+      // Try to recreate container
+      const containerId = this.container?.id || 'photoPreviewContainer';
+      this.container = document.getElementById(containerId);
+      if (!this.container) {
+        console.error('❌ PhotoQueueUI: Cannot render photo - no container available');
+        return null;
+      }
     }
     
     if (!item.preview) {
