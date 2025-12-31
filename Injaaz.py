@@ -455,6 +455,9 @@ def create_app():
     
     # Register admin blueprint
     if admin_bp:
+        # Exempt admin API from CSRF (uses JWT instead)
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(admin_bp)
         app.register_blueprint(admin_bp)  # Already has /api/admin prefix
         logger.info("✅ Registered admin blueprint at /api/admin")
     else:
