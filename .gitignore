@@ -1,40 +1,39 @@
+# Capacitor
+android/
+ios/
+.capacitor/
+node_modules/
+package-lock.json
+
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-env/
-.venv/
-venv/
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Distribution / packaging
+*$py.class
+*.so
 .Python
-build/
-dist/
-.eggs/
-*.egg-info/
-*.egg
+env/
+venv/
+ENV/
+.venv
 
-# Environments
-.env
-.env.local
-.env.*.local
+# Flask
+instance/
+.webassets-cache
 
-# VS Code
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# macOS
+# OS
 .DS_Store
-
-# Docker
-*.log
-*.pid
+Thumbs.db
 
 # Logs
-logs/
 *.log
 
-# Generated files
-generated/
+# Environment
+.env
+.env.local
