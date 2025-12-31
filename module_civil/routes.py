@@ -151,7 +151,7 @@ def submit():
     job_id = job.job_id
 
     def task_generate_reports(job_id_local, sub_id_local, base_url, app):
-        logger.info(f"🔴 DEBUG: task_generate_reports called for {job_id_local}")
+        logger.debug(f"task_generate_reports called for {job_id_local}")
         with app.app_context():
             try:
                 update_job_progress_db(job_id_local, 10, status='processing')
@@ -437,62 +437,16 @@ def submit_with_urls():
 
 
 def process_job(sub_id, job_id, config, app):
-    """Background worker: Generate BOTH Excel AND PDF reports (like HVAC)"""
-    logger.info(f"DEBUG: process_job called with sub_id={sub_id}, job_id={job_id}")
-    try:
-        with app.app_context():
-            GENERATED_DIR = app.config.get('GENERATED_DIR')
-            if not os.path.exists(GENERATED_DIR):
-                os.makedirs(GENERATED_DIR, exist_ok=True)
-            
-            logger.info(f"🔄 Processing civil job {job_id}")
-            update_job_progress_db(job_id, 10, status='processing')
-            
-            # Get submission data from database
-            submission_data = get_submission_db(sub_id)
-            if not submission_data:
-                logger.error(f"❌ Submission {sub_id} not found in database")
-                fail_job_db(job_id, "Submission not found")
-                return
-            
-            # Use form_data from database
-            submission_record = submission_data.get('form_data', {})
-            
-            # Generate Excel
-            logger.info("📊 Generating Excel report...")
-            update_job_progress_db(job_id, 30)
-            excel_path = create_excel_report(submission_record, output_dir=GENERATED_DIR)
-            excel_filename = os.path.basename(excel_path)
-            logger.info(f"✅ Excel created: {excel_filename}")
-            
-            # Upload Excel to Cloudinary (optional)
-            update_job_progress_db(job_id, 45)
-            base_url = submission_record.get('base_url', '')
-            excel_url = f"{base_url}/generated/{excel_filename}"
-            
-            # Generate PDF
-            logger.info("📄 Generating PDF report...")
-            update_job_progress_db(job_id, 60)
-            pdf_path = create_pdf_report(submission_record, output_dir=GENERATED_DIR)
-            pdf_filename = os.path.basename(pdf_path)
-            logger.info(f"✅ PDF created: {pdf_filename}")
-            pdf_url = f"{base_url}/generated/{pdf_filename}"
-            
-            # Mark complete
-            results = {
-                'excel': excel_url,
-                'pdf': pdf_url,
-                'excel_filename': excel_filename,
-                'pdf_filename': pdf_filename
-            }
-            complete_job_db(job_id, results)
-            logger.info(f"✅ Job {job_id} completed successfully")
-            
-    except Exception as e:
-        logger.error(f"❌ Job {job_id} failed: {str(e)}")
-        logger.error(traceback.format_exc())
-        try:
-            with app.app_context():
-                fail_job_db(job_id, str(e))
-        except:
-            logger.error("Could not even update job status to failed")
+    """Background worker: Generate BOTH Excel AND PDF reports"""
+    logger.debug(f"process_job called with sub_id={sub_id}, job_id={job_id}")
+    from common.module_base import process_report_job
+    from .civil_generators import create_excel_report, create_pdf_report
+    
+    process_report_job(
+        sub_id=sub_id,
+        job_id=job_id,
+        app=app,
+        module_name='civil',
+        create_excel_report=create_excel_report,
+        create_pdf_report=create_pdf_report
+    )

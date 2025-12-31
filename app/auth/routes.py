@@ -14,6 +14,24 @@ import re
 auth_bp = Blueprint('auth_bp', __name__, url_prefix='/api/auth')
 
 
+def get_limiter():
+    """Get rate limiter from current app"""
+    try:
+        return current_app.limiter
+    except (AttributeError, RuntimeError):
+        return None
+
+
+def rate_limit_if_available(limit_str):
+    """Decorator to apply rate limiting if limiter is available"""
+    def decorator(f):
+        limiter = get_limiter()
+        if limiter:
+            return limiter.limit(limit_str)(f)
+        return f
+    return decorator
+
+
 def validate_email(email):
     """Basic email validation"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -52,6 +70,7 @@ def log_audit(user_id, action, resource_type=None, resource_id=None, details=Non
 
 
 @auth_bp.route('/register', methods=['POST'])
+@rate_limit_if_available('5 per minute')
 def register():
     """Register a new user"""
     try:
@@ -117,6 +136,7 @@ def register():
 
 
 @auth_bp.route('/login', methods=['POST'])
+@rate_limit_if_available('5 per minute')
 def login():
     """Authenticate user and return JWT tokens"""
     try:

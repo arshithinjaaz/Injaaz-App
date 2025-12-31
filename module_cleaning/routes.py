@@ -263,88 +263,19 @@ def job_status(job_id):
 
 
 def process_job(sub_id, job_id, config, app):
-    """Background worker: Generate BOTH Excel AND PDF reports (like civil/HVAC)"""
-    logger.info(f"DEBUG: process_job called with sub_id={sub_id}, job_id={job_id}")
-    try:
-        with app.app_context():
-            GENERATED_DIR = app.config.get('GENERATED_DIR')
-            if not os.path.exists(GENERATED_DIR):
-                os.makedirs(GENERATED_DIR, exist_ok=True)
-            
-            logger.info(f"🔄 Processing cleaning job {job_id}")
-            update_job_progress_db(job_id, 10, status='processing')
-            
-            # Get submission data from database
-            submission_data = get_submission_db(sub_id)
-            if not submission_data:
-                logger.error(f"❌ Submission {sub_id} not found in database")
-                fail_job_db(job_id, "Submission not found")
-                return
-            
-            # Use form_data from database
-            # Note: submission_data is wrapped as {'form_data': {...}}
-            # The form_data contains {'data': {...}, 'submission_id': ..., 'timestamp': ...}
-            # So we need to extract the actual data
-            form_data_wrapper = submission_data.get('form_data', {})
-            
-            # Check if data is wrapped in a 'data' key (from submit-with-urls)
-            if 'data' in form_data_wrapper:
-                submission_record = form_data_wrapper.get('data', {})
-                logger.info("📸 Process Job: Extracted data from wrapper")
-            else:
-                # Direct form_data (from old submit endpoint)
-                submission_record = form_data_wrapper
-                logger.info("📸 Process Job: Using form_data directly")
-            
-            # Log photo data for debugging
-            photos_in_data = submission_record.get('photos', [])
-            logger.info(f"📸 Process Job: Found {len(photos_in_data)} photos in submission_record")
-            if photos_in_data:
-                for idx, photo in enumerate(photos_in_data[:3]):  # Log first 3
-                    if isinstance(photo, dict):
-                        logger.info(f"📸 Process Job: Photo {idx + 1}: url={photo.get('url', 'NO URL')[:80]}...")
-                    else:
-                        logger.info(f"📸 Process Job: Photo {idx + 1}: {str(photo)[:80]}...")
-            else:
-                logger.warning(f"📸 Process Job: No photos found! Keys in submission_record: {list(submission_record.keys())}")
-            
-            # Generate Excel
-            logger.info("📊 Generating Excel report...")
-            update_job_progress_db(job_id, 30)
-            excel_path = create_excel_report(submission_record, output_dir=GENERATED_DIR)
-            excel_filename = os.path.basename(excel_path)
-            logger.info(f"✅ Excel created: {excel_filename}")
-            # Only use local Excel URL, skip Cloudinary upload
-            base_url = submission_record.get('base_url', '')
-            excel_url = f"{base_url}/cleaning/generated/{excel_filename}"
-
-            # Generate PDF
-            logger.info("📄 Generating PDF report...")
-            update_job_progress_db(job_id, 60)
-            pdf_path = create_pdf_report(submission_record, output_dir=GENERATED_DIR)
-            pdf_filename = os.path.basename(pdf_path)
-            logger.info(f"✅ PDF created: {pdf_filename}")
-            pdf_url = f"{base_url}/cleaning/generated/{pdf_filename}"
-
-            # Mark complete
-            results = {
-                'excel': excel_url,
-                'pdf': pdf_url,
-                'excel_filename': excel_filename,
-                'pdf_filename': pdf_filename
-            }
-
-            complete_job_db(job_id, results)
-            logger.info(f"✅ Job {job_id} completed successfully")
-            
-    except Exception as e:
-        logger.error(f"❌ Job {job_id} failed: {str(e)}")
-        logger.error(traceback.format_exc())
-        try:
-            with app.app_context():
-                fail_job_db(job_id, str(e))
-        except:
-            logger.error("Could not even update job status to failed")
+    """Background worker: Generate BOTH Excel AND PDF reports"""
+    logger.debug(f"process_job called with sub_id={sub_id}, job_id={job_id}")
+    from common.module_base import process_report_job
+    from .cleaning_generators import create_excel_report, create_pdf_report
+    
+    process_report_job(
+        sub_id=sub_id,
+        job_id=job_id,
+        app=app,
+        module_name='cleaning',
+        create_excel_report=create_excel_report,
+        create_pdf_report=create_pdf_report
+    )
 
 
 # ---------- Progressive Upload Endpoints ----------
