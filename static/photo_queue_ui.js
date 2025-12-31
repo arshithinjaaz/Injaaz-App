@@ -150,12 +150,20 @@ class PhotoQueueUI {
       return null;
     }
     
-    // Ensure container is visible
+    // Ensure container is visible and responsive
     this.container.style.display = 'flex';
     this.container.style.flexWrap = 'wrap';
     this.container.style.gap = '10px';
     this.container.style.marginTop = '1rem';
     this.container.style.padding = '0.5rem';
+    this.container.style.width = '100%';
+    this.container.style.boxSizing = 'border-box';
+    
+    // Mobile-specific adjustments
+    if (window.innerWidth <= 768) {
+      this.container.style.gap = '8px';
+      this.container.style.padding = '8px';
+    }
     
     const photoDiv = document.createElement('div');
     photoDiv.className = 'photo-item';
@@ -166,9 +174,12 @@ class PhotoQueueUI {
     img.src = item.preview;
     img.alt = 'Photo';
     img.style.display = 'block';
+    // Responsive sizing - will be overridden by CSS on mobile
     img.style.width = '120px';
     img.style.height = '120px';
     img.style.objectFit = 'cover';
+    img.style.maxWidth = '100%';
+    img.loading = 'lazy'; // Lazy load for better mobile performance
     img.onerror = () => {
       console.error('❌ Failed to load image preview:', item.preview);
       img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=';
@@ -316,6 +327,29 @@ class PhotoQueueUI {
    */
   getPhotoCount() {
     return this.photoElements.size;
+  }
+  
+  /**
+   * Update container layout for mobile responsiveness
+   */
+  updateLayout() {
+    if (!this.container) return;
+    
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      this.container.style.gap = '8px';
+      this.container.style.padding = '8px';
+      // Update photo items for mobile
+      this.photoElements.forEach((photoDiv) => {
+        const img = photoDiv.querySelector('img');
+        if (img) {
+          img.style.maxWidth = '100%';
+        }
+      });
+    } else {
+      this.container.style.gap = '10px';
+      this.container.style.padding = '0.5rem';
+    }
   }
 }
 

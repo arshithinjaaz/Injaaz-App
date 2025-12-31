@@ -165,6 +165,8 @@
     gap: 0.5rem !important;
     margin-top: 1rem !important;
     padding: 0.5rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   .photo-item,
@@ -172,6 +174,7 @@
     width: calc(50% - 0.25rem) !important;
     max-width: none !important;
     flex: 0 0 calc(50% - 0.25rem) !important;
+    box-sizing: border-box !important;
   }
   
   .photo-item img,
@@ -180,6 +183,23 @@
     width: 100% !important;
     object-fit: cover !important;
     border-radius: 4px !important;
+    display: block !important;
+  }
+  
+  /* Upload Queue UI - Mobile */
+  .upload-queue-container {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Photo status overlays - more visible on mobile */
+  .photo-status-overlay {
+    font-size: 11px !important;
+  }
+  
+  .photo-status-overlay.status-uploading,
+  .photo-status-overlay.status-failed {
+    opacity: 1 !important;
   }
   
   .photo-count {
@@ -351,7 +371,21 @@
   
   /* Single photo per row on very small screens */
   .photo-item {
-    width: 100% !important;
+    width: calc(50% - 0.25rem) !important;
+    flex: 0 0 calc(50% - 0.25rem) !important;
+  }
+  
+  /* Upload queue - full width on small screens */
+  .upload-queue-container {
+    padding: 8px !important;
+  }
+  
+  .upload-progress-bar {
+    height: 18px !important;
+  }
+  
+  .upload-stats {
+    font-size: 11px !important;
   }
   
   /* Stack signature pads */

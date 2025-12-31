@@ -85,6 +85,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 1rem;
     }
     
     /* Stunning logo with glow effect */
@@ -133,12 +134,16 @@
     
     #welcome-text {
       font-size: 1.6rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     
-    @media (max-width: 768px) {
-      #welcome-text {
-        font-size: 1.2rem;
-      }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex-shrink: 0;
     }
     
     .logo:hover img {
@@ -556,43 +561,61 @@
     
     @media (max-width: 768px) {
       .nav-container {
-        padding: 1rem 1.5rem !important;
-        flex-wrap: wrap !important;
+        padding: 0.75rem 1rem !important;
+        flex-wrap: nowrap !important;
+        gap: 0.5rem !important;
+        align-items: center !important;
+        min-height: 56px !important;
       }
       
       .logo {
-        flex: 0 0 auto !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        gap: 0.5rem !important;
+        overflow: hidden !important;
       }
       
       .logo img {
-        height: 36px;
+        height: 32px !important;
+        flex-shrink: 0 !important;
+        width: auto !important;
       }
       
-      .logo span {
-        font-size: 1.2rem;
-        max-width: 200px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+      .logo span,
+      #welcome-text {
+        font-size: 0.85rem !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        display: block !important;
+      }
+      
+      .nav-right {
+        gap: 0.5rem !important;
+        flex-shrink: 0 !important;
       }
       
       .nav-menu {
-        display: none;
+        display: none !important;
       }
       
       .logout-btn {
-        font-size: 0.875rem;
-        padding: 0.625rem 1rem;
-        min-height: 44px;
+        font-size: 0.875rem !important;
+        padding: 0.5rem !important;
+        min-height: 40px !important;
+        min-width: 40px !important;
+        flex-shrink: 0 !important;
       }
       
       .logout-btn svg {
-        width: 18px;
-        height: 18px;
+        width: 18px !important;
+        height: 18px !important;
       }
       
       .logout-btn span {
-        display: inline;
+        display: none !important;
       }
       
       .module-card {
@@ -616,25 +639,44 @@
     
     @media (max-width: 480px) {
       .nav-container {
-        padding: 0.75rem 1rem !important;
+        padding: 0.625rem 0.75rem !important;
+        gap: 0.375rem !important;
+        min-height: 52px !important;
       }
       
-      .logo span {
-        font-size: 0.95rem;
-        max-width: 150px;
+      .logo {
+        gap: 0.375rem !important;
+        flex: 1 1 auto !important;
       }
       
+      .logo img {
+        height: 28px !important;
+        flex-shrink: 0 !important;
+      }
+      
+      .logo span,
       #welcome-text {
-        font-size: 0.9rem;
+        font-size: 0.75rem !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
       }
       
-      .logout-btn span {
-        display: none;
+      .nav-right {
+        gap: 0.375rem !important;
       }
       
       .logout-btn {
-        padding: 0.625rem;
-        min-width: 44px;
+        padding: 0.5rem !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+      }
+      
+      .logout-btn svg {
+        width: 16px !important;
+        height: 16px !important;
       }
       
       .module-card {
@@ -667,7 +709,7 @@
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
         <span id="welcome-text">Injaaz</span>
       </a>
-      <div style="display: flex; align-items: center; gap: 2rem;">
+      <div class="nav-right">
         <ul class="nav-menu">
           <li><a href="#modules">Modules</a></li>
           <li><a href="#about">About</a></li>
