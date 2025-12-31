@@ -1089,6 +1089,25 @@
                     photoQueue.retryAllFailed();
                 }
             });
+            
+            // Handle window resize and orientation changes for mobile responsiveness
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    if (photoQueueUI) {
+                        photoQueueUI.updateLayout();
+                    }
+                }, 250);
+            });
+            
+            window.addEventListener('orientationchange', () => {
+                setTimeout(() => {
+                    if (photoQueueUI) {
+                        photoQueueUI.updateLayout();
+                    }
+                }, 100);
+            });
         }
 
         function updatePhotoCount() {

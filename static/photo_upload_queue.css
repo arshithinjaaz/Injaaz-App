@@ -207,14 +207,126 @@
   animation: spin 1s linear infinite;
 }
 
-/* Responsive */
+/* Responsive - Mobile Optimized */
 @media (max-width: 768px) {
-  .photo-item img {
-    width: 80px;
-    height: 80px;
+  .upload-queue-container {
+    margin: 10px 0;
+    padding: 10px;
+  }
+  
+  .upload-progress-bar {
+    height: 20px;
+  }
+  
+  .upload-progress-fill {
+    font-size: 11px;
+  }
+  
+  .upload-stats {
+    font-size: 12px;
+    margin-bottom: 8px;
   }
   
   .photo-item {
-    margin: 5px;
+    width: calc(50% - 8px) !important;
+    margin: 4px !important;
+    flex: 0 0 calc(50% - 8px) !important;
+  }
+  
+  .photo-item img {
+    width: 100% !important;
+    height: 120px !important;
+    object-fit: cover;
+  }
+  
+  .photo-status-overlay {
+    font-size: 11px;
+    padding: 4px;
+  }
+  
+  .photo-status-icon {
+    font-size: 24px;
+    margin-bottom: 2px;
+  }
+  
+  .photo-remove-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+    top: 4px;
+    right: 4px;
+  }
+  
+  .retry-all-btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    margin-top: 8px;
+  }
+  
+  /* Photo preview container - mobile */
+  .photo-preview-container,
+  #photoPreviewContainer {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 8px !important;
+    justify-content: flex-start !important;
+  }
+}
+
+/* Extra Small Devices */
+@media (max-width: 576px) {
+  .photo-item {
+    width: calc(50% - 6px) !important;
+    margin: 3px !important;
+    flex: 0 0 calc(50% - 6px) !important;
+  }
+  
+  .photo-item img {
+    height: 100px !important;
+  }
+  
+  .upload-queue-container {
+    padding: 8px;
+    margin: 8px 0;
+  }
+  
+  .upload-stats {
+    font-size: 11px;
+  }
+  
+  .photo-status-overlay {
+    font-size: 10px;
+  }
+  
+  .photo-status-icon {
+    font-size: 20px;
+  }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .photo-item {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(18, 84, 53, 0.2);
+  }
+  
+  .photo-status-overlay.status-uploading,
+  .photo-status-overlay.status-failed {
+    opacity: 1 !important;
+  }
+  
+  .photo-status-overlay.status-completed {
+    opacity: 0.3 !important;
+  }
+  
+  .photo-remove-btn {
+    min-width: 32px;
+    min-height: 32px;
+  }
+  
+  .photo-remove-btn:active {
+    transform: scale(0.9);
   }
 }

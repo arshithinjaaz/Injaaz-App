@@ -1131,6 +1131,25 @@
               photoQueue.retryAllFailed();
             }
           });
+          
+          // Handle window resize and orientation changes for mobile responsiveness
+          let resizeTimeout;
+          window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+              if (photoQueueUI) {
+                photoQueueUI.updateLayout();
+              }
+            }, 250);
+          });
+          
+          window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+              if (photoQueueUI) {
+                photoQueueUI.updateLayout();
+              }
+            }, 100);
+          });
         } else {
           console.error('❌ PhotoUploadQueue or PhotoQueueUI not available!');
           console.error('Available window properties:', Object.keys(window).filter(k => k.includes('Photo')));
