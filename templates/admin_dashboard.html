@@ -390,25 +390,132 @@
     }
     
     @media (max-width: 768px) {
+      .navbar {
+        padding: 0.75rem 1rem !important;
+      }
+      
+      .navbar-container {
+        flex-wrap: wrap !important;
+        gap: 0.75rem !important;
+      }
+      
+      .navbar-brand {
+        font-size: 1.1rem !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+      }
+      
+      .navbar-brand img {
+        height: 32px !important;
+      }
+      
+      .navbar-brand span {
+        font-size: 0.9rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+      
+      .nav-actions {
+        width: 100% !important;
+        justify-content: flex-end !important;
+      }
+      
+      .btn {
+        font-size: 0.875rem !important;
+        padding: 0.5rem 0.875rem !important;
+      }
+      
       .container {
-        padding: 1rem;
+        padding: 1rem !important;
+      }
+      
+      .page-title {
+        font-size: 1.5rem !important;
+      }
+      
+      .page-subtitle {
+        font-size: 0.9rem !important;
+      }
+      
+      .users-section {
+        padding: 1.25rem !important;
+      }
+      
+      .section-title {
+        font-size: 1.25rem !important;
       }
       
       .users-table {
-        font-size: 0.875rem;
+        font-size: 0.8rem !important;
+        display: block !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+      
+      .users-table thead,
+      .users-table tbody,
+      .users-table tr {
+        display: block !important;
       }
       
       .users-table th,
       .users-table td {
-        padding: 0.75rem 0.5rem;
+        padding: 0.75rem 0.5rem !important;
+        display: block !important;
+        text-align: left !important;
+        border-bottom: 1px solid #e5e7eb !important;
+      }
+      
+      .users-table th {
+        display: none !important;
+      }
+      
+      .users-table td:before {
+        content: attr(data-label) ": " !important;
+        font-weight: 600 !important;
+        display: inline-block !important;
+        width: 40% !important;
       }
       
       .action-buttons {
-        flex-direction: column;
+        flex-direction: column !important;
+        gap: 0.5rem !important;
       }
       
       .btn-sm {
-        width: 100%;
+        width: 100% !important;
+        margin: 0 !important;
+      }
+      
+      .modal {
+        padding: 0.5rem !important;
+      }
+      
+      .modal-content {
+        padding: 1.25rem !important;
+      }
+      
+      .modal-title {
+        font-size: 1.25rem !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .navbar-brand span {
+        font-size: 0.8rem !important;
+      }
+      
+      .page-title {
+        font-size: 1.35rem !important;
+      }
+      
+      .users-section {
+        padding: 1rem !important;
+      }
+      
+      .users-table {
+        font-size: 0.75rem !important;
       }
     }
   </style>
@@ -550,13 +657,13 @@
         
         html += `
           <tr>
-            <td>${user.id}</td>
-            <td><strong>${user.username}</strong></td>
-            <td>${user.full_name || '-'}</td>
-            <td>${user.email}</td>
-            <td><span class="badge ${roleBadge}">${user.role}</span></td>
-            <td><span class="badge ${statusBadge}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
-            <td>
+            <td data-label="ID">${user.id}</td>
+            <td data-label="Username"><strong>${user.username}</strong></td>
+            <td data-label="Full Name">${user.full_name || '-'}</td>
+            <td data-label="Email">${user.email}</td>
+            <td data-label="Role"><span class="badge ${roleBadge}">${user.role}</span></td>
+            <td data-label="Status"><span class="badge ${statusBadge}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
+            <td data-label="Module Access">
               <div class="access-badges">
                 ${user.access_hvac ? '<span class="access-badge hvac">HVAC</span>' : ''}
                 ${user.access_civil ? '<span class="access-badge civil">Civil</span>' : ''}
@@ -564,7 +671,7 @@
                 ${!user.access_hvac && !user.access_civil && !user.access_cleaning && user.role !== 'admin' ? '<span style="color: var(--text-light);">No access</span>' : ''}
               </div>
             </td>
-            <td>
+            <td data-label="Actions">
               <div class="action-buttons">
                 <button class="btn btn-sm btn-reset" onclick="resetPassword(${user.id}, '${user.username}')">Reset Password</button>
                 <button class="btn btn-sm btn-toggle" onclick="toggleActive(${user.id}, ${user.is_active})">

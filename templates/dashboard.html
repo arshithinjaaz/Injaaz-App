@@ -553,6 +553,10 @@
         padding: 0 2rem;
       }
       
+      .hero {
+        padding-top: 100px;
+      }
+      
       .modules-grid {
         grid-template-columns: 1fr;
         gap: 1.5rem;
@@ -560,74 +564,94 @@
     }
     
     @media (max-width: 768px) {
+      .hero {
+        padding-top: 80px !important;
+        min-height: auto !important;
+      }
+      
+      .hero-content {
+        padding: 0 1.5rem !important;
+      }
+      
+      .hero-text {
+        margin-bottom: 3rem !important;
+      }
+      
+      .footer {
+        padding: 3rem 1.5rem !important;
+        margin-top: 5rem !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .hero {
+        padding-top: 70px !important;
+      }
+      
+      .hero-content {
+        padding: 0 1rem !important;
+      }
+      
+      .footer {
+        padding: 2rem 1rem !important;
+        margin-top: 3rem !important;
+      }
+      
+      .footer p {
+        font-size: 0.8rem !important;
+      }
+    }
+    
+    @media (max-width: 768px) {
       .nav-container {
-        padding: 1rem 1.25rem !important;
-        flex-wrap: wrap !important;
+        padding: 0.875rem 1rem !important;
+        flex-wrap: nowrap !important;
         gap: 0.75rem !important;
         align-items: center !important;
-        min-height: auto !important;
+        min-height: 60px !important;
       }
       
       .logo {
         flex: 0 0 auto !important;
         gap: 0.5rem !important;
-        order: 1 !important;
+        min-width: 0 !important;
       }
       
       .logo img {
-        height: 36px !important;
+        height: 32px !important;
         flex-shrink: 0 !important;
         width: auto !important;
       }
       
       .logo span {
-        font-size: 1.2rem !important;
-        display: block !important;
+        font-size: 1.1rem !important;
+        display: none !important; /* Hide "Injaaz" text on mobile, show welcome instead */
       }
       
       #welcome-text {
-        font-size: 1rem !important;
-        order: 2 !important;
-        flex: 1 1 100% !important;
-        width: 100% !important;
-        text-align: left !important;
-        margin-top: 0.25rem !important;
-        padding-left: 0 !important;
-        max-width: 100% !important;
+        font-size: 0.9rem !important;
+        font-weight: 500 !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
+        margin: 0 0.5rem !important;
+        display: block !important;
       }
       
       .nav-right {
-        order: 3 !important;
-        flex: 1 1 auto !important;
+        flex: 0 0 auto !important;
         gap: 0.5rem !important;
-        justify-content: flex-end !important;
-        margin-top: 0.25rem !important;
+        align-items: center !important;
       }
       
       .nav-menu {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 0.5rem !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        list-style: none !important;
-      }
-      
-      .nav-menu li {
-        margin: 0 !important;
-      }
-      
-      .nav-menu a {
-        font-size: 0.875rem !important;
-        padding: 0.375rem 0.75rem !important;
-        white-space: nowrap !important;
+        display: none !important; /* Hide menu links on mobile - keep it simple */
       }
       
       .logout-btn {
-        font-size: 0.875rem !important;
+        font-size: 0.8rem !important;
         padding: 0.5rem 0.75rem !important;
         min-height: 36px !important;
         flex-shrink: 0 !important;
@@ -639,32 +663,53 @@
       }
       
       .logout-btn span {
-        display: inline !important;
+        display: none !important; /* Icon only on mobile */
       }
       
       .module-card {
-        padding: 1.5rem 1.25rem;
+        padding: 1.5rem 1.25rem !important;
+        margin-bottom: 1rem !important;
       }
       
-      .hero-title {
-        letter-spacing: -2px;
-        font-size: clamp(2rem, 8vw, 3.5rem) !important;
+      .module-title {
+        font-size: 1.75rem !important;
+        margin-bottom: 0.75rem !important;
       }
       
-      .hero-subtitle {
-        font-size: 1rem !important;
+      .module-description {
+        font-size: 0.95rem !important;
+        line-height: 1.6 !important;
+      }
+      
+      .module-number {
+        font-size: 0.7rem !important;
+        margin-bottom: 0.75rem !important;
+      }
+      
+      .module-icon {
+        width: 60px !important;
+        height: 60px !important;
+        font-size: 2rem !important;
+        margin-bottom: 1rem !important;
+      }
+      
+      .module-arrow {
+        font-size: 0.9rem !important;
+        margin-top: 1rem !important;
       }
       
       .modules-grid {
         grid-template-columns: 1fr !important;
-        gap: 1.5rem !important;
+        gap: 1.25rem !important;
+        padding: 0 !important;
       }
     }
     
     @media (max-width: 480px) {
       .nav-container {
-        padding: 0.75rem 1rem !important;
+        padding: 0.75rem 0.875rem !important;
         gap: 0.5rem !important;
+        min-height: 56px !important;
       }
       
       .logo {
@@ -672,34 +717,19 @@
       }
       
       .logo img {
-        height: 32px !important;
-      }
-      
-      .logo span {
-        font-size: 1.1rem !important;
+        height: 28px !important;
       }
       
       #welcome-text {
-        font-size: 0.9rem !important;
-      }
-      
-      .nav-menu {
-        gap: 0.375rem !important;
-      }
-      
-      .nav-menu a {
         font-size: 0.8rem !important;
-        padding: 0.375rem 0.5rem !important;
+        margin: 0 0.375rem !important;
       }
       
       .logout-btn {
         padding: 0.5rem !important;
         min-width: 36px !important;
-        font-size: 0.8rem !important;
-      }
-      
-      .logout-btn span {
-        display: none !important;
+        min-height: 36px !important;
+        font-size: 0.75rem !important;
       }
       
       .logout-btn svg {
@@ -708,7 +738,7 @@
       }
       
       .module-card {
-        padding: 1.25rem 1rem;
+        padding: 1.25rem 1rem !important;
       }
       
       .module-title {
@@ -717,10 +747,13 @@
       
       .module-description {
         font-size: 0.9rem !important;
+        line-height: 1.5 !important;
       }
       
-      .hero-title {
-        font-size: 2rem !important;
+      .module-icon {
+        width: 50px !important;
+        height: 50px !important;
+        font-size: 1.75rem !important;
       }
     }
     
