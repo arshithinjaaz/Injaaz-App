@@ -122,9 +122,13 @@
     }
     
     .logo img {
-      width: 50px;
-      height: 50px;
+      width: 60px;
+      height: 60px;
       object-fit: contain;
+    }
+    
+    .logo span {
+      display: none; /* Hide text, show only logo */
     }
     
     .nav-menu {
@@ -710,12 +714,11 @@
     <div class="nav-container">
       <a href="/dashboard" class="logo">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
-        <span>Injaaz</span>
       </a>
       <ul class="nav-menu">
         <li><a href="/dashboard#modules">Modules</a></li>
         <li><a href="/about" class="active">About</a></li>
-        <li><a href="/dashboard#contact">Contact</a></li>
+        <li><a href="#" id="contactLink">Contact</a></li>
       </ul>
     </div>
   </nav>
@@ -937,6 +940,41 @@
     <p>© 2026 Injaaz Facilities Management. All rights reserved.</p>
   </footer>
 
+  <!-- Contact Modal -->
+  <div id="contactModal" class="contact-modal">
+    <div class="contact-modal-content">
+      <div class="contact-modal-header">
+        <h2>Contact Us</h2>
+        <button class="contact-modal-close" onclick="closeContactModal()" aria-label="Close">×</button>
+      </div>
+      <div class="contact-modal-info">
+        <div class="contact-modal-item">
+          <span class="contact-modal-icon">📍</span>
+          <div class="contact-modal-details">
+            <h4>Address</h4>
+            <p>Sheik Khalifa Bin Zayed St<br>Ajman, United Arab Emirates</p>
+          </div>
+        </div>
+        <div class="contact-modal-item">
+          <span class="contact-modal-icon">📞</span>
+          <div class="contact-modal-details">
+            <h4>Phone</h4>
+            <a href="tel:+97167123456">+971 6 712 3456</a>
+            <p class="contact-modal-note">Available 24/7</p>
+          </div>
+        </div>
+        <div class="contact-modal-item">
+          <span class="contact-modal-icon">📧</span>
+          <div class="contact-modal-details">
+            <h4>Email</h4>
+            <a href="mailto:info@injaaz.ae">info@injaaz.ae</a>
+            <p class="contact-modal-note">We'll respond within 24 hours</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Navbar scroll effect
     window.addEventListener('scroll', function() {
@@ -945,6 +983,39 @@
         navbar.classList.add('scrolled');
       } else {
         navbar.classList.remove('scrolled');
+      }
+    });
+    
+    // Contact Modal Functions
+    function openContactModal() {
+      const modal = document.getElementById('contactModal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }
+    
+    function closeContactModal() {
+      const modal = document.getElementById('contactModal');
+      modal.classList.remove('active');
+      document.body.style.overflow = ''; // Restore scrolling
+    }
+    
+    // Contact link click handler
+    document.getElementById('contactLink').addEventListener('click', function(e) {
+      e.preventDefault();
+      openContactModal();
+    });
+    
+    // Close modal when clicking outside
+    document.getElementById('contactModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeContactModal();
+      }
+    });
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeContactModal();
       }
     });
   </script>
