@@ -2,7 +2,7 @@ services:
   - type: web
     name: injaaz-app
     env: python
-    buildCommand: bash build.sh && python scripts/init_db.py
+    buildCommand: bash build.sh
     startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 300 --worker-class gthread
     envVars:
       - key: PYTHON_VERSION
