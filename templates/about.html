@@ -64,15 +64,15 @@
       content: '';
       position: fixed;
       top: 50%;
-      right: -10%;
+      right: -8%;
       transform: translateY(-50%) rotate(-15deg);
-      width: 900px;
-      height: 900px;
+      width: 1200px;
+      height: 1200px;
       background-image: url("{{ url_for('static', filename='logo.png') }}");
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      opacity: 0.04;
+      opacity: 0.05;
       pointer-events: none;
       z-index: 0;
       filter: blur(0.5px);
@@ -624,10 +624,10 @@
     /* Responsive */
     @media (max-width: 968px) {
       body::after {
-        width: 600px;
-        height: 600px;
+        width: 800px;
+        height: 800px;
         right: -20%;
-        opacity: 0.02;
+        opacity: 0.03;
       }
       
       .nav-container {
@@ -682,6 +682,13 @@
     }
     
     @media (max-width: 640px) {
+      body::after {
+        width: 600px;
+        height: 600px;
+        right: -30%;
+        opacity: 0.02;
+      }
+      
       .hero h1 {
         font-size: 2rem;
       }
@@ -906,18 +913,20 @@
       <div class="contact-info">
         <div class="contact-item">
           <span class="icon">📍</span>
-          <h4>Location</h4>
+          <h4>Address</h4>
           <p>Sheik Khalifa Bin Zayed St<br>Ajman, United Arab Emirates</p>
+        </div>
+        <div class="contact-item">
+          <span class="icon">📞</span>
+          <h4>Phone</h4>
+          <a href="tel:+97167123456">+971 6 712 3456</a>
+          <p style="margin-top: 0.5rem; font-size: 0.95rem; opacity: 0.85;">Available 24/7</p>
         </div>
         <div class="contact-item">
           <span class="icon">📧</span>
           <h4>Email</h4>
           <a href="mailto:info@injaaz.ae">info@injaaz.ae</a>
-        </div>
-        <div class="contact-item">
-          <span class="icon">🌐</span>
-          <h4>Connect With Us</h4>
-          <p>Visit our website for more information about our services and projects</p>
+          <p style="margin-top: 0.5rem; font-size: 0.95rem; opacity: 0.85;">We'll respond within 24 hours</p>
         </div>
       </div>
     </section>
