@@ -1344,22 +1344,22 @@
         }
       });
       
-      // Contact Modal Functions
-      function openContactModal() {
+      // Contact Modal Functions (make them global)
+      window.openContactModal = function() {
         const modal = document.getElementById('contactModal');
         if (modal) {
           modal.classList.add('active');
           document.body.style.overflow = 'hidden';
         }
-      }
+      };
       
-      function closeContactModal() {
+      window.closeContactModal = function() {
         const modal = document.getElementById('contactModal');
         if (modal) {
           modal.classList.remove('active');
           document.body.style.overflow = '';
         }
-      }
+      };
       
       // Contact link click handler
       const contactLink = document.getElementById('contactLink');
