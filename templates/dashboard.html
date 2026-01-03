@@ -570,6 +570,86 @@
       margin-top: 2rem;
     }
     
+    /* Contact Section */
+    .contact-section {
+      margin-top: 8rem;
+      padding: 4rem 0;
+      width: 100%;
+    }
+    
+    .contact-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-align: center;
+      margin-bottom: 3rem;
+      letter-spacing: -1px;
+    }
+    
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .contact-card {
+      background: var(--white);
+      border: 1px solid rgba(18, 84, 53, 0.1);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+    
+    .contact-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(18, 84, 53, 0.12);
+      border-color: var(--primary);
+    }
+    
+    .contact-icon {
+      font-size: 2.5rem;
+      display: block;
+      margin-bottom: 1.5rem;
+    }
+    
+    .contact-card h3 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 1rem;
+    }
+    
+    .contact-card p {
+      font-size: 1rem;
+      color: var(--text-dark);
+      line-height: 1.6;
+      margin-bottom: 0.5rem;
+    }
+    
+    .contact-card a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+    
+    .contact-card a:hover {
+      color: var(--primary-light);
+      text-decoration: underline;
+    }
+    
+    .contact-note {
+      font-size: 0.9rem;
+      color: var(--text-light);
+      font-style: italic;
+      display: block;
+      margin-top: 0.5rem;
+    }
+    
     /* Responsive */
     @media (max-width: 1024px) {
       .nav-container {
@@ -896,6 +976,30 @@
             </p>
             <span class="module-arrow">Start Inspection →</span>
           </a>
+        </div>
+      </section>
+
+      <!-- Contact Section -->
+      <section class="contact-section" id="contact">
+        <h2 class="contact-title">Contact Us</h2>
+        <div class="contact-grid">
+          <div class="contact-card">
+            <span class="contact-icon">📍</span>
+            <h3>Address</h3>
+            <p>Sheik Khalifa Bin Zayed St<br>Ajman, United Arab Emirates</p>
+          </div>
+          <div class="contact-card">
+            <span class="contact-icon">📞</span>
+            <h3>Phone</h3>
+            <p><a href="tel:+97167123456">+971 6 712 3456</a></p>
+            <span class="contact-note">Available 24/7</span>
+          </div>
+          <div class="contact-card">
+            <span class="contact-icon">📧</span>
+            <h3>Email</h3>
+            <p><a href="mailto:info@injaaz.ae">info@injaaz.ae</a></p>
+            <span class="contact-note">We'll respond within 24 hours</span>
+          </div>
         </div>
       </section>
     </div>
