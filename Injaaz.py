@@ -514,6 +514,11 @@ def create_app():
         """Protected dashboard - requires authentication"""
         return render_template('dashboard.html')
     
+    @app.route('/about')
+    def about():
+        """About page - accessible to all users"""
+        return render_template('about.html')
+    
     @app.route('/admin/dashboard')
     def admin_dashboard():
         """Admin dashboard - requires admin authentication"""
