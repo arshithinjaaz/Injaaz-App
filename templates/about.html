@@ -80,12 +80,13 @@
     }
     
     .nav-container {
-      max-width: 1400px;
+      max-width: 1600px;
       margin: 0 auto;
-      padding: 1.5rem 3rem;
+      padding: 2rem 4rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 1rem;
     }
     
     .logo {
@@ -93,61 +94,157 @@
       align-items: center;
       gap: 1rem;
       text-decoration: none;
-      color: var(--primary);
-      font-weight: 700;
-      font-size: 1.5rem;
-      transition: transform 0.3s ease;
-    }
-    
-    .logo:hover {
-      transform: scale(1.05);
-    }
-    
-    .logo img {
-      width: 60px;
-      height: 60px;
-      object-fit: contain;
-    }
-    
-    .logo span {
-      display: none; /* Hide text, show only logo */
-    }
-    
-    .nav-menu {
-      display: flex;
-      list-style: none;
-      gap: 2.5rem;
-      align-items: center;
-    }
-    
-    .nav-menu a {
-      text-decoration: none;
-      color: var(--text-dark);
-      font-weight: 500;
-      font-size: 1rem;
-      transition: color 0.3s ease;
+      transition: all 0.3s ease;
       position: relative;
     }
     
-    .nav-menu a::after {
+    .logo::after {
       content: '';
       position: absolute;
-      bottom: -5px;
-      left: 0;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      background: radial-gradient(circle, rgba(18, 84, 53, 0.1) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      border-radius: 50%;
+      z-index: -1;
+    }
+    
+    .logo:hover::after {
+      opacity: 1;
+    }
+    
+    .logo img {
+      height: 55px;
+      width: auto;
+      filter: drop-shadow(0 2px 8px rgba(18, 84, 53, 0.15));
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .logo span {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -1px;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+    
+    #welcome-text {
+      font-size: 1.6rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex-shrink: 0;
+    }
+    
+    .logo:hover img {
+      filter: drop-shadow(0 6px 20px rgba(18, 84, 53, 0.3));
+      transform: scale(1.05);
+    }
+    
+    .logo:hover span {
+      letter-spacing: 0px;
+    }
+    
+    /* Elegant nav menu */
+    .nav-menu {
+      display: flex;
+      gap: 3rem;
+      list-style: none;
+    }
+    
+    .nav-menu a {
+      color: var(--text-light);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+      position: relative;
+      padding: 0.5rem 0;
+    }
+    
+    .nav-menu a::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
       width: 0;
       height: 2px;
-      background: var(--primary);
+      background: linear-gradient(90deg, var(--primary-light), var(--primary));
+      transform: translateX(-50%);
       transition: width 0.3s ease;
     }
     
-    .nav-menu a:hover::after,
-    .nav-menu a.active::after {
+    .nav-menu a:hover {
+      color: var(--primary);
+    }
+    
+    .nav-menu a:hover::before,
+    .nav-menu a.active::before {
       width: 100%;
     }
     
-    .nav-menu a:hover,
-    .nav-menu a.active {
-      color: var(--primary);
+    /* Logout Button - Matching UI Style */
+    .logout-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: white;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      border: none;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(18, 84, 53, 0.2);
+      letter-spacing: 0.3px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .logout-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+    
+    .logout-btn:hover::before {
+      left: 100%;
+    }
+    
+    .logout-btn:hover {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(18, 84, 53, 0.35);
+    }
+    
+    .logout-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(18, 84, 53, 0.2);
+    }
+    
+    .logout-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
     }
     
     /* Hero Section */
@@ -742,14 +839,23 @@
   <!-- Navigation -->
   <nav class="nav" id="navbar">
     <div class="nav-container">
-      <a href="/dashboard" class="logo">
+      <a href="/" class="logo">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
+        <span id="welcome-text">Injaaz</span>
       </a>
-      <ul class="nav-menu">
-        <li><a href="/dashboard#modules">Modules</a></li>
-        <li><a href="/about" class="active">About</a></li>
+      <div class="nav-right">
+        <ul class="nav-menu">
+          <li><a href="/dashboard#modules">Modules</a></li>
+          <li><a href="/about" class="active">About</a></li>
           <li><a href="#" id="contactLink">Contact</a></li>
-      </ul>
+        </ul>
+        <button class="logout-btn" id="logoutBtn" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3h12.75" />
+          </svg>
+          <span>Logout</span>
+        </button>
+      </div>
     </div>
   </nav>
 
@@ -981,6 +1087,50 @@
   </div>
 
   <script>
+    // Load and display user welcome message
+    function loadUserWelcome() {
+      try {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          // Use full_name if available, otherwise username
+          const displayName = user.full_name || user.username;
+          
+          // Update welcome text
+          const welcomeText = document.getElementById('welcome-text');
+          if (welcomeText) {
+            welcomeText.textContent = `Injaaz welcomes, ${displayName}!`;
+          }
+        } else {
+          // Try to fetch user from API if not in localStorage
+          const token = localStorage.getItem('access_token');
+          if (token) {
+            fetch('/api/auth/me', {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.user) {
+                localStorage.setItem('user', JSON.stringify(data.user));
+                const displayName = data.user.full_name || data.user.username;
+                const welcomeText = document.getElementById('welcome-text');
+                if (welcomeText) {
+                  welcomeText.textContent = `Injaaz welcomes, ${displayName}!`;
+                }
+              }
+            })
+            .catch(error => {
+              console.error('Failed to fetch user:', error);
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Error loading user welcome:', e);
+      }
+    }
+    
     // Contact Modal Functions (make them global)
     window.openContactModal = function() {
       const modal = document.getElementById('contactModal');
@@ -1008,8 +1158,12 @@
       }
     });
     
-    // Contact link click handler
+    // Contact link click handler and logout
     document.addEventListener('DOMContentLoaded', function() {
+      // Load welcome message
+      loadUserWelcome();
+      
+      // Contact link click handler
       const contactLink = document.getElementById('contactLink');
       if (contactLink) {
         contactLink.addEventListener('click', function(e) {
@@ -1034,6 +1188,47 @@
           closeContactModal();
         }
       });
+      
+      // Logout functionality
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', async function() {
+          try {
+            // Get token from localStorage
+            const token = localStorage.getItem('access_token');
+            
+            if (!token) {
+              // No token, just redirect to login
+              localStorage.clear();
+              window.location.href = '/login';
+              return;
+            }
+            
+            // Call logout API
+            const response = await fetch('/api/auth/logout', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            // Clear local storage regardless of API response
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Redirect to login page
+            window.location.href = '/login';
+            
+          } catch (error) {
+            console.error('Logout error:', error);
+            // Clear storage and redirect even if API call fails
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = '/login';
+          }
+        });
+      }
     });
   </script>
 </body>
