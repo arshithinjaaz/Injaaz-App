@@ -570,84 +570,157 @@
       margin-top: 2rem;
     }
     
-    /* Contact Section */
-    .contact-section {
-      margin-top: 8rem;
-      padding: 4rem 0;
+    /* Contact Modal */
+    .contact-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .contact-modal.active {
+      display: flex;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    
+    .contact-modal-content {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 3rem;
+      max-width: 600px;
       width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.3);
     }
     
-    .contact-title {
+    @keyframes slideUp {
+      from {
+        transform: translateY(50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    .contact-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 2px solid var(--primary);
+    }
+    
+    .contact-modal-header h2 {
       font-size: 2.5rem;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--primary);
-      text-align: center;
-      margin-bottom: 3rem;
-      letter-spacing: -1px;
+      margin: 0;
     }
     
-    .contact-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2rem;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    
-    .contact-card {
-      background: var(--white);
-      border: 1px solid rgba(18, 84, 53, 0.1);
-      border-radius: 16px;
-      padding: 2.5rem 2rem;
-      text-align: center;
+    .contact-modal-close {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      color: var(--text-light);
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
       transition: all 0.3s ease;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
     }
     
-    .contact-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 25px rgba(18, 84, 53, 0.12);
-      border-color: var(--primary);
+    .contact-modal-close:hover {
+      background: var(--primary);
+      color: var(--white);
+      transform: rotate(90deg);
     }
     
-    .contact-icon {
+    .contact-modal-info {
+      display: grid;
+      gap: 2rem;
+    }
+    
+    .contact-modal-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      background: rgba(18, 84, 53, 0.05);
+      border-radius: 16px;
+      transition: all 0.3s ease;
+    }
+    
+    .contact-modal-item:hover {
+      background: rgba(18, 84, 53, 0.08);
+      transform: translateX(5px);
+    }
+    
+    .contact-modal-icon {
       font-size: 2.5rem;
-      display: block;
-      margin-bottom: 1.5rem;
+      flex-shrink: 0;
     }
     
-    .contact-card h3 {
+    .contact-modal-details h4 {
       font-size: 1.5rem;
       font-weight: 700;
       color: var(--primary);
-      margin-bottom: 1rem;
+      margin: 0 0 0.5rem 0;
     }
     
-    .contact-card p {
-      font-size: 1rem;
+    .contact-modal-details p,
+    .contact-modal-details a {
+      font-size: 1.1rem;
       color: var(--text-dark);
+      text-decoration: none;
+      margin: 0.25rem 0;
+      display: block;
       line-height: 1.6;
-      margin-bottom: 0.5rem;
     }
     
-    .contact-card a {
+    .contact-modal-details a {
       color: var(--primary);
-      text-decoration: none;
       font-weight: 600;
       transition: color 0.3s ease;
     }
     
-    .contact-card a:hover {
+    .contact-modal-details a:hover {
       color: var(--primary-light);
       text-decoration: underline;
     }
     
-    .contact-note {
-      font-size: 0.9rem;
+    .contact-modal-note {
+      font-size: 0.95rem;
       color: var(--text-light);
-      font-style: italic;
-      display: block;
       margin-top: 0.5rem;
+      font-style: italic;
     }
     
     /* Responsive */
@@ -920,7 +993,7 @@
         <ul class="nav-menu">
           <li><a href="#modules">Modules</a></li>
           <li><a href="/about">About</a></li>
-          <li><a href="#contact">Contact</a></li>
+          <li><a href="#" id="contactLink">Contact</a></li>
           <li id="admin-menu-item" style="display: none;">
             <a href="/admin/dashboard" style="color: var(--primary); font-weight: 600;">Administrative</a>
           </li>
@@ -979,35 +1052,47 @@
         </div>
       </section>
 
-      <!-- Contact Section -->
-      <section class="contact-section" id="contact">
-        <h2 class="contact-title">Contact Us</h2>
-        <div class="contact-grid">
-          <div class="contact-card">
-            <span class="contact-icon">📍</span>
-            <h3>Address</h3>
-            <p>Sheik Khalifa Bin Zayed St<br>Ajman, United Arab Emirates</p>
-          </div>
-          <div class="contact-card">
-            <span class="contact-icon">📞</span>
-            <h3>Phone</h3>
-            <p><a href="tel:+97167123456">+971 6 712 3456</a></p>
-            <span class="contact-note">Available 24/7</span>
-          </div>
-          <div class="contact-card">
-            <span class="contact-icon">📧</span>
-            <h3>Email</h3>
-            <p><a href="mailto:info@injaaz.ae">info@injaaz.ae</a></p>
-            <span class="contact-note">We'll respond within 24 hours</span>
-          </div>
-        </div>
-      </section>
     </div>
   </div>
 
   <footer class="footer">
     <p>© 2026 Injaaz • Professional Site Reporting Platform</p>
   </footer>
+
+  <!-- Contact Modal -->
+  <div id="contactModal" class="contact-modal">
+    <div class="contact-modal-content">
+      <div class="contact-modal-header">
+        <h2>Contact Us</h2>
+        <button class="contact-modal-close" onclick="closeContactModal()" aria-label="Close">×</button>
+      </div>
+      <div class="contact-modal-info">
+        <div class="contact-modal-item">
+          <span class="contact-modal-icon">📍</span>
+          <div class="contact-modal-details">
+            <h4>Address</h4>
+            <p>Sheik Khalifa Bin Zayed St<br>Ajman, United Arab Emirates</p>
+          </div>
+        </div>
+        <div class="contact-modal-item">
+          <span class="contact-modal-icon">📞</span>
+          <div class="contact-modal-details">
+            <h4>Phone</h4>
+            <a href="tel:+97167123456">+971 6 712 3456</a>
+            <p class="contact-modal-note">Available 24/7</p>
+          </div>
+        </div>
+        <div class="contact-modal-item">
+          <span class="contact-modal-icon">📧</span>
+          <div class="contact-modal-details">
+            <h4>Email</h4>
+            <a href="mailto:info@injaaz.ae">info@injaaz.ae</a>
+            <p class="contact-modal-note">We'll respond within 24 hours</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     // Load and display user welcome message
@@ -1256,6 +1341,49 @@
           nav.classList.add('scrolled');
         } else {
           nav.classList.remove('scrolled');
+        }
+      });
+      
+      // Contact Modal Functions
+      function openContactModal() {
+        const modal = document.getElementById('contactModal');
+        if (modal) {
+          modal.classList.add('active');
+          document.body.style.overflow = 'hidden';
+        }
+      }
+      
+      function closeContactModal() {
+        const modal = document.getElementById('contactModal');
+        if (modal) {
+          modal.classList.remove('active');
+          document.body.style.overflow = '';
+        }
+      }
+      
+      // Contact link click handler
+      const contactLink = document.getElementById('contactLink');
+      if (contactLink) {
+        contactLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          openContactModal();
+        });
+      }
+      
+      // Close modal when clicking outside
+      const contactModal = document.getElementById('contactModal');
+      if (contactModal) {
+        contactModal.addEventListener('click', function(e) {
+          if (e.target === this) {
+            closeContactModal();
+          }
+        });
+      }
+      
+      // Close modal with Escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          closeContactModal();
         }
       });
       
