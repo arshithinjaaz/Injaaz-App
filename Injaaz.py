@@ -69,7 +69,8 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(JOBS_DIR, exist_ok=True)
 
 # Simple background executor for report generation tasks
-executor = ThreadPoolExecutor(max_workers=2)
+# Reduced to 1 worker for free tier memory constraints (512MB limit)
+executor = ThreadPoolExecutor(max_workers=1)
 
 
 def create_app():

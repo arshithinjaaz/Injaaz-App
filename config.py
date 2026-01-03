@@ -84,8 +84,8 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 SQLALCHEMY_ENGINE_OPTIONS = {
     'pool_pre_ping': True,           # Check connections before using
     'pool_recycle': 300,             # Recycle connections every 5 minutes
-    'pool_size': 10,                 # Number of connections to maintain
-    'max_overflow': 20,              # Maximum overflow connections
+    'pool_size': 5,                  # Number of connections to maintain (reduced for free tier)
+    'max_overflow': 10,              # Maximum overflow connections (reduced for free tier)
     'pool_timeout': 30,              # Timeout for getting connection from pool
     'echo': False,                   # Don't log all SQL queries (set to True for debugging)
 }
