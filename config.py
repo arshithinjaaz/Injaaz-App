@@ -30,9 +30,17 @@ CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
 CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
 CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 
-# DATABASE - PostgreSQL for production
+# DATABASE - PostgreSQL for production (REQUIRED in production)
 # Fix for Render: Replace postgres:// with postgresql:// for SQLAlchemy compatibility
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'injaaz.db')}")
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    # Only allow SQLite in development
+    if os.getenv("FLASK_ENV", "development") == "development":
+        DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'injaaz.db')}"
+    else:
+        # Production requires DATABASE_URL environment variable
+        raise ValueError("DATABASE_URL environment variable is required in production")
+
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -74,6 +82,10 @@ SESSION_COOKIE_SAMESITE = "Lax"
 SQLALCHEMY_DATABASE_URI = DATABASE_URL
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 SQLALCHEMY_ENGINE_OPTIONS = {
-    'pool_pre_ping': True,
-    'pool_recycle': 300,
+    'pool_pre_ping': True,           # Check connections before using
+    'pool_recycle': 300,             # Recycle connections every 5 minutes
+    'pool_size': 5,                  # Number of connections to maintain (reduced for free tier)
+    'max_overflow': 10,              # Maximum overflow connections (reduced for free tier)
+    'pool_timeout': 30,              # Timeout for getting connection from pool
+    'echo': False,                   # Don't log all SQL queries (set to True for debugging)
 }

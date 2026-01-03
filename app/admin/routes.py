@@ -24,17 +24,22 @@ def generate_temp_password(length=12):
 def list_users():
     """Get all users with their details"""
     try:
-        users = User.query.order_by(User.created_at.desc()).all()
+        # Use eager loading to prevent N+1 queries
+        from sqlalchemy.orm import joinedload
+        users = User.query.options(
+            joinedload(User.submissions),
+            joinedload(User.audit_logs),
+            joinedload(User.sessions)
+        ).order_by(User.created_at.desc()).all()
         users_data = [user.to_dict() for user in users]
         
-        return jsonify({
-            'success': True,
+        return success_response({
             'users': users_data,
             'count': len(users_data)
-        }), 200
+        })
     except Exception as e:
         current_app.logger.error(f"Error listing users: {str(e)}")
-        return jsonify({'error': 'Failed to fetch users'}), 500
+        return error_response('Failed to fetch users', status_code=500, error_code='DATABASE_ERROR')
 
 
 @admin_bp.route('/users/<int:user_id>', methods=['GET'])
@@ -57,7 +62,7 @@ def get_user(user_id):
 @jwt_required()
 @admin_required
 def reset_user_password(user_id):
-    """Reset user password and return temporary password"""
+    """Reset user password and email temporary password"""
     try:
         admin_id = get_jwt_identity()
         user = User.query.get_or_404(user_id)
@@ -74,20 +79,43 @@ def reset_user_password(user_id):
             'reset_by': User.query.get(admin_id).username if admin_id else 'system'
         })
         
-        return jsonify({
-            'success': True,
-            'message': 'Password reset successfully',
-            'temp_password': temp_password,  # Only returned to admin
+        # Send email with temporary password
+        email_sent = False
+        try:
+            from common.email_service import send_password_reset_email
+            email_sent = send_password_reset_email(
+                user_email=user.email,
+                username=user.username,
+                temp_password=temp_password
+            )
+        except Exception as email_error:
+            current_app.logger.warning(f"Failed to send password reset email: {str(email_error)}")
+            # Continue - password is reset even if email fails
+        
+        if email_sent:
+            message = 'Password reset successfully. Temporary password has been sent to user\'s email.'
+        else:
+            # If email fails, return password in response as fallback (admin only)
+            message = 'Password reset successfully. Email delivery failed - password returned in response.'
+            current_app.logger.warning(f"Password reset email failed for user {user_id}, password returned in response")
+        
+        response_data = {
             'user': {
                 'id': user.id,
                 'username': user.username,
                 'email': user.email
             }
-        }), 200
+        }
+        
+        if not email_sent:
+            response_data['temp_password'] = temp_password
+            response_data['warning'] = 'Email delivery failed. Password returned in response (admin only).'
+        
+        return success_response(response_data, message=message)
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error resetting password: {str(e)}")
-        return jsonify({'error': 'Failed to reset password'}), 500
+        return error_response('Failed to reset password', status_code=500, error_code='DATABASE_ERROR')
 
 
 @admin_bp.route('/users/<int:user_id>/toggle-active', methods=['POST'])

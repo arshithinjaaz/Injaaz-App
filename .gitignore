@@ -28,6 +28,7 @@ desktop.ini
 # Logs
 *.log
 *.tmp
+logs/
 
 # Environment
 .env

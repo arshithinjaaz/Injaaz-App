@@ -1,10 +1,12 @@
 import os
 import sys
 import logging
+from datetime import datetime
 from flask import Flask, send_from_directory, abort, render_template, jsonify, request
 from concurrent.futures import ThreadPoolExecutor
 from werkzeug.exceptions import HTTPException
 from flask_jwt_extended import JWTManager
+from sqlalchemy import text
 
 # Import Flask extensions
 from app.models import db, bcrypt
@@ -67,7 +69,8 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(JOBS_DIR, exist_ok=True)
 
 # Simple background executor for report generation tasks
-executor = ThreadPoolExecutor(max_workers=2)
+# Reduced to 1 worker for free tier memory constraints (512MB limit)
+executor = ThreadPoolExecutor(max_workers=1)
 
 
 def create_app():
@@ -76,21 +79,15 @@ def create_app():
     # Load configuration from config.py
     app.config.from_object('config')
     
-    # Validate critical settings
-    flask_env = app.config.get('FLASK_ENV', 'development')
-    secret_key = app.config.get('SECRET_KEY')
-    jwt_secret_key = app.config.get('JWT_SECRET_KEY')
+    # Validate configuration
+    from common.config_validator import validate_config
+    is_valid, errors = validate_config(app)
     
-    if flask_env == 'production':
-        if not secret_key or secret_key in ['dev-secret', 'dev-secret-change-in-production', 'change-me', 'change-me-in-production']:
-            logger.error("❌ CRITICAL: SECRET_KEY not set or using default value in production!")
-            sys.exit(1)
-        if not jwt_secret_key or jwt_secret_key in ['change-me', 'change-me-jwt-secret']:
-            logger.error("❌ CRITICAL: JWT_SECRET_KEY not set or using default value in production!")
-            sys.exit(1)
-        if len(secret_key) < 32:
-            logger.error("❌ CRITICAL: SECRET_KEY too short (min 32 characters)!")
-            sys.exit(1)
+    if not is_valid:
+        logger.error("❌ CRITICAL: Configuration validation failed!")
+        for error in errors:
+            logger.error(f"  - {error}")
+        sys.exit(1)
     
     # Initialize Flask extensions
     db.init_app(app)
@@ -344,22 +341,22 @@ def create_app():
     @app.errorhandler(404)
     def not_found(e):
         if request.path.startswith('/api/'):
-            return jsonify({"error": "Resource not found"}), 404
+            return jsonify({"success": False, "error": "Resource not found"}), 404
         return render_template('404.html') if os.path.exists(os.path.join(app.template_folder, '404.html')) else ("Not Found", 404)
     
     @app.errorhandler(413)
     def too_large(e):
-        return jsonify({"error": "File too large. Maximum upload size: 100MB"}), 413
+        return jsonify({"success": False, "error": "File too large. Maximum upload size: 100MB"}), 413
     
     @app.errorhandler(429)
     def rate_limit_exceeded(e):
         logger.warning(f"Rate limit exceeded from IP: {request.remote_addr}")
-        return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
+        return jsonify({"success": False, "error": "Rate limit exceeded. Please try again later."}), 429
     
     @app.errorhandler(500)
     def internal_error(e):
         logger.exception(f"Internal server error: {e}")
-        return jsonify({"error": "Internal server error", "request_id": request.headers.get('X-Request-ID', 'unknown')}), 500
+        return jsonify({"success": False, "error": "Internal server error", "request_id": request.headers.get('X-Request-ID', 'unknown')}), 500
     
     @app.errorhandler(400)
     def bad_request(e):
@@ -527,54 +524,55 @@ def create_app():
         from flask import redirect, url_for
         return redirect(url_for('login_page'))
 
-    # Serve generated files (downloads) with security checks
+    # Serve generated files (downloads) - DEPRECATED in production (use cloud URLs)
+    # This route is kept for backward compatibility in development only
     GENERATED_DIR_NAME = os.path.basename(GENERATED_DIR.rstrip(os.sep))
     @app.route(f'/{GENERATED_DIR_NAME}/<path:filename>')
     def download_generated(filename):
-        # Security: prevent path traversal
+        flask_env = app.config.get('FLASK_ENV', 'development')
+        
+        # In production, files should be served from cloud storage
+        if flask_env == 'production':
+            logger.warning(f"Attempted to access local file in production: {filename}")
+            return jsonify({
+                'success': False,
+                'error': 'File serving from local filesystem is not available in production. Use cloud URLs instead.'
+            }), 404
+        
+        # Development fallback - serve from local filesystem
         from common.security import safe_path_join
         try:
             safe_path = safe_path_join(GENERATED_DIR, filename)
             if not os.path.exists(safe_path):
                 logger.warning(f"File not found: {filename}")
                 abort(404)
-            logger.info(f"Serving file: {filename}")
+            logger.info(f"Serving file from local filesystem (development): {filename}")
             return send_from_directory(GENERATED_DIR, filename, as_attachment=False)
         except ValueError as e:
             logger.warning(f"Path traversal attempt blocked: {filename}")
             abort(403)
 
-    # Enhanced health endpoint with dependency checks
-    @app.route('/health')
-    def health():
-        checks = {
-            "status": "ok",
-            "filesystem": os.access(GENERATED_DIR, os.W_OK),
-            "executor": executor is not None,
+    # Health check endpoint for monitoring
+    @app.route('/health', methods=['GET'])
+    def health_check():
+        """Health check endpoint for monitoring and load balancers"""
+        try:
+            # Check database connection
+            with db.engine.connect() as conn:
+                conn.execute(text('SELECT 1'))
+            db_status = 'healthy'
+        except Exception as e:
+            logger.warning(f"Database health check failed: {e}")
+            db_status = 'unhealthy'
+        
+        health_status = {
+            'status': 'healthy' if db_status == 'healthy' else 'degraded',
+            'database': db_status,
+            'timestamp': datetime.utcnow().isoformat()
         }
         
-        # Check Cloudinary
-        try:
-            checks["cloudinary"] = bool(app.config.get('CLOUDINARY_CLOUD_NAME'))
-        except Exception:
-            checks["cloudinary"] = False
-        
-        # Check Redis (if configured)
-        redis_url = os.environ.get('REDIS_URL')
-        if redis_url:
-            try:
-                import redis
-                r = redis.from_url(redis_url, socket_connect_timeout=2)
-                r.ping()
-                checks["redis"] = True
-            except Exception:
-                checks["redis"] = False
-        
-        # Overall status
-        all_ok = all([checks["filesystem"], checks["executor"]])
-        status_code = 200 if all_ok else 503
-        
-        return jsonify(checks), status_code
+        status_code = 200 if health_status['status'] == 'healthy' else 503
+        return jsonify(health_status), status_code
 
     return app
 
