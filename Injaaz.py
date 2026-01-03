@@ -84,10 +84,11 @@ def create_app():
     is_valid, errors = validate_config(app)
     
     if not is_valid:
-        logger.error("❌ CRITICAL: Configuration validation failed!")
-        for error in errors:
-            logger.error(f"  - {error}")
-        sys.exit(1)
+        error_msg = "❌ CRITICAL: Configuration validation failed!\n"
+        error_msg += "\n".join(f"  - {error}" for error in errors)
+        logger.error(error_msg)
+        # Raise exception instead of sys.exit() to avoid crashing WSGI worker
+        raise RuntimeError(error_msg)
     
     # Initialize Flask extensions
     db.init_app(app)
@@ -258,6 +259,7 @@ def create_app():
     logger.info(f"✅ Cloudinary configured: {app.config.get('CLOUDINARY_CLOUD_NAME')}")
     
     # Warn if using default secret (only in dev)
+    flask_env = app.config.get('FLASK_ENV', 'development')
     if flask_env != 'production' and app.config['SECRET_KEY'] in ['dev-secret-change-in-production', 'change-me-in-production']:
         logger.warning("⚠️  Using default SECRET_KEY! Set SECRET_KEY in .env for production!")
 
