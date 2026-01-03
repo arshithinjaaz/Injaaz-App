@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-  <title>About Us - INJAAZ Facilities Management</title>
-  <meta name="description" content="INJAAZ Facilities Management provides integrated FM solutions that are cost-effective, sustainable and aligned to international best practices.">
+  <title>About Us - Injaaz Facilities Management</title>
+  <meta name="description" content="Injaaz Facilities Management provides integrated FM solutions that are cost-effective, sustainable and aligned to international best practices.">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   
   <!-- PWA Meta Tags -->
@@ -57,6 +57,25 @@
         radial-gradient(circle at 80% 70%, rgba(26, 122, 77, 0.02) 0%, transparent 40%);
       pointer-events: none;
       z-index: 0;
+    }
+    
+    /* Logo background on the right */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 50%;
+      right: -10%;
+      transform: translateY(-50%) rotate(-15deg);
+      width: 900px;
+      height: 900px;
+      background-image: url("{{ url_for('static', filename='logo.png') }}");
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      opacity: 0.04;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(0.5px);
     }
     
     /* Navigation */
@@ -604,6 +623,13 @@
     
     /* Responsive */
     @media (max-width: 968px) {
+      body::after {
+        width: 600px;
+        height: 600px;
+        right: -20%;
+        opacity: 0.02;
+      }
+      
       .nav-container {
         padding: 1rem 1.5rem;
       }
@@ -676,8 +702,8 @@
   <nav class="nav" id="navbar">
     <div class="nav-container">
       <a href="/dashboard" class="logo">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ Logo">
-        <span>INJAAZ</span>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
+        <span>Injaaz</span>
       </a>
       <ul class="nav-menu">
         <li><a href="/dashboard#modules">Modules</a></li>
@@ -691,7 +717,7 @@
   <section class="hero">
     <div class="hero-content">
       <div class="hero-badge">Facilities Management Excellence Since Inception</div>
-      <h1>INJAAZ Facilities Management</h1>
+      <h1>Injaaz Facilities Management</h1>
       <p>We provide integrated FM solutions that are cost-effective, sustainable and aligned to international best practices in health, safety and environment.</p>
       
       <div class="hero-stats">
@@ -758,7 +784,7 @@
         
         <div class="about-highlight">
           <h3>Our Commitment</h3>
-          <p>INJAAZ Facilities Management is dedicated to providing world-class facilities management solutions that exceed expectations. We combine expertise, innovation, and commitment to deliver exceptional results for our clients across diverse industries.</p>
+          <p>Injaaz Facilities Management is dedicated to providing world-class facilities management solutions that exceed expectations. We combine expertise, innovation, and commitment to deliver exceptional results for our clients across diverse industries.</p>
           <p style="margin-top: 1.5rem;">Working with us means partnering with a team that's committed to your success, ensuring your facilities operate at peak efficiency while maintaining the highest standards of safety and sustainability.</p>
         </div>
       </div>
@@ -837,7 +863,7 @@
 
     <!-- Values Section -->
     <section class="values-section">
-      <h2 class="section-title">Why Choose INJAAZ?</h2>
+      <h2 class="section-title">Why Choose Injaaz?</h2>
       <div class="values-grid">
         <div class="value-item">
           <span class="value-icon">✨</span>
@@ -899,7 +925,7 @@
 
   <!-- Footer -->
   <footer class="footer">
-    <p>© 2026 INJAAZ Facilities Management. All rights reserved.</p>
+    <p>© 2026 Injaaz Facilities Management. All rights reserved.</p>
   </footer>
 
   <script>
