@@ -100,9 +100,9 @@ def get_professional_styles():
         'MainTitle': ParagraphStyle(
             'MainTitle',
             parent=styles['Heading1'],
-            fontSize=18,
+            fontSize=16,  # Reduced from 18 for compact layout
             textColor=PRIMARY_COLOR,
-            spaceAfter=0.1*inch,
+            spaceAfter=0.08*inch,  # Reduced spacing
             spaceBefore=0,
             alignment=TA_CENTER,
             fontName='Helvetica-Bold'
@@ -110,42 +110,42 @@ def get_professional_styles():
         'Subtitle': ParagraphStyle(
             'Subtitle',
             parent=styles['Normal'],
-            fontSize=11,
+            fontSize=10,  # Reduced from 11
             textColor=SECONDARY_COLOR,
-            spaceAfter=0.15*inch,
+            spaceAfter=0.12*inch,  # Reduced spacing
             alignment=TA_CENTER,
             fontName='Helvetica-Bold'
         ),
         'SectionHeading': ParagraphStyle(
             'SectionHeading',
             parent=styles['Heading2'],
-            fontSize=14,
+            fontSize=13,  # Reduced from 14
             textColor=PRIMARY_COLOR,
-            spaceAfter=0.1*inch,
-            spaceBefore=0.15*inch,
+            spaceAfter=0.08*inch,  # Reduced spacing
+            spaceBefore=0.12*inch,  # Reduced spacing
             fontName='Helvetica-Bold',
-            borderPadding=4,
+            borderPadding=3,  # Reduced from 4
             borderColor=PRIMARY_COLOR,
             borderWidth=1,
             borderRadius=3,
             backColor=ACCENT_COLOR,
-            leftIndent=5,
+            leftIndent=4,  # Reduced from 5
         ),
         'ItemHeading': ParagraphStyle(
             'ItemHeading',
             parent=styles['Heading3'],
-            fontSize=12,
+            fontSize=11,  # Reduced from 12
             textColor=SECONDARY_COLOR,
-            spaceAfter=0.08*inch,
-            spaceBefore=0.1*inch,
+            spaceAfter=0.06*inch,  # Reduced spacing
+            spaceBefore=0.08*inch,  # Reduced spacing
             fontName='Helvetica-Bold'
         ),
         'Normal': ParagraphStyle(
             'ProfessionalNormal',
             parent=styles['Normal'],
-            fontSize=10,
-            spaceAfter=0.08*inch,
-            leading=14
+            fontSize=9,  # Reduced from 10 for compact layout
+            spaceAfter=0.06*inch,  # Reduced spacing
+            leading=13  # Reduced from 14
         ),
         'Small': ParagraphStyle(
             'Small',
@@ -193,7 +193,7 @@ def create_header_with_logo(story, title, subtitle=None):
     if subtitle:
         story.append(Paragraph(subtitle, styles['Subtitle']))
     
-    story.append(Spacer(1, 0.15*inch))
+    story.append(Spacer(1, 0.12*inch))  # Reduced spacing for compact layout
     return story
 
 
@@ -261,29 +261,52 @@ def create_data_table(headers, rows, col_widths=None):
         ('LINEBELOW', (0, 0), (-1, 0), 1.5, PRIMARY_COLOR),
         
         # Padding
-        ('LEFTPADDING', (0, 0), (-1, -1), 4),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 3),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
     ]))
     
     return table
 
 
-def add_photo_grid(story, photos, photos_per_row=2, photo_width=2.5*inch, photo_height=2*inch):
-    """Add a grid of photos to the story
+def add_photo_grid(story, photos, photos_per_row=None, photo_width=None, photo_height=None):
+    """Add a grid of photos to the story - optimized for 20+ images
     
     Args:
         story: PDF story list
         photos: List of photo items (URLs or base64)
-        photos_per_row: Number of photos per row
-        photo_width: Width of each photo
-        photo_height: Height of each photo
+        photos_per_row: Number of photos per row (auto-calculated if None based on photo count)
+        photo_width: Width of each photo (auto-calculated if None)
+        photo_height: Height of each photo (auto-calculated if None)
     """
     styles = get_professional_styles()
     
     if not photos:
         return story
+    
+    photo_count = len(photos)
+    
+    # Auto-adjust layout based on number of photos for better handling of 20+ images
+    if photos_per_row is None:
+        if photo_count > 20:
+            photos_per_row = 4  # 4 photos per row for 20+ images
+        elif photo_count > 10:
+            photos_per_row = 3  # 3 photos per row for 10-20 images
+        else:
+            photos_per_row = 2  # 2 photos per row for <10 images
+    
+    # Auto-adjust photo size based on number per row
+    if photo_width is None or photo_height is None:
+        if photos_per_row == 4:
+            photo_width = 1.7*inch  # Smaller for 4 per row
+            photo_height = 1.3*inch
+        elif photos_per_row == 3:
+            photo_width = 2.2*inch  # Medium for 3 per row
+            photo_height = 1.65*inch
+        else:
+            photo_width = 2.5*inch  # Standard for 2 per row
+            photo_height = 2*inch
     
     photo_rows = []
     for i in range(0, len(photos), photos_per_row):
@@ -297,10 +320,10 @@ def add_photo_grid(story, photos, photos_per_row=2, photo_width=2.5*inch, photo_
                     img = Image(img_data, width=photo_width, height=photo_height)
                     photo_row.append(img)
                 else:
-                    photo_row.append(Paragraph("Image not available", styles['Normal']))
+                    photo_row.append(Paragraph("Image not available", styles['Small']))
             except Exception as e:
                 logger.error(f"Error loading photo: {str(e)}")
-                photo_row.append(Paragraph("Error loading image", styles['Normal']))
+                photo_row.append(Paragraph("Error loading image", styles['Small']))
         
         # Pad row if needed
         while len(photo_row) < photos_per_row:
@@ -308,21 +331,22 @@ def add_photo_grid(story, photos, photos_per_row=2, photo_width=2.5*inch, photo_
         
         photo_rows.append(photo_row)
     
+    # Add photos in batches to avoid memory issues with many images
     if photo_rows:
-        col_widths = [photo_width + 0.2*inch] * photos_per_row
+        col_widths = [photo_width + 0.15*inch] * photos_per_row
         photo_table = Table(photo_rows, colWidths=col_widths)
         photo_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 5),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
             ('BOX', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
             ('INNERGRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
         ]))
         story.append(photo_table)
-        story.append(Spacer(1, 0.2*inch))
+        story.append(Spacer(1, 0.15*inch))  # Reduced spacing
     
     return story
 
@@ -343,7 +367,7 @@ def add_signatures_section(story, signatures_dict):
     
     story.append(PageBreak())
     story.append(Paragraph("Signatures & Approval", styles['SectionHeading']))
-    story.append(Spacer(1, 0.2*inch))
+    story.append(Spacer(1, 0.15*inch))  # Reduced spacing
     
     sig_rows = []
     
@@ -384,15 +408,15 @@ def add_signatures_section(story, signatures_dict):
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('GRID', (0, 0), (-1, -1), 0.75, PRIMARY_COLOR),
             ('BACKGROUND', (0, 0), (0, -1), ACCENT_COLOR),
-            ('TOPPADDING', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-            ('LEFTPADDING', (0, 0), (-1, -1), 8),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
         ]))
         story.append(sig_table)
     
     # Add signature date
-    story.append(Spacer(1, 0.2*inch))
+    story.append(Spacer(1, 0.15*inch))  # Reduced spacing
     story.append(Paragraph(
         f"<i>Document signed on: {datetime.now().strftime('%B %d, %Y at %H:%M')}</i>",
         styles['Small']
@@ -434,11 +458,37 @@ def create_professional_pdf(pdf_path, story, report_title="Injaaz Report"):
         if not os.path.exists(pdf_path):
             raise Exception(f"PDF file not created at {pdf_path}")
         
-        logger.info(f"✅ Professional PDF created: {pdf_path}")
+        # Verify PDF file is not empty and has valid structure
+        file_size = os.path.getsize(pdf_path)
+        if file_size == 0:
+            if os.path.exists(pdf_path):
+                os.remove(pdf_path)
+            raise Exception(f"PDF file is empty at {pdf_path}")
+        
+        # Verify PDF header (should start with %PDF)
+        try:
+            with open(pdf_path, 'rb') as f:
+                header = f.read(8)
+                if not header.startswith(b'%PDF'):
+                    if os.path.exists(pdf_path):
+                        os.remove(pdf_path)
+                    raise Exception(f"PDF file has invalid header at {pdf_path} (expected %PDF, got {header[:8]})")
+        except Exception as e:
+            if os.path.exists(pdf_path):
+                try:
+                    os.remove(pdf_path)
+                except:
+                    pass
+            raise Exception(f"Failed to verify PDF file: {str(e)}")
+        
+        logger.info(f"✅ Professional PDF created: {pdf_path} ({file_size} bytes)")
         return pdf_path
         
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         logger.error(f"❌ PDF creation failed: {str(e)}")
+        logger.error(f"❌ PDF creation traceback:\n{error_details}")
         raise
 
 

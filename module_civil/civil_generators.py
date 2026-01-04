@@ -49,7 +49,6 @@ def create_excel_report(data, output_dir):
             add_info_section,
             add_data_table,
             add_section_header,
-            add_signature_section,
             finalize_workbook
         )
         
@@ -132,33 +131,7 @@ def create_excel_report(data, output_dir):
             
             current_row = add_data_table(ws, headers, table_data, current_row, col_widths=col_widths)
         
-        # Signatures Section
-        signatures = {}
-        inspector_sig = data.get('inspector_signature', {})
-        manager_sig = data.get('manager_signature', {})
-        
-        # Handle signature dict with url or direct string
-        if inspector_sig:
-            if isinstance(inspector_sig, dict) and inspector_sig.get('url'):
-                signatures['Inspector'] = inspector_sig.get('url')
-            elif isinstance(inspector_sig, str):
-                signatures['Inspector'] = inspector_sig
-            else:
-                signatures['Inspector'] = None
-        else:
-            signatures['Inspector'] = None
-            
-        if manager_sig:
-            if isinstance(manager_sig, dict) and manager_sig.get('url'):
-                signatures['Manager'] = manager_sig.get('url')
-            elif isinstance(manager_sig, str):
-                signatures['Manager'] = manager_sig
-            else:
-                signatures['Manager'] = None
-        else:
-            signatures['Manager'] = None
-        
-        current_row = add_signature_section(ws, signatures, current_row)
+        # Signatures Section - REMOVED from Excel (images/signatures not needed in Excel)
         
         # Finalize formatting
         finalize_workbook(ws)

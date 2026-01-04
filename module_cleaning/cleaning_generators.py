@@ -55,7 +55,6 @@ def create_excel_report(data, output_dir):
             add_info_section,
             add_data_table,
             add_section_header,
-            add_signature_section,
             finalize_workbook
         )
         
@@ -172,22 +171,7 @@ def create_excel_report(data, output_dir):
         
         current_row = add_info_section(ws, comments_data, current_row, title="General Comments")
         
-        # Signatures Section
-        signatures = {}
-        tech_sig = data.get('tech_signature', '')
-        contact_sig = data.get('contact_signature', '')
-        
-        if tech_sig:
-            signatures['Technician'] = tech_sig
-        else:
-            signatures['Technician'] = None
-            
-        if contact_sig:
-            signatures['Contact Person'] = contact_sig
-        else:
-            signatures['Contact Person'] = None
-        
-        current_row = add_signature_section(ws, signatures, current_row)
+        # Signatures Section - REMOVED from Excel (images/signatures not needed in Excel)
         
         # Finalize formatting
         finalize_workbook(ws)

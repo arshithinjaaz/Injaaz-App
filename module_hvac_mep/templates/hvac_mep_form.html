@@ -1652,20 +1652,23 @@
                 // Show download links
                 downloadLinks.style.display = 'block';
                 
+                // Use download proxy route for auto-download (jobId is available in closure)
                 if (excelUrl) {
-                  excelLink.href = excelUrl;
-                  excelLink.download = results.excel_filename || 'hvac_mep_report.xlsx';
+                  excelLink.href = `${modulePrefix}/download/${jobId}/excel`;
                   excelLink.textContent = '📥 Download Excel Report';
                   excelLink.style.display = 'block';
+                  // Trigger auto-download
+                  setTimeout(() => excelLink.click(), 500);
                 } else {
                   excelLink.style.display = 'none';
                 }
                 
                 if (pdfUrl) {
-                  pdfLink.href = pdfUrl;
-                  pdfLink.download = results.pdf_filename || 'hvac_mep_report.pdf';
+                  pdfLink.href = `${modulePrefix}/download/${jobId}/pdf`;
                   pdfLink.textContent = '📥 Download PDF Report';
                   pdfLink.style.display = 'block';
+                  // Trigger auto-download
+                  setTimeout(() => pdfLink.click(), 700);
                 } else {
                   pdfLink.style.display = 'none';
                 }

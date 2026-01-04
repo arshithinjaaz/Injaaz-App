@@ -66,10 +66,8 @@ def upload_local_file(path, public_id_prefix):
         )
         url = res.get('secure_url')
         
-        # For PDFs, add attachment query parameter to force download
-        if url and file_ext == '.pdf':
-            url = f"{url}?attachment=true"
-        
+        # Don't add ?attachment=true to URLs - let the download route handle it
+        # The attachment parameter can cause issues with Cloudinary access
         logger.info(f"Cloudinary file upload success: {url}")
         return url
     except Exception as e:
