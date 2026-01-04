@@ -47,7 +47,6 @@ def create_excel_report(data, output_dir):
             add_info_section,
             add_data_table,
             add_section_header,
-            add_signature_section,
             finalize_workbook
         )
         
@@ -118,22 +117,7 @@ def create_excel_report(data, output_dir):
                 title=None, col_widths=col_widths
             )
         
-        # Signatures Section
-        signatures = {}
-        tech_sig = data.get('tech_signature', '') or data.get('opMan_signature', '')
-        opman_sig = data.get('opMan_signature', '') or data.get('opman_signature', '')
-        
-        if tech_sig:
-            signatures['Technician'] = tech_sig
-        else:
-            signatures['Technician'] = None
-            
-        if opman_sig:
-            signatures['Operation Manager'] = opman_sig
-        else:
-            signatures['Operation Manager'] = None
-        
-        current_row = add_signature_section(ws, signatures, current_row)
+        # Signatures Section - REMOVED from Excel (images/signatures not needed in Excel)
         
         # Finalize formatting
         finalize_workbook(ws)

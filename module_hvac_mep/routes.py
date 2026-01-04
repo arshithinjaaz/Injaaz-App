@@ -7,7 +7,9 @@ import re
 import traceback
 import logging
 from datetime import datetime
-from flask import Blueprint, current_app, render_template, request, jsonify, url_for, send_from_directory
+from flask import Blueprint, current_app, render_template, request, jsonify, url_for, send_from_directory, send_file, Response
+import requests
+from io import BytesIO
 
 # CRITICAL FIX: Define logger FIRST before using it
 logger = logging.getLogger(__name__)
@@ -383,6 +385,121 @@ def download_generated(filename):
     GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
     # allow nested paths like uploads/<name>
     return send_from_directory(GENERATED_DIR, filename, as_attachment=True)
+
+
+@hvac_mep_bp.route("/download/<job_id>/<file_type>", methods=["GET"])
+def download_file(job_id, file_type):
+    """
+    Download proxy route that fetches files from Cloudinary or local storage
+    and serves them with proper download headers for auto-download.
+    
+    Args:
+        job_id: Job ID to get file URLs from
+        file_type: 'excel' or 'pdf'
+    """
+    GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+    
+    try:
+        # Get job data from database
+        job_data = get_job_status_db(job_id)
+        if not job_data:
+            logger.error(f"Job not found: {job_id}")
+            return jsonify({"error": "Job not found"}), 404
+        
+        # Debug: log the job_data structure
+        logger.info(f"Job data for {job_id}: {type(job_data)}")
+        logger.debug(f"Job data keys: {list(job_data.keys()) if isinstance(job_data, dict) else 'Not a dict'}")
+        
+        # Extract results - try multiple possible keys
+        results = {}
+        if isinstance(job_data, dict):
+            results = job_data.get('results', {}) or job_data.get('result_data', {}) or job_data.get('results_data', {})
+            # If results is a string (JSON), parse it
+            if isinstance(results, str):
+                try:
+                    import json
+                    results = json.loads(results)
+                except:
+                    logger.warning(f"Failed to parse results as JSON: {results}")
+                    results = {}
+        
+        if not results:
+            logger.error(f"Job results not found for {job_id}. Job data: {job_data}")
+            return jsonify({"error": "Job results not found"}), 404
+        
+        logger.info(f"Results for {job_id}: {list(results.keys()) if isinstance(results, dict) else type(results)}")
+        
+        # Get file URL and filename based on file_type
+        if file_type == 'excel':
+            file_url = results.get('excel') or results.get('excel_url')
+            filename = results.get('excel_filename', 'hvac_report.xlsx')
+        elif file_type == 'pdf':
+            file_url = results.get('pdf') or results.get('pdf_url')
+            filename = results.get('pdf_filename', 'hvac_report.pdf')
+        else:
+            return jsonify({"error": "Invalid file type. Use 'excel' or 'pdf'"}), 400
+        
+        if not file_url:
+            return jsonify({"error": f"{file_type.upper()} file URL not found"}), 404
+        
+        # Check if it's a Cloudinary URL or local URL
+        if file_url.startswith('http://') or file_url.startswith('https://'):
+            # Cloudinary URL - fetch and serve
+            try:
+                logger.info(f"Fetching {file_type.upper()} file from Cloudinary: {file_url}")
+                # Remove ?attachment=true if present
+                clean_url = file_url.split('?')[0]
+                logger.debug(f"Clean URL (removed query params): {clean_url}")
+                
+                # Use the original URL directly - Cloudinary URLs work fine as-is
+                response = requests.get(clean_url, timeout=60, stream=True)
+                response.raise_for_status()
+                logger.info(f"Successfully fetched {file_type.upper()} file, status: {response.status_code}, content-length: {response.headers.get('Content-Length', 'unknown')}")
+                
+                # Read file content into BytesIO
+                file_content = response.content
+                file_data = BytesIO(file_content)
+                file_data.seek(0)  # Reset to beginning
+                
+                # Determine content type
+                if file_type == 'excel':
+                    mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                else:  # pdf
+                    mimetype = 'application/pdf'
+                
+                # Verify file content is not empty
+                if len(file_content) == 0:
+                    logger.error(f"Empty file content received from Cloudinary: {file_url}")
+                    return jsonify({"error": "File content is empty"}), 500
+                
+                logger.info(f"Serving file: {filename}, size: {len(file_content)} bytes, type: {mimetype}")
+                
+                # Serve with download headers
+                return send_file(
+                    file_data,
+                    mimetype=mimetype,
+                    as_attachment=True,
+                    download_name=filename
+                )
+            except Exception as e:
+                logger.error(f"Error fetching from Cloudinary: {str(e)}")
+                logger.error(traceback.format_exc())
+                return jsonify({"error": f"Failed to fetch file from Cloudinary: {str(e)}"}), 500
+        else:
+            # Local URL - extract filename and serve from local storage
+            # Remove leading slash and 'generated/' if present
+            local_filename = file_url.lstrip('/').replace('generated/', '')
+            local_path = os.path.join(GENERATED_DIR, local_filename)
+            
+            if not os.path.exists(local_path):
+                return jsonify({"error": "File not found locally"}), 404
+            
+            return send_file(local_path, as_attachment=True, download_name=filename)
+    
+    except Exception as e:
+        logger.error(f"Download error: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
 
 def process_job(sub_id, job_id, config, app):
     """Background worker: Generate BOTH Excel AND PDF reports"""

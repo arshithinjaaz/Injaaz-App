@@ -247,6 +247,83 @@
       stroke: currentColor;
     }
     
+    /* Animation Keyframes */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(60px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
+    @keyframes countUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Animation Classes */
+    .animate-on-scroll {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+                  transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .animate-on-scroll.animated {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .animate-fade-in {
+      opacity: 0;
+      animation: fadeIn 0.6s ease forwards;
+    }
+    
+    .animate-slide-up {
+      opacity: 0;
+      animation: slideInUp 0.8s ease forwards;
+    }
+    
     /* Hero Section */
     .hero {
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
@@ -268,6 +345,7 @@
         radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
         url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
       opacity: 0.5;
+      animation: fadeIn 1.5s ease;
     }
     
     .hero-content {
@@ -287,6 +365,9 @@
       font-weight: 600;
       margin-bottom: 2rem;
       border: 1px solid rgba(255, 255, 255, 0.3);
+      opacity: 0;
+      transform: translateY(-20px);
+      animation: fadeInUp 0.8s ease forwards 0.2s;
     }
     
     .hero h1 {
@@ -296,15 +377,24 @@
       line-height: 1.1;
       letter-spacing: -0.03em;
       text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeInUp 1s ease forwards 0.4s;
     }
     
     .hero p {
       font-size: 1.4rem;
-      opacity: 0.95;
+      opacity: 0;
       line-height: 1.8;
       max-width: 800px;
       margin: 0 auto;
       font-weight: 300;
+      transform: translateY(30px);
+      animation: fadeInUp 1s ease forwards 0.6s;
+    }
+    
+    .hero p.animated {
+      opacity: 0.95;
     }
     
     .hero-stats {
@@ -313,10 +403,27 @@
       gap: 4rem;
       margin-top: 4rem;
       flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeIn 0.8s ease forwards 0.8s;
     }
     
     .stat-item {
       text-align: center;
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeInUp 0.8s ease forwards;
+    }
+    
+    .stat-item:nth-child(1) {
+      animation-delay: 1s;
+    }
+    
+    .stat-item:nth-child(2) {
+      animation-delay: 1.2s;
+    }
+    
+    .stat-item:nth-child(3) {
+      animation-delay: 1.4s;
     }
     
     .stat-number {
@@ -325,6 +432,11 @@
       display: block;
       line-height: 1;
       margin-bottom: 0.5rem;
+      transition: transform 0.3s ease;
+    }
+    
+    .stat-item:hover .stat-number {
+      transform: scale(1.1);
     }
     
     .stat-label {
@@ -345,6 +457,15 @@
     /* Section Styling */
     .section {
       padding: 6rem 2rem;
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+                  transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .section.animated {
+      opacity: 1;
+      transform: translateY(0);
     }
     
     .section-title {
@@ -354,6 +475,16 @@
       margin-bottom: 1rem;
       text-align: center;
       letter-spacing: -0.02em;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+                  transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .section.animated .section-title {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.2s;
     }
     
     .section-subtitle {
@@ -363,6 +494,16 @@
       max-width: 700px;
       margin: 0 auto 4rem;
       font-weight: 400;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+                  transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .section.animated .section-subtitle {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.4s;
     }
     
     /* About Section */
@@ -432,6 +573,16 @@
       border: 2px solid rgba(18, 84, 53, 0.1);
       position: relative;
       overflow: hidden;
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+                  transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .section.animated .about-highlight {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.5s;
     }
     
     .about-highlight::before {
@@ -461,6 +612,8 @@
     .services-section {
       background: var(--accent);
       padding: 6rem 2rem;
+      opacity: 1;
+      transform: none;
     }
     
     .services-grid {
@@ -566,6 +719,15 @@
     .values-section {
       background: linear-gradient(135deg, rgba(18, 84, 53, 0.05) 0%, rgba(26, 122, 77, 0.03) 100%);
       padding: 6rem 2rem;
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+                  transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .values-section.animated {
+      opacity: 1;
+      transform: translateY(0);
     }
     
     .values-grid {
@@ -937,7 +1099,7 @@
     </section>
 
     <!-- Services Section -->
-    <section class="services-section">
+    <section class="section services-section">
       <h2 class="section-title">Our Services</h2>
       <p class="section-subtitle">Comprehensive facilities management solutions tailored to your needs</p>
       
@@ -970,6 +1132,72 @@
           <span class="service-icon">🐛</span>
           <h3>Pest Control</h3>
           <p>Keeping your premises pest free is our aim that's why we are using the approved municipal pesticides and materials following the international QH&S standards for safe and effective pest management.</p>
+        </div>
+        
+        <div class="service-card">
+          <span class="service-icon">📋</span>
+          <h3>Contract Management</h3>
+          <p>From establishing an international standard on SLA followed by strong and applicable KPIs to plan, execute, monitoring and developing all our contracts management standards.</p>
+        </div>
+        
+        <div class="service-card">
+          <span class="service-icon">🎨</span>
+          <h3>Fit Out Services</h3>
+          <p>You imagine we make it reality. Creative ideas is our strength with the best space planning, interior designing and refurbishment of all project types.</p>
+        </div>
+        
+        <div class="service-card">
+          <span class="service-icon">💼</span>
+          <h3>Office Support Services</h3>
+          <p>Hospitality required specialized staff whom trained to provide the best services by understanding the local and international traditions.</p>
+        </div>
+        
+        <div class="service-card">
+          <span class="service-icon">🚗</span>
+          <h3>Car Cleaning Services</h3>
+          <p>You wish to have your loved ride cleaned. We apply the waterless technology to maintain your vehicle cleaned, polished & shined using the microfiber clothes and harmless cleaning consumables.</p>
+        </div>
+        
+        <div class="service-card">
+          <span class="service-icon">⚡</span>
+          <h3>Utility & Energy Management</h3>
+          <p>Saving energy became a social responsibility. With INJAAZ utility management we audit your bills and consumption to provide the best solution matching your expected ROIs.</p>
+        </div>
+        
+        <div class="service-card">
+          <span class="service-icon">🔧</span>
+          <h3>Facilities Management Consultancy</h3>
+          <p>Evaluate and provide a professional view for all FM business to recommend the best business model to drive excellence and efficiency.</p>
+        </div>
+        
+        <div class="service-card">
+          <span class="service-icon">🏗️</span>
+          <h3>Engineering Services</h3>
+          <p>Our experienced and talented engineers are always ready to convert your imagination into reality with professional engineering solutions.</p>
+        </div>
+        
+        <div class="service-card">
+          <span class="service-icon">❄️</span>
+          <h3>HVAC Services</h3>
+          <p>There are several providers in the region, but we are among the best and aim to continue be the best. If you require proper care of your HVAC systems then we are the answer.</p>
+        </div>
+        
+        <div class="service-card">
+          <span class="service-icon">🏠</span>
+          <h3>In Unit Services Packages</h3>
+          <p>Enjoy hassle free, comfortable living environment with experience and dedicated staff to serve your units with multiple flexible packages and options.</p>
+        </div>
+        
+        <div class="service-card">
+          <span class="service-icon">🛗</span>
+          <h3>Elevators and Escalator Services</h3>
+          <p>Our values and focus are aligned with the international QHSE standards. When it comes to life and safety we offer professional and competitive service to keep your assets always healthy and available.</p>
+        </div>
+        
+        <div class="service-card">
+          <span class="service-icon">🔧</span>
+          <h3>Ad-hoc Works</h3>
+          <p>Your comfort is away from you by one step. Contact INJAAZ we are offering what you need with flexible and responsive ad-hoc services.</p>
         </div>
       </div>
     </section>
@@ -1087,6 +1315,36 @@
   </div>
 
   <script>
+    // Intersection Observer for scroll animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animated');
+          
+          // Animate child elements with stagger
+          const children = entry.target.querySelectorAll('.service-card, .sector-item, .value-item, .feature-item');
+          children.forEach((child, index) => {
+            setTimeout(() => {
+              child.classList.add('animated');
+            }, index * 100);
+          });
+        }
+      });
+    }, observerOptions);
+    
+    // Observe all sections
+    document.addEventListener('DOMContentLoaded', () => {
+      const sections = document.querySelectorAll('.section');
+      sections.forEach(section => {
+        observer.observe(section);
+      });
+    });
+    
     // Load and display user welcome message
     function loadUserWelcome() {
       try {
@@ -1162,6 +1420,18 @@
     document.addEventListener('DOMContentLoaded', function() {
       // Load welcome message
       loadUserWelcome();
+      
+      // Initialize scroll animations
+      const sections = document.querySelectorAll('.section, .values-section');
+      sections.forEach(section => {
+        observer.observe(section);
+      });
+      
+      // Also observe values-section separately if it exists
+      const valuesSection = document.querySelector('.values-section');
+      if (valuesSection) {
+        observer.observe(valuesSection);
+      }
       
       // Contact link click handler
       const contactLink = document.getElementById('contactLink');

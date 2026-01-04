@@ -160,7 +160,7 @@ def add_info_section(ws, info_data, start_row, title="Information"):
         
         value_cell = ws[f'B{current_row}']
         value_cell.value = str(value)
-        value_cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+        value_cell.alignment = Alignment(horizontal='left', vertical='top', wrap_text=True)
         value_cell.border = Border(
             left=Side(style='thin', color=BORDER_COLOR),
             right=Side(style='thin', color=BORDER_COLOR),
@@ -168,6 +168,10 @@ def add_info_section(ws, info_data, start_row, title="Information"):
             bottom=Side(style='thin', color=BORDER_COLOR)
         )
         ws.merge_cells(f'B{current_row}:E{current_row}')
+        
+        # Auto-adjust row height for wrapped content
+        if value and len(str(value)) > 50:
+            ws.row_dimensions[current_row].height = max(25, min(len(str(value)) // 30 * 15 + 25, 100))
         
         current_row += 1
     
@@ -358,11 +362,40 @@ def add_signature_section(ws, signatures, start_row):
 
 
 def finalize_workbook(ws):
-    """Apply final formatting to worksheet
+    """Apply final formatting to worksheet and auto-size columns
     
     Args:
         ws: Worksheet object
     """
+    # Auto-size columns based on content
+    from openpyxl.utils import get_column_letter
+    
+    for col in ws.iter_cols(min_col=1, max_col=ws.max_column):
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+        
+        for cell in col:
+            try:
+                if cell.value:
+                    # Calculate cell content length
+                    cell_value = str(cell.value)
+                    # Count wrapped lines (estimate based on width)
+                    lines = cell_value.count('\n') + 1
+                    # Estimate width needed (characters per line)
+                    if hasattr(cell, 'alignment') and cell.alignment and cell.alignment.wrap_text:
+                        # For wrapped text, use a reasonable width (35 chars is good for wrapped content)
+                        length = min(len(cell_value) // lines + 5, 50)
+                    else:
+                        length = len(cell_value)
+                    if length > max_length:
+                        max_length = length
+            except:
+                pass
+        
+        # Set column width (add 2 for padding, minimum 10, maximum 60)
+        adjusted_width = min(max(max_length + 2, 10), 60)
+        ws.column_dimensions[col_letter].width = adjusted_width
+    
     # Freeze top rows (typically after logo and title)
     ws.freeze_panes = 'A6'
     
