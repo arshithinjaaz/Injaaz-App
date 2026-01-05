@@ -40,6 +40,99 @@ def download_generated_cleaning(filename):
     # Serve as attachment for download
     return send_file(safe_path, as_attachment=True, download_name=filename)
 
+
+@cleaning_bp.route("/download/<job_id>/<file_type>", methods=["GET"])
+def download_file(job_id, file_type):
+    """
+    Download proxy route that fetches files from Cloudinary or local storage
+    and serves them with proper download headers for auto-download.
+    
+    Args:
+        job_id: Job ID to get file URLs from
+        file_type: 'excel' or 'pdf'
+    """
+    GENERATED_DIR = current_app.config['GENERATED_DIR']
+    
+    try:
+        import requests
+        from io import BytesIO
+        
+        # Get job data from database
+        job_data = get_job_status_db(job_id)
+        if not job_data:
+            logger.error(f"Job not found: {job_id}")
+            return jsonify({"error": "Job not found"}), 404
+        
+        # Extract results
+        results = {}
+        if isinstance(job_data, dict):
+            results = job_data.get('results', {}) or job_data.get('result_data', {}) or job_data.get('results_data', {})
+            if isinstance(results, str):
+                try:
+                    results = json.loads(results)
+                except:
+                    logger.warning(f"Failed to parse results as JSON")
+                    results = {}
+        
+        if not results:
+            logger.error(f"Job results not found for {job_id}")
+            return jsonify({"error": "Job results not found"}), 404
+        
+        # Get file URL and filename based on file_type
+        if file_type == 'excel':
+            file_url = results.get('excel') or results.get('excel_url')
+            filename = results.get('excel_filename') or 'cleaning_report.xlsx'
+        elif file_type == 'pdf':
+            file_url = results.get('pdf') or results.get('pdf_url')
+            filename = results.get('pdf_filename') or 'cleaning_report.pdf'
+        else:
+            return jsonify({"error": "Invalid file type"}), 400
+        
+        if not file_url:
+            return jsonify({"error": f"{file_type.upper()} file URL not found"}), 404
+        
+        # Check if it's a Cloudinary URL
+        if 'cloudinary.com' in file_url:
+            try:
+                clean_url = file_url.split('?')[0]
+                response = requests.get(clean_url, timeout=60, stream=True)
+                response.raise_for_status()
+                
+                file_content = response.content
+                file_data = BytesIO(file_content)
+                file_data.seek(0)
+                
+                mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if file_type == 'excel' else 'application/pdf'
+                
+                if len(file_content) == 0:
+                    logger.error(f"Empty file content received from Cloudinary")
+                    return jsonify({"error": "File content is empty"}), 500
+                
+                return send_file(
+                    file_data,
+                    mimetype=mimetype,
+                    as_attachment=True,
+                    download_name=filename
+                )
+            except Exception as e:
+                logger.error(f"Error fetching from Cloudinary: {str(e)}")
+                logger.error(traceback.format_exc())
+                return jsonify({"error": f"Failed to fetch file: {str(e)}"}), 500
+        else:
+            # Local URL
+            local_filename = file_url.lstrip('/').replace('generated/', '')
+            local_path = os.path.join(GENERATED_DIR, local_filename)
+            
+            if not os.path.exists(local_path):
+                return jsonify({"error": "File not found locally"}), 404
+            
+            return send_file(local_path, as_attachment=True, download_name=filename)
+    
+    except Exception as e:
+        logger.error(f"Download error: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
 try:
     from .cleaning_generators import create_excel_report, create_pdf_report
     logger.info("✅ Successfully imported cleaning_generators")

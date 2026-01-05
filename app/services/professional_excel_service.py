@@ -206,6 +206,24 @@ def add_data_table(ws, headers, data_rows, start_row, title=None, col_widths=Non
     if col_widths:
         for col_letter, width in col_widths.items():
             ws.column_dimensions[col_letter].width = width
+
+    # Detect numeric columns (all non-empty values are int/float)
+    numeric_cols = set()
+    if data_rows:
+        for col_idx in range(1, len(headers) + 1):
+            all_numeric = True
+            for row in data_rows:
+                if col_idx - 1 >= len(row):
+                    continue
+                value = row[col_idx - 1]
+                # Skip empty values
+                if value in (None, ""):
+                    continue
+                if not isinstance(value, (int, float)):
+                    all_numeric = False
+                    break
+            if all_numeric:
+                numeric_cols.add(col_idx)
     
     # Header row
     header_row = current_row
@@ -239,7 +257,12 @@ def add_data_table(ws, headers, data_rows, start_row, title=None, col_widths=Non
             col_letter = get_column_letter(col_idx)
             cell = ws[f'{col_letter}{current_row}']
             cell.value = value
-            cell.alignment = Alignment(horizontal='left', vertical='top', wrap_text=True)
+
+            # Right-align purely numeric columns, left-align others
+            if col_idx in numeric_cols:
+                cell.alignment = Alignment(horizontal='right', vertical='top', wrap_text=True)
+            else:
+                cell.alignment = Alignment(horizontal='left', vertical='top', wrap_text=True)
             cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
             cell.border = Border(
                 left=Side(style='thin', color=BORDER_COLOR),

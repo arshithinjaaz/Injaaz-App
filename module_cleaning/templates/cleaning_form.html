@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='photo_upload_queue.css') }}">
+  <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
   <script src="{{ url_for('static', filename='photo_upload_queue.js') }}"></script>
   <script src="{{ url_for('static', filename='photo_queue_ui.js') }}"></script>
   <script src="{{ url_for('static', filename='form.js') }}"></script>
@@ -1725,13 +1726,25 @@
                     const pdfFilename = results.pdf_filename || 'cleaning_report.pdf';
                     
                     let linksHtml = '<strong>✅ Success!</strong> Reports generated.<br><br>';
+                    const modulePrefix = '/cleaning';
+                    const jobId = jobData?.job_id;
                     
-                    if (excelUrl) {
-                      linksHtml += `<a href="${excelUrl}" download="${excelFilename}" class="btn btn-success me-2 mt-2" style="text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">📥 Download Excel Report</a>`;
+                    if (excelUrl || jobId) {
+                      const downloadUrl = jobId ? `${modulePrefix}/download/${jobId}/excel` : excelUrl;
+                      linksHtml += `<a href="${downloadUrl}" download="${excelFilename}" class="btn btn-success me-2 mt-2" style="text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">📥 Download Excel Report</a>`;
+                      // Auto-download for mobile
+                      if (jobId && typeof downloadWithRetry !== 'undefined') {
+                        setTimeout(() => downloadWithRetry(downloadUrl, excelFilename, 2), 500);
+                      }
                     }
                     
-                    if (pdfUrl) {
-                      linksHtml += `<a href="${pdfUrl}" download="${pdfFilename}" class="btn btn-danger me-2 mt-2" style="text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">📥 Download PDF Report</a>`;
+                    if (pdfUrl || jobId) {
+                      const downloadUrl = jobId ? `${modulePrefix}/download/${jobId}/pdf` : pdfUrl;
+                      linksHtml += `<a href="${downloadUrl}" download="${pdfFilename}" class="btn btn-danger me-2 mt-2" style="text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">📥 Download PDF Report</a>`;
+                      // Auto-download for mobile
+                      if (jobId && typeof downloadWithRetry !== 'undefined') {
+                        setTimeout(() => downloadWithRetry(downloadUrl, pdfFilename, 2), 700);
+                      }
                     }
                     
                     linksHtml += '<div class="mt-2 text-muted" style="font-size:0.9em;">Click the buttons above to download your reports.</div>';
