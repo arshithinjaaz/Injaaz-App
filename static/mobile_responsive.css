@@ -547,3 +547,133 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Mobile-specific improvements */
+.is-mobile {
+  -webkit-tap-highlight-color: rgba(18, 84, 53, 0.2) !important;
+  -webkit-touch-callout: none !important;
+}
+
+/* Better download button styling for mobile */
+.is-mobile .download-links a,
+.is-mobile #downloadLinks a {
+  display: block !important;
+  width: 100% !important;
+  padding: 1rem !important;
+  margin-bottom: 0.75rem !important;
+  font-size: 1rem !important;
+  text-align: center !important;
+  border-radius: 8px !important;
+  min-height: 52px !important;
+  touch-action: manipulation !important;
+}
+
+/* Prevent text selection on mobile buttons */
+.is-mobile button,
+.is-mobile .btn,
+.is-mobile a.btn {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-tap-highlight-color: rgba(18, 84, 53, 0.3) !important;
+}
+
+/* Better signature pad on mobile */
+.is-mobile canvas.signature-pad,
+.is-mobile #techSignaturePad,
+.is-mobile #opManSignaturePad {
+  touch-action: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  background: white !important;
+  border: 2px solid #125435 !important;
+}
+
+/* File input improvements for mobile */
+.is-mobile input[type="file"] {
+  font-size: 16px !important;
+  min-height: 44px !important;
+  padding: 0.5rem !important;
+}
+
+/* Better modal on mobile */
+.is-mobile .modal-dialog {
+  margin: 0 !important;
+  max-width: 100% !important;
+  height: 100vh !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.is-mobile .modal-content {
+  border-radius: 0 !important;
+  max-height: 100vh !important;
+  overflow-y: auto !important;
+}
+
+/* Prevent horizontal scroll on mobile */
+.is-mobile body {
+  overflow-x: hidden !important;
+  position: relative !important;
+}
+
+.is-mobile .container {
+  overflow-x: hidden !important;
+}
+
+/* Better status messages on mobile */
+.is-mobile .alert {
+  font-size: 0.95rem !important;
+  padding: 1rem !important;
+  line-height: 1.5 !important;
+}
+
+/* Loading overlay improvements */
+.is-mobile .loading-overlay {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+/* Progress bar improvements */
+.is-mobile .progress {
+  height: 12px !important;
+  border-radius: 6px !important;
+}
+
+.is-mobile .progress-bar {
+  font-size: 0.75rem !important;
+  line-height: 12px !important;
+}
+
+/* Network status indicator */
+.network-status {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #dc3545;
+  color: white;
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  z-index: 10001;
+  display: none;
+}
+
+.network-status.online {
+  background: #28a745;
+}
+
+.network-status.show {
+  display: block;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

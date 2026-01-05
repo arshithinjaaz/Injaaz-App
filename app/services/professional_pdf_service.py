@@ -204,10 +204,28 @@ def create_info_table(data_list, col_widths=None):
         data_list: List of [label, value] pairs
         col_widths: Optional column widths
     """
+    styles = get_professional_styles()
+
+    # Wrap long text values in Paragraphs so they word-wrap nicely
+    table_data = []
+    for row in data_list:
+        new_row = []
+        for col_idx, cell in enumerate(row):
+            # Convert plain strings to Paragraphs for better wrapping
+            if isinstance(cell, str):
+                # First column is typically the label – make it bold
+                if col_idx == 0:
+                    new_row.append(Paragraph(f"<b>{cell}</b>", styles['Normal']))
+                else:
+                    new_row.append(Paragraph(cell, styles['Normal']))
+            else:
+                new_row.append(cell)
+        table_data.append(new_row)
+
     if not col_widths:
         col_widths = [2*inch, 4*inch]
     
-    table = Table(data_list, colWidths=col_widths)
+    table = Table(table_data, colWidths=col_widths)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, -1), ACCENT_COLOR),
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
@@ -235,7 +253,29 @@ def create_data_table(headers, rows, col_widths=None):
         rows: List of row data lists
         col_widths: Optional column widths
     """
-    table_data = [headers] + rows
+    styles = get_professional_styles()
+
+    # Build table data with Paragraphs so long text wraps instead of overflowing
+    table_data = []
+
+    # Header row – bold text
+    header_cells = []
+    for header in headers:
+        if isinstance(header, str):
+            header_cells.append(Paragraph(f"<b>{header}</b>", styles['Normal']))
+        else:
+            header_cells.append(header)
+    table_data.append(header_cells)
+
+    # Data rows
+    for row in rows:
+        new_row = []
+        for cell in row:
+            if isinstance(cell, str):
+                new_row.append(Paragraph(cell, styles['Normal']))
+            else:
+                new_row.append(cell)
+        table_data.append(new_row)
     
     table = Table(table_data, colWidths=col_widths)
     table.setStyle(TableStyle([

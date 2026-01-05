@@ -21,6 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='photo_upload_queue.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
   <script src="{{ url_for('static', filename='photo_upload_queue.js') }}"></script>
   <script src="{{ url_for('static', filename='photo_queue_ui.js') }}"></script>
   <style>
@@ -954,6 +955,13 @@
     function initSignaturePads() {
       const techCanvas = document.getElementById('techSignaturePad');
       const opCanvas = document.getElementById('opManSignaturePad');
+      
+      // Enhance touch events for mobile
+      if (typeof enhanceTouchEvents !== 'undefined') {
+        if (techCanvas) enhanceTouchEvents(techCanvas);
+        if (opCanvas) enhanceTouchEvents(opCanvas);
+      }
+      
       const techPad = new SignaturePad(techCanvas, {
         backgroundColor: 'rgb(255, 255, 255)',
         penColor: 'rgb(0, 0, 0)',
@@ -1657,8 +1665,12 @@
                   excelLink.href = `${modulePrefix}/download/${jobId}/excel`;
                   excelLink.textContent = '📥 Download Excel Report';
                   excelLink.style.display = 'block';
-                  // Trigger auto-download
-                  setTimeout(() => excelLink.click(), 500);
+                  // Use mobile-friendly download handler
+                  if (typeof downloadWithRetry !== 'undefined') {
+                    setTimeout(() => downloadWithRetry(`${modulePrefix}/download/${jobId}/excel`, results.excel_filename || 'hvac_report.xlsx', 2), 500);
+                  } else {
+                    setTimeout(() => excelLink.click(), 500);
+                  }
                 } else {
                   excelLink.style.display = 'none';
                 }
@@ -1667,8 +1679,12 @@
                   pdfLink.href = `${modulePrefix}/download/${jobId}/pdf`;
                   pdfLink.textContent = '📥 Download PDF Report';
                   pdfLink.style.display = 'block';
-                  // Trigger auto-download
-                  setTimeout(() => pdfLink.click(), 700);
+                  // Use mobile-friendly download handler
+                  if (typeof downloadWithRetry !== 'undefined') {
+                    setTimeout(() => downloadWithRetry(`${modulePrefix}/download/${jobId}/pdf`, results.pdf_filename || 'hvac_report.pdf', 2), 700);
+                  } else {
+                    setTimeout(() => pdfLink.click(), 700);
+                  }
                 } else {
                   pdfLink.style.display = 'none';
                 }
