@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='photo_upload_queue.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
   <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='production_logger.js') }}" defer></script>
   <script src="{{ url_for('static', filename='photo_upload_queue.js') }}"></script>
   <script src="{{ url_for('static', filename='photo_queue_ui.js') }}"></script>
   <style>
@@ -921,7 +922,9 @@
       var pollJobStatus = window.pollJobStatus;
     }
     
-    console.log('✅ pollJobStatus is now available globally');
+    if (window.safeLog) {
+      window.safeLog.log('✅ pollJobStatus is now available globally');
+    }
   </script>
 
   <script>
@@ -1805,10 +1808,17 @@
 
         try {
           const submitUrl = modulePrefix + '/submit-with-urls';
+          // Get JWT token from localStorage
+          const token = localStorage.getItem('access_token');
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
           const res = await fetch(submitUrl, { 
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            headers: headers,
+            body: JSON.stringify(payload),
+            credentials: 'include'  // Include cookies for JWT
           });
           
           if (!res.ok) {
@@ -1891,8 +1901,10 @@
               // Support both 'results' and 'result_data'
               const results = result.results || result.result_data || {};
               
-              console.log('Extracted results:', results);
-              console.log('Is done?', isDone, 'Status:', result.status, 'State:', result.state);
+              if (window.safeLog) {
+                window.safeLog.log('Extracted results:', results);
+                window.safeLog.log('Is done?', isDone, 'Status:', result.status, 'State:', result.state);
+              }
               
               if (isDone) {
                 const links = [];

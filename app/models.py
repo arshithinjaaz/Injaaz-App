@@ -22,6 +22,7 @@ class User(db.Model):
     full_name = db.Column(db.String(120))
     role = db.Column(db.String(20), default='user')  # 'admin', 'inspector', 'user'
     is_active = db.Column(db.Boolean, default=True)
+    password_changed = db.Column(db.Boolean, default=False)  # Track if password was changed from default
     # Module access permissions (admin has access to all by default)
     access_hvac = db.Column(db.Boolean, default=False)  # HVAC&MEP form access
     access_civil = db.Column(db.Boolean, default=False)  # Civil works form access

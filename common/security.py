@@ -97,13 +97,13 @@ def validate_json_request(required_fields=None):
         return wrapper
     return decorator
 
-def validate_file_upload(allowed_extensions=None, max_size_mb=10):
+def validate_file_upload(allowed_extensions=None, max_size_mb=None):
     """
     Decorator to validate file uploads
     
     Args:
         allowed_extensions: Set of allowed extensions (e.g., {'png', 'jpg'})
-        max_size_mb: Maximum file size in MB
+        max_size_mb: Maximum file size in MB (defaults to 10MB from config)
         
     Returns:
         Decorator function
@@ -123,6 +123,11 @@ def validate_file_upload(allowed_extensions=None, max_size_mb=10):
                 ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
                 if ext not in allowed_extensions:
                     return jsonify({"error": f"File type .{ext} not allowed. Allowed: {', '.join(allowed_extensions)}"}), 400
+            
+            # Use standardized max size from config if not specified
+            if max_size_mb is None:
+                from config import MAX_FILE_SIZE_MB
+                max_size_mb = MAX_FILE_SIZE_MB
             
             # Check size (if we can)
             file.seek(0, os.SEEK_END)

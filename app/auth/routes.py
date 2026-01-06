@@ -195,12 +195,16 @@ def login():
         # Log successful login
         log_audit(user.id, 'login', 'user', str(user.id))
         
+        # Check if password needs to be changed (for default admin)
+        requires_password_change = not user.password_changed
+        
         # Create response
         response = jsonify({
             'message': 'Login successful',
             'access_token': access_token,
             'refresh_token': refresh_token,
-            'user': user.to_dict()
+            'user': user.to_dict(),
+            'requires_password_change': requires_password_change
         })
         
         # Set JWT tokens in cookies for HTML link access
@@ -331,6 +335,7 @@ def change_password():
         
         # Update password
         user.set_password(data['new_password'])
+        user.password_changed = True  # Mark password as changed
         db.session.commit()
         
         # Revoke all existing sessions (force re-login)

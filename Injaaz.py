@@ -77,7 +77,12 @@ def create_app():
     app = Flask(__name__, static_folder='static', template_folder='templates')
 
     # Load configuration from config.py
-    app.config.from_object('config')
+    # Import config module and load all uppercase variables (config settings)
+    import config as config_module
+    # Use vars() to get only attributes defined in the module, not imported ones
+    for key, value in vars(config_module).items():
+        if key.isupper() and not key.startswith('_') and not callable(value):
+            app.config[key] = value
     
     # Validate configuration
     from common.config_validator import validate_config
@@ -159,6 +164,9 @@ def create_app():
                 logger.info(f"Found users table with {len(columns)} columns")
                 
                 missing_columns = []
+                # Check for password_changed column
+                if 'password_changed' not in columns:
+                    missing_columns.append('password_changed')
                 if 'access_hvac' not in columns:
                     missing_columns.append('access_hvac')
                 if 'access_civil' not in columns:
@@ -174,7 +182,7 @@ def create_app():
                         for col_name in missing_columns:
                             try:
                                 logger.info(f"Adding {col_name} column to users table...")
-                                # Use FALSE for PostgreSQL compatibility
+                                # Use FALSE for PostgreSQL compatibility (works for SQLite too)
                                 conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} BOOLEAN DEFAULT FALSE"))
                                 logger.info(f"✅ Added {col_name} column")
                             except Exception as col_error:
@@ -223,11 +231,21 @@ def create_app():
                             access_civil=True,
                             access_cleaning=True
                         )
-                        admin.set_password('Admin@123')  # Default password - should be changed!
+                        # Use environment variable for default password, or generate random one
+                        import secrets
+                        default_password = os.environ.get('DEFAULT_ADMIN_PASSWORD', None)
+                        if not default_password:
+                            # Generate a secure random password if not set
+                            default_password = secrets.token_urlsafe(16)
+                            logger.warning("⚠️  No DEFAULT_ADMIN_PASSWORD set - using generated password (check logs)")
+                        
+                        admin.set_password(default_password)
+                        admin.password_changed = False  # Force password change on first login
                         db.session.add(admin)
                         db.session.commit()
                         logger.info("✅ Default admin user created")
-                        logger.warning("⚠️  Default admin credentials: username='admin', password='Admin@123' - CHANGE IMMEDIATELY!")
+                        logger.warning(f"⚠️  Default admin credentials: username='admin', password='{default_password}' - CHANGE IMMEDIATELY!")
+                        logger.warning("⚠️  Password change will be required on first login")
                     else:
                         logger.info("✅ Admin user already exists")
                 except Exception as admin_create_error:

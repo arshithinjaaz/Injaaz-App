@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='photo_upload_queue.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='production_logger.js') }}" defer></script>
   <script src="{{ url_for('static', filename='photo_upload_queue.js') }}"></script>
   <script src="{{ url_for('static', filename='photo_queue_ui.js') }}"></script>
   <style>
@@ -1075,11 +1076,11 @@
             updatePhotoCount();
           },
           onQueueComplete: (stats) => {
-            console.log('✅ All uploads complete:', stats);
+            if (window.safeLog) window.safeLog.log('✅ All uploads complete:', stats);
             updatePhotoCount();
             // Show success message if all completed
             if (stats.completed === stats.total && stats.failed === 0) {
-              console.log(`✅ Successfully uploaded ${stats.completed} photo(s)`);
+              if (window.safeLog) window.safeLog.log(`✅ Successfully uploaded ${stats.completed} photo(s)`);
             }
           },
           onError: (error) => {
@@ -1763,10 +1764,17 @@
 
         try {
           const submitUrl = modulePrefix + '/submit-with-urls';
+          // Get JWT token from localStorage
+          const token = localStorage.getItem('access_token');
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
           const res = await fetch(submitUrl, { 
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            headers: headers,
+            body: JSON.stringify(payload),
+            credentials: 'include'  // Include cookies for JWT
           });
           
           if (!res.ok) {
