@@ -50,16 +50,32 @@ def admin_required(fn):
             
             from flask_jwt_extended import get_jwt_identity
             user_id = get_jwt_identity()
+            
+            if not user_id:
+                current_app.logger.warning("Admin check failed: No user ID in token")
+                return jsonify({'error': 'Unauthorized'}), 401
+            
             user = User.query.get(user_id)
             
-            if not user or user.role != 'admin':
+            if not user:
+                current_app.logger.warning(f"Admin check failed: User {user_id} not found")
+                return jsonify({'error': 'User not found'}), 404
+            
+            if not user.is_active:
+                current_app.logger.warning(f"Admin check failed: User {user_id} is inactive")
+                return jsonify({'error': 'User account is inactive'}), 403
+            
+            if user.role != 'admin':
+                current_app.logger.warning(f"Admin check failed: User {user_id} has role '{user.role}', not 'admin'")
                 return jsonify({'error': 'Admin access required'}), 403
             
             return fn(*args, **kwargs)
             
         except Exception as e:
+            import traceback
             current_app.logger.error(f"Admin check error: {str(e)}")
-            return jsonify({'error': 'Unauthorized'}), 401
+            current_app.logger.error(traceback.format_exc())
+            return jsonify({'error': 'Unauthorized', 'details': str(e) if current_app.debug else None}), 401
     
     return wrapper
 

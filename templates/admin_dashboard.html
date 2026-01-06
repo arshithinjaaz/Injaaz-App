@@ -262,6 +262,47 @@
     .btn-access:hover {
       background: var(--primary-dark);
     }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .documents-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .bulk-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .checkbox-select-all {
+      margin-right: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .checkbox-select-all input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .documents-table input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
     
     .modal {
       display: none;
@@ -388,6 +429,146 @@
       text-align: center;
       color: #92400e;
     }
+
+    .documents-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    .documents-table th,
+    .documents-table td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .documents-table th {
+      background: var(--bg-light);
+      font-weight: 600;
+      color: var(--text-dark);
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .documents-table td {
+      font-size: 0.95rem;
+    }
+
+    .documents-table tr:hover {
+      background: var(--bg-light);
+    }
+
+    .module-badge {
+      display: inline-block;
+      padding: 0.375rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .module-badge.hvac {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .module-badge.civil {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .module-badge.cleaning {
+      background: #fce7f3;
+      color: #9f1239;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-badge.completed {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-badge.processing {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-badge.submitted {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .status-badge.draft {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .download-links {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-download {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.875rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      transition: all 0.3s ease;
+    }
+
+    .btn-download:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(18, 84, 53, 0.3);
+    }
+
+    .btn-download:disabled {
+      background: #d1d5db;
+      color: #9ca3af;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .user-name {
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .user-email {
+      font-size: 0.85rem;
+      color: var(--text-light);
+    }
+
+    .no-documents {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-light);
+    }
     
     @media (max-width: 768px) {
       .navbar {
@@ -446,7 +627,8 @@
         font-size: 1.25rem !important;
       }
       
-      .users-table {
+      .users-table,
+      .documents-table {
         font-size: 0.8rem !important;
         display: block !important;
         overflow-x: auto !important;
@@ -455,27 +637,43 @@
       
       .users-table thead,
       .users-table tbody,
-      .users-table tr {
+      .users-table tr,
+      .documents-table thead,
+      .documents-table tbody,
+      .documents-table tr {
         display: block !important;
       }
       
       .users-table th,
-      .users-table td {
+      .users-table td,
+      .documents-table th,
+      .documents-table td {
         padding: 0.75rem 0.5rem !important;
         display: block !important;
         text-align: left !important;
         border-bottom: 1px solid #e5e7eb !important;
       }
       
-      .users-table th {
+      .users-table th,
+      .documents-table th {
         display: none !important;
       }
       
-      .users-table td:before {
+      .users-table td:before,
+      .documents-table td:before {
         content: attr(data-label) ": " !important;
         font-weight: 600 !important;
         display: inline-block !important;
         width: 40% !important;
+      }
+
+      .download-links {
+        flex-direction: column !important;
+      }
+
+      .btn-download {
+        width: 100% !important;
+        justify-content: center !important;
       }
       
       .action-buttons {
@@ -514,7 +712,8 @@
         padding: 1rem !important;
       }
       
-      .users-table {
+      .users-table,
+      .documents-table {
         font-size: 0.75rem !important;
       }
     }
@@ -535,8 +734,8 @@
 
   <div class="container">
     <div class="page-header">
-      <h1 class="page-title">User Management</h1>
-      <p class="page-subtitle">Manage users, permissions, and access controls</p>
+      <h1 class="page-title">Administrative Dashboard</h1>
+      <p class="page-subtitle">Manage users, permissions, access controls, and view all generated documents</p>
     </div>
 
     <div id="alertContainer"></div>
@@ -547,6 +746,27 @@
       </div>
       <div id="usersTableContainer">
         <p>Loading users...</p>
+      </div>
+    </div>
+
+    <div class="users-section">
+      <div class="section-header">
+        <h2 class="section-title">Generated Documents</h2>
+        <button class="btn btn-primary" onclick="loadDocuments()">Refresh</button>
+      </div>
+      <div class="documents-header">
+        <div class="checkbox-select-all">
+          <input type="checkbox" id="selectAllDocuments" onchange="toggleSelectAll()">
+          <label for="selectAllDocuments">Select All</label>
+        </div>
+        <div class="bulk-actions">
+          <button class="btn btn-danger" onclick="deleteSelectedDocuments()" id="deleteSelectedBtn" disabled>
+            Delete Selected
+          </button>
+        </div>
+      </div>
+      <div id="documentsTableContainer">
+        <p>Loading documents...</p>
       </div>
     </div>
   </div>
@@ -678,6 +898,7 @@
                   ${user.is_active ? 'Deactivate' : 'Activate'}
                 </button>
                 ${user.role !== 'admin' ? `<button class="btn btn-sm btn-access" onclick="openAccessModal(${user.id})">Manage Access</button>` : ''}
+                <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id}, '${user.username}')" id="deleteUserBtn_${user.id}">Delete</button>
               </div>
             </td>
           </tr>
@@ -827,8 +1048,246 @@
       }
     });
 
-    // Load users on page load
-    document.addEventListener('DOMContentLoaded', loadUsers);
+    // Documents Management
+    let documents = [];
+
+    async function loadDocuments() {
+      try {
+        const response = await fetch('/api/admin/documents', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          showAlert('Access denied. Admin privileges required.', 'error');
+          return;
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          documents = data.documents;
+          renderDocumentsTable();
+        } else {
+          showAlert('Failed to load documents', 'error');
+          document.getElementById('documentsTableContainer').innerHTML = '<p class="no-documents">Failed to load documents</p>';
+        }
+      } catch (error) {
+        console.error('Error loading documents:', error);
+        showAlert('Error loading documents', 'error');
+        document.getElementById('documentsTableContainer').innerHTML = '<p class="no-documents">Error loading documents</p>';
+      }
+    }
+
+    function renderDocumentsTable() {
+      const container = document.getElementById('documentsTableContainer');
+      
+      if (documents.length === 0) {
+        container.innerHTML = '<p class="no-documents">No documents found.</p>';
+        return;
+      }
+
+      let html = `
+        <table class="documents-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;"><input type="checkbox" id="selectAllHeader" onchange="toggleSelectAll()"></th>
+              <th>Document ID</th>
+              <th>Module</th>
+              <th>Site/Project</th>
+              <th>Visit Date</th>
+              <th>Created By</th>
+              <th>Status</th>
+              <th>Created At</th>
+              <th>Downloads</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      documents.forEach(doc => {
+        const moduleClass = doc.module_type === 'hvac_mep' ? 'hvac' : 
+                           doc.module_type === 'civil' ? 'civil' : 'cleaning';
+        const statusClass = doc.status === 'completed' ? 'completed' :
+                           doc.status === 'processing' ? 'processing' :
+                           doc.status === 'submitted' ? 'submitted' : 'draft';
+        
+        // Fix date formatting - use GST (Gulf Standard Time, UTC+4)
+        // GST is same as Asia/Dubai timezone
+        const visitDate = doc.visit_date ? new Date(doc.visit_date + 'T00:00:00').toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'Asia/Dubai'  // GST = UTC+4
+        }) : 'N/A';
+        
+        // Format created_at properly - use GST (Gulf Standard Time, UTC+4)
+        let createdDate = 'N/A';
+        if (doc.created_at) {
+          // Parse the ISO string - backend now sends with 'Z' to indicate UTC
+          const date = new Date(doc.created_at);
+          // Check if date is valid
+          if (!isNaN(date.getTime())) {
+            // Use Asia/Dubai timezone which is GST (UTC+4)
+            // The toLocaleString will automatically convert from UTC to GST
+            createdDate = date.toLocaleString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+              timeZone: 'Asia/Dubai'  // GST = UTC+4
+            }) + ' (GST)';
+          }
+        }
+        
+        const userName = doc.user ? (doc.user.full_name || doc.user.username) : 'Unknown';
+        const userEmail = doc.user ? doc.user.email : 'N/A';
+
+        html += `
+          <tr>
+            <td data-label="Select"><input type="checkbox" class="document-checkbox" value="${doc.submission_id}" onchange="updateDeleteButton()"></td>
+            <td data-label="Document ID"><code style="font-size: 0.85rem;">${doc.submission_id}</code></td>
+            <td data-label="Module"><span class="module-badge ${moduleClass}">${doc.module_display}</span></td>
+            <td data-label="Site/Project"><strong>${doc.site_name}</strong></td>
+            <td data-label="Visit Date">${visitDate}</td>
+            <td data-label="Created By">
+              <div class="user-info">
+                <span class="user-name">${userName}</span>
+                <span class="user-email">${userEmail}</span>
+              </div>
+            </td>
+            <td data-label="Status"><span class="status-badge ${statusClass}">${doc.status}</span></td>
+            <td data-label="Created At">${createdDate}</td>
+            <td data-label="Downloads">
+              <div class="download-links">
+                ${doc.excel_url ? `
+                  <a href="${doc.excel_url}" target="_blank" class="btn-download" title="Download Excel">
+                    📊 Excel
+                  </a>
+                ` : '<button class="btn-download" disabled title="Excel not available">📊 Excel</button>'}
+                ${doc.pdf_url ? `
+                  <a href="${doc.pdf_url}" target="_blank" class="btn-download" title="Download PDF">
+                    📄 PDF
+                  </a>
+                ` : '<button class="btn-download" disabled title="PDF not available">📄 PDF</button>'}
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+          </tbody>
+        </table>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    // Delete user function
+    async function deleteUser(userId, username) {
+      // Get current user ID from localStorage
+      let currentUserId = null;
+      try {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          currentUserId = user.id;
+        }
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+      
+      // Prevent deleting yourself
+      if (userId === currentUserId) {
+        showAlert('You cannot delete your own account', 'error');
+        return;
+      }
+      
+      if (!confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showAlert(data.message, 'success');
+          loadUsers();
+        } else {
+          showAlert(data.error || 'Failed to delete user', 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        showAlert('Error deleting user', 'error');
+      }
+    }
+
+    // Documents bulk delete functions
+    function toggleSelectAll() {
+      const selectAll = document.getElementById('selectAllDocuments');
+      const checkboxes = document.querySelectorAll('.document-checkbox');
+      checkboxes.forEach(cb => cb.checked = selectAll.checked);
+      updateDeleteButton();
+    }
+
+    function updateDeleteButton() {
+      const checked = document.querySelectorAll('.document-checkbox:checked');
+      const deleteBtn = document.getElementById('deleteSelectedBtn');
+      deleteBtn.disabled = checked.length === 0;
+    }
+
+    async function deleteSelectedDocuments() {
+      const checked = document.querySelectorAll('.document-checkbox:checked');
+      if (checked.length === 0) {
+        showAlert('Please select at least one document to delete', 'error');
+        return;
+      }
+
+      const submissionIds = Array.from(checked).map(cb => cb.value);
+      const count = submissionIds.length;
+      
+      if (!confirm(`Are you sure you want to delete ${count} document(s)? This action cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/admin/documents', {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ submission_ids: submissionIds })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showAlert(data.message || `Successfully deleted ${count} document(s)`, 'success');
+          loadDocuments();
+        } else {
+          showAlert(data.error || 'Failed to delete documents', 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting documents:', error);
+        showAlert('Error deleting documents', 'error');
+      }
+    }
+
+    // Load users and documents on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadUsers();
+      loadDocuments();
+    });
   </script>
 </body>
 </html>

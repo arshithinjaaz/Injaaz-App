@@ -25,6 +25,23 @@ from app.middleware import token_required
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from app.services.cloudinary_service import upload_local_file
 
+# Rate limiting helper
+def get_limiter():
+    """Get rate limiter from current app"""
+    try:
+        return current_app.limiter
+    except (AttributeError, RuntimeError):
+        return None
+
+def rate_limit_if_available(limit_str):
+    """Decorator to apply rate limiting if limiter is available"""
+    def decorator(f):
+        limiter = get_limiter()
+        if limiter:
+            return limiter.limit(limit_str)(f)
+        return f
+    return decorator
+
 logger = logging.getLogger(__name__)
 
 cleaning_bp = Blueprint('cleaning', __name__, url_prefix='/cleaning', template_folder='templates')
@@ -76,7 +93,7 @@ def download_file(job_id, file_type):
         
         if not results:
             logger.error(f"Job results not found for {job_id}")
-            return jsonify({"error": "Job results not found"}), 404
+            return error_response("Job results not found", status_code=404, error_code='NOT_FOUND')
         
         # Get file URL and filename based on file_type
         if file_type == 'excel':
@@ -86,10 +103,10 @@ def download_file(job_id, file_type):
             file_url = results.get('pdf') or results.get('pdf_url')
             filename = results.get('pdf_filename') or 'cleaning_report.pdf'
         else:
-            return jsonify({"error": "Invalid file type"}), 400
+            return error_response("Invalid file type", status_code=400, error_code='VALIDATION_ERROR')
         
         if not file_url:
-            return jsonify({"error": f"{file_type.upper()} file URL not found"}), 404
+            return error_response(f"{file_type.upper()} file URL not found", status_code=404, error_code='NOT_FOUND')
         
         # Check if it's a Cloudinary URL
         if 'cloudinary.com' in file_url:
@@ -106,7 +123,7 @@ def download_file(job_id, file_type):
                 
                 if len(file_content) == 0:
                     logger.error(f"Empty file content received from Cloudinary")
-                    return jsonify({"error": "File content is empty"}), 500
+                    return error_response("File content is empty", status_code=500, error_code='STORAGE_ERROR')
                 
                 return send_file(
                     file_data,
@@ -117,21 +134,21 @@ def download_file(job_id, file_type):
             except Exception as e:
                 logger.error(f"Error fetching from Cloudinary: {str(e)}")
                 logger.error(traceback.format_exc())
-                return jsonify({"error": f"Failed to fetch file: {str(e)}"}), 500
+                return error_response("Failed to fetch file from Cloudinary", status_code=500, error_code='STORAGE_ERROR')
         else:
             # Local URL
             local_filename = file_url.lstrip('/').replace('generated/', '')
             local_path = os.path.join(GENERATED_DIR, local_filename)
             
             if not os.path.exists(local_path):
-                return jsonify({"error": "File not found locally"}), 404
+                return error_response("File not found locally", status_code=404, error_code='NOT_FOUND')
             
             return send_file(local_path, as_attachment=True, download_name=filename)
     
     except Exception as e:
         logger.error(f"Download error: {str(e)}")
         logger.error(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
+        return error_response("Download failed", status_code=500, error_code='INTERNAL_ERROR')
 
 try:
     from .cleaning_generators import create_excel_report, create_pdf_report
@@ -182,20 +199,21 @@ def form():
 
 
 @cleaning_bp.route('/submit', methods=['POST'])
+@rate_limit_if_available('10 per minute')  # Limit form submissions
 def submit():
     """Handle form submission and start background job."""
     try:
         data = request.get_json()
         
         if not data:
-            return jsonify({'error': 'No data received'}), 400
+            return error_response('No data received', status_code=400, error_code='VALIDATION_ERROR')
         
         # Validate required fields
         required_fields = ['client_name', 'project_name', 'date_of_visit']
         missing = [f for f in required_fields if not data.get(f) or not str(data.get(f)).strip()]
         if missing:
             logger.warning(f"Missing required fields: {missing}")
-            return jsonify({'error': f"Missing required fields: {', '.join(missing)}"}), 400
+            return error_response(f"Missing required fields: {', '.join(missing)}", status_code=400, error_code='VALIDATION_ERROR')
         
         # Validate date
         date_str = data.get('date_of_visit', '')
@@ -203,9 +221,9 @@ def submit():
             try:
                 visit_date = datetime.strptime(date_str, '%Y-%m-%d').date()
                 if visit_date > datetime.now().date():
-                    return jsonify({'error': 'Visit date cannot be in the future'}), 400
+                    return error_response('Visit date cannot be in the future', status_code=400, error_code='VALIDATION_ERROR')
             except ValueError:
-                return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+                return error_response('Invalid date format. Use YYYY-MM-DD', status_code=400, error_code='VALIDATION_ERROR')
         
         GENERATED_DIR = current_app.config['GENERATED_DIR']
         UPLOADS_DIR = current_app.config['UPLOADS_DIR']
@@ -268,7 +286,7 @@ def submit():
                 }
             except Exception as e:
                 logger.error(f"Failed to upload tech signature: {e}")
-                return jsonify({'error': f'Cloud storage error for tech signature: {str(e)}'}), 500
+                return error_response('Cloud storage error for tech signature', status_code=500, error_code='STORAGE_ERROR')
         
         if contact_signature and contact_signature.startswith('data:image'):
             try:
@@ -287,18 +305,33 @@ def submit():
                 }
             except Exception as e:
                 logger.error(f"Failed to upload contact signature: {e}")
-                return jsonify({'error': f'Cloud storage error for contact signature: {str(e)}'}), 500
+                return error_response('Cloud storage error for contact signature', status_code=500, error_code='STORAGE_ERROR')
         
         # Save base URL for report generation
         data['base_url'] = request.host_url.rstrip('/')
         data['created_at'] = datetime.utcnow().isoformat()
+        
+        # Get user_id from JWT token if available
+        user_id = None
+        try:
+            from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+            try:
+                verify_jwt_in_request(optional=True)
+                user_id = get_jwt_identity()
+                if user_id:
+                    logger.info(f"✅ Submission will be associated with user_id: {user_id}")
+            except Exception:
+                pass  # No token or invalid token - submission will be anonymous
+        except Exception:
+            pass  # JWT not available
         
         # Create submission in database
         submission = create_submission_db(
             module_type='cleaning',
             form_data=data,
             site_name=data.get('project_name'),
-            visit_date=data.get('date_of_visit')
+            visit_date=data.get('date_of_visit'),
+            user_id=user_id
         )
         submission_id = submission.submission_id
         
@@ -325,7 +358,7 @@ def submit():
             logger.info(f"Job {job_id} submitted to executor")
         else:
             logger.error("ThreadPoolExecutor not found in app config")
-            return jsonify({'error': 'Background task executor not available'}), 500
+            return error_response('Background task executor not available', status_code=500, error_code='SERVICE_UNAVAILABLE')
         
         return jsonify({
             'status': 'queued',

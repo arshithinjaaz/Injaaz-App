@@ -11,7 +11,9 @@ UPLOADS_DIR = os.path.join(GENERATED_DIR, "uploads")
 JOBS_DIR = os.path.join(GENERATED_DIR, "jobs")
 
 # simple limits
+# Standardized file upload limits (10MB for all modules)
 MAX_UPLOAD_FILESIZE = 10 * 1024 * 1024  # 10MB per file
+MAX_FILE_SIZE_MB = 10  # Standardized max file size in MB
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf', 'xlsx', 'csv'}
 
 # To increase total upload size (all files combined):

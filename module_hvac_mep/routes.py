@@ -33,8 +33,24 @@ from common.db_utils import (
 from app.models import db, User
 from app.middleware import token_required, module_access_required
 from app.services.cloudinary_service import upload_local_file
-from app.services.cloudinary_service import upload_local_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
+
+# Rate limiting helper (import from auth routes)
+def get_limiter():
+    """Get rate limiter from current app"""
+    try:
+        return current_app.limiter
+    except (AttributeError, RuntimeError):
+        return None
+
+def rate_limit_if_available(limit_str):
+    """Decorator to apply rate limiting if limiter is available"""
+    def decorator(f):
+        limiter = get_limiter()
+        if limiter:
+            return limiter.limit(limit_str)(f)
+        return f
+    return decorator
 
 # Import BOTH report generators
 try:
@@ -183,6 +199,7 @@ def save_signature_dataurl(dataurl, uploads_dir, prefix="signature"):
 
 # ---------- Submit route (handles multi-item + per-item photos + signatures) ----------
 @hvac_mep_bp.route("/submit", methods=["POST"])
+@rate_limit_if_available('10 per minute')  # Limit form submissions
 def submit():
     GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
 
@@ -201,16 +218,16 @@ def submit():
         
         # Validate required fields
         if not site_name or not site_name.strip():
-            return jsonify({"error": "Site name is required"}), 400
+            return error_response("Site name is required", status_code=400, error_code='VALIDATION_ERROR')
         
         # Validate date
         if visit_date:
             try:
                 parsed_date = datetime.strptime(visit_date, '%Y-%m-%d').date()
                 if parsed_date > datetime.now().date():
-                    return jsonify({"error": "Visit date cannot be in the future"}), 400
+                    return error_response("Visit date cannot be in the future", status_code=400, error_code='VALIDATION_ERROR')
             except ValueError:
-                return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+                return error_response("Invalid date format. Use YYYY-MM-DD", status_code=400, error_code='VALIDATION_ERROR')
 
         # Signatures (data URLs). We'll persist them to files.
         tech_sig_dataurl = request.form.get("tech_signature") or request.form.get("tech_signature_data") or ""
@@ -319,11 +336,30 @@ def submit():
             "created_at": datetime.utcnow().isoformat(),
         }
 
+        # Get user_id from JWT token if available
+        user_id = None
+        try:
+            from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+            try:
+                verify_jwt_in_request(optional=True)
+                user_id = get_jwt_identity()
+                if user_id:
+                    logger.info(f"✅ Submission will be associated with user_id: {user_id}")
+                else:
+                    logger.warning("⚠️ JWT token verified but no user_id found")
+            except Exception as jwt_error:
+                logger.debug(f"JWT token not available or invalid: {jwt_error}")
+                # No token or invalid token - submission will be anonymous
+        except Exception as e:
+            logger.debug(f"JWT verification error: {e}")
+            pass  # JWT not available
+        
         submission = create_submission_db(
             module_type='hvac_mep',
             form_data=submission_record,
             site_name=site_name,
-            visit_date=visit_date
+            visit_date=visit_date,
+            user_id=user_id
         )
         sub_id = submission.submission_id
 
@@ -364,7 +400,7 @@ def submit():
     except Exception as e:
         logger.error(f"Submission failed: {str(e)}")
         logger.error(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500
+        return error_response('Submission failed', status_code=500, error_code='INTERNAL_ERROR')
 
 
 @hvac_mep_bp.route("/status/<job_id>", methods=["GET"])
@@ -372,12 +408,12 @@ def status(job_id):
     try:
         job_data = get_job_status_db(job_id)
         if not job_data:
-            return jsonify({"error": "unknown job"}), 404
+            return error_response("Job not found", status_code=404, error_code='NOT_FOUND')
         return jsonify(job_data)
     except Exception as e:
         logger.error(f"Status check failed for {job_id}: {e}")
         logger.error(traceback.format_exc())
-        return jsonify({"error": "Status check failed", "details": str(e)}), 500
+        return error_response("Status check failed", status_code=500, error_code='INTERNAL_ERROR')
 
 
 @hvac_mep_bp.route("/generated/<path:filename>", methods=["GET"])
@@ -406,8 +442,8 @@ def download_file(job_id, file_type):
             logger.error(f"Job not found: {job_id}")
             return jsonify({"error": "Job not found"}), 404
         
-        # Debug: log the job_data structure
-        logger.info(f"Job data for {job_id}: {type(job_data)}")
+        # Log the job_data structure (debug level only)
+        logger.debug(f"Job data for {job_id}: {type(job_data)}")
         logger.debug(f"Job data keys: {list(job_data.keys()) if isinstance(job_data, dict) else 'Not a dict'}")
         
         # Extract results - try multiple possible keys
@@ -420,14 +456,14 @@ def download_file(job_id, file_type):
                     import json
                     results = json.loads(results)
                 except:
-                    logger.warning(f"Failed to parse results as JSON: {results}")
+                    logger.warning(f"Failed to parse results as JSON")
                     results = {}
         
         if not results:
-            logger.error(f"Job results not found for {job_id}. Job data: {job_data}")
-            return jsonify({"error": "Job results not found"}), 404
+            logger.error(f"Job results not found for {job_id}")
+            return error_response("Job results not found", status_code=404, error_code='NOT_FOUND')
         
-        logger.info(f"Results for {job_id}: {list(results.keys()) if isinstance(results, dict) else type(results)}")
+        logger.debug(f"Results for {job_id}: {list(results.keys()) if isinstance(results, dict) else type(results)}")
         
         # Get file URL and filename based on file_type
         if file_type == 'excel':
@@ -437,16 +473,16 @@ def download_file(job_id, file_type):
             file_url = results.get('pdf') or results.get('pdf_url')
             filename = results.get('pdf_filename', 'hvac_report.pdf')
         else:
-            return jsonify({"error": "Invalid file type. Use 'excel' or 'pdf'"}), 400
+            return error_response("Invalid file type. Use 'excel' or 'pdf'", status_code=400, error_code='VALIDATION_ERROR')
         
         if not file_url:
-            return jsonify({"error": f"{file_type.upper()} file URL not found"}), 404
+            return error_response(f"{file_type.upper()} file URL not found", status_code=404, error_code='NOT_FOUND')
         
         # Check if it's a Cloudinary URL or local URL
         if file_url.startswith('http://') or file_url.startswith('https://'):
             # Cloudinary URL - fetch and serve
             try:
-                logger.info(f"Fetching {file_type.upper()} file from Cloudinary: {file_url}")
+                logger.debug(f"Fetching {file_type.upper()} file from Cloudinary: {file_url}")
                 # Remove ?attachment=true if present
                 clean_url = file_url.split('?')[0]
                 logger.debug(f"Clean URL (removed query params): {clean_url}")
@@ -454,7 +490,7 @@ def download_file(job_id, file_type):
                 # Use the original URL directly - Cloudinary URLs work fine as-is
                 response = requests.get(clean_url, timeout=60, stream=True)
                 response.raise_for_status()
-                logger.info(f"Successfully fetched {file_type.upper()} file, status: {response.status_code}, content-length: {response.headers.get('Content-Length', 'unknown')}")
+                logger.debug(f"Successfully fetched {file_type.upper()} file, status: {response.status_code}, content-length: {response.headers.get('Content-Length', 'unknown')}")
                 
                 # Read file content into BytesIO
                 file_content = response.content
@@ -472,7 +508,7 @@ def download_file(job_id, file_type):
                     logger.error(f"Empty file content received from Cloudinary: {file_url}")
                     return jsonify({"error": "File content is empty"}), 500
                 
-                logger.info(f"Serving file: {filename}, size: {len(file_content)} bytes, type: {mimetype}")
+                logger.debug(f"Serving file: {filename}, size: {len(file_content)} bytes, type: {mimetype}")
                 
                 # Serve with download headers
                 return send_file(
@@ -484,7 +520,7 @@ def download_file(job_id, file_type):
             except Exception as e:
                 logger.error(f"Error fetching from Cloudinary: {str(e)}")
                 logger.error(traceback.format_exc())
-                return jsonify({"error": f"Failed to fetch file from Cloudinary: {str(e)}"}), 500
+                return error_response("Failed to fetch file from Cloudinary", status_code=500, error_code='STORAGE_ERROR')
         else:
             # Local URL - extract filename and serve from local storage
             # Remove leading slash and 'generated/' if present
@@ -492,14 +528,14 @@ def download_file(job_id, file_type):
             local_path = os.path.join(GENERATED_DIR, local_filename)
             
             if not os.path.exists(local_path):
-                return jsonify({"error": "File not found locally"}), 404
+                return error_response("File not found locally", status_code=404, error_code='NOT_FOUND')
             
             return send_file(local_path, as_attachment=True, download_name=filename)
     
     except Exception as e:
         logger.error(f"Download error: {str(e)}")
         logger.error(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
+        return error_response("Download failed", status_code=500, error_code='INTERNAL_ERROR')
 
 def process_job(sub_id, job_id, config, app):
     """Background worker: Generate BOTH Excel AND PDF reports"""
@@ -520,6 +556,7 @@ def process_job(sub_id, job_id, config, app):
 # ---------- Progressive Upload Endpoints ----------
 
 @hvac_mep_bp.route("/upload-photo", methods=["POST"])
+@rate_limit_if_available('20 per minute')  # Allow multiple photos per submission
 def upload_photo():
     """
     Upload a single photo immediately to cloud storage.
@@ -532,12 +569,12 @@ def upload_photo():
         # Expect a single file with field name 'photo'
         if 'photo' not in request.files:
             logger.error("No photo file in request")
-            return jsonify({"success": False, "error": "No photo file provided"}), 400
+            return error_response("No photo file provided", status_code=400, error_code='VALIDATION_ERROR')
         
         photo_file = request.files['photo']
         if photo_file.filename == '':
             logger.error("Empty filename provided")
-            return jsonify({"success": False, "error": "Empty filename"}), 400
+            return error_response("Empty filename", status_code=400, error_code='VALIDATION_ERROR')
         
         logger.info(f"Uploading photo: {photo_file.filename}")
         
@@ -547,7 +584,7 @@ def upload_photo():
             
             if not result or not result.get("url"):
                 logger.error("Upload returned no URL")
-                return jsonify({"success": False, "error": "Upload failed - no URL returned"}), 500
+                return error_response("Upload failed - no URL returned", status_code=500, error_code='STORAGE_ERROR')
             
             logger.info(f"✅ Photo uploaded successfully: {result['url']}")
             
@@ -578,15 +615,16 @@ def upload_photo():
                 })
             except Exception as local_error:
                 logger.error(f"Local fallback also failed: {str(local_error)}")
-                return jsonify({"success": False, "error": f"Both cloud and local upload failed: {str(local_error)}"}), 500
+                return error_response("Both cloud and local upload failed", status_code=500, error_code='STORAGE_ERROR')
         
     except Exception as e:
         logger.error(f"❌ Photo upload failed completely: {str(e)}")
         logger.error(traceback.format_exc())
-        return jsonify({"success": False, "error": str(e)}), 500
+        return error_response("Photo upload failed", status_code=500, error_code='INTERNAL_ERROR')
 
 
 @hvac_mep_bp.route("/submit-with-urls", methods=["POST"])
+@rate_limit_if_available('10 per minute')  # Limit form submissions
 def submit_with_urls():
     """
     Submit form data where photos are already uploaded to cloud.
@@ -680,12 +718,31 @@ def submit_with_urls():
             "base_url": request.host_url.rstrip('/')
         }
         
+        # Get user_id from JWT token if available
+        user_id = None
+        try:
+            from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+            try:
+                verify_jwt_in_request(optional=True)
+                user_id = get_jwt_identity()
+                if user_id:
+                    logger.info(f"✅ Submission will be associated with user_id: {user_id}")
+                else:
+                    logger.warning("⚠️ JWT token verified but no user_id found")
+            except Exception as jwt_error:
+                logger.debug(f"JWT token not available or invalid: {jwt_error}")
+                # No token or invalid token - submission will be anonymous
+        except Exception as e:
+            logger.debug(f"JWT verification error: {e}")
+            pass  # JWT not available
+        
         # Save submission to database
         submission_db = create_submission_db(
             module_type='hvac_mep',
             form_data=submission_data,
             site_name=site_name,
-            visit_date=visit_date
+            visit_date=visit_date,
+            user_id=user_id
         )
         sub_id = submission_db.submission_id
         
