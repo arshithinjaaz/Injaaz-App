@@ -126,9 +126,10 @@ def get_paths():
 @hvac_mep_bp.route("/form", methods=["GET"])
 @jwt_required()
 def index():
-    """HVAC&MEP form - requires authentication and module access"""
-    from flask import redirect, url_for
+    """HVAC&MEP form - requires authentication and module access. Supports editing existing submissions."""
+    from flask import redirect, url_for, request
     from flask_jwt_extended import get_jwt_identity
+    from app.models import Submission
     
     try:
         user_id = get_jwt_identity()
@@ -139,14 +140,62 @@ def index():
                                  module='HVAC & MEP',
                                  message='Your account is inactive. Please contact an administrator.'), 403
         
-        if not user.has_module_access('hvac_mep'):
-            return render_template('access_denied.html',
-                                 module='HVAC & MEP',
-                                 message='You do not have access to this module. Please contact an administrator to grant access.'), 403
+        # Allow admins, supervisors, and managers to edit submissions even if they don't have module access
+        edit_submission_id = request.args.get('edit')
+        submission_data = None
+        is_edit_mode = False
         
-        return render_template("hvac_mep_form.html")
+        if edit_submission_id:
+            # Check if user can edit (admin, or supervisor/manager of this submission)
+            submission = Submission.query.filter_by(submission_id=edit_submission_id).first()
+            if not submission:
+                return render_template('access_denied.html',
+                                     module='HVAC & MEP',
+                                     message='Submission not found.'), 404
+            
+            # Allow editing if: admin, or supervisor/manager assigned to this submission
+            can_edit = False
+            if user.role == 'admin':
+                can_edit = True
+            elif hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id:
+                can_edit = True
+            elif hasattr(submission, 'manager_id') and submission.manager_id == user.id:
+                can_edit = True
+            
+            if not can_edit:
+                return render_template('access_denied.html',
+                                     module='HVAC & MEP',
+                                     message='You do not have permission to edit this submission.'), 403
+            
+            # Load submission data for editing
+            submission_dict = submission.to_dict()
+            # Parse form_data if it's a string
+            form_data = submission_dict.get('form_data', {})
+            if isinstance(form_data, str):
+                try:
+                    form_data = json.loads(form_data)
+                except:
+                    form_data = {}
+            
+            submission_data = {
+                'submission_id': submission.submission_id,
+                'site_name': submission.site_name or '',
+                'visit_date': submission.visit_date.isoformat() if submission.visit_date else '',
+                'form_data': form_data,
+                'is_edit_mode': True
+            }
+            is_edit_mode = True
+        else:
+            # Normal form access - check module access
+            if not user.has_module_access('hvac_mep'):
+                return render_template('access_denied.html',
+                                     module='HVAC & MEP',
+                                     message='You do not have access to this module. Please contact an administrator to grant access.'), 403
+        
+        return render_template("hvac_mep_form.html", submission_data=submission_data, is_edit_mode=is_edit_mode)
     except Exception as e:
         logger.error(f"Error checking module access: {str(e)}")
+        logger.error(traceback.format_exc())
         # If JWT check fails, redirect to login
         return redirect(url_for('login_page'))
 

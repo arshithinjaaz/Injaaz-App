@@ -201,7 +201,9 @@
     .access-badges {
       display: flex;
       gap: 0.5rem;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      align-items: center;
+      white-space: nowrap;
     }
     
     .access-badge {
@@ -514,6 +516,62 @@
       color: #374151;
     }
 
+    .workflow-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
+    .workflow-badge.submitted {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .workflow-badge.notified {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .workflow-badge.reviewing {
+      background: #fce7f3;
+      color: #9f1239;
+    }
+
+    .workflow-badge.approved {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .workflow-badge.rejected {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .designation-select {
+      min-width: 120px;
+      font-size: 0.875rem;
+      padding: 0.375rem 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: white;
+      color: var(--text-dark);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .designation-select:hover {
+      border-color: var(--primary);
+    }
+    
+    .designation-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
     .download-links {
       display: flex;
       gap: 0.5rem;
@@ -808,6 +866,46 @@
     </div>
   </div>
 
+  <!-- Edit Submission Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Submission</h2>
+        <button type="button" class="modal-close" onclick="closeEditModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+      </div>
+      <form id="editForm">
+        <input type="hidden" id="editSubmissionId">
+        <div class="form-group">
+          <label class="form-label">Submission ID:</label>
+          <input type="text" id="editSubmissionIdDisplay" class="form-control" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Module:</label>
+          <input type="text" id="editModule" class="form-control" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Site/Project Name: <span style="color: red;">*</span></label>
+          <input type="text" id="editSiteName" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Visit Date: <span style="color: red;">*</span></label>
+          <input type="date" id="editVisitDate" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 600; margin-bottom: 1rem; display: block;">Form Fields:</label>
+          <div id="editFormFields" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; background: #fafafa;">
+            <p style="color: #666; text-align: center;">Loading form fields...</p>
+          </div>
+        </div>
+        <input type="hidden" id="editFormDataJson">
+        <div class="modal-actions">
+          <button type="button" class="btn btn-cancel" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     let users = [];
     const token = localStorage.getItem('access_token');
@@ -852,6 +950,12 @@
         container.innerHTML = '<p>No users found.</p>';
         return;
       }
+      
+      // Check if current user needs to change password
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      if (currentUser && !currentUser.password_changed) {
+        showAlert('⚠️ SECURITY WARNING: You are using the default password. Please change it immediately!', 'error', true);
+      }
 
       let html = `
         <table class="users-table">
@@ -862,6 +966,7 @@
               <th>Full Name</th>
               <th>Email</th>
               <th>Role</th>
+              <th>Designation</th>
               <th>Status</th>
               <th>Module Access</th>
               <th>Actions</th>
@@ -882,6 +987,14 @@
             <td data-label="Full Name">${user.full_name || '-'}</td>
             <td data-label="Email">${user.email}</td>
             <td data-label="Role"><span class="badge ${roleBadge}">${user.role}</span></td>
+            <td data-label="Designation">
+              <select class="designation-select" onchange="setDesignation(${user.id}, this.value)">
+                <option value="">None</option>
+                <option value="technician" ${user.designation === 'technician' ? 'selected' : ''}>Technician</option>
+                <option value="supervisor" ${user.designation === 'supervisor' ? 'selected' : ''}>Supervisor</option>
+                <option value="manager" ${user.designation === 'manager' ? 'selected' : ''}>Manager</option>
+              </select>
+            </td>
             <td data-label="Status"><span class="badge ${statusBadge}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
             <td data-label="Module Access">
               <div class="access-badges">
@@ -1091,7 +1204,7 @@
         <table class="documents-table">
           <thead>
             <tr>
-              <th style="width: 40px;"><input type="checkbox" id="selectAllHeader" onchange="toggleSelectAll()"></th>
+              <th style="width: 40px;"><input type="checkbox" id="selectAllHeader" onchange="toggleSelectAllDocuments()"></th>
               <th>Document ID</th>
               <th>Module</th>
               <th>Site/Project</th>
@@ -1099,7 +1212,7 @@
               <th>Created By</th>
               <th>Status</th>
               <th>Created At</th>
-              <th>Downloads</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -1147,7 +1260,7 @@
 
         html += `
           <tr>
-            <td data-label="Select"><input type="checkbox" class="document-checkbox" value="${doc.submission_id}" onchange="updateDeleteButton()"></td>
+            <td data-label="Select"><input type="checkbox" class="document-checkbox" value="${doc.submission_id}" onchange="updateDocumentDeleteButton()"></td>
             <td data-label="Document ID"><code style="font-size: 0.85rem;">${doc.submission_id}</code></td>
             <td data-label="Module"><span class="module-badge ${moduleClass}">${doc.module_display}</span></td>
             <td data-label="Site/Project"><strong>${doc.site_name}</strong></td>
@@ -1160,18 +1273,11 @@
             </td>
             <td data-label="Status"><span class="status-badge ${statusClass}">${doc.status}</span></td>
             <td data-label="Created At">${createdDate}</td>
-            <td data-label="Downloads">
-              <div class="download-links">
-                ${doc.excel_url ? `
-                  <a href="${doc.excel_url}" target="_blank" class="btn-download" title="Download Excel">
-                    📊 Excel
-                  </a>
-                ` : '<button class="btn-download" disabled title="Excel not available">📊 Excel</button>'}
-                ${doc.pdf_url ? `
-                  <a href="${doc.pdf_url}" target="_blank" class="btn-download" title="Download PDF">
-                    📄 PDF
-                  </a>
-                ` : '<button class="btn-download" disabled title="PDF not available">📄 PDF</button>'}
+            <td data-label="Actions">
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                ${doc.excel_url ? `<a href="${doc.excel_url}" target="_blank" class="btn-download" title="Download Excel">📊 Excel</a>` : ''}
+                ${doc.pdf_url ? `<a href="${doc.pdf_url}" target="_blank" class="btn-download" title="Download PDF">📄 PDF</a>` : ''}
+                <button class="btn btn-sm btn-primary" onclick="editSubmission('${doc.submission_id}', '${doc.module_type}')" title="Edit Submission">✏️ Edit</button>
               </div>
             </td>
           </tr>
@@ -1232,18 +1338,16 @@
       }
     }
 
-    // Documents bulk delete functions
-    function toggleSelectAll() {
-      const selectAll = document.getElementById('selectAllDocuments');
-      const checkboxes = document.querySelectorAll('.document-checkbox');
-      checkboxes.forEach(cb => cb.checked = selectAll.checked);
-      updateDeleteButton();
-    }
+    // Documents bulk delete functions (toggleSelectAll defined above)
 
-    function updateDeleteButton() {
-      const checked = document.querySelectorAll('.document-checkbox:checked');
-      const deleteBtn = document.getElementById('deleteSelectedBtn');
-      deleteBtn.disabled = checked.length === 0;
+    // toggleSelectAll for documents table header
+    function toggleSelectAllDocuments() {
+      const selectAll = document.getElementById('selectAllHeader');
+      if (selectAll) {
+        const checkboxes = document.querySelectorAll('.document-checkbox');
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        updateDocumentDeleteButton();
+      }
     }
 
     async function deleteSelectedDocuments() {
@@ -1283,8 +1387,466 @@
       }
     }
 
+    // Edit Submission - Redirect to form page
+    function editSubmission(submissionId, moduleType) {
+      // Redirect to the appropriate form page with submission_id parameter
+      let formUrl = '';
+      if (moduleType === 'hvac_mep') {
+        formUrl = `/hvac-mep/form?edit=${submissionId}`;
+      } else if (moduleType === 'civil') {
+        formUrl = `/civil/form?edit=${submissionId}`;
+      } else if (moduleType === 'cleaning') {
+        formUrl = `/cleaning/form?edit=${submissionId}`;
+      } else {
+        showAlert('Unknown module type', 'error');
+        return;
+      }
+      window.location.href = formUrl;
+    }
+
+    // OLD MODAL FUNCTIONS - KEEPING FOR REFERENCE BUT NOT USED
+    let isEditModalLoading = false;
+    
+    async function openEditModal(submissionId) {
+      // Prevent multiple simultaneous requests
+      if (isEditModalLoading) {
+        console.log('Edit modal is already loading, please wait...');
+        return;
+      }
+      
+      // Prevent opening if modal is already open
+      if (document.getElementById('editModal').classList.contains('active')) {
+        console.log('Edit modal is already open');
+        return;
+      }
+      
+      try {
+        isEditModalLoading = true;
+        
+        // Show loading state
+        document.getElementById('editFormFields').innerHTML = '<p style="color: #666; text-align: center;">Loading form data...</p>';
+        document.getElementById('editModal').classList.add('active');
+        
+        // Fetch submission data
+        const response = await fetch(`/api/admin/submissions/${submissionId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          showAlert('Failed to load submission data', 'error');
+          return;
+        }
+
+        const data = await response.json();
+        if (!data.success || !data.submission) {
+          showAlert('Submission not found', 'error');
+          closeEditModal();
+          return;
+        }
+
+        const submission = data.submission;
+        
+        // Populate form
+        document.getElementById('editSubmissionId').value = submission.submission_id;
+        document.getElementById('editSubmissionIdDisplay').value = submission.submission_id;
+        document.getElementById('editModule').value = submission.module_type === 'hvac_mep' ? 'HVAC & MEP' : 
+                                                      submission.module_type === 'civil' ? 'Civil Works' : 
+                                                      'Cleaning Services';
+        document.getElementById('editSiteName').value = submission.site_name || '';
+        
+        // Format visit date for input
+        if (submission.visit_date) {
+          const visitDate = new Date(submission.visit_date);
+          document.getElementById('editVisitDate').value = visitDate.toISOString().split('T')[0];
+        }
+        
+        // Parse form_data if it's a string, otherwise use as-is
+        let formData = submission.form_data;
+        if (typeof formData === 'string') {
+          try {
+            formData = JSON.parse(formData);
+          } catch (e) {
+            console.error('Error parsing form_data:', e);
+            showAlert('Error parsing form data. Please check the submission.', 'error');
+            return;
+          }
+        }
+        
+        // Store form data for later use
+        window.currentFormData = formData;
+        window.currentModuleType = submission.module_type;
+        
+        // Render dynamic form fields
+        renderFormFields(submission.module_type, formData);
+        
+      } catch (error) {
+        console.error('Error opening edit modal:', error);
+        showAlert(`Error loading submission data: ${error.message || error}`, 'error');
+        document.getElementById('editFormFields').innerHTML = '<p style="color: #dc2626; text-align: center;">Error loading form data. Please try again.</p>';
+        // Don't close modal on error, let user see the error
+      } finally {
+        isEditModalLoading = false;
+      }
+    }
+
+    function closeEditModal() {
+      if (isEditModalLoading) {
+        console.log('Cannot close modal while loading');
+        return;
+      }
+      
+      document.getElementById('editModal').classList.remove('active');
+      document.getElementById('editForm').reset();
+      document.getElementById('editFormFields').innerHTML = '<p style="color: #666; text-align: center;">Loading form fields...</p>';
+      window.currentFormData = null;
+      window.currentModuleType = null;
+      isEditModalLoading = false;
+    }
+
+    function escapeHtml(text) {
+      if (text == null) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function renderFormFields(moduleType, formData) {
+      const container = document.getElementById('editFormFields');
+      let html = '';
+      
+      if (!formData || typeof formData !== 'object') {
+        container.innerHTML = '<p style="color: #dc2626; text-align: center;">Error: Invalid form data structure</p>';
+        return;
+      }
+      
+      if (moduleType === 'hvac_mep') {
+        // HVAC & MEP form
+        html += '<div style="margin-bottom: 1.5rem;"><h4 style="margin-bottom: 1rem; color: var(--primary);">Inspection Items</h4>';
+        
+        if (formData.items && Array.isArray(formData.items)) {
+          formData.items.forEach((item, index) => {
+            const asset = escapeHtml(item.asset || '');
+            const system = escapeHtml(item.system || '');
+            const description = escapeHtml(item.description || '');
+            const photoUrls = item.photo_urls || item.photos || [];
+            const photoUrlsJson = JSON.stringify(Array.isArray(photoUrls) ? photoUrls : [], null, 2);
+            
+            html += `
+              <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: white;">
+                <h5 style="margin-bottom: 0.75rem; color: #374151;">Item ${index + 1}</h5>
+                <div style="display: grid; gap: 1rem;">
+                  <div>
+                    <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">Asset:</label>
+                    <input type="text" class="form-control edit-field" data-field="items.${index}.asset" value="${asset}" style="width: 100%;">
+                  </div>
+                  <div>
+                    <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">System:</label>
+                    <input type="text" class="form-control edit-field" data-field="items.${index}.system" value="${system}" style="width: 100%;">
+                  </div>
+                  <div>
+                    <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">Description:</label>
+                    <textarea class="form-control edit-field" data-field="items.${index}.description" rows="3" style="width: 100%;">${description}</textarea>
+                  </div>
+                  <div>
+                    <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">Photo URLs:</label>
+                    <textarea class="form-control edit-field" data-field="items.${index}.photo_urls" rows="2" style="width: 100%; font-family: monospace; font-size: 0.85rem;" placeholder='["url1", "url2"]'>${escapeHtml(photoUrlsJson)}</textarea>
+                    <small style="color: #666;">Enter as JSON array of URLs</small>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+        } else {
+          html += '<p style="color: #666;">No inspection items found</p>';
+        }
+        
+        html += '</div>';
+        
+        // Signatures (read-only if they exist)
+        html += '<div style="margin-bottom: 1.5rem;"><h4 style="margin-bottom: 1rem; color: var(--primary);">Signatures</h4>';
+        
+        if (formData.tech_signature || formData.techSignatureData) {
+          const sigData = formData.tech_signature || formData.techSignatureData || '';
+          html += `
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Technician Signature (Read-only):</label>
+              ${sigData.startsWith('data:image') ? `<img src="${sigData}" style="max-width: 100%; border: 1px solid #e5e7eb; border-radius: 4px; background: white; padding: 0.5rem;" alt="Technician Signature">` : '<p style="color: #666;">No signature available</p>'}
+            </div>
+          `;
+        }
+        
+        if (formData.opMan_signature || formData.opManSignatureData) {
+          const sigData = formData.opMan_signature || formData.opManSignatureData || '';
+          html += `
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Operations Manager Signature (Read-only):</label>
+              ${sigData.startsWith('data:image') ? `<img src="${sigData}" style="max-width: 100%; border: 1px solid #e5e7eb; border-radius: 4px; background: white; padding: 0.5rem;" alt="Operations Manager Signature">` : '<p style="color: #666;">No signature available</p>'}
+            </div>
+          `;
+        }
+        
+        html += '</div>';
+        
+      } else if (moduleType === 'civil') {
+        // Civil Works form
+        html += '<div style="display: grid; gap: 1rem;">';
+        
+        const fields = [
+          { key: 'building_name', label: 'Building Name', type: 'text' },
+          { key: 'email', label: 'Contact Email', type: 'email' },
+          { key: 'location', label: 'Location on Site', type: 'text' },
+          { key: 'severity', label: 'Severity', type: 'text' },
+          { key: 'notes', label: 'Notes', type: 'textarea' }
+        ];
+        
+        fields.forEach(field => {
+          const value = escapeHtml(formData[field.key] || '');
+          if (field.type === 'textarea') {
+            html += `
+              <div>
+                <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">${field.label}:</label>
+                <textarea class="form-control edit-field" data-field="${field.key}" rows="4" style="width: 100%;">${value}</textarea>
+              </div>
+            `;
+          } else {
+            html += `
+              <div>
+                <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">${field.label}:</label>
+                <input type="${field.type}" class="form-control edit-field" data-field="${field.key}" value="${value}" style="width: 100%;">
+              </div>
+            `;
+          }
+        });
+        
+        // Photos
+        if (formData.photos && Array.isArray(formData.photos)) {
+          html += `
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Photos:</label>
+              <textarea class="form-control edit-field" data-field="photos" rows="3" style="width: 100%; font-family: monospace; font-size: 0.85rem;">${escapeHtml(JSON.stringify(formData.photos, null, 2))}</textarea>
+              <small style="color: #666;">Enter as JSON array</small>
+            </div>
+          `;
+        }
+        
+        // Signature (read-only if exists)
+        if (formData.signature || formData.signatureData) {
+          const sigData = formData.signature || formData.signatureData || '';
+          html += `
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Signature (Read-only):</label>
+              ${sigData.startsWith('data:image') ? `<img src="${sigData}" style="max-width: 100%; border: 1px solid #e5e7eb; border-radius: 4px; background: white; padding: 0.5rem;" alt="Signature">` : '<p style="color: #666;">No signature available</p>'}
+            </div>
+          `;
+        }
+        
+        html += '</div>';
+        
+      } else if (moduleType === 'cleaning') {
+        // Cleaning Services form
+        html += '<div style="display: grid; gap: 1rem;">';
+        
+        const fields = [
+          { key: 'building_name', label: 'Building Name', type: 'text' },
+          { key: 'email', label: 'Contact Email', type: 'email' },
+          { key: 'area', label: 'Area / Zone', type: 'text' },
+          { key: 'checklist', label: 'Checklist Notes', type: 'textarea' }
+        ];
+        
+        fields.forEach(field => {
+          const value = escapeHtml(formData[field.key] || '');
+          if (field.type === 'textarea') {
+            html += `
+              <div>
+                <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">${field.label}:</label>
+                <textarea class="form-control edit-field" data-field="${field.key}" rows="4" style="width: 100%;">${value}</textarea>
+              </div>
+            `;
+          } else {
+            html += `
+              <div>
+                <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">${field.label}:</label>
+                <input type="${field.type}" class="form-control edit-field" data-field="${field.key}" value="${value}" style="width: 100%;">
+              </div>
+            `;
+          }
+        });
+        
+        // Photos
+        if (formData.photos && Array.isArray(formData.photos)) {
+          html += `
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Photos:</label>
+              <textarea class="form-control edit-field" data-field="photos" rows="3" style="width: 100%; font-family: monospace; font-size: 0.85rem;">${escapeHtml(JSON.stringify(formData.photos, null, 2))}</textarea>
+              <small style="color: #666;">Enter as JSON array</small>
+            </div>
+          `;
+        }
+        
+        // Signature (read-only if exists)
+        if (formData.signature || formData.signatureData) {
+          const sigData = formData.signature || formData.signatureData || '';
+          html += `
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Signature (Read-only):</label>
+              ${sigData.startsWith('data:image') ? `<img src="${sigData}" style="max-width: 100%; border: 1px solid #e5e7eb; border-radius: 4px; background: white; padding: 0.5rem;" alt="Signature">` : '<p style="color: #666;">No signature available</p>'}
+            </div>
+          `;
+        }
+        
+        html += '</div>';
+      }
+      
+      container.innerHTML = html;
+    }
+
+    function collectFormData(moduleType) {
+      if (!window.currentFormData) {
+        console.error('No form data available');
+        return {};
+      }
+      
+      const formData = JSON.parse(JSON.stringify(window.currentFormData)); // Deep copy
+      
+      // Collect all edit-field values
+      document.querySelectorAll('.edit-field').forEach(field => {
+        const fieldPath = field.getAttribute('data-field');
+        if (!fieldPath) return;
+        
+        const value = field.value;
+        
+        if (fieldPath.includes('.')) {
+          // Nested path like items.0.asset
+          const parts = fieldPath.split('.');
+          let current = formData;
+          
+          try {
+            for (let i = 0; i < parts.length - 1; i++) {
+              const part = parts[i];
+              const nextPart = parts[i + 1];
+              
+              // Handle array indices
+              if (!isNaN(nextPart)) {
+                if (!current[part]) current[part] = [];
+                if (!current[part][parseInt(nextPart)]) current[part][parseInt(nextPart)] = {};
+                current = current[part][parseInt(nextPart)];
+                i++; // Skip next part as we already handled it
+              } else {
+                if (!current[part]) current[part] = {};
+                current = current[part];
+              }
+            }
+            
+            const lastPart = parts[parts.length - 1];
+            if (lastPart.includes('_urls') || lastPart === 'photos') {
+              // Parse JSON for arrays
+              try {
+                current[lastPart] = JSON.parse(value);
+              } catch (e) {
+                console.warn('Failed to parse JSON for', lastPart, ':', e);
+                current[lastPart] = value;
+              }
+            } else {
+              current[lastPart] = value;
+            }
+          } catch (e) {
+            console.error('Error setting nested field', fieldPath, ':', e);
+          }
+        } else {
+          // Simple path
+          if (fieldPath === 'photos') {
+            try {
+              formData[fieldPath] = JSON.parse(value);
+            } catch (e) {
+              console.warn('Failed to parse photos JSON:', e);
+              formData[fieldPath] = value;
+            }
+          } else {
+            formData[fieldPath] = value;
+          }
+        }
+      });
+      
+      // Preserve signatures (they are read-only, so keep original)
+      if (moduleType === 'hvac_mep') {
+        if (window.currentFormData.tech_signature) formData.tech_signature = window.currentFormData.tech_signature;
+        if (window.currentFormData.techSignatureData) formData.techSignatureData = window.currentFormData.techSignatureData;
+        if (window.currentFormData.opMan_signature) formData.opMan_signature = window.currentFormData.opMan_signature;
+        if (window.currentFormData.opManSignatureData) formData.opManSignatureData = window.currentFormData.opManSignatureData;
+      } else {
+        if (window.currentFormData.signature) formData.signature = window.currentFormData.signature;
+        if (window.currentFormData.signatureData) formData.signatureData = window.currentFormData.signatureData;
+      }
+      
+      return formData;
+    }
+
+    // Handle edit form submission
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submissionId = document.getElementById('editSubmissionId').value;
+      const siteName = document.getElementById('editSiteName').value;
+      const visitDate = document.getElementById('editVisitDate').value;
+      
+      // Collect form data from dynamic fields
+      const formData = collectFormData(window.currentModuleType);
+      
+      try {
+        const response = await fetch(`/api/admin/submissions/${submissionId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            site_name: siteName,
+            visit_date: visitDate,
+            form_data: formData
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showAlert('Submission updated successfully', 'success');
+          closeEditModal();
+          loadDocuments(); // Refresh documents list
+        } else {
+          showAlert(data.error || 'Failed to update submission', 'error');
+        }
+      } catch (error) {
+        console.error('Error updating submission:', error);
+        showAlert('Error updating submission', 'error');
+      }
+    });
+
+    // Close modal on outside click
+    document.getElementById('editModal').addEventListener('click', (e) => {
+      if (e.target.id === 'editModal') {
+        closeEditModal();
+      }
+    });
+
     // Load users and documents on page load
+    // Check for password change requirement on page load
+    function checkPasswordChangeRequired() {
+      try {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          if (user && !user.password_changed) {
+            showAlert('⚠️ SECURITY WARNING: You are using the default password. Please change it immediately in your profile settings!', 'error', true);
+          }
+        }
+      } catch (e) {
+        console.error('Error checking password status:', e);
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+      checkPasswordChangeRequired();
       loadUsers();
       loadDocuments();
     });

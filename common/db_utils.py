@@ -4,10 +4,42 @@ Provides a clean interface for database operations used by all modules
 """
 import logging
 from datetime import datetime
-from app.models import db, Submission, Job, File
+from app.models import db, Submission, Job, File, User
 from common.utils import random_id
 
 logger = logging.getLogger(__name__)
+
+
+def _notify_supervisor(submission, session):
+    """Notify supervisor when technician submits a form"""
+    try:
+        # Find a supervisor (first available supervisor)
+        supervisor = User.query.filter_by(designation='supervisor', is_active=True).first()
+        
+        if supervisor and hasattr(submission, 'supervisor_id'):
+            submission.supervisor_id = supervisor.id
+            submission.workflow_status = 'supervisor_notified'
+            submission.supervisor_notified_at = datetime.utcnow()
+            session.commit()
+            logger.info(f"✅ Notified supervisor {supervisor.username} about submission {submission.submission_id}")
+    except Exception as e:
+        logger.warning(f"Could not notify supervisor: {e}")
+
+
+def _notify_manager(submission, session):
+    """Notify manager when supervisor reviews a form"""
+    try:
+        # Find a manager (first available manager)
+        manager = User.query.filter_by(designation='manager', is_active=True).first()
+        
+        if manager and hasattr(submission, 'manager_id'):
+            submission.manager_id = manager.id
+            submission.workflow_status = 'manager_notified'
+            submission.manager_notified_at = datetime.utcnow()
+            session.commit()
+            logger.info(f"✅ Notified manager {manager.username} about submission {submission.submission_id}")
+    except Exception as e:
+        logger.warning(f"Could not notify manager: {e}")
 
 
 def create_submission_db(module_type, form_data, site_name=None, visit_date=None, user_id=None):
@@ -38,6 +70,11 @@ def create_submission_db(module_type, form_data, site_name=None, visit_date=None
             else:
                 parsed_date = visit_date
         
+        # Set workflow status
+        workflow_status = 'submitted'
+        if hasattr(Submission, 'workflow_status'):
+            workflow_status = 'submitted'  # Will trigger supervisor notification
+        
         submission = Submission(
             submission_id=submission_id,
             user_id=user_id,
@@ -45,11 +82,24 @@ def create_submission_db(module_type, form_data, site_name=None, visit_date=None
             site_name=site_name or form_data.get('site_name') or form_data.get('project_name'),
             visit_date=parsed_date,
             status='submitted',
+            workflow_status=workflow_status if hasattr(Submission, 'workflow_status') else None,
             form_data=form_data
         )
         
         db.session.add(submission)
         db.session.commit()
+        
+        # Trigger workflow notification if user has designation
+        if user_id:
+            try:
+                from app.models import User
+            except ImportError:
+                pass
+            else:
+                user = User.query.get(user_id)
+                if user and user.designation == 'technician':
+                    # Find supervisor and notify
+                    _notify_supervisor(submission, db.session)
         
         logger.info(f"✅ Created submission {submission_id} for {module_type}")
         return submission

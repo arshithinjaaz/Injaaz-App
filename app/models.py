@@ -21,6 +21,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     full_name = db.Column(db.String(120))
     role = db.Column(db.String(20), default='user')  # 'admin', 'inspector', 'user'
+    designation = db.Column(db.String(20), default=None)  # 'technician', 'supervisor', 'manager'
     is_active = db.Column(db.Boolean, default=True)
     password_changed = db.Column(db.Boolean, default=False)  # Track if password was changed from default
     # Module access permissions (admin has access to all by default)
@@ -31,7 +32,9 @@ class User(db.Model):
     last_login = db.Column(db.DateTime)
     
     # Relationships
-    submissions = db.relationship('Submission', backref='user', lazy='dynamic')
+    submissions = db.relationship('Submission', foreign_keys='Submission.user_id', backref='user', lazy='dynamic')
+    supervised_submissions = db.relationship('Submission', foreign_keys='Submission.supervisor_id', backref='supervisor', lazy='dynamic')
+    managed_submissions = db.relationship('Submission', foreign_keys='Submission.manager_id', backref='manager', lazy='dynamic')
     audit_logs = db.relationship('AuditLog', backref='user', lazy='dynamic')
     sessions = db.relationship('Session', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     
@@ -66,6 +69,8 @@ class User(db.Model):
             'access_hvac': self.access_hvac if self.role != 'admin' else True,
             'access_civil': self.access_civil if self.role != 'admin' else True,
             'access_cleaning': self.access_cleaning if self.role != 'admin' else True,
+            'password_changed': self.password_changed if hasattr(self, 'password_changed') else True,
+            'designation': self.designation if hasattr(self, 'designation') else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None
         }
@@ -86,6 +91,13 @@ class Submission(db.Model):
     site_name = db.Column(db.String(255))
     visit_date = db.Column(db.Date)
     status = db.Column(db.String(20), default='draft', index=True)  # 'draft', 'submitted', 'processing', 'completed'
+    workflow_status = db.Column(db.String(30), default='submitted', index=True)  # 'submitted', 'supervisor_notified', 'supervisor_reviewing', 'manager_notified', 'manager_reviewing', 'approved'
+    supervisor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Assigned supervisor
+    manager_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Assigned manager
+    supervisor_notified_at = db.Column(db.DateTime, nullable=True)
+    supervisor_reviewed_at = db.Column(db.DateTime, nullable=True)
+    manager_notified_at = db.Column(db.DateTime, nullable=True)
+    manager_reviewed_at = db.Column(db.DateTime, nullable=True)
     form_data = db.Column(JSON, nullable=False)  # All form fields as JSON
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -104,6 +116,13 @@ class Submission(db.Model):
             'site_name': self.site_name,
             'visit_date': self.visit_date.isoformat() if self.visit_date else None,
             'status': self.status,
+            'workflow_status': getattr(self, 'workflow_status', 'submitted'),
+            'supervisor_id': getattr(self, 'supervisor_id', None),
+            'manager_id': getattr(self, 'manager_id', None),
+            'supervisor_notified_at': getattr(self, 'supervisor_notified_at', None).isoformat() if hasattr(self, 'supervisor_notified_at') and getattr(self, 'supervisor_notified_at', None) else None,
+            'supervisor_reviewed_at': getattr(self, 'supervisor_reviewed_at', None).isoformat() if hasattr(self, 'supervisor_reviewed_at') and getattr(self, 'supervisor_reviewed_at', None) else None,
+            'manager_notified_at': getattr(self, 'manager_notified_at', None).isoformat() if hasattr(self, 'manager_notified_at') and getattr(self, 'manager_notified_at', None) else None,
+            'manager_reviewed_at': getattr(self, 'manager_reviewed_at', None).isoformat() if hasattr(self, 'manager_reviewed_at') and getattr(self, 'manager_reviewed_at', None) else None,
             'form_data': self.form_data,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None

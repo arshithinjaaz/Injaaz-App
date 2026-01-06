@@ -758,14 +758,18 @@
       </a>
       <div class="module-badge">HVAC & MEP</div>
       <div class="navbar-nav">
+        {% if is_edit_mode %}
+        <a href="/admin/dashboard" class="nav-btn next-btn">← Back to Admin</a>
+        {% else %}
         <a href="/civil/form" class="nav-btn next-btn">Next →</a>
+        {% endif %}
       </div>
     </div>
   </nav>
   
   <div class="container">
-    <h2>HVAC & MEP Inspection</h2>
-    <p class="text-muted mb-4">Complete site visit documentation with photos and signatures</p>
+    <h2>HVAC & MEP Inspection{% if is_edit_mode %} - Edit Mode{% endif %}</h2>
+    <p class="text-muted mb-4">{% if is_edit_mode %}Review and edit the submission below. Signatures cannot be modified.{% else %}Complete site visit documentation with photos and signatures{% endif %}</p>
 
     <form id="mainForm" enctype="multipart/form-data" onsubmit="return false;">
       <div class="row g-3">
@@ -870,7 +874,7 @@
 
         <!-- Submit Section -->
         <div class="col-12 mb-4">
-          <button type="button" id="submitAllBtn" class="btn btn-success btn-lg">Submit Inspection</button>
+          <button type="button" id="submitAllBtn" class="btn btn-success btn-lg">{% if is_edit_mode %}Update Submission{% else %}Submit Inspection{% endif %}</button>
         </div>
 
         <!-- Status & Downloads -->
@@ -1048,6 +1052,9 @@
       const pdfLink = document.getElementById('pdfLink');
       
       const pads = initSignaturePads();
+      
+      // Make pads available globally for loadSubmissionData
+      window.signaturePads = pads;
 
       // Initialize Upload Queue System
       let photoQueue = null;
@@ -1587,17 +1594,46 @@
           const maxShow = 6;
           
           // Show cloud URLs if available
-          if (it.photoUrls && it.photoUrls.length > 0) {
-            it.photoUrls.slice(0, maxShow).forEach(url => {
+          if (it.photoUrls && Array.isArray(it.photoUrls) && it.photoUrls.length > 0) {
+            it.photoUrls.slice(0, maxShow).forEach((url, urlIdx) => {
+              if (!url || typeof url !== 'string') {
+                console.warn('Invalid photo URL at index', urlIdx, ':', url);
+                return; // Skip invalid URLs
+              }
+              
               const img = document.createElement('img');
               img.className = 'thumb';
               img.src = url;
+              img.alt = `Photo ${urlIdx + 1}`;
               img.style.width = '70px';
               img.style.height = '50px';
               img.style.marginRight = '4px';
+              img.style.marginBottom = '4px';
               img.style.objectFit = 'cover';
+              img.style.borderRadius = '4px';
+              img.style.border = '1px solid #e5e7eb';
+              img.style.cursor = 'pointer';
+              img.style.backgroundColor = '#f3f4f6';
+              img.loading = 'lazy';
+              
+              img.onerror = function() {
+                console.error('Failed to load thumbnail:', url);
+                // Show placeholder instead of hiding
+                this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="70" height="50"%3E%3Crect width="70" height="50" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="10"%3EFailed%3C/text%3E%3C/svg%3E';
+                this.style.cursor = 'default';
+              };
+              
+              img.onload = function() {
+                console.log('Thumbnail loaded successfully:', url);
+              };
+              
+              img.onclick = function() {
+                window.open(url, '_blank');
+              };
+              
               thumbsRow.appendChild(img);
             });
+            
             if (it.photoUrls.length > maxShow) {
               const more = document.createElement('span');
               more.textContent = `+${it.photoUrls.length - maxShow} more`;
@@ -1605,6 +1641,8 @@
               more.style.marginLeft = '8px';
               thumbsRow.appendChild(more);
             }
+          } else {
+            console.log('No photo URLs for item:', it);
           }
           
           card.querySelector('.remove-item').addEventListener('click', (e) => {
@@ -1717,10 +1755,21 @@
       }
 
       async function submitAll() {
-        const techData = pads.techPad.isEmpty() ? '' : pads.techPad.toDataURL('image/png');
-        const opData = pads.opPad.isEmpty() ? '' : pads.opPad.toDataURL('image/png');
+        // In edit mode, preserve original signatures
+        let techData = '';
+        let opData = '';
+        
+        {% if is_edit_mode %}
+        // In edit mode, use existing signatures (read-only)
+        techData = document.getElementById('techSignatureData').value || '';
+        opData = document.getElementById('opManSignatureData').value || '';
+        {% else %}
+        // Normal mode - get from signature pads
+        techData = pads.techPad.isEmpty() ? '' : pads.techPad.toDataURL('image/png');
+        opData = pads.opPad.isEmpty() ? '' : pads.opPad.toDataURL('image/png');
         document.getElementById('techSignatureData').value = techData;
         document.getElementById('opManSignatureData').value = opData;
+        {% endif %}
 
         if (items.length === 0) {
           statusBox.innerHTML = '<div class="alert alert-warning">⚠️ Please add at least one item before submitting.</div>';
@@ -1763,6 +1812,42 @@
         };
 
         try {
+          {% if is_edit_mode %}
+          // Update existing submission
+          const submissionId = window.editSubmissionId;
+          const token = localStorage.getItem('access_token');
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+          
+          const res = await fetch(`/api/admin/submissions/${submissionId}`, {
+            method: 'PUT',
+            headers: headers,
+            body: JSON.stringify({
+              site_name: payload.site_name,
+              visit_date: payload.visit_date,
+              form_data: payload
+            }),
+            credentials: 'include'
+          });
+          
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error('Server error: ' + res.status + ' ' + txt);
+          }
+          
+          const json = await res.json();
+          
+          if (json.success) {
+            loadingOverlay.style.display = 'none';
+            statusBox.innerHTML = '<div class="alert alert-success">✅ Submission updated successfully! <a href="/admin/dashboard">Return to Admin Dashboard</a></div>';
+            clearDraft();
+          } else {
+            throw new Error(json.error || 'Update failed');
+          }
+          {% else %}
+          // Create new submission
           const submitUrl = modulePrefix + '/submit-with-urls';
           // Get JWT token from localStorage
           const token = localStorage.getItem('access_token');
@@ -1795,9 +1880,10 @@
             loadingOverlay.style.display = 'none';
             statusBox.innerHTML = '<div class="alert alert-warning">Submission accepted but no job ID</div>';
           }
+          {% endif %}
         } catch (err) {
           loadingOverlay.style.display = 'none';
-          statusBox.innerHTML = `<div class="alert alert-danger">❌ Submission failed: ${err.message}</div>`;
+          statusBox.innerHTML = `<div class="alert alert-danger">❌ {% if is_edit_mode %}Update{% else %}Submission{% endif %} failed: ${err.message}</div>`;
         }
       }
 
@@ -1866,8 +1952,177 @@
       document.getElementById('site_name').addEventListener('input', saveDraft);
       document.getElementById('visit_date').addEventListener('change', saveDraft);
 
-      // Load draft on page load
-      window.addEventListener('DOMContentLoaded', loadDraft);
+      // Load submission data if in edit mode
+      function loadSubmissionData() {
+        {% if is_edit_mode and submission_data %}
+        try {
+          const submissionData = {{ submission_data|tojson }};
+          
+          // Pre-fill basic fields
+          if (submissionData.site_name) {
+            document.getElementById('site_name').value = submissionData.site_name;
+          }
+          if (submissionData.visit_date) {
+            document.getElementById('visit_date').value = submissionData.visit_date;
+          }
+          
+          // Pre-populate items
+          const formData = submissionData.form_data || {};
+          console.log('Loading submission data, formData:', formData);
+          
+          if (formData.items && Array.isArray(formData.items)) {
+            formData.items.forEach((item, idx) => {
+              // Extract photo URLs - handle different formats
+              let photoUrls = [];
+              
+              // Try photo_urls first (direct array of URLs)
+              if (item.photo_urls && Array.isArray(item.photo_urls)) {
+                photoUrls = item.photo_urls.filter(url => url && typeof url === 'string');
+              } 
+              // Try photos array (array of objects with 'url' property)
+              else if (item.photos && Array.isArray(item.photos)) {
+                photoUrls = item.photos.map(photo => {
+                  if (typeof photo === 'string') {
+                    return photo;
+                  } else if (photo && typeof photo === 'object') {
+                    // Could be {url: "...", saved: ..., path: ...} or just {url: "..."}
+                    return photo.url || photo.cloud_url || null;
+                  }
+                  return null;
+                }).filter(url => url !== null && typeof url === 'string');
+              }
+              
+              console.log(`Item ${idx}: asset=${item.asset}, photoUrls count=${photoUrls.length}`, photoUrls);
+              
+              items.push({
+                asset: item.asset || '',
+                system: item.system || '',
+                description: item.description || '',
+                photoUrls: photoUrls,
+                photoCount: photoUrls.length
+              });
+            });
+            
+            // Render items after all are loaded
+            setTimeout(() => {
+              renderItems();
+            }, 100);
+          }
+          
+          // Load signatures as read-only images (if they exist)
+          // Wait for signature pads to be initialized
+          function loadSignatures() {
+            const pads = window.signaturePads;
+            if (!pads || !pads.techPad || !pads.opPad) {
+              // Retry after a short delay if pads aren't ready
+              setTimeout(loadSignatures, 200);
+              return;
+            }
+            
+            if (formData.tech_signature || formData.techSignatureData) {
+              const techSig = formData.tech_signature || formData.techSignatureData;
+              if (techSig && (techSig.startsWith('data:image') || techSig.startsWith('http'))) {
+                const techCanvas = document.getElementById('techSignaturePad');
+                if (techCanvas) {
+                  // Load signature into pad
+                  if (techSig.startsWith('data:image')) {
+                    pads.techPad.fromDataURL(techSig);
+                  } else if (techSig.startsWith('http')) {
+                    // If it's a URL, fetch and convert to data URL
+                    fetch(techSig)
+                      .then(res => res.blob())
+                      .then(blob => {
+                        const reader = new FileReader();
+                        reader.onload = function() {
+                          pads.techPad.fromDataURL(reader.result);
+                        };
+                        reader.readAsDataURL(blob);
+                      })
+                      .catch(err => console.error('Failed to load tech signature:', err));
+                  }
+                  
+                  // Disable signature pad
+                  techCanvas.style.pointerEvents = 'none';
+                  techCanvas.style.opacity = '0.8';
+                  techCanvas.style.cursor = 'not-allowed';
+                  techCanvas.style.border = '2px solid #d1d5db';
+                  const clearBtn = document.getElementById('clearTech');
+                  if (clearBtn) clearBtn.style.display = 'none';
+                  const techSigInput = document.getElementById('techSignatureData');
+                  if (techSigInput) techSigInput.value = techSig;
+                  
+                  // Add label
+                  const techLabel = techCanvas.parentElement.querySelector('label');
+                  if (techLabel) {
+                    techLabel.innerHTML = 'TECHNICIAN SIGNATURE <span style="color: #666; font-size: 0.85rem;">(Read-only - Original signature)</span>';
+                  }
+                }
+              }
+            }
+            
+            if (formData.opMan_signature || formData.opManSignatureData) {
+              const opSig = formData.opMan_signature || formData.opManSignatureData;
+              if (opSig && (opSig.startsWith('data:image') || opSig.startsWith('http'))) {
+                const opCanvas = document.getElementById('opManSignaturePad');
+                if (opCanvas) {
+                  // Load signature into pad
+                  if (opSig.startsWith('data:image')) {
+                    pads.opPad.fromDataURL(opSig);
+                  } else if (opSig.startsWith('http')) {
+                    // If it's a URL, fetch and convert to data URL
+                    fetch(opSig)
+                      .then(res => res.blob())
+                      .then(blob => {
+                        const reader = new FileReader();
+                        reader.onload = function() {
+                          pads.opPad.fromDataURL(reader.result);
+                        };
+                        reader.readAsDataURL(blob);
+                      })
+                      .catch(err => console.error('Failed to load op signature:', err));
+                  }
+                  
+                  // Disable signature pad
+                  opCanvas.style.pointerEvents = 'none';
+                  opCanvas.style.opacity = '0.8';
+                  opCanvas.style.cursor = 'not-allowed';
+                  opCanvas.style.border = '2px solid #d1d5db';
+                  const clearBtn = document.getElementById('clearOp');
+                  if (clearBtn) clearBtn.style.display = 'none';
+                  const opSigInput = document.getElementById('opManSignatureData');
+                  if (opSigInput) opSigInput.value = opSig;
+                  
+                  // Add label
+                  const opLabel = opCanvas.parentElement.querySelector('label');
+                  if (opLabel) {
+                    opLabel.innerHTML = 'OPERATIONS MANAGER SIGNATURE <span style="color: #666; font-size: 0.85rem;">(Read-only - Original signature)</span>';
+                  }
+                }
+              }
+            }
+          }
+          
+          // Start loading signatures after a short delay to ensure pads are initialized
+          setTimeout(loadSignatures, 300);
+          
+          // Store submission ID for update
+          window.editSubmissionId = submissionData.submission_id;
+          
+          console.log('✅ Submission data loaded for editing');
+        } catch (err) {
+          console.error('Failed to load submission data:', err);
+        }
+        {% endif %}
+      }
+      
+      // Load draft on page load (only if not in edit mode)
+      window.addEventListener('DOMContentLoaded', () => {
+        {% if not is_edit_mode %}
+        loadDraft();
+        {% else %}
+        loadSubmissionData();
+        {% endif %}
+      });
 
       function onDropdownsReady() { 
         fillAssets(); 

@@ -68,6 +68,7 @@ def reset_user_password(user_id):
         # Generate temporary password
         temp_password = generate_temp_password()
         user.set_password(temp_password)
+        user.password_changed = False  # Force password change on next login
         
         db.session.commit()
         
@@ -431,8 +432,16 @@ def list_documents():
                     'id': user.id if user else None,
                     'username': user.username if user else 'Unknown',
                     'full_name': user.full_name if user else None,
-                    'email': user.email if user else 'N/A'
+                    'email': user.email if user else 'N/A',
+                    'designation': user.designation if user and hasattr(user, 'designation') else None
                 },
+                'workflow_status': submission.workflow_status if hasattr(submission, 'workflow_status') else 'submitted',
+                'supervisor_id': submission.supervisor_id if hasattr(submission, 'supervisor_id') else None,
+                'manager_id': submission.manager_id if hasattr(submission, 'manager_id') else None,
+                'supervisor_notified_at': submission.supervisor_notified_at.isoformat() + 'Z' if hasattr(submission, 'supervisor_notified_at') and submission.supervisor_notified_at else None,
+                'supervisor_reviewed_at': submission.supervisor_reviewed_at.isoformat() + 'Z' if hasattr(submission, 'supervisor_reviewed_at') and submission.supervisor_reviewed_at else None,
+                'manager_notified_at': submission.manager_notified_at.isoformat() + 'Z' if hasattr(submission, 'manager_notified_at') and submission.manager_notified_at else None,
+                'manager_reviewed_at': submission.manager_reviewed_at.isoformat() + 'Z' if hasattr(submission, 'manager_reviewed_at') and submission.manager_reviewed_at else None,
                 'excel_url': excel_url,
                 'pdf_url': pdf_url,
                 'has_documents': bool(excel_url or pdf_url)
@@ -464,4 +473,111 @@ def log_audit(user_id, action, resource_type=None, resource_id=None, details=Non
     except Exception as e:
         current_app.logger.error(f"Failed to create audit log: {str(e)}")
         db.session.rollback()
+
+
+@admin_bp.route('/users/<int:user_id>/designation', methods=['PUT'])
+@jwt_required()
+@admin_required
+def set_user_designation(user_id):
+    """Set user designation (technician, supervisor, manager)"""
+    try:
+        admin_id = get_jwt_identity()
+        data = request.get_json()
+        designation = data.get('designation')
+        
+        if designation not in ['technician', 'supervisor', 'manager', None]:
+            return error_response('Invalid designation. Must be: technician, supervisor, manager, or null', 
+                                status_code=400, error_code='VALIDATION_ERROR')
+        
+        user = User.query.get_or_404(user_id)
+        old_designation = user.designation
+        user.designation = designation
+        
+        db.session.commit()
+        
+        log_audit(admin_id, 'set_designation', 'user', str(user_id), {
+            'target_user': user.username,
+            'old_designation': old_designation,
+            'new_designation': designation,
+            'set_by': User.query.get(admin_id).username if admin_id else 'system'
+        })
+        
+        return success_response({
+            'user': user.to_dict(),
+            'message': f'Designation updated to {designation or "None"}'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error setting designation: {str(e)}", exc_info=True)
+        return error_response('Failed to set designation', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/submissions/<submission_id>', methods=['PUT'])
+@jwt_required()
+@admin_required
+def update_submission(submission_id):
+    """Update a submitted form (admin can modify any field)"""
+    try:
+        admin_id = get_jwt_identity()
+        data = request.get_json()
+        
+        from app.models import Submission
+        submission = Submission.query.filter_by(submission_id=submission_id).first_or_404()
+        
+        # Update form_data
+        if 'form_data' in data:
+            submission.form_data = data['form_data']
+        
+        # Update other fields if provided
+        if 'site_name' in data:
+            submission.site_name = data['site_name']
+        if 'visit_date' in data:
+            from datetime import datetime
+            try:
+                submission.visit_date = datetime.strptime(data['visit_date'], '%Y-%m-%d').date()
+            except ValueError:
+                return error_response('Invalid date format. Use YYYY-MM-DD', status_code=400, error_code='VALIDATION_ERROR')
+        
+        submission.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        log_audit(admin_id, 'update_submission', 'submission', submission_id, {
+            'site_name': submission.site_name,
+            'module_type': submission.module_type,
+            'updated_by': User.query.get(admin_id).username if admin_id else 'system'
+        })
+        
+        return success_response({
+            'submission': submission.to_dict(),
+            'message': 'Submission updated successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating submission: {str(e)}", exc_info=True)
+        return error_response('Failed to update submission', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/submissions/<submission_id>', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_submission(submission_id):
+    """Get submission details for editing"""
+    try:
+        from app.models import Submission
+        submission = Submission.query.filter_by(submission_id=submission_id).first_or_404()
+        
+        # Get user info
+        user = User.query.get(submission.user_id) if submission.user_id else None
+        supervisor = User.query.get(submission.supervisor_id) if hasattr(submission, 'supervisor_id') and submission.supervisor_id else None
+        manager = User.query.get(submission.manager_id) if hasattr(submission, 'manager_id') and submission.manager_id else None
+        
+        submission_dict = submission.to_dict()
+        submission_dict['user'] = user.to_dict() if user else None
+        submission_dict['supervisor'] = supervisor.to_dict() if supervisor else None
+        submission_dict['manager'] = manager.to_dict() if manager else None
+        
+        return success_response({'submission': submission_dict})
+    except Exception as e:
+        current_app.logger.error(f"Error getting submission: {str(e)}", exc_info=True)
+        return error_response('Failed to get submission', status_code=500, error_code='DATABASE_ERROR')
 

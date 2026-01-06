@@ -171,6 +171,9 @@ def login():
         if not user.is_active:
             return jsonify({'error': 'Account is disabled'}), 403
         
+        # Check if password change is required (default admin password)
+        password_change_required = not user.password_changed if hasattr(user, 'password_changed') else False
+        
         # Update last login
         user.last_login = datetime.utcnow()
         db.session.commit()

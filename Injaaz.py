@@ -63,6 +63,13 @@ except Exception as e:
     logger.exception("Could not import app.admin.routes.admin_bp: %s", e)
     admin_bp = None
 
+try:
+    from app.workflow.routes import workflow_bp  # noqa: F401
+    logger.info("Imported app.workflow.routes.workflow_bp")
+except Exception as e:
+    logger.exception("Could not import app.workflow.routes.workflow_bp: %s", e)
+    workflow_bp = None
+
 # Ensure required directories exist at startup
 os.makedirs(GENERATED_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -98,6 +105,10 @@ def create_app():
     # Initialize Flask extensions
     db.init_app(app)
     bcrypt.init_app(app)
+    
+    # Initialize Flask-Migrate for database migrations
+    from flask_migrate import Migrate
+    migrate = Migrate(app, db)
     
     # Initialize JWT
     jwt = JWTManager(app)
@@ -157,99 +168,116 @@ def create_app():
                 logger.warning(f"Table creation check: {create_error}")
                 # Continue anyway - tables might already exist
             
-            # Step 2: Check and migrate user permission columns
+            # Step 2: Database migrations are now handled by Flask-Migrate
+            # Run migrations manually using: flask db upgrade
+            # This ensures version-controlled, reversible migrations
+            logger.info("✅ Database tables verified. Use 'flask db upgrade' to apply migrations.")
+            
+            # Step 2.5: Add missing columns if tables exist (one-time migration for existing databases)
             inspector = inspect(db.engine)
             if 'users' in inspector.get_table_names():
                 columns = [col['name'] for col in inspector.get_columns('users')]
-                logger.info(f"Found users table with {len(columns)} columns")
-                
                 missing_columns = []
-                # Check for password_changed column
-                if 'password_changed' not in columns:
-                    missing_columns.append('password_changed')
-                if 'access_hvac' not in columns:
-                    missing_columns.append('access_hvac')
-                if 'access_civil' not in columns:
-                    missing_columns.append('access_civil')
-                if 'access_cleaning' not in columns:
-                    missing_columns.append('access_cleaning')
+                
+                # Check for designation column
+                if 'designation' not in columns:
+                    missing_columns.append(('designation', 'VARCHAR(20) DEFAULT NULL'))
                 
                 if missing_columns:
-                    logger.info(f"Missing columns detected: {', '.join(missing_columns)}. Adding them...")
-                    
-                    # Use a transaction to add all columns
-                    with db.engine.begin() as conn:  # begin() automatically commits or rolls back
-                        for col_name in missing_columns:
-                            try:
-                                logger.info(f"Adding {col_name} column to users table...")
-                                # Use FALSE for PostgreSQL compatibility (works for SQLite too)
-                                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} BOOLEAN DEFAULT FALSE"))
-                                logger.info(f"✅ Added {col_name} column")
-                            except Exception as col_error:
-                                # Column might already exist (race condition)
-                                error_str = str(col_error).lower()
-                                if 'already exists' in error_str or 'duplicate' in error_str or 'column' in error_str and 'exists' in error_str:
-                                    logger.info(f"Column {col_name} already exists, skipping")
-                                else:
-                                    logger.error(f"Failed to add {col_name}: {col_error}")
-                                    raise
-                    
-                    # Refresh inspector to see new columns
-                    inspector = inspect(db.engine)
-                    columns = [col['name'] for col in inspector.get_columns('users')]
-                    
-                    # If all columns now exist, grant full access to existing admin users
-                    if all(col in columns for col in ['access_hvac', 'access_civil', 'access_cleaning']):
-                        try:
-                            from app.models import User
-                            admin_users = User.query.filter_by(role='admin').all()
-                            for admin in admin_users:
-                                admin.access_hvac = True
-                                admin.access_civil = True
-                                admin.access_cleaning = True
-                            db.session.commit()
-                            if admin_users:
-                                logger.info(f"✅ Granted full access to {len(admin_users)} admin user(s)")
-                        except Exception as admin_error:
-                            logger.warning(f"Could not update admin users (non-critical): {admin_error}")
-                else:
-                    logger.info("✅ All permission columns already exist")
+                    logger.info(f"Adding missing columns to users table: {[col[0] for col in missing_columns]}")
+                    try:
+                        with db.engine.begin() as conn:
+                            for col_name, col_def in missing_columns:
+                                try:
+                                    conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
+                                    logger.info(f"✅ Added {col_name} column to users table")
+                                except Exception as col_error:
+                                    error_str = str(col_error).lower()
+                                    if 'already exists' in error_str or 'duplicate' in error_str:
+                                        logger.info(f"Column {col_name} already exists, skipping")
+                                    else:
+                                        logger.warning(f"Could not add {col_name}: {col_error}")
+                    except Exception as e:
+                        logger.warning(f"Could not add missing columns (non-critical): {e}")
+            
+            if 'submissions' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('submissions')]
+                missing_columns = []
                 
-                # Step 3: Ensure default admin user exists (fully automatic for Render)
-                try:
-                    from app.models import User
-                    admin = User.query.filter_by(username='admin').first()
-                    if not admin:
-                        logger.info("Creating default admin user...")
-                        admin = User(
-                            username='admin',
-                            email='admin@injaaz.com',
-                            full_name='System Administrator',
-                            role='admin',
-                            is_active=True,
-                            access_hvac=True,
-                            access_civil=True,
-                            access_cleaning=True
-                        )
-                        # Use environment variable for default password, or generate random one
-                        import secrets
-                        default_password = os.environ.get('DEFAULT_ADMIN_PASSWORD', None)
-                        if not default_password:
-                            # Generate a secure random password if not set
-                            default_password = secrets.token_urlsafe(16)
-                            logger.warning("⚠️  No DEFAULT_ADMIN_PASSWORD set - using generated password (check logs)")
-                        
-                        admin.set_password(default_password)
-                        admin.password_changed = False  # Force password change on first login
-                        db.session.add(admin)
-                        db.session.commit()
-                        logger.info("✅ Default admin user created")
-                        logger.warning(f"⚠️  Default admin credentials: username='admin', password='{default_password}' - CHANGE IMMEDIATELY!")
-                        logger.warning("⚠️  Password change will be required on first login")
+                # Check for workflow columns
+                workflow_fields = [
+                    ('workflow_status', "VARCHAR(30) DEFAULT 'submitted'"),
+                    ('supervisor_id', 'INTEGER'),
+                    ('manager_id', 'INTEGER'),
+                    ('supervisor_notified_at', 'TIMESTAMP DEFAULT NULL'),
+                    ('supervisor_reviewed_at', 'TIMESTAMP DEFAULT NULL'),
+                    ('manager_notified_at', 'TIMESTAMP DEFAULT NULL'),
+                    ('manager_reviewed_at', 'TIMESTAMP DEFAULT NULL')
+                ]
+                
+                for col_name, col_def in workflow_fields:
+                    if col_name not in columns:
+                        missing_columns.append((col_name, col_def))
+                
+                if missing_columns:
+                    logger.info(f"Adding missing workflow columns to submissions table: {[col[0] for col in missing_columns]}")
+                    try:
+                        with db.engine.begin() as conn:
+                            for col_name, col_def in missing_columns:
+                                try:
+                                    conn.execute(text(f"ALTER TABLE submissions ADD COLUMN {col_name} {col_def}"))
+                                    logger.info(f"✅ Added {col_name} column to submissions table")
+                                except Exception as col_error:
+                                    error_str = str(col_error).lower()
+                                    if 'already exists' in error_str or 'duplicate' in error_str:
+                                        logger.info(f"Column {col_name} already exists, skipping")
+                                    else:
+                                        logger.warning(f"Could not add {col_name}: {col_error}")
+                    except Exception as e:
+                        logger.warning(f"Could not add missing workflow columns (non-critical): {e}")
+            
+            # Step 3: Ensure default admin user exists (fully automatic for Render)
+            try:
+                from app.models import User
+                admin = User.query.filter_by(username='admin').first()
+                if not admin:
+                    logger.info("Creating default admin user...")
+                    admin = User(
+                        username='admin',
+                        email='admin@injaaz.com',
+                        full_name='System Administrator',
+                        role='admin',
+                        is_active=True,
+                        access_hvac=True,
+                        access_civil=True,
+                        access_cleaning=True
+                    )
+                    # Use environment variable for default password, or generate random one
+                    import secrets
+                    default_password = os.environ.get('DEFAULT_ADMIN_PASSWORD', None)
+                    if not default_password:
+                        # Generate a secure random password if not set
+                        default_password = secrets.token_urlsafe(16)
+                        logger.warning("⚠️  No DEFAULT_ADMIN_PASSWORD set - using generated password")
+                        # Log to a secure location (not just console)
+                        logger.critical(f"🔐 DEFAULT ADMIN PASSWORD GENERATED: {default_password}")
+                        logger.critical("⚠️  SECURITY: Change this password immediately after first login!")
+                    
+                    admin.set_password(default_password)
+                    admin.password_changed = False  # Force password change on first login
+                    db.session.add(admin)
+                    db.session.commit()
+                    logger.info("✅ Default admin user created")
+                    if not os.environ.get('DEFAULT_ADMIN_PASSWORD'):
+                        logger.critical(f"⚠️  CRITICAL: Default admin password is: {default_password}")
+                        logger.critical("⚠️  This password will be required on first login. CHANGE IT IMMEDIATELY!")
                     else:
-                        logger.info("✅ Admin user already exists")
-                except Exception as admin_create_error:
-                    logger.warning(f"Could not create admin user (non-critical): {admin_create_error}")
+                        logger.warning("⚠️  Default admin password set from DEFAULT_ADMIN_PASSWORD env var")
+                        logger.warning("⚠️  Password change will be required on first login")
+                else:
+                    logger.info("✅ Admin user already exists")
+            except Exception as admin_create_error:
+                logger.warning(f"Could not create admin user (non-critical): {admin_create_error}")
             else:
                 logger.info("Users table will be created when first user is registered")
             
@@ -479,6 +507,15 @@ def create_app():
         logger.info("✅ Registered admin blueprint at /api/admin")
     else:
         logger.warning("⚠️  Admin blueprint not available - check imports")
+    
+    # Register workflow blueprint
+    if workflow_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(workflow_bp)
+        app.register_blueprint(workflow_bp)  # Already has /api/workflow prefix
+        logger.info("✅ Registered workflow blueprint at /api/workflow")
+    else:
+        logger.warning("⚠️  Workflow blueprint not available - check imports")
     
     # Register reports API blueprint for on-demand regeneration
     try:
