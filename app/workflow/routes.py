@@ -3,6 +3,7 @@ Workflow Routes - Supervisor and Manager review endpoints
 """
 from flask import Blueprint, request, jsonify, current_app, render_template
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy import or_
 from app.models import db, User, Submission, AuditLog
 from common.error_responses import error_response, success_response
 from datetime import datetime
@@ -73,15 +74,18 @@ def get_pending_submissions():
         
         # Get submissions based on designation
         if user.designation == 'supervisor':
-            # Get submissions that need supervisor review
+            # Get submissions that need supervisor review (including those with NULL workflow_status)
             submissions = Submission.query.filter(
-                Submission.workflow_status.in_(['submitted', 'supervisor_notified'])
-            ).all()
+                or_(
+                    Submission.workflow_status.in_(['submitted', 'supervisor_notified']),
+                    Submission.workflow_status.is_(None)  # Include old submissions without workflow_status
+                )
+            ).order_by(Submission.created_at.desc()).all()
         elif user.designation == 'manager':
             # Get submissions that need manager review
             submissions = Submission.query.filter(
                 Submission.workflow_status.in_(['supervisor_reviewing', 'manager_notified'])
-            ).all()
+            ).order_by(Submission.created_at.desc()).all()
         else:
             return error_response('Invalid designation for review', status_code=403, error_code='INVALID_DESIGNATION')
         
@@ -249,3 +253,38 @@ def reject_submission(submission_id):
         db.session.rollback()
         current_app.logger.error(f"Error rejecting submission: {str(e)}", exc_info=True)
         return error_response('Failed to reject submission', status_code=500, error_code='DATABASE_ERROR')
+
+
+@workflow_bp.route('/fix-workflow-status', methods=['POST'])
+@jwt_required()
+def fix_workflow_status():
+    """Fix submissions with NULL workflow_status (admin only)"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if not user or user.role != 'admin':
+            return error_response('Admin access required', status_code=403, error_code='UNAUTHORIZED')
+        
+        # Find submissions with NULL workflow_status
+        submissions_to_fix = Submission.query.filter(
+            Submission.workflow_status.is_(None)
+        ).all()
+        
+        count = 0
+        for sub in submissions_to_fix:
+            sub.workflow_status = 'submitted'
+            count += 1
+        
+        db.session.commit()
+        
+        log_audit(user_id, 'fix_workflow_status', 'system', None, {'fixed_count': count})
+        
+        return success_response({
+            'message': f'Fixed {count} submissions with NULL workflow_status',
+            'fixed_count': count
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error fixing workflow status: {str(e)}", exc_info=True)
+        return error_response('Failed to fix workflow status', status_code=500, error_code='DATABASE_ERROR')

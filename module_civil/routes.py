@@ -126,7 +126,17 @@ def index():
                                      module='Civil Works',
                                      message='You do not have access to this module. Please contact an administrator to grant access.'), 403
         
-        return render_template('civil_form.html', submission_data=submission_data, is_edit_mode=is_edit_mode)
+        # Pass designation info so the template can adjust signature visibility
+        user_designation = user.designation if hasattr(user, 'designation') else None
+        is_supervisor_edit = is_edit_mode and user_designation == 'supervisor'
+        
+        return render_template(
+            'civil_form.html',
+            submission_data=submission_data,
+            is_edit_mode=is_edit_mode,
+            user_designation=user_designation,
+            is_supervisor_edit=is_supervisor_edit
+        )
     except Exception as e:
         logger.error(f"Error checking module access: {str(e)}")
         # If JWT check fails, redirect to login

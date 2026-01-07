@@ -865,6 +865,16 @@
                         <div class="tab-pane fade" id="tab-5" role="tabpanel">
                             <h4 class="section-heading">Sign-off & Submission</h4>
                             
+                            {% if user_designation == 'technician' and not is_edit_mode %}
+                            <div class="alert alert-info" role="alert" style="font-weight: 600; margin-top: 0.5rem;">
+                                Technician submissions will be routed to supervisors/managers for approval after upload.
+                            </div>
+                            {% elif is_supervisor_edit %}
+                            <div class="alert alert-warning" role="alert" style="font-weight: 600; margin-top: 0.5rem;">
+                                Technician and client signatures are locked. Review and add your approval notes before updating.
+                            </div>
+                            {% endif %}
+                            
                             <div class="row g-3">
                                 <div class="col-md-6 mb-3">
                                     <div class="signature-label">
@@ -1096,61 +1106,65 @@
                     }
                     
                     if (formData.tech_signature) {
-                        const techSig = formData.tech_signature;
-                        if (techSig && (techSig.startsWith('data:image') || techSig.startsWith('http'))) {
-                            if (techSig.startsWith('data:image')) {
-                                pads.tech.fromDataURL(techSig);
-                            } else if (techSig.startsWith('http')) {
-                                fetch(techSig).then(res => res.blob()).then(blob => {
-                                    const reader = new FileReader();
-                                    reader.onload = () => pads.tech.fromDataURL(reader.result);
-                                    reader.readAsDataURL(blob);
-                                }).catch(err => console.error('Failed to load tech signature:', err));
-                            }
+                        let techSig = formData.tech_signature;
+                        // Handle object format with url property (from Cloudinary)
+                        if (techSig && typeof techSig === 'object' && techSig.url) {
+                            techSig = techSig.url;
+                        }
+                        if (techSig && typeof techSig === 'string' && (techSig.startsWith('data:image') || techSig.startsWith('http'))) {
+                            // Hide canvas and show signature as image instead (more reliable)
+                            techCanvas.style.display = 'none';
                             
-                            techCanvas.style.pointerEvents = 'none';
-                            techCanvas.style.opacity = '0.8';
-                            techCanvas.style.cursor = 'not-allowed';
-                            techCanvas.style.border = '2px solid #d1d5db';
+                            // Create image element to display the signature
+                            const sigImg = document.createElement('img');
+                            sigImg.src = techSig;
+                            sigImg.alt = 'Technician Signature';
+                            sigImg.style.cssText = 'width: 100%; max-height: 180px; object-fit: contain; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px;';
+                            techCanvas.parentElement.insertBefore(sigImg, techCanvas);
+                            
                             const clearBtn = techCanvas.parentElement.querySelector('button');
                             if (clearBtn) clearBtn.style.display = 'none';
                             const techLabel = techCanvas.parentElement.querySelector('label');
                             if (techLabel) {
-                                techLabel.innerHTML = 'Technician Signature <span style="color: #dc2626; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                                techLabel.innerHTML = 'Technician Signature <span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
                             }
+                            const hintSpan = techCanvas.parentElement.querySelector('.signature-hint');
+                            if (hintSpan) hintSpan.style.display = 'none';
                             const techInfo = document.createElement('div');
                             techInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
-                            techInfo.textContent = '⚠️ This field has been already signed and cannot be modified.';
+                            techInfo.textContent = '⚠️ This signature was provided by the technician and cannot be modified.';
                             techCanvas.parentElement.appendChild(techInfo);
                         }
                     }
                     
                     if (formData.contact_signature) {
-                        const contactSig = formData.contact_signature;
-                        if (contactSig && (contactSig.startsWith('data:image') || contactSig.startsWith('http'))) {
-                            if (contactSig.startsWith('data:image')) {
-                                pads.contact.fromDataURL(contactSig);
-                            } else if (contactSig.startsWith('http')) {
-                                fetch(contactSig).then(res => res.blob()).then(blob => {
-                                    const reader = new FileReader();
-                                    reader.onload = () => pads.contact.fromDataURL(reader.result);
-                                    reader.readAsDataURL(blob);
-                                }).catch(err => console.error('Failed to load contact signature:', err));
-                            }
+                        let contactSig = formData.contact_signature;
+                        // Handle object format with url property (from Cloudinary)
+                        if (contactSig && typeof contactSig === 'object' && contactSig.url) {
+                            contactSig = contactSig.url;
+                        }
+                        if (contactSig && typeof contactSig === 'string' && (contactSig.startsWith('data:image') || contactSig.startsWith('http'))) {
+                            // Hide canvas and show signature as image instead (more reliable)
+                            contactCanvas.style.display = 'none';
                             
-                            contactCanvas.style.pointerEvents = 'none';
-                            contactCanvas.style.opacity = '0.8';
-                            contactCanvas.style.cursor = 'not-allowed';
-                            contactCanvas.style.border = '2px solid #d1d5db';
+                            // Create image element to display the signature
+                            const sigImg = document.createElement('img');
+                            sigImg.src = contactSig;
+                            sigImg.alt = 'Client Signature';
+                            sigImg.style.cssText = 'width: 100%; max-height: 180px; object-fit: contain; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px;';
+                            contactCanvas.parentElement.insertBefore(sigImg, contactCanvas);
+                            
                             const clearBtn = contactCanvas.parentElement.querySelector('button');
                             if (clearBtn) clearBtn.style.display = 'none';
                             const contactLabel = contactCanvas.parentElement.querySelector('label');
                             if (contactLabel) {
-                                contactLabel.innerHTML = 'Client Signature <span style="color: #dc2626; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                                contactLabel.innerHTML = 'Client Signature <span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
                             }
+                            const hintSpan = contactCanvas.parentElement.querySelector('.signature-hint');
+                            if (hintSpan) hintSpan.style.display = 'none';
                             const contactInfo = document.createElement('div');
                             contactInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
-                            contactInfo.textContent = '⚠️ This field has been already signed and cannot be modified.';
+                            contactInfo.textContent = '⚠️ This signature was already provided and cannot be modified.';
                             contactCanvas.parentElement.appendChild(contactInfo);
                         }
                     }

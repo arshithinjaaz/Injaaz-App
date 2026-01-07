@@ -2067,94 +2067,89 @@
             }
             
             if (formData.tech_signature || formData.techSignatureData) {
-              const techSig = formData.tech_signature || formData.techSignatureData;
-              if (techSig && (techSig.startsWith('data:image') || techSig.startsWith('http'))) {
+              let techSig = formData.tech_signature || formData.techSignatureData;
+              // Handle object format with url property (from Cloudinary)
+              if (techSig && typeof techSig === 'object' && techSig.url) {
+                techSig = techSig.url;
+              }
+              if (techSig && typeof techSig === 'string' && (techSig.startsWith('data:image') || techSig.startsWith('http'))) {
                 const techCanvas = document.getElementById('techSignaturePad');
                 if (techCanvas) {
-                  // Load signature into pad
-                  if (techSig.startsWith('data:image')) {
-                    pads.techPad.fromDataURL(techSig);
-                  } else if (techSig.startsWith('http')) {
-                    // If it's a URL, fetch and convert to data URL
-                    fetch(techSig)
-                      .then(res => res.blob())
-                      .then(blob => {
-                        const reader = new FileReader();
-                        reader.onload = function() {
-                          pads.techPad.fromDataURL(reader.result);
-                        };
-                        reader.readAsDataURL(blob);
-                      })
-                      .catch(err => console.error('Failed to load tech signature:', err));
-                  }
+                  // Hide canvas and show signature as image instead (more reliable)
+                  techCanvas.style.display = 'none';
                   
-                  // Disable signature pad
-                  techCanvas.style.pointerEvents = 'none';
-                  techCanvas.style.opacity = '0.8';
-                  techCanvas.style.cursor = 'not-allowed';
-                  techCanvas.style.border = '2px solid #d1d5db';
+                  // Create image element to display the signature
+                  const sigImg = document.createElement('img');
+                  sigImg.src = techSig;
+                  sigImg.alt = 'Technician Signature';
+                  sigImg.style.cssText = 'width: 100%; max-height: 180px; object-fit: contain; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px;';
+                  techCanvas.parentElement.insertBefore(sigImg, techCanvas);
+                  
+                  // Hide clear button
                   const clearBtn = document.getElementById('clearTech');
                   if (clearBtn) clearBtn.style.display = 'none';
+                  
+                  // Store signature URL in hidden input
                   const techSigInput = document.getElementById('techSignatureData');
                   if (techSigInput) techSigInput.value = techSig;
                   
                   // Add label and message
                   const techLabel = techCanvas.parentElement.querySelector('label');
                   if (techLabel) {
-                    techLabel.innerHTML = 'TECHNICIAN SIGNATURE <span style="color: #dc2626; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                    techLabel.innerHTML = 'TECHNICIAN SIGNATURE <span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
                   }
                   
-                  // Add info message below canvas
+                  // Update hint text
+                  const hintSpan = techCanvas.parentElement.querySelector('.signature-hint');
+                  if (hintSpan) hintSpan.style.display = 'none';
+                  
+                  // Add info message below
                   const techInfo = document.createElement('div');
                   techInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
-                  techInfo.textContent = '⚠️ This field has been already signed by the technician and cannot be modified.';
+                  techInfo.textContent = '⚠️ This signature was provided by the technician and cannot be modified.';
                   techCanvas.parentElement.appendChild(techInfo);
                 }
               }
             }
             
             if (formData.opMan_signature || formData.opManSignatureData) {
-              const opSig = formData.opMan_signature || formData.opManSignatureData;
-              if (opSig && (opSig.startsWith('data:image') || opSig.startsWith('http'))) {
+              let opSig = formData.opMan_signature || formData.opManSignatureData;
+              // Handle object format with url property (from Cloudinary)
+              if (opSig && typeof opSig === 'object' && opSig.url) {
+                opSig = opSig.url;
+              }
+              if (opSig && typeof opSig === 'string' && (opSig.startsWith('data:image') || opSig.startsWith('http'))) {
                 const opCanvas = document.getElementById('opManSignaturePad');
                 if (opCanvas) {
-                  // Load signature into pad
-                  if (opSig.startsWith('data:image')) {
-                    pads.opPad.fromDataURL(opSig);
-                  } else if (opSig.startsWith('http')) {
-                    // If it's a URL, fetch and convert to data URL
-                    fetch(opSig)
-                      .then(res => res.blob())
-                      .then(blob => {
-                        const reader = new FileReader();
-                        reader.onload = function() {
-                          pads.opPad.fromDataURL(reader.result);
-                        };
-                        reader.readAsDataURL(blob);
-                      })
-                      .catch(err => console.error('Failed to load op signature:', err));
-                  }
+                  // Hide canvas and show signature as image instead (more reliable)
+                  opCanvas.style.display = 'none';
                   
-                  // Disable signature pad
-                  opCanvas.style.pointerEvents = 'none';
-                  opCanvas.style.opacity = '0.8';
-                  opCanvas.style.cursor = 'not-allowed';
-                  opCanvas.style.border = '2px solid #d1d5db';
-                  const clearBtn = document.getElementById('clearOp');
-                  if (clearBtn) clearBtn.style.display = 'none';
+                  // Create image element to display the signature
+                  const sigImg = document.createElement('img');
+                  sigImg.src = opSig;
+                  sigImg.alt = 'Manager Signature';
+                  sigImg.style.cssText = 'width: 100%; max-height: 180px; object-fit: contain; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px;';
+                  opCanvas.parentElement.insertBefore(sigImg, opCanvas);
+                  
+                  // Hide clear button
+                  // Store signature URL in hidden input
                   const opSigInput = document.getElementById('opManSignatureData');
                   if (opSigInput) opSigInput.value = opSig;
                   
                   // Add label and message
                   const opLabel = opCanvas.parentElement.querySelector('label');
                   if (opLabel) {
-                    opLabel.innerHTML = 'OPERATIONS MANAGER SIGNATURE <span style="color: #dc2626; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                    opLabel.innerHTML = 'OPERATIONS MANAGER SIGNATURE <span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
                   }
                   
-                  // Add info message below canvas
+                  // Update hint text
+                  const hintSpan = opCanvas.parentElement.querySelector('.signature-hint');
+                  if (hintSpan) hintSpan.style.display = 'none';
+                  
+                  // Add info message below
                   const opInfo = document.createElement('div');
                   opInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
-                  opInfo.textContent = '⚠️ This field has been already signed and cannot be modified.';
+                  opInfo.textContent = '⚠️ This signature was already provided and cannot be modified.';
                   opCanvas.parentElement.appendChild(opInfo);
                 }
               }

@@ -82,6 +82,9 @@ executor = ThreadPoolExecutor(max_workers=1)
 
 def create_app():
     app = Flask(__name__, static_folder='static', template_folder='templates')
+    
+    # Enable template auto-reload for development
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
 
     # Load configuration from config.py
     # Import config module and load all uppercase variables (config settings)
