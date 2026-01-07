@@ -560,16 +560,24 @@
       color: var(--text-dark);
       cursor: pointer;
       transition: all 0.2s;
+      width: 100%;
+      max-width: 150px;
     }
     
-    .designation-select:hover {
+    .designation-select:hover:not(:disabled) {
       border-color: var(--primary);
     }
     
     .designation-select:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      box-shadow: 0 0 0 3px rgba(18, 84, 53, 0.1);
+    }
+
+    .designation-select:disabled {
+      background: #f3f4f6;
+      cursor: wait;
+      opacity: 0.6;
     }
 
     .download-links {
@@ -988,7 +996,7 @@
             <td data-label="Email">${user.email}</td>
             <td data-label="Role"><span class="badge ${roleBadge}">${user.role}</span></td>
             <td data-label="Designation">
-              <select class="designation-select" onchange="setDesignation(${user.id}, this.value)">
+              <select class="designation-select" onchange="setDesignation(${user.id}, this.value, this)" data-original-value="${user.designation || ''}" data-user-id="${user.id}">
                 <option value="">None</option>
                 <option value="technician" ${user.designation === 'technician' ? 'selected' : ''}>Technician</option>
                 <option value="supervisor" ${user.designation === 'supervisor' ? 'selected' : ''}>Supervisor</option>
@@ -1290,6 +1298,68 @@
       `;
 
       container.innerHTML = html;
+    }
+
+    // Set user designation
+    async function setDesignation(userId, designation) {
+      // Get the select element from the event
+      const selectElement = window.event ? window.event.target : (arguments[2] || document.querySelector(`select[data-user-id="${userId}"]`));
+      
+      if (!selectElement) {
+        showAlert('Error: Could not find designation selector', 'error');
+        return;
+      }
+
+      try {
+        // Show loading state on the select element
+        const originalValue = selectElement.dataset.originalValue || '';
+        selectElement.disabled = true;
+        selectElement.style.opacity = '0.6';
+        selectElement.style.cursor = 'wait';
+
+        // Prepare the designation value (empty string becomes null)
+        const designationValue = designation === '' || designation === 'None' ? null : designation;
+
+        const response = await fetch(`/api/admin/users/${userId}/designation`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ designation: designationValue })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // Update the original value tracker
+          selectElement.dataset.originalValue = designationValue || '';
+          
+          // Update the user in the local array
+          const userIndex = users.findIndex(u => u.id === userId);
+          if (userIndex !== -1) {
+            users[userIndex].designation = designationValue;
+          }
+
+          // Show success message
+          showAlert(`Designation updated to ${designationValue || 'None'}`, 'success');
+        } else {
+          // Revert to original value on error
+          selectElement.value = originalValue || '';
+          showAlert(data.error || 'Failed to update designation', 'error');
+        }
+      } catch (error) {
+        console.error('Error setting designation:', error);
+        // Revert to original value on error
+        const originalValue = selectElement.dataset.originalValue || '';
+        selectElement.value = originalValue || '';
+        showAlert('Error updating designation. Please try again.', 'error');
+      } finally {
+        // Re-enable the select element
+        selectElement.disabled = false;
+        selectElement.style.opacity = '1';
+        selectElement.style.cursor = 'pointer';
+      }
     }
 
     // Delete user function

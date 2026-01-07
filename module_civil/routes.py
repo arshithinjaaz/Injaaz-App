@@ -61,7 +61,7 @@ def app_paths():
 @jwt_required()
 def index():
     """Civil form - requires authentication and module access. Supports editing existing submissions."""
-    from flask import redirect, url_for
+    from flask import redirect, url_for, request
     from flask_jwt_extended import get_jwt_identity
     from app.models import Submission
     

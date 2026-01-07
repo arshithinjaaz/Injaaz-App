@@ -862,15 +862,21 @@
           <button type="button" id="clearTech" class="btn btn-outline-secondary btn-sm mt-2">Clear</button>
         </div>
 
-        <div class="col-md-6 mb-3">
+        {% if user_designation != 'technician' or is_edit_mode %}
+        <div class="col-md-6 mb-3" id="opManSignatureContainer">
           <div class="signature-label">
             <label class="form-label mb-0">Operation Manager Signature</label>
+            {% if is_supervisor_edit %}
+            <span class="signature-hint" style="color: var(--primary); font-weight: 600;">Verify & Sign as Supervisor</span>
+            {% else %}
             <span class="signature-hint">Draw signature</span>
+            {% endif %}
           </div>
           <canvas id="opManSignaturePad" class="signature-pad"></canvas>
           <input type="hidden" id="opManSignatureData" name="opMan_signature">
           <button type="button" id="clearOp" class="btn btn-outline-secondary btn-sm mt-2">Clear</button>
         </div>
+        {% endif %}
 
         <!-- Submit Section -->
         <div class="col-12 mb-4">
@@ -974,13 +980,18 @@
         maxWidth: 3,
         throttle: 16
       });
-      const opPad = new SignaturePad(opCanvas, {
-        backgroundColor: 'rgb(255, 255, 255)',
-        penColor: 'rgb(0, 0, 0)',
-        minWidth: 1,
-        maxWidth: 3,
-        throttle: 16
-      });
+      
+      // Only initialize operations manager pad if the canvas exists
+      let opPad = null;
+      if (opCanvas) {
+        opPad = new SignaturePad(opCanvas, {
+          backgroundColor: 'rgb(255, 255, 255)',
+          penColor: 'rgb(0, 0, 0)',
+          minWidth: 1,
+          maxWidth: 3,
+          throttle: 16
+        });
+      }
 
       function resizeCanvas(canvas, pad) {
         if (!canvas || canvas.offsetWidth === 0) return;
@@ -1010,16 +1021,25 @@
       
       // Initial resize
       resizeCanvas(techCanvas, techPad);
-      resizeCanvas(opCanvas, opPad);
+      if (opCanvas && opPad) {
+        resizeCanvas(opCanvas, opPad);
+      }
       
       // Resize on window resize
       window.addEventListener('resize', () => { 
         resizeCanvas(techCanvas, techPad); 
-        resizeCanvas(opCanvas, opPad); 
+        if (opCanvas && opPad) {
+          resizeCanvas(opCanvas, opPad); 
+        }
       });
 
       document.getElementById('clearTech').addEventListener('click', () => { techPad.clear(); document.getElementById('techSignatureData').value=''; });
-      document.getElementById('clearOp').addEventListener('click', () => { opPad.clear(); document.getElementById('opManSignatureData').value=''; });
+      
+      // Only attach clear button if operations manager pad exists
+      const clearOpBtn = document.getElementById('clearOp');
+      if (clearOpBtn && opPad) {
+        clearOpBtn.addEventListener('click', () => { opPad.clear(); document.getElementById('opManSignatureData').value=''; });
+      }
 
       return { techPad, opPad };
     }
@@ -1760,15 +1780,35 @@
         let opData = '';
         
         {% if is_edit_mode %}
-        // In edit mode, use existing signatures (read-only)
+        // In edit mode, use existing signatures (read-only for tech, editable for supervisor)
         techData = document.getElementById('techSignatureData').value || '';
-        opData = document.getElementById('opManSignatureData').value || '';
+        const opManInput = document.getElementById('opManSignatureData');
+        if (opManInput) {
+          // If supervisor is editing, allow them to sign
+          {% if is_supervisor_edit %}
+          if (pads.opPad && !pads.opPad.isEmpty()) {
+            opData = pads.opPad.toDataURL('image/png');
+            opManInput.value = opData;
+          } else {
+            opData = opManInput.value || '';
+          }
+          {% else %}
+          opData = opManInput.value || '';
+          {% endif %}
+        } else {
+          opData = '';
+        }
         {% else %}
         // Normal mode - get from signature pads
         techData = pads.techPad.isEmpty() ? '' : pads.techPad.toDataURL('image/png');
-        opData = pads.opPad.isEmpty() ? '' : pads.opPad.toDataURL('image/png');
+        const opManInput = document.getElementById('opManSignatureData');
+        if (opManInput && pads.opPad) {
+          opData = pads.opPad.isEmpty() ? '' : pads.opPad.toDataURL('image/png');
+          opManInput.value = opData;
+        } else {
+          opData = '';
+        }
         document.getElementById('techSignatureData').value = techData;
-        document.getElementById('opManSignatureData').value = opData;
         {% endif %}
 
         if (items.length === 0) {
@@ -1840,9 +1880,16 @@
           const json = await res.json();
           
           if (json.success) {
-            loadingOverlay.style.display = 'none';
-            statusBox.innerHTML = '<div class="alert alert-success">✅ Submission updated successfully! <a href="/admin/dashboard">Return to Admin Dashboard</a></div>';
-            clearDraft();
+            // If documents are being regenerated, poll job status
+            if (json.data && json.data.job_id && json.data.regenerating) {
+              statusBox.innerHTML = '<div class="alert alert-info">✅ Submission updated! Regenerating documents... This may take a moment.</div>';
+              loadingOverlay.style.display = 'flex';
+              pollJobStatus(json.data.job_id);
+            } else {
+              loadingOverlay.style.display = 'none';
+              statusBox.innerHTML = '<div class="alert alert-success">✅ Submission updated successfully! <a href="/admin/dashboard">Return to Admin Dashboard</a></div>';
+              clearDraft();
+            }
           } else {
             throw new Error(json.error || 'Update failed');
           }
@@ -2051,11 +2098,17 @@
                   const techSigInput = document.getElementById('techSignatureData');
                   if (techSigInput) techSigInput.value = techSig;
                   
-                  // Add label
+                  // Add label and message
                   const techLabel = techCanvas.parentElement.querySelector('label');
                   if (techLabel) {
-                    techLabel.innerHTML = 'TECHNICIAN SIGNATURE <span style="color: #666; font-size: 0.85rem;">(Read-only - Original signature)</span>';
+                    techLabel.innerHTML = 'TECHNICIAN SIGNATURE <span style="color: #dc2626; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
                   }
+                  
+                  // Add info message below canvas
+                  const techInfo = document.createElement('div');
+                  techInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
+                  techInfo.textContent = '⚠️ This field has been already signed by the technician and cannot be modified.';
+                  techCanvas.parentElement.appendChild(techInfo);
                 }
               }
             }
@@ -2092,11 +2145,17 @@
                   const opSigInput = document.getElementById('opManSignatureData');
                   if (opSigInput) opSigInput.value = opSig;
                   
-                  // Add label
+                  // Add label and message
                   const opLabel = opCanvas.parentElement.querySelector('label');
                   if (opLabel) {
-                    opLabel.innerHTML = 'OPERATIONS MANAGER SIGNATURE <span style="color: #666; font-size: 0.85rem;">(Read-only - Original signature)</span>';
+                    opLabel.innerHTML = 'OPERATIONS MANAGER SIGNATURE <span style="color: #dc2626; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
                   }
+                  
+                  // Add info message below canvas
+                  const opInfo = document.createElement('div');
+                  opInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
+                  opInfo.textContent = '⚠️ This field has been already signed and cannot be modified.';
+                  opCanvas.parentElement.appendChild(opInfo);
                 }
               }
             }

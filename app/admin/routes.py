@@ -516,12 +516,15 @@ def set_user_designation(user_id):
 @jwt_required()
 @admin_required
 def update_submission(submission_id):
-    """Update a submitted form (admin can modify any field)"""
+    """Update a submitted form (admin can modify any field) and regenerate documents"""
     try:
         admin_id = get_jwt_identity()
         data = request.get_json()
         
-        from app.models import Submission
+        from app.models import Submission, Job
+        from datetime import datetime
+        import os
+        
         submission = Submission.query.filter_by(submission_id=submission_id).first_or_404()
         
         # Update form_data
@@ -532,7 +535,6 @@ def update_submission(submission_id):
         if 'site_name' in data:
             submission.site_name = data['site_name']
         if 'visit_date' in data:
-            from datetime import datetime
             try:
                 submission.visit_date = datetime.strptime(data['visit_date'], '%Y-%m-%d').date()
             except ValueError:
@@ -541,15 +543,120 @@ def update_submission(submission_id):
         submission.updated_at = datetime.utcnow()
         db.session.commit()
         
+        # Delete old jobs and their associated files to force regeneration
+        old_jobs = Job.query.filter_by(submission_id=submission.id).all()
+        for old_job in old_jobs:
+            # Delete old generated files if they exist locally
+            if old_job.result_data:
+                results = old_job.result_data if isinstance(old_job.result_data, dict) else {}
+                excel_filename = results.get('excel_filename') or results.get('excel')
+                pdf_filename = results.get('pdf_filename') or results.get('pdf')
+                
+                GENERATED_DIR = current_app.config.get('GENERATED_DIR')
+                if GENERATED_DIR:
+                    if excel_filename and isinstance(excel_filename, str):
+                        excel_path = os.path.join(GENERATED_DIR, excel_filename)
+                        if os.path.exists(excel_path):
+                            try:
+                                os.remove(excel_path)
+                                current_app.logger.info(f"Deleted old Excel file: {excel_filename}")
+                            except Exception as e:
+                                current_app.logger.warning(f"Could not delete old Excel file: {e}")
+                    
+                    if pdf_filename and isinstance(pdf_filename, str):
+                        pdf_path = os.path.join(GENERATED_DIR, pdf_filename)
+                        if os.path.exists(pdf_path):
+                            try:
+                                os.remove(pdf_path)
+                                current_app.logger.info(f"Deleted old PDF file: {pdf_filename}")
+                            except Exception as e:
+                                current_app.logger.warning(f"Could not delete old PDF file: {e}")
+            
+            db.session.delete(old_job)
+        
+        db.session.commit()
+        
+        # Trigger document regeneration based on module type
+        job_id = None
+        if submission.module_type == 'hvac_mep':
+            from common.db_utils import create_job_db, get_submission_db
+            from module_hvac_mep.routes import get_paths, process_job
+            
+            # Create new job
+            new_job = create_job_db(submission)
+            job_id = new_job.job_id
+            
+            # Get executor and paths
+            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+            
+            # Submit to background executor using the same process_job function
+            if EXECUTOR:
+                EXECUTOR.submit(
+                    process_job,
+                    submission.submission_id,
+                    job_id,
+                    current_app.config,
+                    current_app._get_current_object()
+                )
+                current_app.logger.info(f"✅ Regeneration job {job_id} queued for submission {submission_id}")
+            else:
+                current_app.logger.error("ThreadPoolExecutor not available for document regeneration")
+        
+        elif submission.module_type == 'civil':
+            from common.db_utils import create_job_db
+            from module_civil.routes import app_paths, process_job
+            
+            new_job = create_job_db(submission)
+            job_id = new_job.job_id
+            
+            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = app_paths()
+            
+            if EXECUTOR:
+                EXECUTOR.submit(
+                    process_job,
+                    submission.submission_id,
+                    job_id,
+                    current_app.config,
+                    current_app._get_current_object()
+                )
+                current_app.logger.info(f"✅ Regeneration job {job_id} queued for submission {submission_id}")
+            else:
+                current_app.logger.error("ThreadPoolExecutor not available for document regeneration")
+        
+        elif submission.module_type == 'cleaning':
+            from common.db_utils import create_job_db
+            from module_cleaning.routes import process_job
+            
+            new_job = create_job_db(submission)
+            job_id = new_job.job_id
+            
+            # Get executor from app config
+            EXECUTOR = current_app.config.get('EXECUTOR')
+            
+            if EXECUTOR:
+                EXECUTOR.submit(
+                    process_job,
+                    submission.submission_id,
+                    job_id,
+                    current_app.config,
+                    current_app._get_current_object()
+                )
+                current_app.logger.info(f"✅ Regeneration job {job_id} queued for submission {submission_id}")
+            else:
+                current_app.logger.error("ThreadPoolExecutor not available for document regeneration")
+        
         log_audit(admin_id, 'update_submission', 'submission', submission_id, {
             'site_name': submission.site_name,
             'module_type': submission.module_type,
-            'updated_by': User.query.get(admin_id).username if admin_id else 'system'
+            'updated_by': User.query.get(admin_id).username if admin_id else 'system',
+            'regeneration_job_id': job_id
         })
         
         return success_response({
             'submission': submission.to_dict(),
-            'message': 'Submission updated successfully'
+            'message': 'Submission updated successfully. Documents are being regenerated.',
+            'job_id': job_id,
+            'regenerating': True
         })
     except Exception as e:
         db.session.rollback()

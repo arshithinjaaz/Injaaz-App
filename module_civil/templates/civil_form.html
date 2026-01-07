@@ -699,15 +699,19 @@
       </a>
       <div class="module-badge">Civil Works</div>
       <div class="navbar-nav">
+        {% if is_edit_mode %}
+        <a href="/admin/dashboard" class="nav-btn next-btn">← Back to Admin</a>
+        {% else %}
         <a href="/hvac-mep/form" class="nav-btn prev-btn">← Previous</a>
         <a href="/cleaning/form" class="nav-btn next-btn">Next →</a>
+        {% endif %}
       </div>
     </div>
   </nav>
-
+  
   <div class="container">
-    <h2>Site Inspection Report - Civil</h2>
-    <p class="text-muted">Complete the inspection form below</p>
+    <h2>Site Inspection Report - Civil{% if is_edit_mode %} - Edit Mode{% endif %}</h2>
+    <p class="text-muted">{% if is_edit_mode %}Review and edit the submission below. Signatures cannot be modified.{% else %}Complete the inspection form below{% endif %}</p>
 
     <form id="mainForm">
       <h5>Project Information</h5>
@@ -853,7 +857,7 @@
           <span id="uploadImagesBtnSpinner" class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
         </button>
         <button type="button" id="submitBtn" class="btn btn-primary btn-lg" disabled>
-          <span id="submitBtnText">📄 Generate Reports</span>
+          <span id="submitBtnText">{% if is_edit_mode %}Update Submission{% else %}📄 Generate Reports{% endif %}</span>
         </button>
       </div>
       <div id="uploadStatus" class="alert alert-info d-none mb-3"></div>
@@ -1061,6 +1065,130 @@
       let uploadedPhotoUrls = [];
       
       const pads = initSignaturePads();
+      
+      // Make pads available globally for loadSubmissionData
+      window.signaturePads = pads;
+
+      // Load submission data if in edit mode
+      function loadSubmissionData() {
+        {% if is_edit_mode and submission_data %}
+        try {
+          const submissionData = {{ submission_data|tojson }};
+          const formData = submissionData.form_data || {};
+          
+          // Pre-fill basic fields
+          if (submissionData.site_name) {
+            const projectNameField = document.getElementById('project_name');
+            if (projectNameField) projectNameField.value = submissionData.site_name;
+          }
+          if (submissionData.visit_date) {
+            const dateField = document.getElementById('date');
+            if (dateField) dateField.value = submissionData.visit_date;
+          }
+          
+          // Load other fields from formData
+          ['location', 'inspector_name', 'manager_name', 'description_of_work', 'floor', 'developer_client', 'city_area', 'estimated_time'].forEach(field => {
+            const fieldId = field === 'location' ? 'location_name' : field;
+            const fieldEl = document.getElementById(fieldId);
+            if (fieldEl && formData[field]) {
+              fieldEl.value = formData[field];
+            }
+          });
+          
+          // Load photo URLs
+          if (formData.photo_urls && Array.isArray(formData.photo_urls)) {
+            uploadedPhotoUrls = formData.photo_urls;
+            photosUploaded = uploadedPhotoUrls.length > 0;
+            if (photosUploaded) {
+              updatePhotoCount();
+            }
+          }
+          
+          // Load signatures
+          function loadSignatures() {
+            const pads = window.signaturePads;
+            if (!pads || !pads.tech || !pads.op) {
+              setTimeout(loadSignatures, 200);
+              return;
+            }
+            
+            if (formData.inspector_signature) {
+              const techSig = formData.inspector_signature;
+              if (techSig && (techSig.startsWith('data:image') || techSig.startsWith('http'))) {
+                const techCanvas = document.getElementById('techSignaturePad');
+                if (techCanvas && pads.tech) {
+                  if (techSig.startsWith('data:image')) {
+                    pads.tech.fromDataURL(techSig);
+                  } else if (techSig.startsWith('http')) {
+                    fetch(techSig).then(res => res.blob()).then(blob => {
+                      const reader = new FileReader();
+                      reader.onload = () => pads.tech.fromDataURL(reader.result);
+                      reader.readAsDataURL(blob);
+                    }).catch(err => console.error('Failed to load inspector signature:', err));
+                  }
+                  techCanvas.style.pointerEvents = 'none';
+                  techCanvas.style.opacity = '0.8';
+                  techCanvas.style.cursor = 'not-allowed';
+                  techCanvas.style.border = '2px solid #d1d5db';
+                  const clearBtn = techCanvas.parentElement.querySelector('button');
+                  if (clearBtn) clearBtn.style.display = 'none';
+                  const techLabel = techCanvas.parentElement.querySelector('label');
+                  if (techLabel) {
+                    techLabel.innerHTML = 'Inspector Signature <span style="color: #dc2626; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                  }
+                  const techInfo = document.createElement('div');
+                  techInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
+                  techInfo.textContent = '⚠️ This field has been already signed and cannot be modified.';
+                  techCanvas.parentElement.appendChild(techInfo);
+                }
+              }
+            }
+            
+            if (formData.manager_signature) {
+              const opSig = formData.manager_signature;
+              if (opSig && (opSig.startsWith('data:image') || opSig.startsWith('http'))) {
+                const opCanvas = document.getElementById('opManSignaturePad');
+                if (opCanvas && pads.op) {
+                  if (opSig.startsWith('data:image')) {
+                    pads.op.fromDataURL(opSig);
+                  } else if (opSig.startsWith('http')) {
+                    fetch(opSig).then(res => res.blob()).then(blob => {
+                      const reader = new FileReader();
+                      reader.onload = () => pads.op.fromDataURL(reader.result);
+                      reader.readAsDataURL(blob);
+                    }).catch(err => console.error('Failed to load manager signature:', err));
+                  }
+                  opCanvas.style.pointerEvents = 'none';
+                  opCanvas.style.opacity = '0.8';
+                  opCanvas.style.cursor = 'not-allowed';
+                  opCanvas.style.border = '2px solid #d1d5db';
+                  const clearBtn = opCanvas.parentElement.querySelector('button');
+                  if (clearBtn) clearBtn.style.display = 'none';
+                  const opLabel = opCanvas.parentElement.querySelector('label');
+                  if (opLabel) {
+                    opLabel.innerHTML = 'Manager Approval Signature <span style="color: #dc2626; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                  }
+                  const opInfo = document.createElement('div');
+                  opInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
+                  opInfo.textContent = '⚠️ This field has been already signed and cannot be modified.';
+                  opCanvas.parentElement.appendChild(opInfo);
+                }
+              }
+            }
+          }
+          
+          setTimeout(loadSignatures, 300);
+          window.editSubmissionId = submissionData.submission_id;
+          console.log('✅ Submission data loaded for editing');
+        } catch (err) {
+          console.error('Failed to load submission data:', err);
+        }
+        {% endif %}
+      }
+      
+      {% if is_edit_mode %}
+      window.addEventListener('DOMContentLoaded', loadSubmissionData);
+      {% endif %}
 
       // Initialize Upload Queue System - Matching HVAC exactly
       let photoQueue = null;
@@ -1729,9 +1857,25 @@
 
       // Submit Handler - Using HVAC method with JSON payload
       submitBtn.addEventListener('click', async () => {
-        // Get signatures
-        const techSig = (pads.tech && !pads.tech.isEmpty()) ? pads.tech.toDataURL('image/png') : '';
-        const opSig = (pads.op && !pads.op.isEmpty()) ? pads.op.toDataURL('image/png') : '';
+        // In edit mode, preserve original signatures
+        let techSig = '';
+        let opSig = '';
+        
+        {% if is_edit_mode %}
+        // In edit mode, use existing signatures (read-only)
+        const techCanvas = document.getElementById('techSignaturePad');
+        const opCanvas = document.getElementById('opManSignaturePad');
+        if (techCanvas && pads.tech && !pads.tech.isEmpty()) {
+          techSig = pads.tech.toDataURL('image/png');
+        }
+        if (opCanvas && pads.op && !pads.op.isEmpty()) {
+          opSig = pads.op.toDataURL('image/png');
+        }
+        {% else %}
+        // Normal mode - get from signature pads
+        techSig = (pads.tech && !pads.tech.isEmpty()) ? pads.tech.toDataURL('image/png') : '';
+        opSig = (pads.op && !pads.op.isEmpty()) ? pads.op.toDataURL('image/png') : '';
+        {% endif %}
         
         // Check if photos have been uploaded
         if (!photosUploaded || uploadedPhotoUrls.length === 0) {
@@ -1807,8 +1951,69 @@
         console.log('📤 Each work item photo_urls:', workItems.map(wi => ({ item: wi.item_number, photo_count: wi.photo_urls?.length || 0, urls: wi.photo_urls })));
 
         try {
+          {% if is_edit_mode %}
+          // Update existing submission
+          const submissionId = window.editSubmissionId;
+          const token = localStorage.getItem('access_token');
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+          
+          const res = await fetch(`/api/admin/submissions/${submissionId}`, {
+            method: 'PUT',
+            headers: headers,
+            body: JSON.stringify({
+              site_name: payload.project_name,
+              visit_date: payload.visit_date,
+              form_data: payload
+            }),
+            credentials: 'include'
+          });
+          
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error('Server error: ' + res.status + ' ' + txt);
+          }
+          
+          const json = await res.json();
+          
+          if (json.success) {
+            if (json.data && json.data.job_id && json.data.regenerating) {
+              statusBox.innerHTML = '<div class="alert alert-info">✅ Submission updated! Regenerating documents... This may take a moment.</div>';
+              loadingOverlay.style.display = 'flex';
+              // Use pollJobStatus with correct signature (modulePrefix, jobId, onUpdate, interval)
+              const pollFn = window.pollJobStatus || pollJobStatusFn;
+              if (pollFn && typeof pollFn === 'function') {
+                pollFn(modulePrefix, json.data.job_id, (js) => {
+                  statusBox.innerHTML = `<div class="alert alert-info">Regenerating documents... ${js.progress || 0}%</div>`;
+                }).then(result => {
+                  loadingOverlay.style.display = 'none';
+                  if (result.state === 'done' || result.status === 'completed') {
+                    statusBox.innerHTML = '<div class="alert alert-success">✅ Documents regenerated successfully! <a href="/admin/dashboard">Return to Admin Dashboard</a></div>';
+                  } else {
+                    statusBox.innerHTML = '<div class="alert alert-danger">❌ Document regeneration failed. Please try again.</div>';
+                  }
+                }).catch(err => {
+                  loadingOverlay.style.display = 'none';
+                  statusBox.innerHTML = `<div class="alert alert-danger">❌ Error: ${err.message}</div>`;
+                });
+              } else {
+                // Fallback: just show success message
+                loadingOverlay.style.display = 'none';
+                statusBox.innerHTML = '<div class="alert alert-success">✅ Submission updated! Documents are being regenerated in the background. <a href="/admin/dashboard">Return to Admin Dashboard</a></div>';
+              }
+            } else {
+              loadingOverlay.style.display = 'none';
+              statusBox.innerHTML = '<div class="alert alert-success">✅ Submission updated successfully! <a href="/admin/dashboard">Return to Admin Dashboard</a></div>';
+              clearDraft();
+            }
+          } else {
+            throw new Error(json.error || 'Update failed');
+          }
+          {% else %}
+          // Create new submission
           const submitUrl = modulePrefix + '/submit-with-urls';
-          // Get JWT token from localStorage
           const token = localStorage.getItem('access_token');
           const headers = { 'Content-Type': 'application/json' };
           if (token) {
@@ -1818,7 +2023,7 @@
             method: 'POST',
             headers: headers,
             body: JSON.stringify(payload),
-            credentials: 'include'  // Include cookies for JWT
+            credentials: 'include'
           });
           
           if (!res.ok) {
@@ -1836,6 +2041,7 @@
             clearDraft(); // Clear draft after successful submission
             
             // Ensure pollJobStatusFn is available - use multiple fallbacks
+          {% endif %}
             let pollFn = null;
             try {
               // First try: use the pollJobStatusFn defined at the top of the IIFE

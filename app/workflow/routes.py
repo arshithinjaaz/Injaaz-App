@@ -1,7 +1,7 @@
 """
 Workflow Routes - Supervisor and Manager review endpoints
 """
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, render_template
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import db, User, Submission, AuditLog
 from common.error_responses import error_response, success_response
@@ -27,6 +27,34 @@ def log_audit(user_id, action, resource_type=None, resource_id=None, details=Non
     except Exception as e:
         current_app.logger.error(f"Failed to create audit log: {str(e)}")
         db.session.rollback()
+
+
+@workflow_bp.route('/dashboard', methods=['GET'])
+@jwt_required()
+def supervisor_dashboard():
+    """Supervisor/Manager dashboard page"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if not user:
+            return render_template('access_denied.html', 
+                                 module='Workflow',
+                                 message='User not found.'), 404
+        
+        if not hasattr(user, 'designation') or user.designation not in ['supervisor', 'manager']:
+            return render_template('access_denied.html',
+                                 module='Workflow',
+                                 message='You must be assigned as a Supervisor or Manager to access this page.'), 403
+        
+        return render_template('supervisor_dashboard.html', 
+                             user_designation=user.designation,
+                             user_name=user.full_name or user.username)
+    except Exception as e:
+        current_app.logger.error(f"Error loading supervisor dashboard: {str(e)}", exc_info=True)
+        return render_template('access_denied.html',
+                             module='Workflow',
+                             message='Error loading dashboard.'), 500
 
 
 @workflow_bp.route('/submissions/pending', methods=['GET'])
@@ -221,4 +249,3 @@ def reject_submission(submission_id):
         db.session.rollback()
         current_app.logger.error(f"Error rejecting submission: {str(e)}", exc_info=True)
         return error_response('Failed to reject submission', status_code=500, error_code='DATABASE_ERROR')
-

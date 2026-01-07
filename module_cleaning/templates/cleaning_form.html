@@ -605,14 +605,18 @@
       </a>
       <div class="module-badge">Cleaning Services</div>
       <div class="navbar-nav">
+        {% if is_edit_mode %}
+        <a href="/admin/dashboard" class="nav-btn prev-btn">← Back to Admin</a>
+        {% else %}
         <a href="/civil/form" class="nav-btn prev-btn">← Previous</a>
+        {% endif %}
       </div>
     </div>
   </nav>
 
   <div class="container">
-    <h2>Site Assessment Report</h2>
-    <p class="text-muted">Complete the assessment form below</p>
+    <h2>Site Assessment Report{% if is_edit_mode %} - Edit Mode{% endif %}</h2>
+    <p class="text-muted">{% if is_edit_mode %}Review and edit the submission below. Signatures cannot be modified.{% else %}Complete the assessment form below{% endif %}</p>
 
     <div id="status-message" class="alert d-none" role="alert"></div>
 
@@ -889,7 +893,7 @@
                             <div class="d-flex justify-content-between mt-4">
                                 <button type="button" class="btn btn-outline-secondary" onclick="goToTab(4)">← Previous</button>
                                 <button type="submit" class="btn btn-success btn-lg">
-                                    Submit & Generate Reports
+                                    {% if is_edit_mode %}Update Submission{% else %}Submit & Generate Reports{% endif %}
                                 </button>
                             </div>
                         </div>
@@ -1016,6 +1020,12 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
+        // Make pads available globally for loadSubmissionData
+        window.signaturePads = {
+            tech: techSignaturePad,
+            contact: contactSignaturePad
+        };
+
         window.clearSignature = function(canvasId) {
             const pad = canvasId === 'tech_signature_canvas' ? techSignaturePad : contactSignaturePad;
             if (pad) {
@@ -1025,6 +1035,139 @@
                 ctx.fillRect(0, 0, pad.canvas.offsetWidth, pad.canvas.offsetHeight);
             }
         }
+
+        // Load submission data if in edit mode
+        function loadSubmissionData() {
+            {% if is_edit_mode and submission_data %}
+            try {
+                const submissionData = {{ submission_data|tojson }};
+                const formData = submissionData.form_data || {};
+                
+                // Pre-fill basic fields
+                if (submissionData.site_name) {
+                    const clientField = document.getElementById('client_name');
+                    if (clientField) clientField.value = submissionData.site_name;
+                }
+                if (submissionData.visit_date) {
+                    const dateField = document.getElementById('date_of_visit');
+                    if (dateField) dateField.value = submissionData.visit_date;
+                }
+                
+                // Load other form fields
+                const fieldMappings = {
+                    'project_name': 'project_name',
+                    'contact_person': 'contact_person',
+                    'contact_phone': 'contact_phone',
+                    'contact_email': 'contact_email',
+                    'assessor_name': 'assessor_name',
+                    'contact_name': 'contact_name'
+                };
+                
+                Object.keys(fieldMappings).forEach(formField => {
+                    const dbField = fieldMappings[formField];
+                    const fieldEl = document.getElementById(formField) || document.querySelector(`[name="${formField}"]`);
+                    if (fieldEl && formData[dbField]) {
+                        fieldEl.value = formData[dbField];
+                    }
+                });
+                
+                // Load checkboxes
+                Object.keys(formData).forEach(key => {
+                    if (formData[key] === 'True' || formData[key] === true) {
+                        const checkbox = document.querySelector(`[name="${key}"]`);
+                        if (checkbox && checkbox.type === 'checkbox') {
+                            checkbox.checked = true;
+                        }
+                    }
+                });
+                
+                // Load photo URLs
+                if (formData.photo_urls && Array.isArray(formData.photo_urls)) {
+                    uploadedPhotoUrls = formData.photo_urls;
+                    photosUploaded = uploadedPhotoUrls.length > 0;
+                }
+                
+                // Load signatures
+                function loadSignatures() {
+                    const pads = window.signaturePads;
+                    if (!pads || !pads.tech || !pads.contact) {
+                        setTimeout(loadSignatures, 200);
+                        return;
+                    }
+                    
+                    if (formData.tech_signature) {
+                        const techSig = formData.tech_signature;
+                        if (techSig && (techSig.startsWith('data:image') || techSig.startsWith('http'))) {
+                            if (techSig.startsWith('data:image')) {
+                                pads.tech.fromDataURL(techSig);
+                            } else if (techSig.startsWith('http')) {
+                                fetch(techSig).then(res => res.blob()).then(blob => {
+                                    const reader = new FileReader();
+                                    reader.onload = () => pads.tech.fromDataURL(reader.result);
+                                    reader.readAsDataURL(blob);
+                                }).catch(err => console.error('Failed to load tech signature:', err));
+                            }
+                            
+                            techCanvas.style.pointerEvents = 'none';
+                            techCanvas.style.opacity = '0.8';
+                            techCanvas.style.cursor = 'not-allowed';
+                            techCanvas.style.border = '2px solid #d1d5db';
+                            const clearBtn = techCanvas.parentElement.querySelector('button');
+                            if (clearBtn) clearBtn.style.display = 'none';
+                            const techLabel = techCanvas.parentElement.querySelector('label');
+                            if (techLabel) {
+                                techLabel.innerHTML = 'Technician Signature <span style="color: #dc2626; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                            }
+                            const techInfo = document.createElement('div');
+                            techInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
+                            techInfo.textContent = '⚠️ This field has been already signed and cannot be modified.';
+                            techCanvas.parentElement.appendChild(techInfo);
+                        }
+                    }
+                    
+                    if (formData.contact_signature) {
+                        const contactSig = formData.contact_signature;
+                        if (contactSig && (contactSig.startsWith('data:image') || contactSig.startsWith('http'))) {
+                            if (contactSig.startsWith('data:image')) {
+                                pads.contact.fromDataURL(contactSig);
+                            } else if (contactSig.startsWith('http')) {
+                                fetch(contactSig).then(res => res.blob()).then(blob => {
+                                    const reader = new FileReader();
+                                    reader.onload = () => pads.contact.fromDataURL(reader.result);
+                                    reader.readAsDataURL(blob);
+                                }).catch(err => console.error('Failed to load contact signature:', err));
+                            }
+                            
+                            contactCanvas.style.pointerEvents = 'none';
+                            contactCanvas.style.opacity = '0.8';
+                            contactCanvas.style.cursor = 'not-allowed';
+                            contactCanvas.style.border = '2px solid #d1d5db';
+                            const clearBtn = contactCanvas.parentElement.querySelector('button');
+                            if (clearBtn) clearBtn.style.display = 'none';
+                            const contactLabel = contactCanvas.parentElement.querySelector('label');
+                            if (contactLabel) {
+                                contactLabel.innerHTML = 'Client Signature <span style="color: #dc2626; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                            }
+                            const contactInfo = document.createElement('div');
+                            contactInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
+                            contactInfo.textContent = '⚠️ This field has been already signed and cannot be modified.';
+                            contactCanvas.parentElement.appendChild(contactInfo);
+                        }
+                    }
+                }
+                
+                setTimeout(loadSignatures, 300);
+                window.editSubmissionId = submissionData.submission_id;
+                console.log('✅ Submission data loaded for editing');
+            } catch (err) {
+                console.error('Failed to load submission data:', err);
+            }
+            {% endif %}
+        }
+        
+        {% if is_edit_mode %}
+        window.addEventListener('DOMContentLoaded', loadSubmissionData);
+        {% endif %}
 
         // Initialize Upload Queue System
         let photoQueue = null;
@@ -1630,9 +1773,23 @@
                 data[cb.name] = formData.has(cb.name) ? 'True' : 'False';
             });
             
-            // Get signatures
-            const techSig = techSignaturePad && !techSignaturePad.isEmpty() ? techSignaturePad.toDataURL() : '';
-            const contactSig = contactSignaturePad && !contactSignaturePad.isEmpty() ? contactSignaturePad.toDataURL() : '';
+            // Get signatures - preserve original in edit mode
+            let techSig = '';
+            let contactSig = '';
+            
+            {% if is_edit_mode %}
+            // In edit mode, use existing signatures (read-only)
+            if (techSignaturePad && !techSignaturePad.isEmpty()) {
+                techSig = techSignaturePad.toDataURL();
+            }
+            if (contactSignaturePad && !contactSignaturePad.isEmpty()) {
+                contactSig = contactSignaturePad.toDataURL();
+            }
+            {% else %}
+            // Normal mode - get from signature pads
+            techSig = techSignaturePad && !techSignaturePad.isEmpty() ? techSignaturePad.toDataURL() : '';
+            contactSig = contactSignaturePad && !contactSignaturePad.isEmpty() ? contactSignaturePad.toDataURL() : '';
+            {% endif %}
             
             // Prepare payload with photo URLs array
             const payload = {
@@ -1652,6 +1809,58 @@
             statusDiv.classList.remove('d-none');
             
             try {
+                {% if is_edit_mode %}
+                // Update existing submission
+                const submissionId = window.editSubmissionId;
+                const token = localStorage.getItem('access_token');
+                const headers = {'Content-Type': 'application/json'};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch(`/api/admin/submissions/${submissionId}`, {
+                    method: 'PUT',
+                    headers: headers,
+                    body: JSON.stringify({
+                        site_name: payload.client_name || payload.project_name,
+                        visit_date: payload.date_of_visit,
+                        form_data: payload
+                    }),
+                    credentials: 'include'
+                });
+                
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Update failed');
+                
+                if (result.success) {
+                    if (result.data && result.data.job_id && result.data.regenerating) {
+                        statusDiv.className = 'alert alert-info';
+                        statusDiv.textContent = '✅ Submission updated! Regenerating documents... This may take a moment.';
+                        loadingOverlay.style.display = 'flex';
+                        pollJobStatusFn(modulePrefix, result.data.job_id, (job) => {
+                            const isDone = job.state === 'done' || job.status === 'completed';
+                            const isFailed = job.state === 'failed' || job.status === 'failed';
+                            if (isDone) {
+                                loadingOverlay.style.display = 'none';
+                                statusDiv.className = 'alert alert-success';
+                                statusDiv.innerHTML = '✅ Documents regenerated successfully! <a href="/admin/dashboard">Return to Admin Dashboard</a>';
+                            } else if (isFailed) {
+                                loadingOverlay.style.display = 'none';
+                                statusDiv.className = 'alert alert-danger';
+                                statusDiv.textContent = '❌ Document regeneration failed. Please try again.';
+                            }
+                        });
+                    } else {
+                        loadingOverlay.style.display = 'none';
+                        statusDiv.className = 'alert alert-success';
+                        statusDiv.innerHTML = '✅ Submission updated successfully! <a href="/admin/dashboard">Return to Admin Dashboard</a>';
+                        clearDraft();
+                    }
+                } else {
+                    throw new Error(result.error || 'Update failed');
+                }
+                {% else %}
+                // Create new submission
                 const submitUrl = `${modulePrefix}/submit-with-urls`;
                 console.log('Submitting to:', submitUrl);
                 
@@ -1677,6 +1886,7 @@
                 
                 clearDraft(); // Clear draft after successful submission
                 statusDiv.textContent = `Job queued: ${result.job_id}`;
+                {% endif %}
                 
                 // Use pollJobStatus function like civil form
                 // The function signature is: pollJobStatus(modulePrefix, jobId, onUpdate, interval)
@@ -1764,11 +1974,11 @@
                 }
                 
             } catch (e) {
-                console.error('Submission error:', e);
+                console.error('{% if is_edit_mode %}Update{% else %}Submission{% endif %} error:', e);
                 uploadModal.style.display = 'none';
                 loadingOverlay.style.display = 'none';
                 statusDiv.className = 'alert alert-danger';
-                statusDiv.textContent = "❌ Error: " + e.message;
+                statusDiv.textContent = "❌ {% if is_edit_mode %}Update{% else %}Submission{% endif %} failed: " + e.message;
             } finally {
                 submitButton.disabled = false;
             }

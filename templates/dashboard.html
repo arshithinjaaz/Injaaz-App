@@ -599,6 +599,11 @@
         opacity: 1;
       }
     }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
     
     .contact-modal-content {
       background: rgba(255, 255, 255, 0.95);
@@ -613,6 +618,86 @@
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       animation: slideUp 0.3s ease;
       border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* Profile Modal - Landscape Layout */
+    #profileModal .contact-modal-content {
+      max-width: 1200px;
+      width: 95%;
+      padding: 2.5rem;
+    }
+
+    #profileModal .contact-modal-info {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+
+    /* Profile items - more compact for landscape */
+    #profileModal .contact-modal-item {
+      padding: 1.25rem;
+      gap: 1rem;
+      min-height: auto;
+    }
+
+    /* Profile icons - slightly smaller */
+    #profileModal .contact-modal-icon {
+      font-size: 2rem;
+    }
+
+    /* Profile details - more compact */
+    #profileModal .contact-modal-details h4 {
+      font-size: 1.25rem;
+      margin: 0 0 0.4rem 0;
+    }
+
+    #profileModal .contact-modal-details p,
+    #profileModal .contact-modal-details a {
+      font-size: 1rem;
+      margin: 0.2rem 0;
+    }
+
+    @media (max-width: 1024px) {
+      #profileModal .contact-modal-info {
+        grid-template-columns: 1fr;
+      }
+      #profileModal .contact-modal-content {
+        max-width: 700px;
+      }
+    }
+
+    @media (min-width: 1400px) {
+      #profileModal .contact-modal-info {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    /* Profile Modal - Landscape Layout */
+    #profileModal .contact-modal-content {
+      max-width: 1200px;
+      width: 95%;
+      padding: 2.5rem;
+    }
+
+    #profileModal .contact-modal-info {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      #profileModal .contact-modal-info {
+        grid-template-columns: 1fr;
+      }
+      #profileModal .contact-modal-content {
+        max-width: 700px;
+      }
+    }
+
+    @media (min-width: 1400px) {
+      #profileModal .contact-modal-info {
+        grid-template-columns: repeat(3, 1fr);
+      }
     }
     
     @keyframes slideUp {
@@ -682,10 +767,22 @@
       background: rgba(18, 84, 53, 0.08);
       transform: translateX(5px);
     }
+
+    /* Profile items - more compact for landscape */
+    #profileModal .contact-modal-item {
+      padding: 1.25rem;
+      gap: 1rem;
+      min-height: auto;
+    }
     
     .contact-modal-icon {
       font-size: 2.5rem;
       flex-shrink: 0;
+    }
+
+    /* Profile icons - slightly smaller */
+    #profileModal .contact-modal-icon {
+      font-size: 2rem;
     }
     
     .contact-modal-details h4 {
@@ -693,6 +790,18 @@
       font-weight: 700;
       color: var(--primary);
       margin: 0 0 0.5rem 0;
+    }
+
+    /* Profile details - more compact */
+    #profileModal .contact-modal-details h4 {
+      font-size: 1.25rem;
+      margin: 0 0 0.4rem 0;
+    }
+
+    #profileModal .contact-modal-details p,
+    #profileModal .contact-modal-details a {
+      font-size: 1rem;
+      margin: 0.2rem 0;
     }
     
     .contact-modal-details p,
@@ -993,6 +1102,7 @@
         <ul class="nav-menu">
           <li><a href="#modules">Modules</a></li>
           <li><a href="/about">About</a></li>
+          <li><a href="#" id="profileLink">Profile</a></li>
           <li><a href="#" id="contactLink">Contact</a></li>
           <li id="admin-menu-item" style="display: none;">
             <a href="/admin/dashboard" style="color: var(--primary); font-weight: 600;">Administrative</a>
@@ -1058,6 +1168,22 @@
   <footer class="footer">
     <p>© 2026 Injaaz • Professional Site Reporting Platform</p>
   </footer>
+
+  <!-- Profile Modal -->
+  <div id="profileModal" class="contact-modal">
+    <div class="contact-modal-content">
+      <div class="contact-modal-header">
+        <h2>My Profile</h2>
+        <button class="contact-modal-close" onclick="closeProfileModal()" aria-label="Close">×</button>
+      </div>
+      <div class="contact-modal-info" id="profileContent">
+        <div style="text-align: center; padding: 2rem;">
+          <div class="spinner" style="border: 4px solid rgba(18, 84, 53, 0.1); border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+          <p style="margin-top: 1rem; color: var(--text-light);">Loading profile...</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Contact Modal -->
   <div id="contactModal" class="contact-modal">
@@ -1344,6 +1470,210 @@
         }
       });
       
+      // Profile Modal Functions
+      window.openProfileModal = function() {
+        const modal = document.getElementById('profileModal');
+        if (modal) {
+          modal.classList.add('active');
+          document.body.style.overflow = 'hidden';
+          loadProfileData();
+        }
+      };
+
+      window.closeProfileModal = function() {
+        const modal = document.getElementById('profileModal');
+        if (modal) {
+          modal.classList.remove('active');
+          document.body.style.overflow = '';
+        }
+      };
+
+      function loadProfileData() {
+        const profileContent = document.getElementById('profileContent');
+        const token = localStorage.getItem('access_token');
+        
+        if (!token) {
+          profileContent.innerHTML = '<div style="text-align: center; padding: 2rem;"><p style="color: var(--text-light);">Please log in to view your profile.</p></div>';
+          return;
+        }
+
+        profileContent.innerHTML = '<div style="text-align: center; padding: 2rem;"><div class="spinner" style="border: 4px solid rgba(18, 84, 53, 0.1); border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 1rem; color: var(--text-light);">Loading profile...</p></div>';
+
+        fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch profile');
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.user) {
+            displayProfileData(data.user);
+          } else {
+            throw new Error('No user data received');
+          }
+        })
+        .catch(error => {
+          console.error('Error loading profile:', error);
+          profileContent.innerHTML = `<div style="text-align: center; padding: 2rem;"><p style="color: #dc3545;">Error loading profile. Please try again.</p></div>`;
+        });
+      }
+
+      function displayProfileData(user) {
+        const profileContent = document.getElementById('profileContent');
+        
+        // Format dates
+        const formatDate = (dateStr) => {
+          if (!dateStr) return 'Never';
+          try {
+            const date = new Date(dateStr);
+            return date.toLocaleString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: 'Asia/Dubai'
+            }) + ' (GST)';
+          } catch {
+            return dateStr;
+          }
+        };
+
+        // Get module access badges
+        const getModuleAccess = () => {
+          const modules = [];
+          if (user.role === 'admin' || user.access_hvac) modules.push('HVAC & MEP');
+          if (user.role === 'admin' || user.access_civil) modules.push('Civil Works');
+          if (user.role === 'admin' || user.access_cleaning) modules.push('Cleaning');
+          return modules.length > 0 ? modules.join(', ') : 'None';
+        };
+
+        // Get role display
+        const getRoleDisplay = () => {
+          const roleMap = {
+            'admin': 'Administrator',
+            'inspector': 'Inspector',
+            'user': 'User'
+          };
+          return roleMap[user.role] || user.role;
+        };
+
+        // Get designation display
+        const getDesignationDisplay = () => {
+          if (!user.designation) return 'Not assigned';
+          const designationMap = {
+            'technician': 'Technician',
+            'supervisor': 'Supervisor',
+            'manager': 'Manager'
+          };
+          return designationMap[user.designation] || user.designation;
+        };
+
+        function escapeHtml(text) {
+          if (!text) return '';
+          const div = document.createElement('div');
+          div.textContent = text;
+          return div.innerHTML;
+        }
+
+        const html = `
+          <div class="contact-modal-item">
+            <span class="contact-modal-icon">👤</span>
+            <div class="contact-modal-details">
+              <h4>Username</h4>
+              <p>${escapeHtml(user.username || 'N/A')}</p>
+            </div>
+          </div>
+          
+          <div class="contact-modal-item">
+            <span class="contact-modal-icon">📧</span>
+            <div class="contact-modal-details">
+              <h4>Email</h4>
+              <a href="mailto:${escapeHtml(user.email || '')}">${escapeHtml(user.email || 'N/A')}</a>
+            </div>
+          </div>
+          
+          ${user.full_name ? `
+          <div class="contact-modal-item">
+            <span class="contact-modal-icon">📝</span>
+            <div class="contact-modal-details">
+              <h4>Full Name</h4>
+              <p>${escapeHtml(user.full_name)}</p>
+            </div>
+          </div>
+          ` : ''}
+          
+          <div class="contact-modal-item">
+            <span class="contact-modal-icon">🔑</span>
+            <div class="contact-modal-details">
+              <h4>Role</h4>
+              <p>${escapeHtml(getRoleDisplay())}</p>
+            </div>
+          </div>
+          
+          ${user.designation ? `
+          <div class="contact-modal-item">
+            <span class="contact-modal-icon">💼</span>
+            <div class="contact-modal-details">
+              <h4>Designation</h4>
+              <p>${escapeHtml(getDesignationDisplay())}</p>
+            </div>
+          </div>
+          ` : ''}
+          
+          <div class="contact-modal-item">
+            <span class="contact-modal-icon">🔐</span>
+            <div class="contact-modal-details">
+              <h4>Module Access</h4>
+              <p>${escapeHtml(getModuleAccess())}</p>
+              <p class="contact-modal-note">${user.role === 'admin' ? 'Full access to all modules' : 'Limited to assigned modules'}</p>
+            </div>
+          </div>
+          
+          <div class="contact-modal-item">
+            <span class="contact-modal-icon">${user.is_active ? '✅' : '❌'}</span>
+            <div class="contact-modal-details">
+              <h4>Account Status</h4>
+              <p>${user.is_active ? 'Active' : 'Inactive'}</p>
+            </div>
+          </div>
+          
+          <div class="contact-modal-item">
+            <span class="contact-modal-icon">🔒</span>
+            <div class="contact-modal-details">
+              <h4>Password Status</h4>
+              <p>${user.password_changed ? 'Changed' : 'Default (Please change)'}</p>
+              ${!user.password_changed ? '<p class="contact-modal-note" style="color: #dc3545;">⚠️ Please change your password for security</p>' : ''}
+            </div>
+          </div>
+          
+          <div class="contact-modal-item">
+            <span class="contact-modal-icon">📅</span>
+            <div class="contact-modal-details">
+              <h4>Account Created</h4>
+              <p>${formatDate(user.created_at)}</p>
+            </div>
+          </div>
+          
+          ${user.last_login ? `
+          <div class="contact-modal-item">
+            <span class="contact-modal-icon">🕐</span>
+            <div class="contact-modal-details">
+              <h4>Last Login</h4>
+              <p>${formatDate(user.last_login)}</p>
+            </div>
+          </div>
+          ` : ''}
+        `;
+
+        profileContent.innerHTML = html;
+      }
+
       // Contact Modal Functions (make them global)
       window.openContactModal = function() {
         const modal = document.getElementById('contactModal');
@@ -1361,6 +1691,15 @@
         }
       };
       
+      // Profile link click handler
+      const profileLink = document.getElementById('profileLink');
+      if (profileLink) {
+        profileLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          openProfileModal();
+        });
+      }
+
       // Contact link click handler
       const contactLink = document.getElementById('contactLink');
       if (contactLink) {
