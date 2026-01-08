@@ -237,21 +237,35 @@ _DATAURL_RE = re.compile(r"data:(?P<mime>[^;]+);base64,(?P<data>.+)")
 
 def save_signature_dataurl(dataurl, uploads_dir, prefix="signature"):
     """
-    Upload signature to cloud storage - CLOUD ONLY.
+    Upload signature to cloud storage with local fallback.
     Returns (saved_filename_or_none, file_path_or_none, public_url) tuple.
-    Raises exception if cloud upload fails.
     """
     if not dataurl:
         return None, None, None
     
-    # Cloud upload only - no fallback
-    cloud_url, is_cloud = upload_base64_to_cloud(dataurl, folder="signatures", prefix=prefix)
-    if is_cloud and cloud_url:
-        logger.info(f"✅ Signature uploaded to cloud: {cloud_url}")
-        return None, None, cloud_url  # No local file
-    
-    # Should never reach here due to exception in upload_base64_to_cloud
-    raise Exception("Cloud storage required but signature upload failed")
+    try:
+        # Try cloud upload first, with local fallback
+        url, is_cloud = upload_base64_to_cloud(dataurl, folder="signatures", prefix=prefix, uploads_dir=uploads_dir)
+        
+        if url:
+            if is_cloud:
+                logger.info(f"✅ Signature uploaded to cloud: {url}")
+                return None, None, url  # No local file for cloud uploads
+            else:
+                # Local storage - extract filename from URL
+                # URL format: /generated/uploads/signatures/filename.png
+                filename = url.split('/')[-1]
+                # Get the full path
+                from config import GENERATED_DIR
+                file_path = os.path.join(GENERATED_DIR, "uploads", "signatures", filename)
+                logger.info(f"✅ Signature saved locally: {url}")
+                return filename, file_path, url
+        
+        raise Exception("Upload succeeded but no URL returned")
+        
+    except Exception as e:
+        logger.error(f"❌ Signature upload failed: {e}")
+        raise Exception(f"Signature upload failed: {str(e)}")
 
 
 # ---------- Submit route (handles multi-item + per-item photos + signatures) ----------

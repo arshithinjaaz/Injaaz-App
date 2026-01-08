@@ -303,11 +303,12 @@ def submit():
         for idx, photo_base64 in enumerate(photos):
             if photo_base64 and photo_base64.startswith('data:image'):
                 try:
-                    # Cloud upload only - no fallback
+                    # Cloud upload with local fallback
                     cloud_url, is_cloud = upload_base64_to_cloud(
                         photo_base64, 
                         folder="cleaning_photos", 
-                        prefix=f"photo_{idx}"
+                        prefix=f"photo_{idx}",
+                        uploads_dir=UPLOADS_DIR
                     )
                     
                     saved_photos.append({
@@ -315,55 +316,57 @@ def submit():
                         'path': None,
                         'url': cloud_url,
                         'index': idx,
-                        'is_cloud': True
+                        'is_cloud': is_cloud
                     })
                 except Exception as e:
                     logger.error(f"Failed to upload photo {idx}: {e}")
-                    return jsonify({'error': f'Cloud storage error for photo {idx}: {str(e)}'}), 500
+                    return jsonify({'error': f'Storage error for photo {idx}: {str(e)}'}), 500
         
         data['photos'] = saved_photos
         
-        # Save signatures (base64 data)
+        # Save signatures (base64 data) with local fallback
         tech_signature = data.get('tech_signature', '')
         contact_signature = data.get('contact_signature', '')
         
         if tech_signature and tech_signature.startswith('data:image'):
             try:
-                # Cloud upload only - no fallback
+                # Cloud upload with local fallback
                 cloud_url, is_cloud = upload_base64_to_cloud(
                     tech_signature, 
                     folder="signatures", 
-                    prefix="tech_sig"
+                    prefix="tech_sig",
+                    uploads_dir=UPLOADS_DIR
                 )
                 
                 data['tech_signature'] = {
                     'saved': None,
                     'path': None,
                     'url': cloud_url,
-                    'is_cloud': True
+                    'is_cloud': is_cloud
                 }
             except Exception as e:
                 logger.error(f"Failed to upload tech signature: {e}")
-                return error_response('Cloud storage error for tech signature', status_code=500, error_code='STORAGE_ERROR')
+                return error_response('Storage error for tech signature', status_code=500, error_code='STORAGE_ERROR')
         
         if contact_signature and contact_signature.startswith('data:image'):
             try:
-                # Cloud upload only - no fallback
+                # Cloud upload with local fallback
                 cloud_url, is_cloud = upload_base64_to_cloud(
                     contact_signature, 
                     folder="signatures", 
-                    prefix="contact_sig"
+                    prefix="contact_sig",
+                    uploads_dir=UPLOADS_DIR
                 )
                 
                 data['contact_signature'] = {
                     'saved': None,
                     'path': None,
                     'url': cloud_url,
-                    'is_cloud': True
+                    'is_cloud': is_cloud
                 }
             except Exception as e:
                 logger.error(f"Failed to upload contact signature: {e}")
-                return error_response('Cloud storage error for contact signature', status_code=500, error_code='STORAGE_ERROR')
+                return error_response('Storage error for contact signature', status_code=500, error_code='STORAGE_ERROR')
         
         # Save base URL for report generation
         data['base_url'] = request.host_url.rstrip('/')
@@ -536,20 +539,20 @@ def submit_with_urls():
         data['photos'] = saved_photos
         logger.info(f"📸 Total photos processed: {len(saved_photos)}")
         
-        # Save signatures (base64 data) to cloud
+        # Save signatures (base64 data) to cloud with local fallback
         tech_signature = data.get('tech_signature', '')
         contact_signature = data.get('contact_signature', '')
         
         if tech_signature:
             try:
-                cloud_url, is_cloud = upload_base64_to_cloud(tech_signature, folder="signatures", prefix="tech_sig")
+                cloud_url, is_cloud = upload_base64_to_cloud(tech_signature, folder="signatures", prefix="tech_sig", uploads_dir=UPLOADS_DIR)
                 data['tech_signature_url'] = cloud_url
             except Exception as e:
                 logger.error(f"Failed to upload tech signature: {e}")
         
         if contact_signature:
             try:
-                cloud_url, is_cloud = upload_base64_to_cloud(contact_signature, folder="signatures", prefix="contact_sig")
+                cloud_url, is_cloud = upload_base64_to_cloud(contact_signature, folder="signatures", prefix="contact_sig", uploads_dir=UPLOADS_DIR)
                 data['contact_signature_url'] = cloud_url
             except Exception as e:
                 logger.error(f"Failed to upload contact signature: {e}")

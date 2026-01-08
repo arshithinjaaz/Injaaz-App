@@ -45,16 +45,28 @@ def safe_path_join(base_dir, *paths):
     
     Args:
         base_dir: Base directory that result must be within
-        *paths: Path components to join
+        *paths: Path components to join (can include subdirectories like 'uploads/filename')
         
     Returns:
         Absolute path within base_dir or raises ValueError
     """
-    # Sanitize each path component
-    sanitized_paths = [sanitize_filename(p) for p in paths]
+    # Join all paths first, then split and sanitize each component
+    # This allows paths like 'uploads/filename' to work correctly
+    joined = os.path.join(*paths) if paths else ''
+    
+    # Split into individual components and sanitize each one
+    path_parts = joined.replace('\\', '/').split('/')
+    sanitized_parts = []
+    
+    for part in path_parts:
+        if part and part not in ('.', '..'):
+            # Sanitize each individual part to prevent path traversal
+            sanitized = sanitize_filename(part)
+            if sanitized and sanitized != '.':
+                sanitized_parts.append(sanitized)
     
     # Use werkzeug's safe_join which prevents path traversal
-    result = safe_join(base_dir, *sanitized_paths)
+    result = safe_join(base_dir, *sanitized_parts)
     
     if result is None:
         raise ValueError(f"Path traversal detected: {paths}")
