@@ -177,14 +177,21 @@ def index():
                 except:
                     form_data = {}
             
+            # Use values from form_data if available (what technician submitted), otherwise fall back to DB columns
+            site_name = form_data.get('site_name') or submission.site_name or ''
+            visit_date = form_data.get('visit_date') or (submission.visit_date.isoformat() if submission.visit_date else '')
+            
             submission_data = {
                 'submission_id': submission.submission_id,
-                'site_name': submission.site_name or '',
-                'visit_date': submission.visit_date.isoformat() if submission.visit_date else '',
+                'site_name': site_name,
+                'visit_date': visit_date,
                 'form_data': form_data,
                 'is_edit_mode': True
             }
             is_edit_mode = True
+            
+            logger.info(f"Submission data prepared - site_name: {site_name}, visit_date: {visit_date}")
+            logger.info(f"Items in form_data: {len(form_data.get('items', [])) if isinstance(form_data.get('items'), list) else 'not a list'}")
         else:
             # Normal form access - check module access
             if not user.has_module_access('hvac_mep'):
@@ -194,7 +201,35 @@ def index():
         
         # Pass user designation and role to template for signature field visibility
         user_designation = user.designation if hasattr(user, 'designation') else None
-        is_supervisor_edit = is_edit_mode and user_designation == 'supervisor'
+        
+        # Consider admins, supervisors, and managers as "supervisor edit" for review purposes
+        # This allows admins to see the same editable view as supervisors at any stage
+        review_param = request.args.get('review') == 'true'
+        is_supervisor_edit = is_edit_mode and (user_designation in ['supervisor', 'manager'] or user.role == 'admin' or review_param)
+        
+        # Log for debugging
+        if is_edit_mode:
+            logger.info(f"Loading submission {edit_submission_id} for user {user_id} (role: {user.role}, designation: {user_designation}, is_supervisor_edit: {is_supervisor_edit})")
+            if submission_data and submission_data.get('form_data'):
+                logger.info(f"Form data keys: {list(submission_data['form_data'].keys())}")
+                logger.info(f"Site name from form_data: {submission_data['form_data'].get('site_name')}")
+                logger.info(f"Visit date from form_data: {submission_data['form_data'].get('visit_date')}")
+                logger.info(f"Site name in submission_data: {submission_data.get('site_name')}")
+                logger.info(f"Visit date in submission_data: {submission_data.get('visit_date')}")
+                if 'items' in submission_data['form_data']:
+                    items_list = submission_data['form_data']['items']
+                    if isinstance(items_list, list):
+                        logger.info(f"Items count: {len(items_list)}")
+                        if len(items_list) > 0:
+                            logger.info(f"First item keys: {list(items_list[0].keys()) if isinstance(items_list[0], dict) else 'not a dict'}")
+                    else:
+                        logger.warning(f"Items is not a list: {type(items_list)}")
+                if 'tech_signature' in submission_data['form_data']:
+                    tech_sig = submission_data['form_data']['tech_signature']
+                    if isinstance(tech_sig, dict):
+                        logger.info(f"Tech signature URL: {tech_sig.get('url', 'no url')}")
+                    else:
+                        logger.info(f"Tech signature type: {type(tech_sig)}")
         
         return render_template("hvac_mep_form.html", 
                              submission_data=submission_data, 
@@ -330,6 +365,10 @@ def submit():
                 asset = request.form.get(f"item_{i}_asset", "")
                 system = request.form.get(f"item_{i}_system", "")
                 description = request.form.get(f"item_{i}_description", "")
+                quantity = request.form.get(f"item_{i}_quantity", "1")
+                brand = request.form.get(f"item_{i}_brand", "")
+                specification = request.form.get(f"item_{i}_specification", "")
+                comments = request.form.get(f"item_{i}_comments", "")
 
                 photos_saved = []
                 # Files for this item are expected with field name item_{i}_photo (can appear multiple times)
@@ -356,6 +395,10 @@ def submit():
                         "asset": asset,
                         "system": system,
                         "description": description,
+                        "quantity": quantity,
+                        "brand": brand,
+                        "specification": specification,
+                        "comments": comments,
                         "photos": photos_saved,
                     }
                 )
@@ -732,9 +775,12 @@ def submit_with_urls():
         # Process signatures
         tech_sig_dataurl = payload.get("tech_signature", "")
         opman_sig_dataurl = payload.get("opMan_signature", "")
+        supervisor_sig_dataurl = payload.get("supervisor_signature", "")
+        supervisor_comments = payload.get("supervisor_comments", "")
         
         tech_sig_file = None
         opman_sig_file = None
+        supervisor_sig_file = None
         
         if tech_sig_dataurl:
             fname, fpath, url = save_signature_dataurl(tech_sig_dataurl, UPLOADS_DIR, prefix="tech_sig")
@@ -746,6 +792,11 @@ def submit_with_urls():
             if url:  # Check for URL, not fname (cloud upload returns None for fname)
                 opman_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
         
+        if supervisor_sig_dataurl:
+            fname, fpath, url = save_signature_dataurl(supervisor_sig_dataurl, UPLOADS_DIR, prefix="supervisor_sig")
+            if url:
+                supervisor_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
+        
         # Process items with photo URLs
         items_data = payload.get("items", [])
         items = []
@@ -754,6 +805,10 @@ def submit_with_urls():
             asset = item_data.get("asset", "")
             system = item_data.get("system", "")
             description = item_data.get("description", "")
+            quantity = item_data.get("quantity", "1")
+            brand = item_data.get("brand", "")
+            specification = item_data.get("specification", "")
+            comments = item_data.get("comments", "")
             photo_urls = item_data.get("photo_urls", [])
             
             # Convert photo URLs to the format expected by generators
@@ -770,6 +825,10 @@ def submit_with_urls():
                 "asset": asset,
                 "system": system,
                 "description": description,
+                "quantity": quantity,
+                "brand": brand,
+                "specification": specification,
+                "comments": comments,
                 "photos": photos_saved
             })
         
@@ -784,6 +843,8 @@ def submit_with_urls():
             "visit_date": visit_date,
             "tech_signature": tech_sig_file,
             "opMan_signature": opman_sig_file,
+            "supervisor_signature": supervisor_sig_file,
+            "supervisor_comments": supervisor_comments,
             "items": items,
             "timestamp": datetime.now().isoformat(),
             "base_url": request.host_url.rstrip('/')

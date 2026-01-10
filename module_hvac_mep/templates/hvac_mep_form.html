@@ -487,7 +487,8 @@
     .signature-pad,
     canvas.signature-pad,
     #techSignaturePad,
-    #opManSignaturePad {
+    #opManSignaturePad,
+    #supervisorSignaturePad {
       border: 2px solid var(--border-light);
       border-radius: 6px;
       width: 100%;
@@ -498,6 +499,7 @@
       cursor: crosshair;
       display: block;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      touch-action: none; /* Crucial for mobile drawing */
     }
     
     /* Ensure canvas doesn't stretch */
@@ -512,26 +514,52 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 0.5rem;
+      gap: 0.5rem;
+      width: 100%;
+      max-width: 500px;
+    }
+    
+    .signature-label label {
+      flex: 1;
+      margin-bottom: 0;
     }
     
     .signature-hint {
       font-size: 0.75rem;
       color: var(--text-light);
       font-weight: 400;
+      white-space: nowrap;
+      flex-shrink: 0;
+      text-align: right;
+    }
+    
+    /* Ensure signature container properly wraps label and pad */
+    .signature-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 500px;
     }
     
     /* Clean item cards */
     .item-card {
       border: 1px solid var(--border-light);
-      padding: 1.25rem;
-      border-radius: 4px;
-      margin-bottom: 0.875rem;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
       background: var(--white);
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
     }
     
     .item-card:hover {
-      box-shadow: var(--shadow-sm);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+      border-color: var(--primary-light);
+    }
+    
+    .editable-item-card {
+      border-left: 4px solid #059669 !important;
+      background: #fcfdfc !important;
     }
     
     /* Minimal thumbnails */
@@ -769,25 +797,169 @@
   
   <div class="container">
     <h2>HVAC & MEP Inspection{% if is_edit_mode %} - Edit Mode{% endif %}</h2>
-    <p class="text-muted mb-4">{% if is_edit_mode %}Review and edit the submission below. Signatures cannot be modified.{% else %}Complete site visit documentation with photos and signatures{% endif %}</p>
+    <p class="text-muted mb-4">
+      {% if is_supervisor_edit %}
+      Review the technician's submission below. You can edit any fields, add new items, add your comments, verify, and sign to approve.
+      {% elif is_edit_mode %}
+      Review and edit the submission below. Signatures cannot be modified.
+      {% else %}
+      Complete site visit documentation with photos and signatures
+      {% endif %}
+    </p>
 
     <form id="mainForm" enctype="multipart/form-data" onsubmit="return false;">
       <div class="row g-3">
         <!-- Site Info -->
         <div class="col-md-6 mb-3">
           <label for="site_name" class="form-label">Site Name</label>
-          <input id="site_name" name="site_name" class="form-control" required>
+          <input id="site_name" name="site_name" class="form-control" 
+                 {% if is_edit_mode and submission_data %}value="{{ submission_data.site_name or (submission_data.form_data.site_name if submission_data.form_data else '') }}"{% endif %}
+                 {% if not is_supervisor_edit %}required{% endif %}>
         </div>
 
         <div class="col-md-6 mb-3">
           <label for="visit_date" class="form-label">Visit Date</label>
-          <input id="visit_date" name="visit_date" type="date" class="form-control" required>
+          <input id="visit_date" name="visit_date" type="date" class="form-control" 
+                 {% if is_edit_mode and submission_data %}value="{{ submission_data.visit_date or (submission_data.form_data.visit_date if submission_data.form_data else '') }}"{% endif %}
+                 {% if not is_supervisor_edit %}required{% endif %}>
         </div>
+        
+        {% if is_edit_mode and submission_data %}
+        <!-- Debug: Submission data loaded -->
+        <script>
+          console.log('🔍 DEBUG: Submission data from Jinja:', {{ submission_data|tojson|safe }});
+        </script>
+        {% endif %}
 
-        <!-- Add Item Section -->
+        <!-- ============================================= -->
+        <!-- SUPERVISOR/MANAGER VIEW: Submitted Items First -->
+        <!-- ============================================= -->
+        {% if is_supervisor_edit %}
+        
+        <!-- Submitted Inspection Items (TOP for Supervisor/Manager) -->
+        <div class="col-12 mb-section">
+          <h5 style="color: #059669; font-weight: 700; border-bottom: 2px solid #059669; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">SUBMITTED INSPECTION ITEMS</h5>
+          <p class="text-muted small" style="margin-top: -1rem; margin-bottom: 1.5rem;">Review and edit the items submitted by the technician below.</p>
+          
+          <!-- Server-side rendered items for supervisor view (editable) -->
+          {% if is_edit_mode and submission_data and submission_data.form_data and submission_data.form_data['items'] %}
+          <div id="serverRenderedItems" class="items-list mb-3">
+            {% for item in submission_data.form_data['items'] %}
+            <div class="item-card editable-item-card" data-item-index="{{ loop.index0 }}" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="d-flex align-items-center gap-2">
+                  <h6 style="margin: 0; color: #059669; font-weight: 700;">Item {{ loop.index }}</h6>
+                  <span class="badge bg-light text-success border border-success-subtle small px-2 py-1">✓ Already Registered Asset</span>
+                </div>
+                <div class="d-flex flex-column align-items-end">
+                  <button type="button" class="btn btn-sm btn-danger remove-server-item" data-idx="{{ loop.index0 }}">🗑️ Remove</button>
+                  <small class="text-primary mt-1" style="font-weight: 600; font-size: 0.75rem;">✎ Edit this Asset</small>
+                </div>
+              </div>
+              
+              <div class="row g-3">
+                <!-- Asset -->
+                <div class="col-md-4">
+                  <label class="form-label"><strong>Asset</strong></label>
+                  <input type="text" class="form-control editable-field" data-field="asset" value="{{ item.asset or '' }}" placeholder="Asset name">
+                </div>
+                
+                <!-- System -->
+                <div class="col-md-4">
+                  <label class="form-label"><strong>System</strong></label>
+                  <input type="text" class="form-control editable-field" data-field="system" value="{{ item.system or '' }}" placeholder="System type">
+                </div>
+                
+                <!-- Description -->
+                <div class="col-md-4">
+                  <label class="form-label"><strong>Description</strong></label>
+                  <input type="text" class="form-control editable-field" data-field="description" value="{{ item.description or '' }}" placeholder="Description">
+                </div>
+                
+                <!-- Quantity -->
+                <div class="col-md-4">
+                  <label class="form-label"><strong>Quantity</strong></label>
+                  <input type="number" class="form-control editable-field" data-field="quantity" value="{{ item.quantity or '1' }}" min="1" placeholder="1">
+                </div>
+                
+                <!-- Brand -->
+                <div class="col-md-4">
+                  <label class="form-label"><strong>Brand</strong></label>
+                  <input type="text" class="form-control editable-field" data-field="brand" value="{{ item.brand or '' }}" placeholder="Brand name">
+                </div>
+                
+                <!-- Specification -->
+                <div class="col-md-4">
+                  <label class="form-label"><strong>Specification</strong></label>
+                  <input type="text" class="form-control editable-field" data-field="specification" value="{{ item.specification or '' }}" placeholder="Specification">
+                </div>
+                
+                <!-- Comments -->
+                <div class="col-12">
+                  <label class="form-label"><strong>Comments</strong></label>
+                  <textarea class="form-control editable-field" data-field="comments" rows="3" placeholder="Enter comments">{{ item.comments or '' }}</textarea>
+                </div>
+                
+                <!-- Photos -->
+                <div class="col-12">
+                  <label class="form-label"><strong>Photos</strong></label>
+                  {% if item.photos and item.photos|length > 0 %}
+                  <div class="photo-count mb-2" style="font-size: 0.85rem;">
+                    📷 {{ item.photos|length }} photo(s) ☁️ Uploaded
+                  </div>
+                  <div class="thumbs-row mb-2" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                    {% for photo in item.photos[:6] %}
+                      {% set photo_url = photo.url if photo is mapping else photo %}
+                      {% if photo_url %}
+                      <img src="{{ photo_url }}" alt="Photo {{ loop.index }}" 
+                           style="width: 70px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; cursor: pointer; background: #f3f4f6;"
+                           onclick="window.open('{{ photo_url }}', '_blank')"
+                           onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2270%22 height=%2250%22%3E%3Crect width=%2270%22 height=%2250%22 fill=%22%23e5e7eb%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2210%22%3EFailed%3C/text%3E%3C/svg%3E'">
+                      {% endif %}
+                    {% endfor %}
+                    {% if item.photos|length > 6 %}
+                    <span class="badge bg-secondary" style="margin-left: 8px; align-self: center;">+{{ item.photos|length - 6 }} more</span>
+                    {% endif %}
+                  </div>
+                  {% else %}
+                  <div class="photo-count mb-2" style="font-size: 0.85rem; color: #6b7280;">
+                    📷 No photos attached
+                  </div>
+                  {% endif %}
+                  
+                  <!-- Add more photos button -->
+                  <button type="button" class="btn btn-sm btn-outline-primary add-photos-to-item" data-item-index="{{ loop.index0 }}">
+                    📷 Add More Photos
+                  </button>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="alert alert-info">No items submitted yet.</div>
+          {% endif %}
+          
+          <!-- Newly added items by supervisor (JavaScript-managed) -->
+          <div id="itemsList" class="items-list"></div>
+        </div>
+        
+        <!-- Add New Item Section (BELOW submitted items for Supervisor) -->
+        <div class="col-12 mb-section">
+          <h5>Add New Item (Optional)</h5>
+          <p class="text-muted" style="font-size: 0.9rem;">If needed, you can add additional items to this submission.</p>
+        </div>
+        
+        {% else %}
+        <!-- ============================================= -->
+        <!-- TECHNICIAN VIEW: Add Item Form First -->
+        <!-- ============================================= -->
+        
+        <!-- Add Inspection Item Section (FIRST for Technician) -->
         <div class="col-12 mb-section">
           <h5>Add Inspection Item</h5>
         </div>
+        {% endif %}
 
         <div class="col-md-4 mb-2">
           <label class="form-label">Asset</label>
@@ -808,6 +980,26 @@
           <select id="curDescription" class="form-select" disabled>
             <option value="">Select Description</option>
           </select>
+        </div>
+
+        <div class="col-md-4 mb-2">
+          <label class="form-label">Quantity</label>
+          <input type="number" id="curQuantity" class="form-control" placeholder="Enter quantity" min="1" value="1">
+        </div>
+
+        <div class="col-md-4 mb-2">
+          <label class="form-label">Brand</label>
+          <input type="text" id="curBrand" class="form-control" placeholder="Enter brand name">
+        </div>
+
+        <div class="col-md-4 mb-2">
+          <label class="form-label">Specification</label>
+          <input type="text" id="curSpecification" class="form-control" placeholder="Enter specification">
+        </div>
+
+        <div class="col-12 mb-2">
+          <label class="form-label">Comments</label>
+          <textarea id="curComments" class="form-control" rows="3" placeholder="Enter any comments"></textarea>
         </div>
 
         <!-- Photos -->
@@ -844,43 +1036,136 @@
           <button id="clearCurrentBtn" type="button" class="btn btn-outline-secondary">Clear Current</button>
           <button id="clearItemsBtn" type="button" class="btn btn-outline-danger">Clear All Items</button>
         </div>
-
-        <!-- Items List -->
+        
+        <!-- Items List (Unified section for all views) -->
         <div class="col-12 mb-section">
-          <h5>Inspection Items</h5>
+          <h5 id="itemsListTitle">{% if is_supervisor_edit %}Newly Added Items{% else %}Inspection Items{% endif %}</h5>
           <div id="itemsList" class="items-list"></div>
         </div>
 
+        {% if is_edit_mode and submission_data %}
+        <!-- Pre-load items data for JavaScript access -->
+        <script>
+          // Store submission items globally for the main script to access
+          window.preloadedSubmissionData = {{ submission_data|tojson|safe }};
+          {% if submission_data.form_data and submission_data.form_data['items'] %}
+          window.preloadedItems = {{ submission_data.form_data['items']|tojson|safe }};
+          {% else %}
+          window.preloadedItems = [];
+          {% endif %}
+          console.log('📦 Preloaded submission data:', window.preloadedSubmissionData);
+          console.log('📦 Preloaded items:', window.preloadedItems);
+          console.log('📦 Preloaded items count:', window.preloadedItems ? window.preloadedItems.length : 0);
+          
+          // Mark that server-rendered items exist
+          window.hasServerRenderedItems = {{ 'true' if submission_data.form_data and submission_data.form_data['items'] else 'false' }};
+        </script>
+        {% endif %}
+
         <!-- Signatures -->
         <div class="col-md-6 mb-3">
+          <div class="signature-container">
           <div class="signature-label">
-            <label class="form-label mb-0">Technician Signature</label>
+              <label class="form-label mb-0" style="flex: 1;">Technician Signature</label>
+              {% if is_supervisor_edit %}
+              <span class="signature-hint" style="color: #059669; font-weight: 600;">✓ Technician has signed</span>
+              {% else %}
             <span class="signature-hint">Draw signature</span>
+              {% endif %}
           </div>
+          {% if is_supervisor_edit %}
+          <!-- Show technician signature as read-only image when supervisor/manager views -->
+          {% set tech_sig = submission_data.form_data.tech_signature if submission_data and submission_data.form_data and submission_data.form_data.tech_signature else none %}
+          {% set tech_sig_url = tech_sig.url if tech_sig is mapping else (tech_sig if tech_sig is string else none) %}
+          <div id="techSignatureDisplay" style="border: 1px solid #e5e7eb; background: #f9fafb; padding: 10px; border-radius: 4px; min-height: 150px; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 500px;">
+            {% if tech_sig_url %}
+            <img src="{{ tech_sig_url }}" alt="Technician Signature" style="width: 100%; max-width: 500px; max-height: 150px; object-fit: contain; border-radius: 4px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span class="text-muted" style="display: none;">Failed to load signature</span>
+            {% else %}
+            <span class="text-muted">Technician Signature (Loading...)</span>
+            {% endif %}
+          </div>
+          {% else %}
           <canvas id="techSignaturePad" class="signature-pad"></canvas>
           <input type="hidden" id="techSignatureData" name="tech_signature">
           <button type="button" id="clearTech" class="btn btn-outline-secondary btn-sm mt-2">Clear</button>
-        </div>
-
-        {% if user_designation != 'technician' or is_edit_mode %}
-        <div class="col-md-6 mb-3" id="opManSignatureContainer">
-          <div class="signature-label">
-            <label class="form-label mb-0">Operation Manager Signature</label>
-            {% if is_supervisor_edit %}
-            <span class="signature-hint" style="color: var(--primary); font-weight: 600;">Verify & Sign as Supervisor</span>
-            {% else %}
-            <span class="signature-hint">Draw signature</span>
             {% endif %}
           </div>
-          <canvas id="opManSignaturePad" class="signature-pad"></canvas>
-          <input type="hidden" id="opManSignatureData" name="opMan_signature">
-          <button type="button" id="clearOp" class="btn btn-outline-secondary btn-sm mt-2">Clear</button>
+        </div>
+
+        {% if is_supervisor_edit or user_designation == 'supervisor' %}
+        <!-- Supervisor Review Section -->
+        <div class="col-12 mb-4" style="border-top: 3px solid var(--primary); padding-top: 1.5rem; margin-top: 2rem;">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 style="color: var(--primary); margin: 0; font-weight: 700;">SUPERVISOR REVIEW & APPROVAL</h5>
+            <div>
+              <button type="button" id="verifiedBtn" class="btn btn-success btn-sm">
+                <span id="verifiedBtnIcon">✓</span> Verify Submission
+              </button>
+              <span id="verifiedStatus" class="ms-2" style="display: none; color: #059669; font-weight: 600;">✓ Verified</span>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-lg-7 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
+              <textarea id="supervisorComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            </div>
+            
+            <div class="col-lg-5 mb-3">
+              <div class="signature-container h-100 d-flex flex-column">
+                <div class="signature-label">
+                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Supervisor Signature</label>
+                  <span class="signature-hint text-danger small">Required for approval</span>
+                </div>
+                <canvas id="supervisorSignaturePad" class="signature-pad flex-grow-1" style="height: 140px !important; min-height: 140px !important;"></canvas>
+                <input type="hidden" id="supervisorSignatureData" name="supervisor_signature">
+                <button type="button" id="clearSupervisor" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if user_designation == 'manager' or (is_edit_mode and user_designation == 'manager') %}
+        <div class="col-md-6 mb-4" id="opManSignatureContainer">
+          <div class="signature-container">
+            <div class="signature-label">
+              <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operation Manager Signature</label>
+              {% if is_supervisor_edit %}
+                <span class="signature-hint text-primary small">Sign as Manager</span>
+              {% else %}
+                <span class="signature-hint small">Draw signature</span>
+              {% endif %}
+            </div>
+            <canvas id="opManSignaturePad" class="signature-pad" style="height: 140px !important; min-height: 140px !important;"></canvas>
+            <input type="hidden" id="opManSignatureData" name="opMan_signature">
+            <button type="button" id="clearOp" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+          </div>
+        </div>
+        {% elif user_designation != 'technician' or is_edit_mode %}
+        <div class="col-md-6 mb-4" id="opManSignatureContainer">
+          <div class="signature-container">
+            <div class="signature-label">
+              <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operation Manager Signature</label>
+              {% if is_supervisor_edit %}
+                <span class="signature-hint text-primary small">Sign as Manager</span>
+              {% else %}
+                <span class="signature-hint small">Draw signature</span>
+              {% endif %}
+            </div>
+            <canvas id="opManSignaturePad" class="signature-pad" style="height: 140px !important; min-height: 140px !important;"></canvas>
+            <input type="hidden" id="opManSignatureData" name="opMan_signature">
+            <button type="button" id="clearOp" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+          </div>
         </div>
         {% endif %}
 
         <!-- Submit Section -->
-        <div class="col-12 mb-4">
-          <button type="button" id="submitAllBtn" class="btn btn-success btn-lg">{% if is_edit_mode %}Update Submission{% else %}Submit Inspection{% endif %}</button>
+        <div class="col-12 mb-5 mt-4 text-center">
+          <button type="button" id="submitAllBtn" class="btn btn-success px-5 py-2 shadow-sm" style="font-weight: 700; letter-spacing: 0.5px; border-radius: 8px;">
+            {% if is_edit_mode %}✓ UPDATE SUBMISSION{% else %}🚀 SUBMIT INSPECTION{% endif %}
+          </button>
         </div>
 
         <!-- Status & Downloads -->
@@ -966,88 +1251,102 @@
     function initSignaturePads() {
       const techCanvas = document.getElementById('techSignaturePad');
       const opCanvas = document.getElementById('opManSignaturePad');
+      const supervisorCanvas = document.getElementById('supervisorSignaturePad');
       
       // Enhance touch events for mobile
       if (typeof enhanceTouchEvents !== 'undefined') {
         if (techCanvas) enhanceTouchEvents(techCanvas);
         if (opCanvas) enhanceTouchEvents(opCanvas);
+        if (supervisorCanvas) enhanceTouchEvents(supervisorCanvas);
       }
       
-      const techPad = new SignaturePad(techCanvas, {
+      const techPad = techCanvas ? new SignaturePad(techCanvas, {
         backgroundColor: 'rgb(255, 255, 255)',
         penColor: 'rgb(0, 0, 0)',
         minWidth: 1,
         maxWidth: 3,
         throttle: 16
-      });
+      }) : null;
       
-      // Only initialize operations manager pad if the canvas exists
-      let opPad = null;
-      if (opCanvas) {
-        opPad = new SignaturePad(opCanvas, {
-          backgroundColor: 'rgb(255, 255, 255)',
-          penColor: 'rgb(0, 0, 0)',
-          minWidth: 1,
-          maxWidth: 3,
-          throttle: 16
-        });
-      }
+      const opPad = opCanvas ? new SignaturePad(opCanvas, {
+        backgroundColor: 'rgb(255, 255, 255)',
+        penColor: 'rgb(0, 0, 0)',
+        minWidth: 1,
+        maxWidth: 3,
+        throttle: 16
+      }) : null;
+
+      const supervisorPad = supervisorCanvas ? new SignaturePad(supervisorCanvas, {
+        backgroundColor: 'rgb(255, 255, 255)',
+        penColor: '#125435',
+        minWidth: 1,
+        maxWidth: 3,
+        throttle: 16
+      }) : null;
 
       function resizeCanvas(canvas, pad) {
-        if (!canvas || canvas.offsetWidth === 0) return;
+        if (!canvas || canvas.offsetParent === null) return; // Skip hidden canvases
         
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
         const rect = canvas.getBoundingClientRect();
         
-        // Set display size
-        canvas.style.width = rect.width + 'px';
-        canvas.style.height = rect.height + 'px';
-        
-        // Set actual size in memory (scaled for DPI)
+        // Only resize if width changed significantly or not yet set
+        if (canvas.width === rect.width * ratio && canvas.height === rect.height * ratio) return;
+
         canvas.width = rect.width * ratio;
         canvas.height = rect.height * ratio;
         
-        // Scale the drawing context so everything draws at correct size
         const ctx = canvas.getContext('2d');
         ctx.scale(ratio, ratio);
         
-        // Redraw signature if it exists
-        if (pad && !pad.isEmpty()) {
-          const data = pad.toData();
-          pad.clear();
-          pad.fromData(data);
+        if (pad) {
+          pad.clear(); // Resizing clears the canvas
         }
       }
       
-      // Initial resize
-      resizeCanvas(techCanvas, techPad);
-      if (opCanvas && opPad) {
-        resizeCanvas(opCanvas, opPad);
-      }
+      // Initial resize with a slight delay to ensure layout is ready
+      setTimeout(() => {
+        if (techCanvas) resizeCanvas(techCanvas, techPad);
+        if (opCanvas) resizeCanvas(opCanvas, opPad);
+        if (supervisorCanvas) resizeCanvas(supervisorCanvas, supervisorPad);
+      }, 500);
       
       // Resize on window resize
-      window.addEventListener('resize', () => { 
-        resizeCanvas(techCanvas, techPad); 
-        if (opCanvas && opPad) {
-          resizeCanvas(opCanvas, opPad); 
-        }
+      window.addEventListener('resize', () => {
+        if (techCanvas) resizeCanvas(techCanvas, techPad);
+        if (opCanvas) resizeCanvas(opCanvas, opPad);
+        if (supervisorCanvas) resizeCanvas(supervisorCanvas, supervisorPad);
       });
 
-      document.getElementById('clearTech').addEventListener('click', () => { techPad.clear(); document.getElementById('techSignatureData').value=''; });
+      const clearTechBtn = document.getElementById('clearTech');
+      if (clearTechBtn && techPad) {
+        clearTechBtn.addEventListener('click', () => { techPad.clear(); document.getElementById('techSignatureData').value=''; });
+      }
       
-      // Only attach clear button if operations manager pad exists
       const clearOpBtn = document.getElementById('clearOp');
       if (clearOpBtn && opPad) {
         clearOpBtn.addEventListener('click', () => { opPad.clear(); document.getElementById('opManSignatureData').value=''; });
       }
 
-      return { techPad, opPad };
+      const clearSupervisorBtn = document.getElementById('clearSupervisor');
+      if (clearSupervisorBtn && supervisorPad) {
+        clearSupervisorBtn.addEventListener('click', () => { 
+          supervisorPad.clear(); 
+          document.getElementById('supervisorSignatureData').value=''; 
+        });
+      }
+
+      return { techPad, opPad, supervisorPad };
     }
 
     (function(){
       const curAsset = document.getElementById('curAsset');
       const curSystem = document.getElementById('curSystem');
       const curDescription = document.getElementById('curDescription');
+      const curQuantity = document.getElementById('curQuantity');
+      const curBrand = document.getElementById('curBrand');
+      const curSpecification = document.getElementById('curSpecification');
+      const curComments = document.getElementById('curComments');
       const curPhotos = document.getElementById('curPhotos');
       const dropZone = document.getElementById('dropZone');
       const photoCount = document.getElementById('photoCount');
@@ -1075,6 +1374,33 @@
       
       // Make pads available globally for loadSubmissionData
       window.signaturePads = pads;
+      
+      // Verified button handler (for supervisor)
+      const verifiedBtn = document.getElementById('verifiedBtn');
+      const verifiedStatus = document.getElementById('verifiedStatus');
+      let isVerified = false;
+      
+      if (verifiedBtn) {
+        verifiedBtn.addEventListener('click', () => {
+          isVerified = !isVerified;
+          if (isVerified) {
+            verifiedBtn.classList.remove('btn-success');
+            verifiedBtn.classList.add('btn-outline-success');
+            verifiedBtn.innerHTML = '<span id="verifiedBtnIcon">✓</span> Verified';
+            if (verifiedStatus) {
+              verifiedStatus.style.display = 'inline';
+              verifiedStatus.textContent = '✓ Verified';
+            }
+          } else {
+            verifiedBtn.classList.remove('btn-outline-success');
+            verifiedBtn.classList.add('btn-success');
+            verifiedBtn.innerHTML = '<span id="verifiedBtnIcon">✓</span> Verify';
+            if (verifiedStatus) {
+              verifiedStatus.style.display = 'none';
+            }
+          }
+        });
+      }
 
       // Initialize Upload Queue System
       let photoQueue = null;
@@ -1168,6 +1494,7 @@
       }
 
       let items = [];
+      window.formItems = items; // Make accessible globally
       let currentFiles = [];
       let currentPreviews = [];
       let pollingInterval = null;
@@ -1446,6 +1773,10 @@
         const asset = curAsset.value || '';
         const system = curSystem.value || '';
         const description = curDescription.value || '';
+        const quantity = curQuantity.value || '1';
+        const brand = curBrand.value || '';
+        const specification = curSpecification.value || '';
+        const comments = curComments.value || '';
         if (!asset || !system || !description) {
           alert('Please select Asset, System and Description before adding.');
           return;
@@ -1480,6 +1811,10 @@
             asset, 
             system, 
             description, 
+            quantity: quantity || '1',
+            brand: brand || '',
+            specification: specification || '',
+            comments: comments || '',
             photoUrls: uploadedPhotoUrls,
             photoCount: uploadedPhotoUrls.length
           });
@@ -1541,6 +1876,10 @@
             asset, 
             system, 
             description, 
+            quantity: quantity || '1',
+            brand: brand || '',
+            specification: specification || '',
+            comments: comments || '',
             photoUrls: uploadedPhotoUrls,
             photoCount: uploadedPhotoUrls.length
           });
@@ -1575,6 +1914,10 @@
         curSystem.disabled = true;
         curDescription.innerHTML = '<option value="">Select Description</option>';
         curDescription.disabled = true;
+        curQuantity.value = '1';
+        curBrand.value = '';
+        curSpecification.value = '';
+        curComments.value = '';
         curPhotos.value = '';
         currentPreviews.forEach(u => URL.revokeObjectURL(u));
         currentFiles = [];
@@ -1588,22 +1931,61 @@
       }
 
       function renderItems() {
-        itemsList.innerHTML = '';
-        if (items.length === 0) {
-          itemsList.innerHTML = '<div class="text-muted">No items added yet</div>';
+        console.log(`🖼️ renderItems() called - items.length: ${items.length}`);
+        const itemsListEl = document.getElementById('itemsList');
+        if (!itemsListEl) {
+          console.error('❌ itemsList element not found in renderItems!');
+          console.error('  Document ready state:', document.readyState);
+          console.error('  Available IDs with "item":', Array.from(document.querySelectorAll('[id*="item"]')).map(el => el.id));
           return;
         }
+        
+        console.log(`🖼️ itemsList element found, clearing and rendering ${items.length} items...`);
+        itemsListEl.innerHTML = '';
+        
+        if (items.length === 0) {
+          itemsListEl.innerHTML = '<div class="text-muted">No items added yet</div>';
+          console.log('⚠️ No items to render, showing empty message');
+          return;
+        }
+        
+        console.log(`🖼️ Starting to render ${items.length} items...`);
+        
         items.forEach((it, idx) => {
+          // If in supervisor view, don't re-render items that were already rendered server-side
+          // This prevents duplication between the editable server-rendered cards and these summary cards
+          {% if is_supervisor_edit %}
+          if (it.isServerRendered) {
+            console.log(`  ⏭️ Skipping item ${idx} (already rendered server-side)`);
+            return;
+          }
+          {% endif %}
+          
+          console.log(`  Rendering item ${idx}:`, it);
           const card = document.createElement('div');
           card.className = 'item-card';
           
           const photoCount = it.photoUrls ? it.photoUrls.length : (it.photoCount || 0);
           const uploadStatus = it.photoUrls ? '☁️ Uploaded to cloud' : '⏳ Not uploaded';
           
+          const quantity = escapeHtml(it.quantity || '1');
+          const brand = escapeHtml(it.brand || '');
+          const specification = escapeHtml(it.specification || '');
+          const comments = escapeHtml(it.comments || '');
+          
+          const isSupervisorView = {% if is_supervisor_edit %}true{% else %}false{% endif %};
+          
           card.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
               <div style="flex:1;">
-                <div class="meta"><strong>Asset:</strong> ${escapeHtml(it.asset)} &nbsp; <strong>System:</strong> ${escapeHtml(it.system)} &nbsp; <strong>Description:</strong> ${escapeHtml(it.description)}</div>
+                <div class="meta"><strong>Asset:</strong> ${escapeHtml(it.asset)} &nbsp; <strong>System:</strong> ${escapeHtml(it.system)}</div>
+                <div class="meta mt-1"><strong>Description:</strong> ${escapeHtml(it.description)}</div>
+                <div class="meta mt-1" style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                  <span><strong>Quantity:</strong> ${quantity}</span>
+                  ${brand ? `<span><strong>Brand:</strong> ${brand}</span>` : '<span><strong>Brand:</strong> <em class="text-muted">Not specified</em></span>'}
+                  ${specification ? `<span><strong>Specification:</strong> ${specification}</span>` : '<span><strong>Specification:</strong> <em class="text-muted">Not specified</em></span>'}
+                </div>
+                ${comments ? `<div class="meta mt-1" style="border-top: 1px solid #e5e7eb; padding-top: 0.5rem; margin-top: 0.5rem;"><strong>Comments:</strong> <br><span style="white-space: pre-wrap;">${comments.replace(/\n/g, '<br>')}</span></div>` : '<div class="meta mt-1" style="border-top: 1px solid #e5e7eb; padding-top: 0.5rem; margin-top: 0.5rem;"><strong>Comments:</strong> <em class="text-muted">No comments</em></div>'}
                 <div class="photo-count mt-1" style="font-size:0.85rem;">📷 ${photoCount} photo(s) ${uploadStatus}</div>
                 <div class="mt-2 thumbs-row"></div>
               </div>
@@ -1665,12 +2047,24 @@
             console.log('No photo URLs for item:', it);
           }
           
-          card.querySelector('.remove-item').addEventListener('click', (e) => {
+          const removeBtn = card.querySelector('.remove-item');
+          if (removeBtn) {
+            removeBtn.addEventListener('click', (e) => {
             const i = Number(e.currentTarget.dataset.idx);
             if (confirm('Remove this item? (Photos remain in cloud storage)')) removeItem(i);
           });
-          itemsList.appendChild(card);
+          } else {
+            console.warn('Remove button not found for item', idx);
+          }
+          itemsListEl.appendChild(card);  // Use local variable, not outer scope
+          console.log(`  ✅ Appended item ${idx} card to DOM`);
         });
+        
+        const finalCount = itemsListEl.children.length;
+        console.log(`✅ renderItems() completed: ${finalCount} cards in DOM (expected ${items.length})`);
+        if (finalCount !== items.length) {
+          console.error(`❌ MISMATCH: Expected ${items.length} items but only ${finalCount} in DOM!`);
+        }
       }
 
       function removeItem(index) {
@@ -1837,23 +2231,119 @@
         progressContainer.style.display = 'none';
         downloadLinks.style.display = 'none';
         
+        // Get supervisor signature and comments if supervisor is submitting
+        let supervisorData = '';
+        let supervisorComments = '';
+        let supervisorVerified = false;
+        const supervisorCommentsField = document.getElementById('supervisorComments');
+        const supervisorSignatureData = document.getElementById('supervisorSignatureData');
+        {% if is_supervisor_edit or user_designation == 'supervisor' %}
+        if (pads.supervisorPad && !pads.supervisorPad.isEmpty()) {
+          supervisorData = pads.supervisorPad.toDataURL('image/png');
+          if (supervisorSignatureData) supervisorSignatureData.value = supervisorData;
+        } else if (supervisorSignatureData) {
+          supervisorData = supervisorSignatureData.value || '';
+        }
+        if (supervisorCommentsField) {
+          supervisorComments = supervisorCommentsField.value || '';
+        }
+        supervisorVerified = isVerified || false;
+        
+        // Validate supervisor signature if submitting as supervisor
+        if (!supervisorData) {
+          alert('Please provide your supervisor signature before submitting.');
+          return;
+        }
+        {% endif %}
+        
         // Prepare JSON payload (photos already in cloud)
         const payload = {
           site_name: document.getElementById('site_name').value || '',
           visit_date: document.getElementById('visit_date').value || '',
           tech_signature: techData || '',
           opMan_signature: opData || '',
+          supervisor_signature: supervisorData || '',
+          supervisor_comments: supervisorComments || '',
           items: items.map(it => ({
             asset: it.asset,
             system: it.system,
             description: it.description,
+            quantity: String(it.quantity || '1'),
+            brand: it.brand || '',
+            specification: it.specification || '',
+            comments: it.comments || '',
             photo_urls: it.photoUrls || [] // Cloud URLs
           }))
         };
 
+        console.log('📤 Submitting payload:', payload);
+        console.log(`📤 Items count: ${payload.items.length}`);
+        
+        // Final validation for items
+        if (payload.items.length === 0) {
+          if (!confirm('Warning: You are submitting a report with 0 items. Are you sure?')) {
+            loadingOverlay.style.display = 'none';
+            return;
+          }
+        }
+
         try {
           {% if is_edit_mode %}
-          // Update existing submission
+          {% if is_supervisor_edit %}
+          // Supervisor is approving/reviewing - use workflow approval endpoint
+          const submissionId = window.editSubmissionId;
+          const token = localStorage.getItem('access_token');
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+          
+          // First update the submission with new data
+          const updateRes = await fetch(`/api/admin/submissions/${submissionId}`, {
+            method: 'PUT',
+            headers: headers,
+            body: JSON.stringify({
+              site_name: payload.site_name,
+              visit_date: payload.visit_date,
+              form_data: payload
+            }),
+            credentials: 'include'
+          });
+          
+          if (!updateRes.ok) {
+            const txt = await updateRes.text();
+            throw new Error('Update failed: ' + updateRes.status + ' ' + txt);
+          }
+          
+          // Then approve via workflow endpoint
+          const approveRes = await fetch(`/api/workflow/submissions/${submissionId}/approve`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+              comments: supervisorComments,
+              supervisor_signature: supervisorData,
+              verified: supervisorVerified,
+              items: payload.items // Send updated items here as well
+            }),
+            credentials: 'include'
+          });
+          
+          if (!approveRes.ok) {
+            const txt = await approveRes.text();
+            throw new Error('Approval failed: ' + approveRes.status + ' ' + txt);
+          }
+          
+          const approveJson = await approveRes.json();
+          
+          if (approveJson.success) {
+            loadingOverlay.style.display = 'none';
+            statusBox.innerHTML = '<div class="alert alert-success">✅ Submission reviewed and approved! Forwarded to manager. <a href="/api/workflow/dashboard">Return to Supervisor Dashboard</a></div>';
+            clearDraft();
+          } else {
+            throw new Error(approveJson.error || 'Approval failed');
+          }
+          {% else %}
+          // Admin or regular edit mode
           const submissionId = window.editSubmissionId;
           const token = localStorage.getItem('access_token');
           const headers = { 'Content-Type': 'application/json' };
@@ -1893,6 +2383,7 @@
           } else {
             throw new Error(json.error || 'Update failed');
           }
+          {% endif %}
           {% else %}
           // Create new submission
           const submitUrl = modulePrefix + '/submit-with-urls';
@@ -1929,6 +2420,7 @@
           }
           {% endif %}
         } catch (err) {
+          console.error('❌ Submission failed:', err);
           loadingOverlay.style.display = 'none';
           statusBox.innerHTML = `<div class="alert alert-danger">❌ {% if is_edit_mode %}Update{% else %}Submission{% endif %} failed: ${err.message}</div>`;
         }
@@ -2002,79 +2494,350 @@
       // Load submission data if in edit mode
       function loadSubmissionData() {
         {% if is_edit_mode and submission_data %}
+        console.log('🔄 Loading submission data for edit mode...');
         try {
-          const submissionData = {{ submission_data|tojson }};
-          
-          // Pre-fill basic fields
-          if (submissionData.site_name) {
-            document.getElementById('site_name').value = submissionData.site_name;
+          // Get submission data - prefer Jinja-rendered, fall back to window global
+          let submissionData = null;
+          try {
+            submissionData = {{ submission_data|tojson }};
+            console.log('📦 Using Jinja-rendered submission data');
+          } catch (e) {
+            console.warn('⚠️ Failed to parse Jinja submission_data, trying window.preloadedSubmissionData:', e);
+            submissionData = window.preloadedSubmissionData || {};
           }
-          if (submissionData.visit_date) {
-            document.getElementById('visit_date').value = submissionData.visit_date;
+          
+          // Fall back to window global if Jinja version is incomplete
+          if (!submissionData || !submissionData.form_data) {
+            if (window.preloadedSubmissionData && window.preloadedSubmissionData.form_data) {
+              console.log('📦 Jinja submission data incomplete, using window.preloadedSubmissionData');
+              submissionData = window.preloadedSubmissionData;
+            }
           }
           
-          // Pre-populate items
+          console.log('📦 Full submission data object:', submissionData);
+          console.log('📦 submissionData keys:', Object.keys(submissionData || {}));
+          console.log('📦 submissionData.site_name:', submissionData?.site_name);
+          console.log('📦 submissionData.visit_date:', submissionData?.visit_date);
+          console.log('📦 submissionData.form_data:', submissionData?.form_data);
+          console.log('📦 submissionData.form_data?.items:', submissionData?.form_data?.items);
+          console.log('📦 submissionData.form_data?.site_name:', submissionData?.form_data?.site_name);
+          
+          // Pre-fill basic fields - check both top-level and form_data
+          const siteNameField = document.getElementById('site_name');
+          if (siteNameField) {
+            const siteName = submissionData.site_name || (submissionData.form_data && submissionData.form_data.site_name) || '';
+            if (siteName) {
+              siteNameField.value = siteName;
+              console.log('✅ Set site_name to:', siteName);
+            } else {
+              console.warn('⚠️ site_name not found in submission data or form_data');
+              console.warn('  submissionData.site_name:', submissionData.site_name);
+              console.warn('  submissionData.form_data?.site_name:', submissionData.form_data?.site_name);
+            }
+          } else {
+            console.error('❌ site_name field not found in DOM');
+          }
+          
+          const visitDateField = document.getElementById('visit_date');
+          if (visitDateField) {
+            const visitDate = submissionData.visit_date || (submissionData.form_data && submissionData.form_data.visit_date) || '';
+            if (visitDate) {
+              visitDateField.value = visitDate;
+              console.log('✅ Set visit_date to:', visitDate);
+            } else {
+              console.warn('⚠️ visit_date not found in submission data or form_data');
+              console.warn('  submissionData.visit_date:', submissionData.visit_date);
+              console.warn('  submissionData.form_data?.visit_date:', submissionData.form_data?.visit_date);
+            }
+          } else {
+            console.error('❌ visit_date field not found in DOM');
+          }
+          
+          // Pre-populate items - use form_data directly
+          // For supervisor edit, we use loadPreloadedItemsIntoArray instead to match server-rendered items
+          {% if is_supervisor_edit %}
+          console.log('⏭️ Supervisor mode: skipping item population in loadSubmissionData (handled by loadPreloadedItemsIntoArray)');
+          {% else %}
+          if (!submissionData) {
+            console.error('❌ submissionData is null or undefined!');
+            return;
+          }
+          
           const formData = submissionData.form_data || {};
-          console.log('Loading submission data, formData:', formData);
+          console.log('📦 Loading submission data, formData:', formData);
+          console.log('📦 Items in formData:', formData.items);
+          console.log('📦 formData keys:', Object.keys(formData));
+          console.log('📦 formData.items type:', typeof formData.items);
+          console.log('📦 formData.items is array?', Array.isArray(formData.items));
+          console.log('📦 formData.items length:', formData.items?.length);
           
-          if (formData.items && Array.isArray(formData.items)) {
-            formData.items.forEach((item, idx) => {
+          // Also check preloaded items from window
+          console.log('📦 window.preloadedItems:', window.preloadedItems);
+          console.log('📦 window.preloadedItems type:', typeof window.preloadedItems);
+          console.log('📦 window.preloadedItems is array?', Array.isArray(window.preloadedItems));
+          console.log('📦 window.preloadedItems length:', window.preloadedItems?.length);
+          
+          // Only clear items if they're empty (don't overwrite if already loaded)
+          let shouldReloadItems = true;
+          if (items.length > 0) {
+            console.log(`⚠️ Items array already has ${items.length} items, checking if we need to reload...`);
+            // If items are already loaded, skip reloading unless formData has different items
+            const existingItemCount = items.length;
+            const formDataItemCount = (formData.items && Array.isArray(formData.items)) ? formData.items.length : 0;
+            const preloadedItemCount = (window.preloadedItems && Array.isArray(window.preloadedItems)) ? window.preloadedItems.length : 0;
+            
+            if (existingItemCount > 0 && (formDataItemCount === existingItemCount || preloadedItemCount === existingItemCount)) {
+              console.log('✅ Items already loaded correctly, will skip reloading items but still render...');
+              shouldReloadItems = false; // Don't reload, but continue to render
+            } else {
+              console.log('🔄 Items count mismatch, will reload...');
+              items.length = 0; // Clear for reload
+            }
+          } else {
+            console.log('🧹 Items array is empty, will load items...');
+          }
+          
+          // Check for items in formData, fall back to preloaded items
+          // Prioritize formData.items, but if it's empty/undefined, use window.preloadedItems
+          let itemsArray = null;
+          
+          // DEBUG: Check all possible sources
+          console.log('🔍 DEBUGGING ITEM SOURCES:');
+          console.log('  formData:', formData);
+          console.log('  formData.items:', formData.items);
+          console.log('  formData.items type:', typeof formData.items);
+          console.log('  formData.items isArray?', Array.isArray(formData.items));
+          console.log('  window.preloadedItems:', window.preloadedItems);
+          console.log('  window.preloadedItems type:', typeof window.preloadedItems);
+          console.log('  window.preloadedItems isArray?', Array.isArray(window.preloadedItems));
+          
+          if (formData.items && Array.isArray(formData.items) && formData.items.length > 0) {
+            itemsArray = formData.items;
+            console.log('✅ Using formData.items - found', itemsArray.length, 'items');
+          } else if (window.preloadedItems && Array.isArray(window.preloadedItems) && window.preloadedItems.length > 0) {
+            itemsArray = window.preloadedItems;
+            console.log('✅ Using window.preloadedItems (fallback) - found', itemsArray.length, 'items');
+          } else {
+            itemsArray = [];
+            console.warn('⚠️ NO ITEMS FOUND in any source!');
+            console.warn('  formData.items:', formData.items);
+            console.warn('  window.preloadedItems:', window.preloadedItems);
+          }
+          console.log('📋 itemsArray:', itemsArray);
+          console.log('📋 itemsArray type:', typeof itemsArray, Array.isArray(itemsArray));
+          console.log('📋 itemsArray length:', itemsArray?.length);
+          
+          // Only load items if shouldReloadItems is true
+          if (!shouldReloadItems && items.length > 0) {
+            console.log('⏭️ Skipping item reload (items already loaded), just rendering...');
+            renderItems();
+          } else if (Array.isArray(itemsArray) && itemsArray.length > 0) {
+            {% if is_supervisor_edit %}
+            console.log('📝 Supervisor edit mode detected, skipping automatic items loading into array (handled by loadPreloadedItemsIntoArray)');
+            {% else %}
+            console.log(`📦 Found ${itemsArray.length} items to load`);
+            itemsArray.forEach((item, idx) => {
+              console.log(`  Processing item ${idx}:`, item);
+              
               // Extract photo URLs - handle different formats
               let photoUrls = [];
               
               // Try photo_urls first (direct array of URLs)
               if (item.photo_urls && Array.isArray(item.photo_urls)) {
                 photoUrls = item.photo_urls.filter(url => url && typeof url === 'string');
+                console.log(`    Item ${idx}: Using photo_urls array, found ${photoUrls.length} URLs`);
               } 
-              // Try photos array (array of objects with 'url' property)
+              // Try photos array (array of objects with 'url' property) - THIS IS THE EXPECTED FORMAT
               else if (item.photos && Array.isArray(item.photos)) {
                 photoUrls = item.photos.map(photo => {
                   if (typeof photo === 'string') {
                     return photo;
                   } else if (photo && typeof photo === 'object') {
-                    // Could be {url: "...", saved: ..., path: ...} or just {url: "..."}
-                    return photo.url || photo.cloud_url || null;
+                    // Format: {url: "...", saved: ..., path: ..., is_cloud: true}
+                    const url = photo.url || photo.cloud_url || null;
+                    console.log(`    Item ${idx}: Extracted photo URL from object:`, url?.substring(0, 50));
+                    return url;
                   }
                   return null;
                 }).filter(url => url !== null && typeof url === 'string');
+                console.log(`    Item ${idx}: Using photos array, extracted ${photoUrls.length} URLs`);
+              } else {
+                console.warn(`    Item ${idx}: No photos found. photo_urls:`, item.photo_urls, 'photos:', item.photos);
               }
               
-              console.log(`Item ${idx}: asset=${item.asset}, photoUrls count=${photoUrls.length}`, photoUrls);
-              
-              items.push({
+              const itemData = {
                 asset: item.asset || '',
                 system: item.system || '',
                 description: item.description || '',
+                quantity: item.quantity || '1',
+                brand: item.brand || '',
+                specification: item.specification || '',
+                comments: item.comments || '',
                 photoUrls: photoUrls,
                 photoCount: photoUrls.length
-              });
+              };
+              
+              console.log(`    Item ${idx} loaded:`, itemData);
+              items.push(itemData);
             });
+            {% endif %}
             
             // Render items after all are loaded
-            setTimeout(() => {
+            console.log(`✅ Loaded ${items.length} items from submission into items array`);
+            console.log(`✅ Items array contents:`, JSON.stringify(items, null, 2));
+            
+            // Function to attempt rendering with retries
+            function attemptRenderItems(retryCount = 0) {
+              const maxRetries = 15;
+              const itemsListEl = document.getElementById('itemsList');
+              
+              if (itemsListEl) {
+                console.log(`✅ itemsList element found (attempt ${retryCount + 1}), calling renderItems...`);
+                console.log(`  Items array has ${items.length} items`);
               renderItems();
-            }, 100);
-          }
-          
-          // Load signatures as read-only images (if they exist)
-          // Wait for signature pads to be initialized
-          function loadSignatures() {
-            const pads = window.signaturePads;
-            if (!pads || !pads.techPad || !pads.opPad) {
-              // Retry after a short delay if pads aren't ready
-              setTimeout(loadSignatures, 200);
-              return;
+                
+                // Check if rendering succeeded after a delay
+                setTimeout(() => {
+                  const renderedCount = itemsListEl.children.length || 0;
+                  console.log(`✅ After renderItems: ${renderedCount} cards in DOM`);
+                  
+                  if (renderedCount === 0 && items.length > 0 && retryCount < maxRetries) {
+                    console.warn(`⚠️ Items not rendered (attempt ${retryCount + 1}/${maxRetries}), retrying...`);
+                    setTimeout(() => attemptRenderItems(retryCount + 1), 300);
+                  } else if (renderedCount > 0) {
+                    console.log(`✅ Successfully rendered ${renderedCount} item cards!`);
+                  } else if (retryCount >= maxRetries) {
+                    console.error(`❌ Failed to render items after ${maxRetries} attempts`);
+                    console.error('  Items array:', items);
+                    console.error('  itemsList element:', itemsListEl);
+                  }
+                }, 200);
+              } else {
+                if (retryCount < maxRetries) {
+                  console.warn(`⚠️ itemsList element not found (attempt ${retryCount + 1}/${maxRetries}), retrying in 200ms...`);
+                  setTimeout(() => attemptRenderItems(retryCount + 1), 200);
+                } else {
+                  console.error(`❌ itemsList element not found after ${maxRetries} attempts!`);
+                  console.error('  Document ready state:', document.readyState);
+                  console.error('  Available elements with "items" in id:', Array.from(document.querySelectorAll('[id*="items"]')).map(el => el.id));
+                }
+              }
             }
             
-            if (formData.tech_signature || formData.techSignatureData) {
-              let techSig = formData.tech_signature || formData.techSignatureData;
-              // Handle object format with url property (from Cloudinary)
-              if (techSig && typeof techSig === 'object' && techSig.url) {
+            // Try rendering immediately and with multiple delays
+            console.log('🔄 Starting render attempts...');
+            attemptRenderItems(0);
+            setTimeout(() => attemptRenderItems(0), 300);
+            setTimeout(() => attemptRenderItems(0), 600);
+            setTimeout(() => attemptRenderItems(0), 1000);
+          } else {
+            console.warn('⚠️ No items found in formData');
+            console.warn('  formData:', formData);
+            console.warn('  formData.items:', formData.items);
+            console.warn('  formData.items type:', typeof formData.items);
+            console.warn('  Is array?', Array.isArray(formData.items));
+            console.warn('  Length?', formData.items?.length);
+            
+            // Try alternative paths
+            if (submissionData.items && Array.isArray(submissionData.items)) {
+              console.log('⚠️ Found items in submissionData.items instead of formData.items');
+              formData.items = submissionData.items;
+              // Retry loading
+              setTimeout(() => {
+                loadSubmissionData();
+            }, 100);
+            }
+          }
+          {% endif %}
+          
+          // Load signatures as read-only images (if they exist)
+          function loadSignatures() {
+            console.log('🔍 Loading signatures...');
+            
+            // Load technician signature - show as read-only for supervisor/manager
+            // Signature is stored as an object: {saved: ..., path: ..., url: "...", is_cloud: true}
+            let techSig = null;
+            
+            // Try multiple paths to find the signature
+            if (formData.tech_signature) {
+              techSig = formData.tech_signature;
+              console.log('📝 Found tech_signature in formData:', typeof techSig);
+            } else if (formData.techSignatureData) {
+              techSig = formData.techSignatureData;
+              console.log('📝 Found techSignatureData in formData:', typeof techSig);
+            } else if (submissionData.form_data && submissionData.form_data.tech_signature) {
+              techSig = submissionData.form_data.tech_signature;
+              console.log('📝 Found tech_signature in submissionData.form_data:', typeof techSig);
+            }
+            
+            if (techSig) {
+              console.log('📝 Processing technician signature:', typeof techSig, techSig);
+              
+              // Handle object format with url property (from database storage)
+              if (typeof techSig === 'object' && techSig !== null) {
+                if (techSig.url) {
                 techSig = techSig.url;
+                  console.log('📝 Extracted URL from signature object:', techSig);
+                } else {
+                  console.warn('⚠️ Signature object found but no url property:', techSig);
+                  techSig = null;
+                }
               }
-              if (techSig && typeof techSig === 'string' && (techSig.startsWith('data:image') || techSig.startsWith('http'))) {
+              
+              // Accept data URLs, http/https URLs, or relative paths starting with /
+              const isValidUrl = typeof techSig === 'string' && techSig.length > 0 && (
+                techSig.startsWith('data:image') || 
+                techSig.startsWith('http://') || 
+                techSig.startsWith('https://') || 
+                techSig.startsWith('/')
+              );
+              
+              if (isValidUrl) {
+                console.log('✅ Valid signature URL found:', techSig.substring(0, 50) + '...');
+                {% if is_supervisor_edit %}
+                // Show in read-only display for supervisor/manager
+                const techDisplay = document.getElementById('techSignatureDisplay');
+                if (techDisplay) {
+                  console.log('✅ Displaying technician signature in read-only mode');
+                  const sigImg = document.createElement('img');
+                  sigImg.src = techSig;
+                  sigImg.alt = 'Technician Signature';
+                  sigImg.style.cssText = 'width: 100%; max-width: 500px; max-height: 150px; object-fit: contain; border-radius: 4px; border: 1px solid #e5e7eb;';
+                  sigImg.onerror = function() {
+                    console.error('❌ Failed to load technician signature image:', techSig);
+                    this.style.display = 'none';
+                    techDisplay.innerHTML = '<span style="color: #dc2626;">⚠️ Failed to load signature image</span>';
+                  };
+                  sigImg.onload = function() {
+                    console.log('✅ Technician signature image loaded successfully');
+                  };
+                  techDisplay.innerHTML = '';
+                  techDisplay.appendChild(sigImg);
+                  
+                  // Store in hidden input for submission
+                  const techSigInput = document.getElementById('techSignatureData');
+                  if (techSigInput) techSigInput.value = techSig;
+                } else {
+                  console.warn('⚠️ techSignatureDisplay element not found');
+                }
+              } else {
+                console.warn('⚠️ Invalid signature URL format:', typeof techSig, techSig);
+              }
+            } else {
+              console.warn('⚠️ No technician signature found in formData');
+              console.warn('  formData keys:', Object.keys(formData));
+              console.warn('  Looking for: tech_signature, techSignatureData');
+            }
+            {% else %}
+                // Normal edit mode - show in canvas (for technician editing their own submission)
+                if (techSig && typeof techSig === 'string' && (
+                  techSig.startsWith('data:image') || 
+                  techSig.startsWith('http://') || 
+                  techSig.startsWith('https://') || 
+                  techSig.startsWith('/')
+                )) {
                 const techCanvas = document.getElementById('techSignaturePad');
-                if (techCanvas) {
+                  if (techCanvas && pads && pads.techPad) {
                   // Hide canvas and show signature as image instead (more reliable)
                   techCanvas.style.display = 'none';
                   
@@ -2102,15 +2865,57 @@
                   // Update hint text
                   const hintSpan = techCanvas.parentElement.querySelector('.signature-hint');
                   if (hintSpan) hintSpan.style.display = 'none';
-                  
-                  // Add info message below
-                  const techInfo = document.createElement('div');
-                  techInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
-                  techInfo.textContent = '⚠️ This signature was provided by the technician and cannot be modified.';
-                  techCanvas.parentElement.appendChild(techInfo);
+                  }
+                }
+                {% endif %}
+            
+            // Load supervisor comments and signature if supervisor is editing
+            {% if is_supervisor_edit or user_designation == 'supervisor' %}
+            if (formData.supervisor_comments) {
+              const commentsField = document.getElementById('supervisorComments');
+              if (commentsField) {
+                commentsField.value = formData.supervisor_comments || '';
+              }
+            }
+            
+            if (formData.supervisor_verified) {
+              if (verifiedBtn) {
+                isVerified = true;
+                verifiedBtn.classList.remove('btn-success');
+                verifiedBtn.classList.add('btn-outline-success');
+                verifiedBtn.innerHTML = '<span id="verifiedBtnIcon">✓</span> Verified';
+                if (verifiedStatus) {
+                  verifiedStatus.style.display = 'inline';
+                  verifiedStatus.textContent = '✓ Verified';
                 }
               }
             }
+            
+            if (formData.supervisor_signature) {
+              let supervisorSig = formData.supervisor_signature;
+              if (supervisorSig && typeof supervisorSig === 'object' && supervisorSig.url) {
+                supervisorSig = supervisorSig.url;
+              }
+              if (supervisorSig && typeof supervisorSig === 'string' && (supervisorSig.startsWith('data:image') || supervisorSig.startsWith('http'))) {
+                const supervisorCanvas = document.getElementById('supervisorSignaturePad');
+                if (supervisorCanvas && pads && pads.supervisorPad) {
+                  // Load signature into pad
+                  const img = new Image();
+                  img.crossOrigin = 'anonymous';
+                  img.onload = function() {
+                    const ctx = supervisorCanvas.getContext('2d');
+                    ctx.clearRect(0, 0, supervisorCanvas.width, supervisorCanvas.height);
+                    ctx.drawImage(img, 0, 0, supervisorCanvas.width, supervisorCanvas.height);
+                    pads.supervisorPad.fromDataURL(supervisorSig);
+                  };
+                  img.src = supervisorSig;
+                  
+                  const supervisorSigInput = document.getElementById('supervisorSignatureData');
+                  if (supervisorSigInput) supervisorSigInput.value = supervisorSig;
+                }
+              }
+            }
+            {% endif %}
             
             if (formData.opMan_signature || formData.opManSignatureData) {
               let opSig = formData.opMan_signature || formData.opManSignatureData;
@@ -2157,26 +2962,74 @@
           }
           
           // Start loading signatures after a short delay to ensure pads are initialized
-          setTimeout(loadSignatures, 300);
+          setTimeout(loadSignatures, 500);
           
           // Store submission ID for update
           window.editSubmissionId = submissionData.submission_id;
           
           console.log('✅ Submission data loaded for editing');
+          console.log('✅ Site name:', submissionData.site_name || 'not set');
+          console.log('✅ Visit date:', submissionData.visit_date || 'not set');
+          console.log('✅ Total items loaded:', items.length);
+          if (items.length > 0) {
+            console.log('✅ First item:', items[0]);
+          }
         } catch (err) {
-          console.error('Failed to load submission data:', err);
+          console.error('❌ Failed to load submission data:', err);
+          console.error('Error details:', err.message, err.stack);
+          alert('Failed to load submission data. Please check the browser console for details.');
         }
+        {% else %}
+        console.log('⚠️ loadSubmissionData called but conditions not met');
+        console.log('is_edit_mode:', {% if is_edit_mode %}true{% else %}false{% endif %});
+        console.log('submission_data:', {% if submission_data %}'provided'{% else %}'not provided'{% endif %});
         {% endif %}
       }
       
-      // Load draft on page load (only if not in edit mode)
-      window.addEventListener('DOMContentLoaded', () => {
-        {% if not is_edit_mode %}
-        loadDraft();
-        {% else %}
+      // Function to attempt loading data with retries
+      function attemptLoadData() {
+        {% if is_edit_mode %}
+        console.log('📥 Attempting to load submission data...');
+        console.log('  DOM ready state:', document.readyState);
+        
+        // Check if all required elements exist
+        const siteNameField = document.getElementById('site_name');
+        const visitDateField = document.getElementById('visit_date');
+        const itemsList = document.getElementById('itemsList');
+        
+        console.log('  site_name field exists:', !!siteNameField);
+        console.log('  visit_date field exists:', !!visitDateField);
+        console.log('  itemsList exists:', !!itemsList);
+        
+        if (siteNameField && visitDateField && itemsList) {
+          console.log('✅ All required DOM elements found, loading data...');
         loadSubmissionData();
+        } else {
+          console.warn('⚠️ Some DOM elements not ready yet, retrying in 100ms...');
+          setTimeout(attemptLoadData, 100);
+        }
+        {% else %}
+        console.log('📝 Loading draft (not in edit mode)');
+        loadDraft();
         {% endif %}
-      });
+      }
+      
+      // Try loading when DOM is ready
+      if (document.readyState === 'loading') {
+        console.log('📄 Document still loading, waiting for DOMContentLoaded...');
+        window.addEventListener('DOMContentLoaded', attemptLoadData);
+      } else {
+        console.log('📄 Document already ready, loading immediately...');
+        attemptLoadData();
+      }
+      
+      // Also try after a short delay as backup
+      setTimeout(() => {
+        {% if is_edit_mode %}
+        console.log('📥 Backup: Attempting to load submission data after delay...');
+        attemptLoadData();
+        {% endif %}
+      }, 500);
 
       function onDropdownsReady() { 
         fillAssets(); 
@@ -2188,7 +3041,179 @@
         window.addEventListener('dropdowns:loaded', onDropdownsReady, { once: true });
       }
 
+      // Make renderItems accessible globally
+      window.renderItems = renderItems;
+      
+      // Load preloaded items into items array for submission (server already rendered them)
+      {% if is_edit_mode and submission_data %}
+      function loadPreloadedItemsIntoArray() {
+        console.log('📦 Loading preloaded items into JavaScript array for submission...');
+        
+        if (window.preloadedItems && Array.isArray(window.preloadedItems) && window.preloadedItems.length > 0) {
+          // Clear items first
+          items.length = 0;
+          
+          window.preloadedItems.forEach((item, idx) => {
+            // Extract photo URLs
+            let photoUrls = [];
+            if (item.photos && Array.isArray(item.photos)) {
+              photoUrls = item.photos.map(photo => {
+                if (typeof photo === 'string') return photo;
+                if (photo && typeof photo === 'object') return photo.url || photo.cloud_url || null;
+                return null;
+              }).filter(url => url !== null && typeof url === 'string');
+            }
+            
+            items.push({
+              asset: item.asset || '',
+              system: item.system || '',
+              description: item.description || '',
+              quantity: item.quantity || '1',
+              brand: item.brand || '',
+              specification: item.specification || '',
+              comments: item.comments || '',
+              photoUrls: photoUrls,
+              photoCount: photoUrls.length,
+              isServerRendered: true  // Mark as server-rendered
+            });
+          });
+          
+          console.log(`✅ Loaded ${items.length} preloaded items into JavaScript array`);
+        }
+      }
+      
+      // Load items into array immediately
+      loadPreloadedItemsIntoArray();
+      
+      // Set up editable fields to sync with items array
+      function setupEditableItemFields() {
+        document.querySelectorAll('.editable-item-card').forEach(card => {
+          // Sync all editable fields
+          card.querySelectorAll('.editable-field').forEach(field => {
+            const fieldName = field.dataset.field;
+            
+            const updateItemArray = function() {
+              // ALWAYS look up the current index from the card's dataset
+              // this handles cases where items were removed and indices shifted
+              const currentItemIndex = Number(card.dataset.itemIndex);
+              
+              if (currentItemIndex >= 0 && currentItemIndex < items.length) {
+                if (fieldName === 'quantity') {
+                  items[currentItemIndex][fieldName] = this.value || '1';
+                } else {
+                  items[currentItemIndex][fieldName] = this.value || '';
+                }
+                console.log(`✅ Updated item ${currentItemIndex}.${fieldName} to:`, items[currentItemIndex][fieldName]);
+              } else {
+                console.warn(`⚠️ Could not update item: index ${currentItemIndex} out of bounds (items.length: ${items.length})`);
+              }
+            };
+
+            // Update items array when field changes
+            field.addEventListener('input', updateItemArray);
+            
+            // Also sync on blur (when field loses focus)
+            field.addEventListener('blur', updateItemArray);
+          });
+          
+          // Set up remove button
+          const removeBtn = card.querySelector('.remove-server-item');
+          if (removeBtn) {
+            removeBtn.addEventListener('click', function(e) {
+              // ALWAYS look up index from dataset at click time
+              const idx = Number(this.dataset.idx);
+              if (confirm('Remove this item? (Photos remain in cloud storage)')) {
+                // Remove from items array
+                if (idx >= 0 && idx < items.length) {
+                  items.splice(idx, 1);
+                  console.log(`✅ Removed item ${idx} from array, ${items.length} items remaining`);
+                }
+                // Remove the DOM element
+                const cardEl = this.closest('.item-card');
+                if (cardEl) {
+                  cardEl.remove();
+                  console.log('✅ Removed item card from DOM');
+                  
+                  // Update indices for remaining items
+                  updateItemIndices();
+                }
+              }
+            });
+          }
+          
+          // Set up "Add More Photos" button
+          const addPhotosBtn = card.querySelector('.add-photos-to-item');
+          if (addPhotosBtn) {
+            addPhotosBtn.addEventListener('click', function() {
+              const idx = Number(this.dataset.itemIndex);
+              console.log(`📷 Add photos button clicked for item ${idx}`);
+              // TODO: Implement photo upload for existing item
+              alert('Photo upload for existing items will be implemented soon. For now, you can add photos to new items.');
+            });
+          }
+          
+          // Set up "Edit this Asset" helper
+          const editLabel = card.querySelector('.text-primary.mt-1');
+          if (editLabel) {
+            editLabel.style.cursor = 'pointer';
+            editLabel.addEventListener('click', () => {
+              const firstInput = card.querySelector('.editable-field');
+              if (firstInput) firstInput.focus();
+            });
+          }
+        });
+      }
+      
+      // Update item indices after removal
+      function updateItemIndices() {
+        document.querySelectorAll('.editable-item-card').forEach((card, newIndex) => {
+          card.dataset.itemIndex = newIndex;
+          const removeBtn = card.querySelector('.remove-server-item');
+          if (removeBtn) removeBtn.dataset.idx = newIndex;
+          const addPhotosBtn = card.querySelector('.add-photos-to-item');
+          if (addPhotosBtn) addPhotosBtn.dataset.itemIndex = newIndex;
+        });
+      }
+      
+      // Initialize editable fields when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupEditableItemFields);
+      } else {
+        setTimeout(setupEditableItemFields, 100);
+      }
+      
+      console.log('✅ Server-rendered items initialized');
+      {% else %}
+      // Not in edit mode - do initial render
       renderItems();
+      {% endif %}
+      
+      // Backup: Ensure items array is populated (server already rendered them visually)
+      {% if is_edit_mode and submission_data %}
+      setTimeout(function() {
+        if (items.length === 0 && window.preloadedItems && window.preloadedItems.length > 0) {
+          console.log('🔄 Backup: Items array is empty, reloading from preloaded...');
+          loadPreloadedItemsIntoArray();
+        } else {
+          console.log(`✅ Items array has ${items.length} items ready for submission`);
+        }
+      }, 500);
+      {% endif %}
+      
+      // Final check - ensure items array is populated for submission
+      {% if is_edit_mode and submission_data %}
+      setTimeout(function() {
+        const serverRenderedItems = document.getElementById('serverRenderedItems');
+        const serverItemCount = serverRenderedItems ? serverRenderedItems.querySelectorAll('.item-card').length : 0;
+        console.log(`✅ FINAL CHECK: ${items.length} items in array, ${serverItemCount} items rendered by server`);
+        
+        // Make sure items array matches what's rendered
+        if (items.length === 0 && window.preloadedItems && window.preloadedItems.length > 0) {
+          console.log('🔄 FINAL CHECK: Reloading items into array...');
+          loadPreloadedItemsIntoArray();
+        }
+      }, 1000);
+      {% endif %}
     })();
   </script>
 </body>

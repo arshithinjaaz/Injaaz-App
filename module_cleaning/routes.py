@@ -241,7 +241,10 @@ def form():
         
         # Pass designation details so the template can adapt workflow UI
         user_designation = user.designation if hasattr(user, 'designation') else None
-        is_supervisor_edit = is_edit_mode and user_designation == 'supervisor'
+        
+        # Consider admins, supervisors, and managers as "supervisor edit" for review purposes
+        review_param = request.args.get('review') == 'true'
+        is_supervisor_edit = is_edit_mode and (user_designation in ['supervisor', 'manager'] or user.role == 'admin' or review_param)
         
         return render_template(
             'cleaning_form.html',
@@ -327,6 +330,8 @@ def submit():
         # Save signatures (base64 data) with local fallback
         tech_signature = data.get('tech_signature', '')
         contact_signature = data.get('contact_signature', '')
+        supervisor_signature = data.get('supervisor_signature', '')
+        supervisor_comments = data.get('supervisor_comments', '')
         
         if tech_signature and tech_signature.startswith('data:image'):
             try:
@@ -367,6 +372,27 @@ def submit():
             except Exception as e:
                 logger.error(f"Failed to upload contact signature: {e}")
                 return error_response('Storage error for contact signature', status_code=500, error_code='STORAGE_ERROR')
+        
+        if supervisor_signature and supervisor_signature.startswith('data:image'):
+            try:
+                # Cloud upload with local fallback
+                cloud_url, is_cloud = upload_base64_to_cloud(
+                    supervisor_signature, 
+                    folder="signatures", 
+                    prefix="supervisor_sig",
+                    uploads_dir=UPLOADS_DIR
+                )
+                
+                data['supervisor_signature'] = {
+                    'saved': None,
+                    'path': None,
+                    'url': cloud_url,
+                    'is_cloud': is_cloud
+                }
+                data['supervisor_comments'] = supervisor_comments
+            except Exception as e:
+                logger.error(f"Failed to upload supervisor signature: {e}")
+                return error_response('Storage error for supervisor signature', status_code=500, error_code='STORAGE_ERROR')
         
         # Save base URL for report generation
         data['base_url'] = request.host_url.rstrip('/')
@@ -542,6 +568,8 @@ def submit_with_urls():
         # Save signatures (base64 data) to cloud with local fallback
         tech_signature = data.get('tech_signature', '')
         contact_signature = data.get('contact_signature', '')
+        supervisor_signature = data.get('supervisor_signature', '')
+        supervisor_comments = data.get('supervisor_comments', '')
         
         if tech_signature:
             try:
@@ -556,6 +584,14 @@ def submit_with_urls():
                 data['contact_signature_url'] = cloud_url
             except Exception as e:
                 logger.error(f"Failed to upload contact signature: {e}")
+        
+        if supervisor_signature:
+            try:
+                cloud_url, is_cloud = upload_base64_to_cloud(supervisor_signature, folder="signatures", prefix="supervisor_sig", uploads_dir=UPLOADS_DIR)
+                data['supervisor_signature_url'] = cloud_url
+                data['supervisor_comments'] = supervisor_comments
+            except Exception as e:
+                logger.error(f"Failed to upload supervisor signature: {e}")
         
         # Save submission
         subs_dir = os.path.join(GENERATED_DIR, 'submissions')

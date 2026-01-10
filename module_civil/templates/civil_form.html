@@ -361,7 +361,8 @@
     /* Signature pad - Standardized size */
     canvas.signature-pad,
     #techSignaturePad,
-    #opManSignaturePad {
+    #opManSignaturePad,
+    #supervisorSignaturePad {
       border: 2px solid var(--border-light);
       border-radius: 6px;
       width: 100%;
@@ -377,7 +378,8 @@
     /* Ensure canvas doesn't stretch */
     canvas.signature-pad,
     #techSignaturePad,
-    #opManSignaturePad {
+    #opManSignaturePad,
+    #supervisorSignaturePad {
       image-rendering: -webkit-optimize-contrast;
       image-rendering: crisp-edges;
     }
@@ -387,12 +389,31 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 0.5rem;
+      gap: 0.5rem;
+      width: 100%;
+      max-width: 500px;
+    }
+    
+    .signature-label label {
+      flex: 1;
+      margin-bottom: 0;
     }
     
     .signature-hint {
       font-size: 0.75rem;
       color: var(--text-light);
       font-weight: 400;
+      white-space: nowrap;
+      flex-shrink: 0;
+      text-align: right;
+    }
+    
+    /* Ensure signature container properly wraps label and pad */
+    .signature-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 500px;
     }
     
     .alert {
@@ -711,19 +732,28 @@
   
   <div class="container">
     <h2>Site Inspection Report - Civil{% if is_edit_mode %} - Edit Mode{% endif %}</h2>
-    <p class="text-muted">{% if is_edit_mode %}Review and edit the submission below. Signatures cannot be modified.{% else %}Complete the inspection form below{% endif %}</p>
+    <p class="text-muted">
+      {% if is_supervisor_edit %}
+      Review the inspector's submission below. You can edit any fields, add new items, add your comments, verify, and sign to approve.
+      {% elif is_edit_mode %}
+      Review and edit the submission below. Signatures cannot be modified.
+      {% else %}
+      Complete the inspection form below
+      {% endif %}
+    </p>
 
     <form id="mainForm">
+
       <h5>Project Information</h5>
       <div class="row g-3">
         <div class="col-md-6 mb-3">
           <label for="date">Date</label>
-          <input id="date" name="date" type="date" class="form-control" required>
+          <input id="date" name="date" type="date" class="form-control" {% if not is_supervisor_edit %}required{% endif %}>
         </div>
         
         <div class="col-md-6 mb-3">
           <label for="project_name">Project Name</label>
-          <input id="project_name" name="project_name" class="form-control" required>
+          <input id="project_name" name="project_name" class="form-control" {% if not is_supervisor_edit %}required{% endif %}>
         </div>
         
         <div class="col-12 mb-3">
@@ -753,6 +783,9 @@
       </div>
 
       <h5>Work Items</h5>
+      {% if is_supervisor_edit %}
+      <p class="text-muted" style="font-size: 0.9rem;">Review and edit the work items submitted by the inspector below. You can modify fields or add new items.</p>
+      {% endif %}
       <div class="mb-3">
         <button type="button" id="addRowBtn" class="btn btn-outline-secondary btn-sm">+ Add Work Item</button>
       </div>
@@ -766,8 +799,10 @@
               <th style="width: 80px;">Quantity</th>
               <th style="width: 180px;">Material Required with Brand</th>
               <th style="width: 80px;">Quantity</th>
+              <th style="width: 120px;">Specification</th>
               <th style="width: 80px;">Price</th>
               <th style="width: 150px;">Labour Needed (Hours/Day)</th>
+              <th style="width: 150px;">Comments</th>
               <th style="width: 60px;">Action</th>
             </tr>
           </thead>
@@ -778,8 +813,10 @@
               <td><input type="number" class="form-control form-control-sm" name="work_qty[]"></td>
               <td><input type="text" class="form-control form-control-sm" name="material[]"></td>
               <td><input type="number" class="form-control form-control-sm" name="material_qty[]"></td>
+              <td><input type="text" class="form-control form-control-sm" name="specification[]"></td>
               <td><input type="number" class="form-control form-control-sm" name="price[]" step="0.01"></td>
               <td><input type="text" class="form-control form-control-sm" name="labour[]"></td>
+              <td><textarea class="form-control form-control-sm" name="comments[]" rows="2"></textarea></td>
               <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">×</button></td>
             </tr>
           </tbody>
@@ -839,26 +876,88 @@
 
       <div class="row g-3">
         <div class="col-md-6 mb-3">
-          <div class="signature-label">
-            <label class="mb-0">Inspector Signature</label>
-            <span class="signature-hint">Draw signature with mouse/touch</span>
+          <div class="signature-container">
+            <div class="signature-label">
+              <label class="form-label mb-0" style="flex: 1;">Inspector Signature</label>
+              {% if is_supervisor_edit %}
+              <span class="signature-hint" style="color: #059669; font-weight: 600;">✓ Inspector has signed</span>
+              {% else %}
+              <span class="signature-hint">Draw signature with mouse/touch</span>
+              {% endif %}
+            </div>
+          {% if is_supervisor_edit %}
+          <!-- Show inspector signature as read-only image when supervisor/manager views -->
+          <div id="techSignatureDisplay" style="border: 1px solid #e5e7eb; background: #f9fafb; padding: 10px; border-radius: 4px; min-height: 150px; display: flex; align-items: center; justify-content: center;">
+            <span class="text-muted">Inspector Signature (Read-only)</span>
           </div>
-          <canvas id="techSignaturePad" class="signature-pad"></canvas>
-          <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="pads.techPad.clear()">Clear</button>
-        </div>
-
-        {% if user_designation != 'technician' or is_edit_mode %}
-        <div class="col-md-6 mb-3" id="managerSignatureContainer">
-          <div class="signature-label">
-            <label class="mb-0">Manager Approval Signature</label>
-            {% if is_supervisor_edit %}
-            <span class="signature-hint" style="color: var(--primary); font-weight: 600;">Verify & Sign as Supervisor</span>
-            {% else %}
-            <span class="signature-hint">Draw signature with mouse/touch</span>
+          {% else %}
+            <canvas id="techSignaturePad" class="signature-pad"></canvas>
+            <input type="hidden" id="techSignatureData" name="inspector_signature">
+            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="pads.techPad.clear()">Clear</button>
             {% endif %}
           </div>
-          <canvas id="opManSignaturePad" class="signature-pad"></canvas>
-          <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="pads.opPad.clear()">Clear</button>
+        </div>
+
+        {% if is_supervisor_edit or user_designation == 'supervisor' %}
+        <!-- Supervisor Review Section -->
+        <div class="col-12 mb-3" style="border-top: 2px solid var(--primary); padding-top: 1.5rem; margin-top: 1rem;">
+          <h5 style="color: var(--primary); margin-bottom: 1rem;">Supervisor Review</h5>
+          
+          <div class="col-12 mb-3">
+            <label class="form-label">Supervisor Comments</label>
+            <textarea id="supervisorComments" class="form-control" rows="3" placeholder="Enter your comments or observations..."></textarea>
+          </div>
+          
+          <div class="col-12 mb-3">
+            <button type="button" id="verifiedBtn" class="btn btn-success">
+              <span id="verifiedBtnIcon">✓</span> Verified
+            </button>
+            <span id="verifiedStatus" class="ms-2" style="display: none; color: #059669; font-weight: 600;">✓ Verified</span>
+          </div>
+          
+          <div class="col-md-6 mb-3">
+            <div class="signature-container">
+              <div class="signature-label">
+                <label class="form-label mb-0" style="flex: 1;">Supervisor Signature</label>
+                <span class="signature-hint" style="color: var(--primary); font-weight: 600;">Required for approval</span>
+              </div>
+              <canvas id="supervisorSignaturePad" class="signature-pad"></canvas>
+              <input type="hidden" id="supervisorSignatureData" name="supervisor_signature">
+              <button type="button" id="clearSupervisor" class="btn btn-outline-secondary btn-sm mt-2">Clear</button>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if user_designation == 'manager' or (is_edit_mode and user_designation == 'manager') %}
+        <div class="col-md-6 mb-3" id="managerSignatureContainer">
+          <div class="signature-container">
+            <div class="signature-label">
+              <label class="form-label mb-0" style="flex: 1;">Manager Approval Signature</label>
+              {% if is_supervisor_edit %}
+              <span class="signature-hint" style="color: var(--primary); font-weight: 600;">Sign as Manager</span>
+              {% else %}
+              <span class="signature-hint">Draw signature with mouse/touch</span>
+              {% endif %}
+            </div>
+            <canvas id="opManSignaturePad" class="signature-pad"></canvas>
+            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="pads.opPad.clear()">Clear</button>
+          </div>
+        </div>
+        {% elif user_designation != 'technician' or is_edit_mode %}
+        <div class="col-md-6 mb-3" id="managerSignatureContainer">
+          <div class="signature-container">
+            <div class="signature-label">
+              <label class="form-label mb-0" style="flex: 1;">Manager Approval Signature</label>
+              {% if is_supervisor_edit %}
+              <span class="signature-hint" style="color: var(--primary); font-weight: 600;">Sign as Manager</span>
+              {% else %}
+              <span class="signature-hint">Draw signature with mouse/touch</span>
+              {% endif %}
+            </div>
+            <canvas id="opManSignaturePad" class="signature-pad"></canvas>
+            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="pads.opPad.clear()">Clear</button>
+          </div>
         </div>
         {% endif %}
       </div>
@@ -955,6 +1054,7 @@
     function initSignaturePads() {
       const techPadEl = document.getElementById('techSignaturePad');
       const opPadEl = document.getElementById('opManSignaturePad');
+      const supervisorPadEl = document.getElementById('supervisorSignaturePad');
       
       function setupSignaturePad(canvas, padName) {
         if (!canvas) return null;
@@ -1003,15 +1103,40 @@
       
       const techPad = setupSignaturePad(techPadEl, 'tech');
       const opPad = setupSignaturePad(opPadEl, 'op');
+      const supervisorPad = setupSignaturePad(supervisorPadEl, 'supervisor');
       
       if (techPad) {
-        document.getElementById('clearTech')?.addEventListener('click', () => techPad.clear());
+        const clearTechBtn = document.getElementById('clearTech');
+        if (clearTechBtn) {
+          clearTechBtn.addEventListener('click', () => {
+            techPad.clear();
+            const techSigInput = document.getElementById('techSignatureData');
+            if (techSigInput) techSigInput.value = '';
+          });
+        }
       }
       if (opPad) {
-        document.getElementById('clearOp')?.addEventListener('click', () => opPad.clear());
+        const clearOpBtn = document.getElementById('clearOp');
+        if (clearOpBtn) {
+          clearOpBtn.addEventListener('click', () => {
+            opPad.clear();
+            const opSigInput = document.getElementById('opManSignatureData');
+            if (opSigInput) opSigInput.value = '';
+          });
+        }
+      }
+      if (supervisorPad) {
+        const clearSupervisorBtn = document.getElementById('clearSupervisor');
+        if (clearSupervisorBtn) {
+          clearSupervisorBtn.addEventListener('click', () => {
+            supervisorPad.clear();
+            const supervisorSigInput = document.getElementById('supervisorSignatureData');
+            if (supervisorSigInput) supervisorSigInput.value = '';
+          });
+        }
       }
 
-      return { techPad, opPad, tech: techPad, op: opPad };
+      return { techPad, opPad, supervisorPad, tech: techPad, op: opPad };
     }
     
     // Define checkBrowserSupport function
@@ -1072,6 +1197,33 @@
       const submitBtn = document.getElementById('submitBtn');
       const submitBtnText = document.getElementById('submitBtnText');
       
+      // Verified button handler (for supervisor)
+      const verifiedBtn = document.getElementById('verifiedBtn');
+      const verifiedStatus = document.getElementById('verifiedStatus');
+      let isVerified = false;
+      
+      if (verifiedBtn) {
+        verifiedBtn.addEventListener('click', () => {
+          isVerified = !isVerified;
+          if (isVerified) {
+            verifiedBtn.classList.remove('btn-success');
+            verifiedBtn.classList.add('btn-outline-success');
+            verifiedBtn.innerHTML = '<span id="verifiedBtnIcon">✓</span> Verified';
+            if (verifiedStatus) {
+              verifiedStatus.style.display = 'inline';
+              verifiedStatus.textContent = '✓ Verified';
+            }
+          } else {
+            verifiedBtn.classList.remove('btn-outline-success');
+            verifiedBtn.classList.add('btn-success');
+            verifiedBtn.innerHTML = '<span id="verifiedBtnIcon">✓</span> Verify';
+            if (verifiedStatus) {
+              verifiedStatus.style.display = 'none';
+            }
+          }
+        });
+      }
+      
       // Track uploaded photos
       let photosUploaded = false;
       let uploadedPhotoUrls = [];
@@ -1124,6 +1276,7 @@
               return;
             }
             
+            // Load inspector signature - show as read-only for supervisor/manager
             if (formData.inspector_signature) {
               let techSig = formData.inspector_signature;
               // Handle object format with url property (from Cloudinary)
@@ -1131,6 +1284,27 @@
                 techSig = techSig.url;
               }
               if (techSig && typeof techSig === 'string' && (techSig.startsWith('data:image') || techSig.startsWith('http'))) {
+                {% if is_supervisor_edit %}
+                // Show in read-only display for supervisor/manager
+                const techDisplay = document.getElementById('techSignatureDisplay');
+                if (techDisplay) {
+                  const sigImg = document.createElement('img');
+                  sigImg.src = techSig;
+                  sigImg.alt = 'Inspector Signature';
+                  sigImg.style.cssText = 'width: 100%; max-height: 150px; object-fit: contain; border-radius: 4px;';
+                  sigImg.onerror = function() {
+                    this.style.display = 'none';
+                    techDisplay.innerHTML = '<span style="color: #dc2626;">⚠️ Failed to load signature image</span>';
+                  };
+                  techDisplay.innerHTML = '';
+                  techDisplay.appendChild(sigImg);
+                  
+                  // Store in hidden input for submission
+                  const techSigInput = document.getElementById('techSignatureData');
+                  if (techSigInput) techSigInput.value = techSig;
+                }
+                {% else %}
+                // Normal edit mode - show in canvas
                 const techCanvas = document.getElementById('techSignaturePad');
                 if (techCanvas && pads.tech) {
                   // Hide canvas and show signature as image instead (more reliable)
@@ -1151,13 +1325,62 @@
                   }
                   const hintSpan = techCanvas.parentElement.querySelector('.signature-hint');
                   if (hintSpan) hintSpan.style.display = 'none';
-                  const techInfo = document.createElement('div');
-                  techInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
-                  techInfo.textContent = '⚠️ This signature was provided by the inspector and cannot be modified.';
-                  techCanvas.parentElement.appendChild(techInfo);
+                  
+                  // Store in hidden input
+                  const techSigInput = document.getElementById('techSignatureData');
+                  if (techSigInput) techSigInput.value = techSig;
+                }
+                {% endif %}
+              }
+            }
+            
+            // Load supervisor comments and signature if supervisor is editing
+            {% if is_supervisor_edit or user_designation == 'supervisor' %}
+            if (formData.supervisor_comments) {
+              const commentsField = document.getElementById('supervisorComments');
+              if (commentsField) {
+                commentsField.value = formData.supervisor_comments || '';
+              }
+            }
+            
+            if (formData.supervisor_verified) {
+              if (verifiedBtn) {
+                isVerified = true;
+                verifiedBtn.classList.remove('btn-success');
+                verifiedBtn.classList.add('btn-outline-success');
+                verifiedBtn.innerHTML = '<span id="verifiedBtnIcon">✓</span> Verified';
+                if (verifiedStatus) {
+                  verifiedStatus.style.display = 'inline';
+                  verifiedStatus.textContent = '✓ Verified';
                 }
               }
             }
+            
+            if (formData.supervisor_signature) {
+              let supervisorSig = formData.supervisor_signature;
+              if (supervisorSig && typeof supervisorSig === 'object' && supervisorSig.url) {
+                supervisorSig = supervisorSig.url;
+              }
+              if (supervisorSig && typeof supervisorSig === 'string' && (supervisorSig.startsWith('data:image') || supervisorSig.startsWith('http'))) {
+                const supervisorCanvas = document.getElementById('supervisorSignaturePad');
+                if (supervisorCanvas && pads && pads.supervisorPad) {
+                  // Load signature into pad
+                  const img = new Image();
+                  img.crossOrigin = 'anonymous';
+                  img.onload = function() {
+                    const ctx = supervisorCanvas.getContext('2d');
+                    ctx.clearRect(0, 0, supervisorCanvas.width, supervisorCanvas.height);
+                    ctx.drawImage(img, 0, 0, supervisorCanvas.width, supervisorCanvas.height);
+                    pads.supervisorPad.fromDataURL(supervisorSig);
+                  };
+                  img.src = supervisorSig;
+                  
+                  const supervisorSigInput = document.getElementById('supervisorSignatureData');
+                  if (supervisorSigInput) supervisorSigInput.value = supervisorSig;
+                }
+              }
+            }
+            {% endif %}
             
             if (formData.manager_signature) {
               let opSig = formData.manager_signature;
@@ -1371,8 +1594,10 @@
           <td><input type="number" class="form-control form-control-sm" name="work_qty[]"></td>
           <td><input type="text" class="form-control form-control-sm" name="material[]"></td>
           <td><input type="number" class="form-control form-control-sm" name="material_qty[]"></td>
+          <td><input type="text" class="form-control form-control-sm" name="specification[]"></td>
           <td><input type="number" class="form-control form-control-sm" name="price[]" step="0.01"></td>
           <td><input type="text" class="form-control form-control-sm" name="labour[]"></td>
+          <td><textarea class="form-control form-control-sm" name="comments[]" rows="2"></textarea></td>
           <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">×</button></td>
         `;
         tbody.appendChild(row);
@@ -1912,15 +2137,18 @@
         
         rows.forEach((row, index) => {
           const inputs = row.querySelectorAll('input');
-          if (inputs.length >= 6) {
+          const textareas = row.querySelectorAll('textarea');
+          if (inputs.length >= 7) {
             workItems.push({
               item_number: index + 1,
               description: inputs[0].value || '', // work_desc
               quantity: inputs[1].value || '', // work_qty
-              material: inputs[2].value || '', // material
+              material: inputs[2].value || '', // material (brand)
               material_qty: inputs[3].value || '', // material_qty
-              price: inputs[4].value || '', // price
-              labour: inputs[5].value || '', // labour
+              specification: inputs[4].value || '', // specification
+              price: inputs[5].value || '', // price
+              labour: inputs[6].value || '', // labour
+              comments: textareas.length > 0 ? (textareas[0].value || '') : '', // comments
               photo_urls: uploadedPhotoUrls // All photos attached to each work item
             });
           }
@@ -1947,6 +2175,31 @@
         loadingOverlay.style.display = 'flex';
         statusBox.innerHTML = '';
         
+        // Get supervisor signature and comments if supervisor is submitting
+        let supervisorData = '';
+        let supervisorComments = '';
+        let supervisorVerified = false;
+        const supervisorCommentsField = document.getElementById('supervisorComments');
+        const supervisorSignatureData = document.getElementById('supervisorSignatureData');
+        {% if is_supervisor_edit or user_designation == 'supervisor' %}
+        if (pads.supervisorPad && !pads.supervisorPad.isEmpty()) {
+          supervisorData = pads.supervisorPad.toDataURL('image/png');
+          if (supervisorSignatureData) supervisorSignatureData.value = supervisorData;
+        } else if (supervisorSignatureData) {
+          supervisorData = supervisorSignatureData.value || '';
+        }
+        if (supervisorCommentsField) {
+          supervisorComments = supervisorCommentsField.value || '';
+        }
+        supervisorVerified = isVerified || false;
+        
+        // Validate supervisor signature if submitting as supervisor
+        if (!supervisorData) {
+          alert('Please provide your supervisor signature before submitting.');
+          return;
+        }
+        {% endif %}
+        
         // Prepare JSON payload (photos already in cloud)
         const payload = {
           project_name: document.getElementById('project_name').value || '',
@@ -1956,6 +2209,8 @@
           inspector_signature: techSig || '',
           manager_name: document.getElementById('manager_name')?.value || '',
           manager_signature: opSig || '',
+          supervisor_signature: supervisorData || '',
+          supervisor_comments: supervisorComments || '',
           description_of_work: document.getElementById('description_of_work').value || '',
           floor: document.getElementById('floor').value || '',
           developer_client: document.getElementById('developer_client').value || '',
@@ -1970,7 +2225,60 @@
 
         try {
           {% if is_edit_mode %}
-          // Update existing submission
+          {% if is_supervisor_edit %}
+          // Supervisor is approving/reviewing - use workflow approval endpoint
+          const submissionId = window.editSubmissionId;
+          const token = localStorage.getItem('access_token');
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+          
+          // First update the submission with new data
+          const updateRes = await fetch(`/api/admin/submissions/${submissionId}`, {
+            method: 'PUT',
+            headers: headers,
+            body: JSON.stringify({
+              site_name: payload.project_name,
+              visit_date: payload.visit_date,
+              form_data: payload
+            }),
+            credentials: 'include'
+          });
+          
+          if (!updateRes.ok) {
+            const txt = await updateRes.text();
+            throw new Error('Update failed: ' + updateRes.status + ' ' + txt);
+          }
+          
+          // Then approve via workflow endpoint
+          const approveRes = await fetch(`/api/workflow/submissions/${submissionId}/approve`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+              comments: supervisorComments,
+              supervisor_signature: supervisorData,
+              verified: supervisorVerified
+            }),
+            credentials: 'include'
+          });
+          
+          if (!approveRes.ok) {
+            const txt = await approveRes.text();
+            throw new Error('Approval failed: ' + approveRes.status + ' ' + txt);
+          }
+          
+          const approveJson = await approveRes.json();
+          
+          if (approveJson.success) {
+            loadingOverlay.style.display = 'none';
+            statusBox.innerHTML = '<div class="alert alert-success">✅ Submission reviewed and approved! Forwarded to manager. <a href="/api/workflow/dashboard">Return to Supervisor Dashboard</a></div>';
+            clearDraft();
+          } else {
+            throw new Error(approveJson.error || 'Approval failed');
+          }
+          {% else %}
+          // Admin or regular edit mode
           const submissionId = window.editSubmissionId;
           const token = localStorage.getItem('access_token');
           const headers = { 'Content-Type': 'application/json' };

@@ -128,7 +128,10 @@ def index():
         
         # Pass designation info so the template can adjust signature visibility
         user_designation = user.designation if hasattr(user, 'designation') else None
-        is_supervisor_edit = is_edit_mode and user_designation == 'supervisor'
+        
+        # Consider admins, supervisors, and managers as "supervisor edit" for review purposes
+        review_param = request.args.get('review') == 'true'
+        is_supervisor_edit = is_edit_mode and (user_designation in ['supervisor', 'manager'] or user.role == 'admin' or review_param)
         
         return render_template(
             'civil_form.html',
@@ -555,12 +558,24 @@ def submit_with_urls():
                 "quantity": item_data.get("quantity", ""),
                 "material": item_data.get("material", ""),
                 "material_qty": item_data.get("material_qty", ""),
+                "specification": item_data.get("specification", ""),
                 "price": item_data.get("price", ""),
                 "labour": item_data.get("labour", ""),
+                "comments": item_data.get("comments", ""),
                 "photos": photos_saved
             })
         
         logger.info(f"📸 Total photos processed: {total_photos}")
+        
+        # Process supervisor signature if present
+        supervisor_sig_dataurl = payload.get("supervisor_signature", "")
+        supervisor_comments = payload.get("supervisor_comments", "")
+        supervisor_sig_file = None
+        
+        if supervisor_sig_dataurl:
+            fname, fpath, url = save_signature_dataurl(supervisor_sig_dataurl, UPLOADS_DIR, prefix="supervisor_sig")
+            if url:
+                supervisor_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
         
         # Create submission in database
         submission_data = {
@@ -571,6 +586,8 @@ def submit_with_urls():
             "inspector_signature": inspector_sig_file,
             "manager_name": payload.get("manager_name", ""),
             "manager_signature": manager_sig_file,
+            "supervisor_signature": supervisor_sig_file,
+            "supervisor_comments": supervisor_comments,
             "description_of_work": payload.get("description_of_work", ""),
             "floor": payload.get("floor", ""),
             "developer_client": payload.get("developer_client", ""),

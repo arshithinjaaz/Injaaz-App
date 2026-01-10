@@ -58,6 +58,82 @@ def supervisor_dashboard():
                              message='Error loading dashboard.'), 500
 
 
+@workflow_bp.route('/submissions/history', methods=['GET'])
+@jwt_required()
+def get_history_submissions():
+    """Get all relevant submissions for supervisor or manager (reviewed and pending)"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if not user:
+            return error_response('User not found', status_code=404, error_code='NOT_FOUND')
+        
+        if not hasattr(user, 'designation') or not user.designation:
+            return error_response('No designation assigned', status_code=403, error_code='NO_DESIGNATION')
+        
+        # Get ALL submissions for modules the user has access to, or all if admin
+        # Filter logic:
+        # 1. If admin: all submissions
+        # 2. If supervisor: submissions they've reviewed OR those pending review (submitted/notified)
+        # 3. If manager: submissions they've approved OR those pending approval
+        
+        from app.models import Submission
+        query = Submission.query
+        
+        if user.role != 'admin':
+            if user.designation == 'supervisor':
+                # Show everything that is NOT a draft
+                query = query.filter(Submission.status != 'draft')
+            elif user.designation == 'manager':
+                # Managers see things from supervisor_reviewing onwards
+                query = query.filter(Submission.workflow_status.in_([
+                    'supervisor_reviewing', 'manager_notified', 'manager_reviewing', 'approved'
+                ]))
+        
+        submissions = query.order_by(Submission.created_at.desc()).all()
+        
+        result = []
+        for submission in submissions:
+            sub_user = User.query.get(submission.user_id) if submission.user_id else None
+            result.append({
+                **submission.to_dict(),
+                'user': sub_user.to_dict() if sub_user else None
+            })
+        
+        return success_response({
+            'submissions': result,
+            'count': len(result)
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error getting history submissions: {str(e)}", exc_info=True)
+        return error_response('Failed to get submission history', status_code=500, error_code='DATABASE_ERROR')
+
+
+@workflow_bp.route('/history', methods=['GET'])
+@jwt_required()
+def history_page():
+    """Render the Review History page"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if not user:
+            return render_template('access_denied.html', module='Workflow', message='User not found.'), 404
+            
+        if not hasattr(user, 'designation') or user.designation not in ['supervisor', 'manager'] and user.role != 'admin':
+            return render_template('access_denied.html',
+                                 module='Workflow',
+                                 message='You must be assigned as a Supervisor or Manager to access this page.'), 403
+        
+        return render_template('workflow_history.html', 
+                             user_designation=user.designation,
+                             user_name=user.full_name or user.username)
+    except Exception as e:
+        current_app.logger.error(f"Error loading history page: {str(e)}", exc_info=True)
+        return render_template('access_denied.html', module='Workflow', message='Error loading history page.'), 500
+
+
 @workflow_bp.route('/submissions/pending', methods=['GET'])
 @jwt_required()
 def get_pending_submissions():
@@ -119,6 +195,26 @@ def start_review(submission_id):
         
         submission = Submission.query.filter_by(submission_id=submission_id).first_or_404()
         
+        # Admin can start review regardless of status or designation
+        if user.role == 'admin':
+            if not submission.workflow_status or submission.workflow_status in ['submitted', 'supervisor_notified', 'rejected']:
+                submission.workflow_status = 'supervisor_reviewing'
+                if not submission.supervisor_id:
+                    submission.supervisor_id = user.id
+                log_audit(user_id, 'admin_start_review_as_supervisor', 'submission', submission_id)
+            elif submission.workflow_status in ['supervisor_reviewing', 'manager_notified']:
+                submission.workflow_status = 'manager_reviewing'
+                if not submission.manager_id:
+                    submission.manager_id = user.id
+                log_audit(user_id, 'admin_start_review_as_manager', 'submission', submission_id)
+            
+            submission.updated_at = datetime.utcnow()
+            db.session.commit()
+            return success_response({
+                'submission': submission.to_dict(),
+                'message': 'Admin review started successfully'
+            })
+
         if user.designation == 'supervisor':
             if submission.workflow_status not in ['submitted', 'supervisor_notified']:
                 return error_response('Submission is not ready for supervisor review', 
@@ -170,11 +266,67 @@ def approve_submission(submission_id):
         
         submission = Submission.query.filter_by(submission_id=submission_id).first_or_404()
         
+        # Admin can approve/update regardless of status or designation
+        if user.role == 'admin':
+            supervisor_signature = data.get('supervisor_signature', '')
+            verified = data.get('verified', False)
+            items = data.get('items', [])
+            
+            form_data = submission.form_data if submission.form_data else {}
+            if supervisor_signature:
+                form_data['supervisor_signature'] = supervisor_signature
+            if comments:
+                form_data['supervisor_comments'] = comments
+            form_data['supervisor_verified'] = verified
+            if items:
+                form_data['items'] = items
+            
+            submission.form_data = form_data
+            
+            # Update workflow status based on current state if not already approved
+            if submission.workflow_status != 'approved':
+                if not submission.workflow_status or submission.workflow_status in ['submitted', 'supervisor_notified', 'supervisor_reviewing']:
+                    submission.workflow_status = 'manager_notified'
+                    submission.supervisor_reviewed_at = datetime.utcnow()
+                elif submission.workflow_status in ['manager_notified', 'manager_reviewing']:
+                    submission.workflow_status = 'approved'
+                    submission.manager_reviewed_at = datetime.utcnow()
+                    submission.status = 'completed'
+            
+            submission.updated_at = datetime.utcnow()
+            db.session.commit()
+            
+            log_audit(user_id, 'admin_approved', 'submission', submission_id, {
+                'comments': comments,
+                'verified': verified,
+                'workflow_status': submission.workflow_status
+            })
+            
+            return success_response({
+                'submission': submission.to_dict(),
+                'message': 'Admin update/approval successful'
+            })
+
         if user.designation == 'supervisor':
             if submission.workflow_status != 'supervisor_reviewing':
                 return error_response('Submission is not being reviewed by supervisor', 
                                     status_code=400, error_code='INVALID_STATUS')
             
+            # Save supervisor signature, comments and any edited items to form_data
+            supervisor_signature = data.get('supervisor_signature', '')
+            verified = data.get('verified', False)
+            items = data.get('items', [])
+            
+            form_data = submission.form_data if submission.form_data else {}
+            if supervisor_signature:
+                form_data['supervisor_signature'] = supervisor_signature
+            if comments:
+                form_data['supervisor_comments'] = comments
+            form_data['supervisor_verified'] = verified
+            if items:
+                form_data['items'] = items
+            
+            submission.form_data = form_data
             submission.workflow_status = 'manager_notified'
             submission.supervisor_reviewed_at = datetime.utcnow()
             
@@ -182,7 +334,11 @@ def approve_submission(submission_id):
             from common.db_utils import _notify_manager
             _notify_manager(submission, db.session)
             
-            log_audit(user_id, 'supervisor_approved', 'submission', submission_id, {'comments': comments})
+            log_audit(user_id, 'supervisor_approved', 'submission', submission_id, {
+                'comments': comments,
+                'verified': verified,
+                'has_signature': bool(supervisor_signature)
+            })
         
         elif user.designation == 'manager':
             if submission.workflow_status != 'manager_reviewing':
