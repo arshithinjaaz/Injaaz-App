@@ -329,13 +329,20 @@ def submit():
         if not site_name or not site_name.strip():
             return error_response("Site name is required", status_code=400, error_code='VALIDATION_ERROR')
         
-        # Validate date
+        # Validate date - allow past dates and today, reject future dates (>1 day)
         if visit_date:
             try:
+                from datetime import timedelta
                 parsed_date = datetime.strptime(visit_date, '%Y-%m-%d').date()
-                if parsed_date > datetime.now().date():
-                    return error_response("Visit date cannot be in the future", status_code=400, error_code='VALIDATION_ERROR')
-            except ValueError:
+                # Use UTC date and add 1 day buffer to account for timezone differences
+                today_utc = datetime.utcnow().date()
+                max_allowed_date = today_utc + timedelta(days=1)
+                logger.info(f"Date validation (HVAC): parsed_date={parsed_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
+                if parsed_date > max_allowed_date:
+                    logger.warning(f"Rejected future date: {parsed_date} > {max_allowed_date}")
+                    return error_response(f"Visit date ({parsed_date}) cannot be more than 1 day in the future", status_code=400, error_code='VALIDATION_ERROR')
+            except ValueError as e:
+                logger.error(f"Invalid date format: {visit_date}, error: {e}")
                 return error_response("Invalid date format. Use YYYY-MM-DD", status_code=400, error_code='VALIDATION_ERROR')
 
         # Signatures (data URLs). We'll persist them to files.

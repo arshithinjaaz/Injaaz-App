@@ -185,11 +185,19 @@ def submit():
     
     # Validate date format
     try:
-        from datetime import datetime
+        from datetime import datetime, timedelta
         visit_date = datetime.strptime(fields.get('date'), '%Y-%m-%d').date()
-        if visit_date > datetime.now().date():
-            return error_response("Visit date cannot be in the future", status_code=400, error_code='VALIDATION_ERROR')
-    except ValueError:
+        # Only reject dates that are clearly in the future (more than 1 day ahead)
+        # This accounts for timezone differences while still catching obvious errors
+        today_utc = datetime.utcnow().date()
+        # Allow today and tomorrow to account for timezone differences (GST is UTC+4)
+        max_allowed_date = today_utc + timedelta(days=1)
+        logger.info(f"Date validation (/submit): visit_date={visit_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
+        if visit_date > max_allowed_date:
+            logger.warning(f"Rejected future date: {visit_date} > {max_allowed_date}")
+            return error_response(f"Visit date ({visit_date}) cannot be more than 1 day in the future", status_code=400, error_code='VALIDATION_ERROR')
+    except ValueError as e:
+        logger.error(f"Invalid date format: {fields.get('date')}, error: {e}")
         return error_response("Invalid date format. Use YYYY-MM-DD", status_code=400, error_code='VALIDATION_ERROR')
     
     saved_files = []
@@ -511,9 +519,18 @@ def submit_with_urls():
         if visit_date:
             try:
                 parsed_date = datetime.strptime(visit_date, '%Y-%m-%d').date()
-                if parsed_date > datetime.now().date():
-                    return jsonify({"error": "Visit date cannot be in the future"}), 400
-            except ValueError:
+                # Only reject dates that are clearly in the future (more than 1 day ahead)
+                # This accounts for timezone differences while still catching obvious errors
+                from datetime import timedelta
+                today_utc = datetime.utcnow().date()
+                # Allow today and tomorrow to account for timezone differences (GST is UTC+4)
+                max_allowed_date = today_utc + timedelta(days=1)
+                logger.info(f"Date validation: parsed_date={parsed_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
+                if parsed_date > max_allowed_date:
+                    logger.warning(f"Rejected future date: {parsed_date} > {max_allowed_date}")
+                    return jsonify({"error": f"Visit date ({parsed_date}) cannot be more than 1 day in the future"}), 400
+            except ValueError as e:
+                logger.error(f"Invalid date format: {visit_date}, error: {e}")
                 return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
         
         # Process signatures (data URLs)
@@ -587,18 +604,11 @@ def submit_with_urls():
             "visit_date": visit_date,
             "inspector_name": payload.get("inspector_name", ""),
             "inspector_signature": inspector_sig_file,
-            "manager_name": payload.get("manager_name", ""),
-            "manager_signature": manager_sig_file,
             "supervisor_signature": supervisor_sig_file,
             "supervisor_comments": supervisor_comments,
             "description_of_work": payload.get("description_of_work", ""),
             "area": payload.get("area", ""),
             "area_other": payload.get("area_other", ""),
-            "floor": payload.get("floor", ""),
-            "developer_client": payload.get("developer_client", ""),
-            "city_area": payload.get("city_area", ""),
-            "estimated_time": payload.get("estimated_time", ""),
-            "estimated_completion": payload.get("estimated_completion", ""),
             "work_items": processed_items,
             "base_url": request.host_url.rstrip('/'),
             "created_at": datetime.utcnow().isoformat()

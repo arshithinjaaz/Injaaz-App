@@ -454,6 +454,29 @@ def get_image_for_pdf(image_info):
                 logger.error(f"Failed to decode data URI: {e}")
                 return None, False
         
+        # Check if it's a relative URL path like /generated/uploads/...
+        if image_info.startswith('/generated/'):
+            try:
+                from config import GENERATED_DIR
+                # Remove /generated/ prefix and convert to local path
+                relative_path = image_info.replace('/generated/', '')
+                local_path = os.path.join(GENERATED_DIR, relative_path)
+                if os.path.exists(local_path):
+                    logger.info(f"Found local image at: {local_path}")
+                    return local_path, False
+            except Exception as e:
+                logger.warning(f"Failed to resolve local path for {image_info}: {e}")
+        
+        # Check if it's a full URL (http/https)
+        if image_info.startswith('http://') or image_info.startswith('https://'):
+            try:
+                response = fetch_url_with_retry(image_info, timeout=10)
+                return io.BytesIO(response.content), True
+            except Exception as e:
+                logger.error(f"Failed to fetch URL {image_info}: {e}")
+                return None, False
+        
+        # Try as direct file path
         if os.path.exists(image_info):
             return image_info, False
         return None, False
@@ -472,8 +495,21 @@ def get_image_for_pdf(image_info):
                 logger.error(f"Failed to decode data URI: {e}")
                 return None, False
         
-        # Try cloud URL with retry
-        if url and image_info.get('is_cloud'):
+        # Try to resolve relative URL paths like /generated/uploads/...
+        if url and url.startswith('/generated/'):
+            try:
+                from config import GENERATED_DIR
+                # Remove /generated/ prefix and convert to local path
+                relative_path = url.replace('/generated/', '')
+                local_path = os.path.join(GENERATED_DIR, relative_path)
+                if os.path.exists(local_path):
+                    logger.info(f"Found local image at: {local_path}")
+                    return local_path, False
+            except Exception as e:
+                logger.warning(f"Failed to resolve local path for {url}: {e}")
+        
+        # Try cloud URL with retry (for full URLs or when is_cloud is True)
+        if url and (image_info.get('is_cloud') or url.startswith('http://') or url.startswith('https://')):
             try:
                 response = fetch_url_with_retry(url, timeout=10)
                 return io.BytesIO(response.content), True

@@ -327,26 +327,26 @@ def add_photo_grid(story, photos, photos_per_row=None, photo_width=None, photo_h
     
     photo_count = len(photos)
     
-    # Auto-adjust layout based on number of photos for better handling of 20+ images
+    # Auto-adjust layout - use more photos per row for smaller, compact display
     if photos_per_row is None:
-        if photo_count > 20:
-            photos_per_row = 4  # 4 photos per row for 20+ images
-        elif photo_count > 10:
-            photos_per_row = 3  # 3 photos per row for 10-20 images
+        if photo_count > 15:
+            photos_per_row = 4  # 4 photos per row for 15+ images
+        elif photo_count > 6:
+            photos_per_row = 3  # 3 photos per row for 6-15 images
         else:
-            photos_per_row = 2  # 2 photos per row for <10 images
+            photos_per_row = 3  # Default to 3 per row for better space usage
     
-    # Auto-adjust photo size based on number per row
+    # Smaller photo sizes for compact display while maintaining visibility
     if photo_width is None or photo_height is None:
         if photos_per_row == 4:
-            photo_width = 1.7*inch  # Smaller for 4 per row
-            photo_height = 1.3*inch
+            photo_width = 1.4*inch  # Compact size for 4 per row
+            photo_height = 1.05*inch  # Maintain 4:3 aspect ratio
         elif photos_per_row == 3:
-            photo_width = 2.2*inch  # Medium for 3 per row
-            photo_height = 1.65*inch
+            photo_width = 1.8*inch  # Compact size for 3 per row
+            photo_height = 1.35*inch  # Maintain 4:3 aspect ratio
         else:
-            photo_width = 2.5*inch  # Standard for 2 per row
-            photo_height = 2*inch
+            photo_width = 1.8*inch  # Compact size for 2 per row
+            photo_height = 1.35*inch  # Maintain 4:3 aspect ratio
     
     photo_rows = []
     for i in range(0, len(photos), photos_per_row):
@@ -357,12 +357,66 @@ def add_photo_grid(story, photos, photos_per_row=None, photo_width=None, photo_h
             try:
                 img_data, is_url = get_image_for_pdf(photo_item)
                 if img_data:
-                    img = Image(img_data, width=photo_width, height=photo_height)
-                    photo_row.append(img)
+                    # Calculate proper dimensions while preserving aspect ratio for best visibility
+                    from reportlab.lib import utils
+                    import io
+                    
+                    try:
+                        # Get image dimensions - handle both file paths and BytesIO streams
+                        if isinstance(img_data, str):
+                            # Local file path
+                            img_reader = utils.ImageReader(img_data)
+                            orig_width, orig_height = img_reader.getSize()
+                            img_source = img_data
+                        else:
+                            # BytesIO stream - read dimensions without consuming
+                            img_data.seek(0)
+                            temp_reader = utils.ImageReader(img_data)
+                            orig_width, orig_height = temp_reader.getSize()
+                            # Reset stream for actual image creation
+                            img_data.seek(0)
+                            img_source = img_data
+                        
+                        # Calculate scale to fit within our target size while preserving aspect ratio
+                        if orig_width > 0 and orig_height > 0:
+                            width_scale = photo_width / orig_width
+                            height_scale = photo_height / orig_height
+                            scale = min(width_scale, height_scale)  # Use smaller scale to fit both dimensions
+                            
+                            # Calculate final dimensions
+                            final_width = orig_width * scale
+                            final_height = orig_height * scale
+                            
+                            # Create image with calculated dimensions (ReportLab Image doesn't have preserveAspectRatio param)
+                            img = Image(img_source, width=final_width, height=final_height)
+                        else:
+                            # Fallback to fixed size if dimensions are invalid
+                            logger.warning(f"Invalid image dimensions: {orig_width}x{orig_height}, using fixed size")
+                            img = Image(img_source, width=photo_width, height=photo_height)
+                        
+                        photo_row.append(img)
+                    except Exception as img_error:
+                        logger.error(f"Error processing image: {img_error}")
+                        import traceback
+                        logger.error(traceback.format_exc())
+                        # Final fallback: try simple image creation
+                        try:
+                            if isinstance(img_data, str):
+                                img = Image(img_data, width=photo_width, height=photo_height)
+                            else:
+                                img_data.seek(0)
+                                img = Image(img_data, width=photo_width, height=photo_height)
+                            photo_row.append(img)
+                        except Exception as final_error:
+                            logger.error(f"Final fallback also failed: {final_error}")
+                            photo_row.append(Paragraph("Error loading image", styles['Small']))
                 else:
+                    logger.warning(f"get_image_for_pdf returned None for photo_item: {photo_item}")
                     photo_row.append(Paragraph("Image not available", styles['Small']))
             except Exception as e:
                 logger.error(f"Error loading photo: {str(e)}")
+                import traceback
+                logger.error(traceback.format_exc())
                 photo_row.append(Paragraph("Error loading image", styles['Small']))
         
         # Pad row if needed
@@ -373,20 +427,20 @@ def add_photo_grid(story, photos, photos_per_row=None, photo_width=None, photo_h
     
     # Add photos in batches to avoid memory issues with many images
     if photo_rows:
-        col_widths = [photo_width + 0.15*inch] * photos_per_row
+        col_widths = [photo_width + 0.1*inch] * photos_per_row  # Reduced padding for compact display
         photo_table = Table(photo_rows, colWidths=col_widths)
         photo_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 4),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 3),  # Reduced padding
+            ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
             ('BOX', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
             ('INNERGRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
         ]))
         story.append(photo_table)
-        story.append(Spacer(1, 0.15*inch))  # Reduced spacing
+        story.append(Spacer(1, 0.1*inch))  # Reduced spacing between photo grids
     
     return story
 

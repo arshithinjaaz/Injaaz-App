@@ -91,7 +91,6 @@ def create_excel_report(data, output_dir):
             ('Visit Date', data.get('visit_date', 'N/A')),
             ('Location', data.get('location', 'N/A')),
             ('Inspector', data.get('inspector_name', 'N/A')),
-            ('Manager', data.get('manager_name', 'N/A')),
             ('Report Generated', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
             ('Total Photos', str(len(all_photos)))
         ]
@@ -154,14 +153,34 @@ def create_pdf_report(data, output_dir):
     try:
         logger.info(f"Creating professional Civil PDF report in {output_dir}")
         
-        # Extract data - data is already in the correct format from submit_with_urls
-        project_name = data.get('project_name', 'Unknown_Project')
+        # Handle data structure - could be direct form_data or wrapped in submission dict
+        if 'form_data' in data:
+            # Data from database (wrapped in submission dict)
+            form_data = data.get('form_data', {})
+            project_name = form_data.get('project_name') or data.get('site_name', 'Unknown_Project')
+            work_items = form_data.get('work_items', [])
+            # Extract other fields from form_data
+            inspector_name = form_data.get('inspector_name', 'N/A')
+            description_of_work = form_data.get('description_of_work', 'N/A')
+            location = form_data.get('location', 'N/A')
+            visit_date = form_data.get('visit_date') or data.get('visit_date', 'N/A')
+            inspector_signature = form_data.get('inspector_signature', {})
+        else:
+            # Direct form_data (from submit_with_urls)
+            form_data = data
+            project_name = data.get('project_name', 'Unknown_Project')
+            work_items = data.get('work_items', [])
+            inspector_name = data.get('inspector_name', 'N/A')
+            description_of_work = data.get('description_of_work', 'N/A')
+            location = data.get('location', 'N/A')
+            visit_date = data.get('visit_date', 'N/A')
+            inspector_signature = data.get('inspector_signature', {})
+        
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         pdf_filename = f"Civil_{project_name.replace(' ', '_')}_{timestamp}.pdf"
         pdf_path = os.path.join(output_dir, pdf_filename)
         
         # Collect all photos from work items
-        work_items = data.get('work_items', [])
         logger.info(f"📸 Processing {len(work_items)} work items for PDF")
         logger.info(f"📸 Full data structure keys: {list(data.keys())}")
         all_photos = []
@@ -201,12 +220,7 @@ def create_pdf_report(data, output_dir):
             ['Location:', data.get('location', 'N/A')],
             ['Visit Date:', data.get('visit_date', 'N/A')],
             ['Inspector:', data.get('inspector_name', 'N/A')],
-            ['Manager:', data.get('manager_name', 'N/A')],
             ['Description of Work:', data.get('description_of_work', 'N/A')],
-            ['Floor:', data.get('floor', 'N/A')],
-            ['Developer/Client:', data.get('developer_client', 'N/A')],
-            ['City/Area:', data.get('city_area', 'N/A')],
-            ['Estimated Time:', data.get('estimated_time', 'N/A')],
             ['Report Generated:', datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
             ['Total Photos:', str(len(all_photos))]
         ]
@@ -262,38 +276,21 @@ def create_pdf_report(data, output_dir):
             story.append(Spacer(1, 0.2*inch))
             add_paragraph(story, "No photos attached.")
         
-        # SIGNATURES SECTION - Professional format
-        inspector_sig = data.get('inspector_signature', {})
-        manager_sig = data.get('manager_signature', {})
-        
+        # SIGNATURES SECTION - Only Inspector signature (Manager removed)
         signatures = {}
         
         # Handle inspector signature - can be dict with url or string
-        if inspector_sig:
-            if isinstance(inspector_sig, dict) and inspector_sig.get('url'):
-                signatures['Inspector'] = inspector_sig
-            elif isinstance(inspector_sig, str) and inspector_sig.startswith('data:image'):
-                signatures['Inspector'] = {'url': inspector_sig, 'is_cloud': False}
-            elif isinstance(inspector_sig, str):
-                signatures['Inspector'] = {'url': inspector_sig, 'is_cloud': True}
+        if inspector_signature:
+            if isinstance(inspector_signature, dict) and inspector_signature.get('url'):
+                signatures['Inspector'] = inspector_signature
+            elif isinstance(inspector_signature, str) and inspector_signature.startswith('data:image'):
+                signatures['Inspector'] = {'url': inspector_signature, 'is_cloud': False}
+            elif isinstance(inspector_signature, str):
+                signatures['Inspector'] = {'url': inspector_signature, 'is_cloud': True}
         
-        # Handle manager signature - can be dict with url or string
-        if manager_sig:
-            if isinstance(manager_sig, dict) and manager_sig.get('url'):
-                signatures['Manager'] = manager_sig
-            elif isinstance(manager_sig, str) and manager_sig.startswith('data:image'):
-                signatures['Manager'] = {'url': manager_sig, 'is_cloud': False}
-            elif isinstance(manager_sig, str):
-                signatures['Manager'] = {'url': manager_sig, 'is_cloud': True}
-        
-        # Always show signature section
-        if not signatures:
-            signatures = {
-                'Inspector': None,
-                'Manager': None
-            }
-        
-        add_signatures_section(story, signatures)
+        # Only show inspector signature section if signature exists
+        if signatures:
+            add_signatures_section(story, signatures)
         
         # Build professional PDF with logo and branding
         create_professional_pdf(

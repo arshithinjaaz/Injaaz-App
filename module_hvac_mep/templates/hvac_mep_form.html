@@ -638,23 +638,16 @@
     }
     
     .download-links a {
-      display: block;
-      margin: 0.5rem 0;
-      padding: 0.75rem 1rem;
-      background: var(--white);
-      border-radius: 4px;
+      /* Standardized to match Civil form style */
       text-decoration: none;
-      color: var(--primary);
-      font-weight: 600;
-      transition: all 0.15s ease;
-      border: 1px solid var(--border-light);
-      font-size: 0.875rem;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      display: inline-block;
     }
     
     .download-links a:hover {
-      background: var(--primary);
-      color: white;
-      border-color: var(--primary);
+      opacity: 0.9;
     }
     
     /* Minimal drop zone */
@@ -841,7 +834,7 @@
           <label for="visit_date" class="form-label">Visit Date</label>
           <input id="visit_date" name="visit_date" type="date" class="form-control" 
                  {% if is_edit_mode and submission_data %}value="{{ submission_data.visit_date or (submission_data.form_data.visit_date if submission_data.form_data else '') }}"{% endif %}
-                 {% if not is_supervisor_edit %}required{% endif %}>
+                 {% if not is_supervisor_edit %}required{% endif %} max="">
         </div>
         
         {% if is_edit_mode and submission_data %}
@@ -1204,7 +1197,6 @@
             </div>
           </div>
           <div id="downloadLinks" class="download-links" style="display:none;">
-            <h5>Reports Ready!</h5>
             <a id="excelLink" href="#" download="hvac_mep_report.xlsx" target="_blank">Download Excel Report</a>
             <a id="pdfLink" href="#" download="hvac_mep_report.pdf" target="_blank">Download PDF Report</a>
           </div>
@@ -2130,41 +2122,54 @@
               loadingOverlay.style.display = 'none'; // Hide loading overlay
               progressBar.classList.remove('progress-bar-animated');
               progressBar.classList.add('bg-success');
-              statusBox.innerHTML = '<div class="alert alert-success"><strong>✅ Reports generated successfully!</strong><br><div class="mt-2 text-muted" style="font-size:0.9em;">Click the download links below to get your reports.</div></div>';
               
               // Support both excel_url/pdf_url AND excel/pdf field names
               const excelUrl = results.excel_url || results.excel;
               const pdfUrl = results.pdf_url || results.pdf;
               
               if (excelUrl || pdfUrl) {
-                // Show download links
+                // Show success message above download links
+                const successMsg = document.createElement('div');
+                successMsg.className = 'alert alert-success mb-3';
+                successMsg.innerHTML = '<strong>✅ Reports generated successfully!</strong>';
+                
+                // Remove any existing success message or h5
+                const existingSuccess = downloadLinks.querySelector('.alert.alert-success');
+                const existingH5 = downloadLinks.querySelector('h5');
+                if (existingSuccess) {
+                  existingSuccess.remove();
+                }
+                if (existingH5) {
+                  existingH5.remove();
+                }
+                
+                // Insert success message at the top
+                downloadLinks.insertBefore(successMsg, downloadLinks.firstChild);
+                
+                // Clear statusBox since message is now in download container
+                statusBox.style.display = 'none';
+                
+                // Show download links (no auto-download) - using standardized Civil form style
                 downloadLinks.style.display = 'block';
                 
-                // Use download proxy route for auto-download (jobId is available in closure)
                 if (excelUrl) {
                   excelLink.href = `${modulePrefix}/download/${jobId}/excel`;
+                  excelLink.download = results.excel_filename || 'hvac_report.xlsx';
+                  excelLink.className = 'btn btn-success me-2 mt-2';
+                  excelLink.style.cssText = 'text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;';
                   excelLink.textContent = '📥 Download Excel Report';
-                  excelLink.style.display = 'block';
-                  // Use mobile-friendly download handler
-                  if (typeof downloadWithRetry !== 'undefined') {
-                    setTimeout(() => downloadWithRetry(`${modulePrefix}/download/${jobId}/excel`, results.excel_filename || 'hvac_report.xlsx', 2), 500);
-                  } else {
-                    setTimeout(() => excelLink.click(), 500);
-                  }
+                  excelLink.style.display = 'inline-block';
                 } else {
                   excelLink.style.display = 'none';
                 }
                 
                 if (pdfUrl) {
                   pdfLink.href = `${modulePrefix}/download/${jobId}/pdf`;
+                  pdfLink.download = results.pdf_filename || 'hvac_report.pdf';
+                  pdfLink.className = 'btn btn-success me-2 mt-2';
+                  pdfLink.style.cssText = 'text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;';
                   pdfLink.textContent = '📥 Download PDF Report';
-                  pdfLink.style.display = 'block';
-                  // Use mobile-friendly download handler
-                  if (typeof downloadWithRetry !== 'undefined') {
-                    setTimeout(() => downloadWithRetry(`${modulePrefix}/download/${jobId}/pdf`, results.pdf_filename || 'hvac_report.pdf', 2), 700);
-                  } else {
-                    setTimeout(() => pdfLink.click(), 700);
-                  }
+                  pdfLink.style.display = 'inline-block';
                 } else {
                   pdfLink.style.display = 'none';
                 }
@@ -3042,8 +3047,22 @@
           setTimeout(attemptLoadData, 100);
         }
         {% else %}
-        console.log('📝 Loading draft (not in edit mode)');
-        loadDraft();
+        // Don't auto-load draft on page refresh - always start with a fresh form
+        // console.log('📝 Loading draft (not in edit mode)');
+        // loadDraft(); // DISABLED - forms should be fresh on refresh
+        
+        // Set default date to today and max date to today (prevent future dates)
+        const visitDateField = document.getElementById('visit_date');
+        if (visitDateField) {
+          const today = new Date();
+          const todayStr = today.toISOString().split('T')[0];
+          visitDateField.setAttribute('max', todayStr);
+          if (!visitDateField.value) {
+            visitDateField.value = todayStr;
+          }
+        }
+        // Clear any existing drafts on page load to ensure fresh form
+        clearDraft();
         {% endif %}
       }
       

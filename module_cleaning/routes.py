@@ -272,20 +272,27 @@ def submit():
             return error_response('No data received', status_code=400, error_code='VALIDATION_ERROR')
         
         # Validate required fields
-        required_fields = ['client_name', 'project_name', 'date_of_visit']
+        required_fields = ['project_name', 'date_of_visit']
         missing = [f for f in required_fields if not data.get(f) or not str(data.get(f)).strip()]
         if missing:
             logger.warning(f"Missing required fields: {missing}")
             return error_response(f"Missing required fields: {', '.join(missing)}", status_code=400, error_code='VALIDATION_ERROR')
         
-        # Validate date
+        # Validate date - allow past dates and today, reject future dates (>1 day)
         date_str = data.get('date_of_visit', '')
         if date_str:
             try:
+                from datetime import timedelta
                 visit_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-                if visit_date > datetime.now().date():
-                    return error_response('Visit date cannot be in the future', status_code=400, error_code='VALIDATION_ERROR')
-            except ValueError:
+                # Use UTC date and add 1 day buffer to account for timezone differences
+                today_utc = datetime.utcnow().date()
+                max_allowed_date = today_utc + timedelta(days=1)
+                logger.info(f"Date validation (Cleaning): parsed_date={visit_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
+                if visit_date > max_allowed_date:
+                    logger.warning(f"Rejected future date: {visit_date} > {max_allowed_date}")
+                    return error_response(f'Visit date ({visit_date}) cannot be more than 1 day in the future', status_code=400, error_code='VALIDATION_ERROR')
+            except ValueError as e:
+                logger.error(f"Invalid date format: {date_str}, error: {e}")
                 return error_response('Invalid date format. Use YYYY-MM-DD', status_code=400, error_code='VALIDATION_ERROR')
         
         GENERATED_DIR = current_app.config['GENERATED_DIR']
@@ -331,7 +338,6 @@ def submit():
         
         # Save signatures (base64 data) with local fallback
         tech_signature = data.get('tech_signature', '')
-        contact_signature = data.get('contact_signature', '')
         supervisor_signature = data.get('supervisor_signature', '')
         supervisor_comments = data.get('supervisor_comments', '')
         
@@ -354,26 +360,6 @@ def submit():
             except Exception as e:
                 logger.error(f"Failed to upload tech signature: {e}")
                 return error_response('Storage error for tech signature', status_code=500, error_code='STORAGE_ERROR')
-        
-        if contact_signature and contact_signature.startswith('data:image'):
-            try:
-                # Cloud upload with local fallback
-                cloud_url, is_cloud = upload_base64_to_cloud(
-                    contact_signature, 
-                    folder="signatures", 
-                    prefix="contact_sig",
-                    uploads_dir=UPLOADS_DIR
-                )
-                
-                data['contact_signature'] = {
-                    'saved': None,
-                    'path': None,
-                    'url': cloud_url,
-                    'is_cloud': is_cloud
-                }
-            except Exception as e:
-                logger.error(f"Failed to upload contact signature: {e}")
-                return error_response('Storage error for contact signature', status_code=500, error_code='STORAGE_ERROR')
         
         if supervisor_signature and supervisor_signature.startswith('data:image'):
             try:
@@ -528,6 +514,7 @@ def upload_photo():
 
 
 @cleaning_bp.route("/submit-with-urls", methods=["POST"])
+@jwt_required()
 def submit_with_urls():
     """Submit form data where photos are already uploaded to cloud."""
     try:
@@ -535,6 +522,30 @@ def submit_with_urls():
         
         if not data:
             return jsonify({'error': 'No data received'}), 400
+        
+        # Validate required fields
+        required_fields = ['project_name', 'date_of_visit']
+        missing = [f for f in required_fields if not data.get(f) or not str(data.get(f)).strip()]
+        if missing:
+            logger.warning(f"Missing required fields: {missing}")
+            return jsonify({'error': f"Missing required fields: {', '.join(missing)}"}), 400
+        
+        # Validate date - allow past dates and today, reject future dates (>1 day)
+        date_str = data.get('date_of_visit', '')
+        if date_str:
+            try:
+                from datetime import timedelta
+                visit_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                # Use UTC date and add 1 day buffer to account for timezone differences
+                today_utc = datetime.utcnow().date()
+                max_allowed_date = today_utc + timedelta(days=1)
+                logger.info(f"Date validation (submit-with-urls): parsed_date={visit_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
+                if visit_date > max_allowed_date:
+                    logger.warning(f"Rejected future date: {visit_date} > {max_allowed_date}")
+                    return jsonify({'error': f'Visit date ({visit_date}) cannot be more than 1 day in the future'}), 400
+            except ValueError as e:
+                logger.error(f"Invalid date format: {date_str}, error: {e}")
+                return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
         
         GENERATED_DIR = current_app.config['GENERATED_DIR']
         UPLOADS_DIR = current_app.config['UPLOADS_DIR']
@@ -569,28 +580,30 @@ def submit_with_urls():
         
         # Save signatures (base64 data) to cloud with local fallback
         tech_signature = data.get('tech_signature', '')
-        contact_signature = data.get('contact_signature', '')
         supervisor_signature = data.get('supervisor_signature', '')
         supervisor_comments = data.get('supervisor_comments', '')
         
-        if tech_signature:
+        if tech_signature and tech_signature.startswith('data:image'):
             try:
                 cloud_url, is_cloud = upload_base64_to_cloud(tech_signature, folder="signatures", prefix="tech_sig", uploads_dir=UPLOADS_DIR)
-                data['tech_signature_url'] = cloud_url
+                data['tech_signature'] = {
+                    'saved': None,
+                    'path': None,
+                    'url': cloud_url,
+                    'is_cloud': is_cloud
+                }
             except Exception as e:
                 logger.error(f"Failed to upload tech signature: {e}")
         
-        if contact_signature:
-            try:
-                cloud_url, is_cloud = upload_base64_to_cloud(contact_signature, folder="signatures", prefix="contact_sig", uploads_dir=UPLOADS_DIR)
-                data['contact_signature_url'] = cloud_url
-            except Exception as e:
-                logger.error(f"Failed to upload contact signature: {e}")
-        
-        if supervisor_signature:
+        if supervisor_signature and supervisor_signature.startswith('data:image'):
             try:
                 cloud_url, is_cloud = upload_base64_to_cloud(supervisor_signature, folder="signatures", prefix="supervisor_sig", uploads_dir=UPLOADS_DIR)
-                data['supervisor_signature_url'] = cloud_url
+                data['supervisor_signature'] = {
+                    'saved': None,
+                    'path': None,
+                    'url': cloud_url,
+                    'is_cloud': is_cloud
+                }
                 data['supervisor_comments'] = supervisor_comments
             except Exception as e:
                 logger.error(f"Failed to upload supervisor signature: {e}")
@@ -606,12 +619,22 @@ def submit_with_urls():
             'base_url': request.host_url.rstrip('/')
         }
         
+        # Get user_id from JWT token
+        user_id = None
+        try:
+            user_id = get_jwt_identity()
+            if user_id:
+                logger.info(f"✅ Submission will be associated with user_id: {user_id}")
+        except Exception:
+            pass  # No token or invalid token - submission will be anonymous
+        
         # Save submission to database
         submission_db = create_submission_db(
             module_type='cleaning',
             form_data=submission_data,
             site_name=data.get('project_name', 'Cleaning Assessment'),
-            visit_date=data.get('date', datetime.utcnow().strftime('%Y-%m-%d'))
+            visit_date=data.get('date_of_visit', datetime.utcnow().strftime('%Y-%m-%d')),
+            user_id=user_id
         )
         submission_id = submission_db.submission_id
         

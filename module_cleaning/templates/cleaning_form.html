@@ -644,7 +644,7 @@
       <ul class="nav nav-tabs" id="assessmentTabs" role="tablist">
         <li class="nav-item" role="presentation"><button class="nav-link active" id="tab-1-link" data-bs-toggle="tab" data-bs-target="#tab-1" type="button" role="tab">1. Project & Facility</button></li>
         <li class="nav-item" role="presentation"><button class="nav-link" id="tab-2-link" data-bs-toggle="tab" data-bs-target="#tab-2" type="button" role="tab">2. Cleaning & Scope</button></li>
-        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab">3. Safety & Staffing</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab">3. Staffing</button></li>
         <li class="nav-item" role="presentation"><button class="nav-link" id="tab-4-link" data-bs-toggle="tab" data-bs-target="#tab-4" type="button" role="tab">4. Visual Evidence</button></li>
         <li class="nav-item" role="presentation"><button class="nav-link" id="tab-5-link" data-bs-toggle="tab" data-bs-target="#tab-5" type="button" role="tab">5. Sign-off & Submit</button></li>
       </ul>
@@ -656,41 +656,19 @@
                             <h4 class="section-heading">Project & Client Details</h4>
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label for="client_name" class="form-label">Client Name</label>
-                                    <input type="text" class="form-control" id="client_name" name="client_name">
-                                </div>
-                                <div class="col-md-6">
                                     <label for="project_name" class="form-label">Project Name</label>
-                                    <input type="text" class="form-control" id="project_name" name="project_name">
-                                </div>
-                                <div class="col-12">
-                                    <label for="site_address" class="form-label">Site Address</label>
-                                    <input type="text" class="form-control" id="site_address" name="site_address">
+                                    <input type="text" class="form-control" id="project_name" name="project_name" {% if not is_supervisor_edit %}required{% endif %}>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="date_of_visit" class="form-label">Date of Visit</label>
-                                    <input type="date" class="form-control" id="date_of_visit" name="date_of_visit">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="key_person_name" class="form-label">Key Person/Contact Name</label>
-                                    <input type="text" class="form-control" id="key_person_name" name="key_person_name">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="contact_number" class="form-label">Contact Number</label>
-                                    <input type="tel" class="form-control" id="contact_number" name="contact_number">
+                                    <input type="date" class="form-control" id="date_of_visit" name="date_of_visit" max="" {% if not is_supervisor_edit %}required{% endif %}>
                                 </div>
                             </div>
 
                             <hr class="my-4">
 
-                            <h4 class="section-heading">Site Count & Current Operations</h4>
+                            <h4 class="section-heading">Facility Area Counts</h4>
                             <div class="row g-3">
-                                <div class="col-md-4"><label class="form-label">Room Count (General)</label><input type="number" class="form-control" name="room_count" min="0"></div>
-                                <div class="col-md-4"><label class="form-label">Current Team Size</label><input type="number" class="form-control" name="current_team_size" min="0"></div>
-                                <div class="col-md-4"><label class="form-label">Lift Count (Total)</label><input type="number" class="form-control" name="lift_count_total" min="0"></div>
-                                <div class="col-12"><label class="form-label">Current Team Description</label><textarea class="form-control" name="current_team_desc" rows="2" placeholder="e.g., 5 cleaners, 1 supervisor, 8 hours/day"></textarea></div>
-                                
-                                <div class="col-12"><h5 class="mt-3 text-secondary">Facility Area Counts</h5></div>
 
                                 <div class="col-md-4"><label class="form-label">Floor (Description/Name)</label><input type="text" class="form-control" name="facility_floor"></div>
                                 <div class="col-md-4"><label class="form-label">Ground Parking (Count)</label><input type="number" class="form-control" name="facility_ground_parking" min="0"></div>
@@ -749,13 +727,17 @@
                             </div>
 
                             <h5 class="mt-4 text-success">Waste Disposal</h5>
-                            <div class="row g-3 ps-3 mb-4">
-                                <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="waste_general" value="True" checked><label class="form-check-label">General Waste</label></div></div>
-                                <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="waste_recycling" value="True"><label class="form-check-label">Recycling</label></div></div>
+                            <div class="row g-3 mb-4">
                                 <div class="col-md-6">
-                                    <input class="form-check-input" type="checkbox" name="waste_hazardous" value="True">
-                                    <label class="form-check-label">Hazardous Waste</label>
-                                    <input type="text" class="form-control mt-2" name="waste_hazardous_details" placeholder="Specify type">
+                                    <label class="form-label">Do they need waste to be disposed?</label>
+                                    <select class="form-select" name="waste_disposal_required">
+                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Method of Waste Disposal</label>
+                                    <textarea class="form-control" name="waste_disposal_method" rows="2" placeholder="Describe the method of waste disposal..."></textarea>
                                 </div>
                             </div>
                             
@@ -773,7 +755,7 @@
 
                         <!-- TAB 3: Safety & Staffing -->
                         <div class="tab-pane fade" id="tab-3" role="tabpanel">
-                            <h4 class="section-heading">Safety & Maintenance Assessment</h4>
+                            <h4 class="section-heading">Safety & Staffing</h4>
                             
                             <div class="row g-3">
                                 <div class="col-md-6">
@@ -787,39 +769,6 @@
                                 <div class="col-12">
                                     <label class="form-label">Site Access Requirements</label>
                                     <textarea class="form-control" name="site_access_requirements" rows="2"></textarea>
-                                </div>
-                            </div>
-                            
-                            <h5 class="mt-4 text-success">Maintenance and Equipment</h5>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Current Equipment Condition</label>
-                                    <select class="form-select" name="facility_equipment_condition">
-                                        <option value="Excellent">Excellent</option>
-                                        <option value="Good" selected>Good</option>
-                                        <option value="Fair">Fair</option>
-                                        <option value="Poor">Poor</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Required Equipment</label>
-                                    <input type="text" class="form-control" name="required_equipment">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Maintenance Notes</label>
-                                    <textarea class="form-control" name="facility_maintenance_notes" rows="3"></textarea>
-                                </div>
-                            </div>
-                            
-                            <h5 class="mt-4 text-success">Safety and Risk</h5>
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <label class="form-label">High-Risk Areas</label>
-                                    <textarea class="form-control" name="high_risk_areas" rows="2"></textarea>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Suggested Safety Measures/PPE</label>
-                                    <input type="text" class="form-control" name="suggested_safety_ppe">
                                 </div>
                             </div>
 
@@ -883,15 +832,23 @@
 
                         <!-- TAB 5: Sign-off & Submit -->
                         <div class="tab-pane fade" id="tab-5" role="tabpanel">
-                            <h4 class="section-heading">Sign-off & Submission</h4>
+                            <h4 class="section-heading">Inspector & Supervisor Sign-off</h4>
                             
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6 mb-3">
+                                    <label for="technician_name" class="form-label">Name of Inspector</label>
+                                    <input id="technician_name" name="technician_name" class="form-control" placeholder="Inspector name">
+                                </div>
+                                <div class="col-md-6"></div>
+                            </div>
+
                             {% if user_designation == 'technician' and not is_edit_mode %}
-                            <div class="alert alert-info" role="alert" style="font-weight: 600; margin-top: 0.5rem;">
-                                Technician submissions will be routed to supervisors/managers for approval after upload.
+                            <div class="alert alert-info" role="alert" style="font-weight: 600; margin-bottom: 1rem;">
+                                Technician submissions only require your signature. Supervisor/manager approval will be collected during review.
                             </div>
                             {% elif is_supervisor_edit %}
-                            <div class="alert alert-warning" role="alert" style="font-weight: 600; margin-top: 0.5rem;">
-                                Technician and client signatures are locked. Review and add your approval notes before updating.
+                            <div class="alert alert-warning" role="alert" style="font-weight: 600; margin-bottom: 1rem;">
+                                Inspector signature is locked. Review and add your approval notes before updating.
                             </div>
                             {% endif %}
                             
@@ -899,38 +856,31 @@
                                 <div class="col-md-6 mb-3">
                                     <div class="signature-container">
                                         <div class="signature-label">
-                                            <label class="form-label mb-0" style="flex: 1;">Technician Signature</label>
+                                            <label class="form-label mb-0" style="flex: 1;">Inspector Signature</label>
                                             {% if is_supervisor_edit %}
-                                            <span class="signature-hint" style="color: #059669; font-weight: 600;">✓ Technician has signed</span>
+                                            <span class="signature-hint" style="color: #059669; font-weight: 600;">✓ Inspector has signed</span>
                                             {% else %}
-                                            <span class="signature-hint">Draw signature</span>
+                                            <span class="signature-hint">Draw signature with mouse/touch</span>
                                             {% endif %}
                                         </div>
                                     {% if is_supervisor_edit %}
-                                    <!-- Show technician signature as read-only image when supervisor/manager views -->
-                                    <div id="techSignatureDisplay" style="border: 1px solid #e5e7eb; background: #f9fafb; padding: 10px; border-radius: 4px; min-height: 150px; display: flex; align-items: center; justify-content: center;">
-                                        <span class="text-muted">Technician Signature (Read-only)</span>
+                                    <!-- Show inspector signature as read-only image when supervisor/manager views -->
+                                    {% set tech_sig = submission_data.form_data.tech_signature if submission_data and submission_data.form_data and submission_data.form_data.tech_signature else none %}
+                                    {% set tech_sig_url = tech_sig.url if tech_sig is mapping and tech_sig.url else (tech_sig if tech_sig is string else none) %}
+                                    <div id="techSignatureDisplay" style="border: 1px solid #e5e7eb; background: #f9fafb; padding: 10px; border-radius: 4px; min-height: 150px; display: flex; align-items: center; justify-content: center; max-width: 500px;">
+                                        {% if tech_sig_url %}
+                                        <img src="{{ tech_sig_url }}" alt="Inspector Signature" style="width: 100%; max-width: 500px; max-height: 150px; object-fit: contain; border-radius: 4px;">
+                                        {% else %}
+                                        <span class="text-muted">Inspector Signature (Read-only)</span>
+                                        {% endif %}
                                     </div>
                                     {% else %}
                                         <canvas id="tech_signature_canvas" class="signature-pad"></canvas>
-                                        <input type="text" class="form-control mt-2 form-control-sm" name="assessor_name" placeholder="Name (Printed)">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="clearSignature('tech_signature_canvas')">Clear</button>
+                                        <input type="hidden" id="techSignatureData" name="tech_signature">
+                                        <button type="button" id="clearTech" class="btn btn-outline-secondary btn-sm mt-2">Clear</button>
                                     {% endif %}
                                     </div>
                                 </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <div class="signature-container">
-                                        <div class="signature-label">
-                                            <label class="form-label mb-0" style="flex: 1;">Client Signature</label>
-                                            <span class="signature-hint">Draw signature</span>
-                                        </div>
-                                        <canvas id="contact_signature_canvas" class="signature-pad"></canvas>
-                                        <input type="text" class="form-control mt-2 form-control-sm" name="contact_name" placeholder="Name (Printed)">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="clearSignature('contact_signature_canvas')">Clear</button>
-                                    </div>
-                                </div>
-                            </div>
 
                             {% if is_supervisor_edit or user_designation == 'supervisor' %}
                             <!-- Supervisor Review Section -->
@@ -963,15 +913,15 @@
                             </div>
                             {% endif %}
                             
-                            <input type="hidden" id="tech_signature_data" name="tech_signature">
-                            <input type="hidden" id="contact_signature_data" name="contact_signature">
-                            
                             <div class="d-flex justify-content-between mt-4">
                                 <button type="button" class="btn btn-outline-secondary" onclick="goToTab(4)">← Previous</button>
                                 <button type="submit" class="btn btn-success btn-lg">
                                     {% if is_edit_mode %}Update Submission{% else %}Submit & Generate Reports{% endif %}
                                 </button>
                             </div>
+                            
+                            <!-- Download Links Container - appears below submit button -->
+                            <div id="download-links-container" style="display: none; margin-top: 1.5rem;"></div>
                         </div>
 
                     </div>
@@ -1033,10 +983,8 @@
 
         // Signature Pads
         const techCanvas = document.getElementById('tech_signature_canvas');
-        const contactCanvas = document.getElementById('contact_signature_canvas');
         const supervisorCanvas = document.getElementById('supervisorSignaturePad');
         let techSignaturePad = null;
-        let contactSignaturePad = null;
         let supervisorSignaturePad = null;
         
         function resizeCanvas() {
@@ -1072,7 +1020,6 @@
             }
 
             if (techCanvas) setupCanvas(techCanvas, techSignaturePad);
-            if (contactCanvas) setupCanvas(contactCanvas, contactSignaturePad);
             if (supervisorCanvas) setupCanvas(supervisorCanvas, supervisorSignaturePad);
         }
         
@@ -1084,15 +1031,23 @@
                 maxWidth: 3,
                 throttle: 16
             });
-        }
-        if (contactCanvas) {
-            contactSignaturePad = new SignaturePad(contactCanvas, { 
-                backgroundColor: 'rgb(255, 255, 255)',
-                penColor: 'rgb(0, 0, 0)',
-                minWidth: 1,
-                maxWidth: 3,
-                throttle: 16
+            
+            // Save signature to hidden input when pad changes
+            techSignaturePad.addEventListener('endStroke', () => {
+                const techSigInput = document.getElementById('techSignatureData');
+                if (techSigInput && !techSignaturePad.isEmpty()) {
+                    techSigInput.value = techSignaturePad.toDataURL('image/png');
+                }
             });
+            
+            const clearTechBtn = document.getElementById('clearTech');
+            if (clearTechBtn) {
+                clearTechBtn.addEventListener('click', () => {
+                    techSignaturePad.clear();
+                    const techSigInput = document.getElementById('techSignatureData');
+                    if (techSigInput) techSigInput.value = '';
+                });
+            }
         }
         if (supervisorCanvas) {
             supervisorSignaturePad = new SignaturePad(supervisorCanvas, { 
@@ -1147,17 +1102,19 @@
         // Make pads available globally for loadSubmissionData
         window.signaturePads = {
             tech: techSignaturePad,
-            contact: contactSignaturePad,
             supervisorPad: supervisorSignaturePad
         };
 
         window.clearSignature = function(canvasId) {
-            const pad = canvasId === 'tech_signature_canvas' ? techSignaturePad : contactSignaturePad;
+            const pad = canvasId === 'tech_signature_canvas' ? techSignaturePad : null;
             if (pad) {
                 pad.clear();
                 const ctx = pad.canvas.getContext('2d');
                 ctx.fillStyle = 'white';
                 ctx.fillRect(0, 0, pad.canvas.offsetWidth, pad.canvas.offsetHeight);
+                // Also clear the hidden input
+                const techSigInput = document.getElementById('techSignatureData');
+                if (techSigInput) techSigInput.value = '';
             }
         }
 
@@ -1166,39 +1123,88 @@
             {% if is_edit_mode and submission_data %}
             try {
                 const submissionData = {{ submission_data|tojson }};
-                const formData = submissionData.form_data || {};
+                // Handle nested form_data structure
+                // submit-with-urls creates: form_data = { data: { ...actual form data... } }
+                // submit creates: form_data = { ...actual form data... }
+                let formData = submissionData.form_data || {};
+                if (formData.data) {
+                    // If form_data has a nested 'data' field, use that (from submit-with-urls)
+                    formData = formData.data;
+                }
+                // Now formData should contain the actual form fields
                 
                 // Pre-fill basic fields
                 if (submissionData.site_name) {
-                    const clientField = document.getElementById('client_name');
-                    if (clientField) clientField.value = submissionData.site_name;
+                    const projectField = document.getElementById('project_name');
+                    if (projectField) projectField.value = submissionData.site_name;
                 }
                 if (submissionData.visit_date) {
                     const dateField = document.getElementById('date_of_visit');
                     if (dateField) dateField.value = submissionData.visit_date;
                 }
                 
-                // Load other form fields
+                // Load all form fields - comprehensive mapping
                 const fieldMappings = {
                     'project_name': 'project_name',
+                    'date_of_visit': 'date_of_visit',
+                    'technician_name': 'technician_name',
                     'contact_person': 'contact_person',
                     'contact_phone': 'contact_phone',
                     'contact_email': 'contact_email',
                     'assessor_name': 'assessor_name',
-                    'contact_name': 'contact_name'
+                    'contact_name': 'contact_name',
+                    'waste_disposal_required': 'waste_disposal_required',
+                    'waste_disposal_method': 'waste_disposal_method',
+                    'site_access_requirements': 'site_access_requirements',
+                    'staffing_notes': 'staffing_notes',
+                    'current_team_size': 'current_team_size',
+                    'recommended_team_size': 'recommended_team_size'
                 };
                 
+                // Load text inputs, selects, and textareas
                 Object.keys(fieldMappings).forEach(formField => {
                     const dbField = fieldMappings[formField];
                     const fieldEl = document.getElementById(formField) || document.querySelector(`[name="${formField}"]`);
-                    if (fieldEl && formData[dbField]) {
+                    if (fieldEl && formData[dbField] !== undefined && formData[dbField] !== null) {
                         fieldEl.value = formData[dbField];
+                    }
+                });
+                
+                // Load facility area counts (all numeric fields)
+                const areaFields = ['facility_floor', 'facility_ground_parking', 'facility_basement', 'facility_podium',
+                                   'facility_gym_room', 'facility_swimming_pool', 'facility_washroom_male', 
+                                   'facility_washroom_female', 'facility_changing_room', 'facility_play_kids_place',
+                                   'facility_garbage_room', 'facility_floor_chute_room', 'facility_staircase',
+                                   'facility_floor_service_room', 'facility_cleaner_count'];
+                areaFields.forEach(field => {
+                    const fieldEl = document.getElementById(field) || document.querySelector(`[name="${field}"]`);
+                    if (fieldEl && formData[field] !== undefined && formData[field] !== null) {
+                        fieldEl.value = formData[field];
+                    }
+                });
+                
+                // Load other text fields
+                const textFields = ['deep_clean_areas', 'restricted_access', 'pest_control', 'working_hours',
+                                   'required_team_size', 'site_access_requirements', 'staffing_notes'];
+                textFields.forEach(field => {
+                    const fieldEl = document.getElementById(field) || document.querySelector(`[name="${field}"]`);
+                    if (fieldEl && formData[field] !== undefined && formData[field] !== null) {
+                        fieldEl.value = formData[field];
+                    }
+                });
+                
+                // Load select fields
+                const selectFields = ['deep_clean_required', 'waste_disposal_required'];
+                selectFields.forEach(field => {
+                    const fieldEl = document.getElementById(field) || document.querySelector(`[name="${field}"]`);
+                    if (fieldEl && formData[field] !== undefined && formData[field] !== null) {
+                        fieldEl.value = formData[field];
                     }
                 });
                 
                 // Load checkboxes
                 Object.keys(formData).forEach(key => {
-                    if (formData[key] === 'True' || formData[key] === true) {
+                    if (formData[key] === 'True' || formData[key] === true || formData[key] === 'true') {
                         const checkbox = document.querySelector(`[name="${key}"]`);
                         if (checkbox && checkbox.type === 'checkbox') {
                             checkbox.checked = true;
@@ -1206,29 +1212,91 @@
                     }
                 });
                 
-                // Load photo URLs
-                if (formData.photo_urls && Array.isArray(formData.photo_urls)) {
+                // Load photo URLs and display them
+                if (formData.photo_urls && Array.isArray(formData.photo_urls) && formData.photo_urls.length > 0) {
                     uploadedPhotoUrls = formData.photo_urls;
                     photosUploaded = uploadedPhotoUrls.length > 0;
+                    
+                    // Display photos in preview container for supervisor review
+                    if (photoPreviewContainer && uploadedPhotoUrls.length > 0) {
+                        photoPreviewContainer.innerHTML = '';
+                        photoPreviewContainer.style.display = 'flex';
+                        photoPreviewContainer.style.flexWrap = 'wrap';
+                        photoPreviewContainer.style.gap = '10px';
+                        
+                        uploadedPhotoUrls.forEach((photoUrl, index) => {
+                            const photoDiv = document.createElement('div');
+                            photoDiv.className = 'photo-item';
+                            photoDiv.style.cssText = 'position: relative; display: inline-block; margin: 8px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #f8f9fa; border: 2px solid #dee2e6;';
+                            
+                            const img = document.createElement('img');
+                            // Handle both URL strings and objects with url property
+                            const imgUrl = typeof photoUrl === 'string' ? photoUrl : (photoUrl.url || photoUrl.path || '');
+                            img.src = imgUrl;
+                            img.alt = `Photo ${index + 1}`;
+                            img.style.cssText = 'display: block !important; width: 120px !important; height: 120px !important; object-fit: cover; background: #fff;';
+                            img.onerror = function() {
+                                this.style.display = 'none';
+                                photoDiv.innerHTML = '<div style="width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; color: #dc2626; font-size: 0.8rem;">⚠️ Failed to load</div>';
+                            };
+                            
+                            photoDiv.appendChild(img);
+                            photoPreviewContainer.appendChild(photoDiv);
+                        });
+                        
+                        // Update photo count display
+                        if (photoCount) {
+                            photoCount.textContent = `${uploadedPhotoUrls.length} photo(s) uploaded`;
+                            photoCount.style.display = 'block';
+                        }
+                    }
+                } else if (formData.photos && Array.isArray(formData.photos) && formData.photos.length > 0) {
+                    // Fallback: try photos array (from old format)
+                    uploadedPhotoUrls = formData.photos.map(p => typeof p === 'string' ? p : (p.url || p.path || '')).filter(url => url);
+                    photosUploaded = uploadedPhotoUrls.length > 0;
+                    
+                    if (photoPreviewContainer && uploadedPhotoUrls.length > 0) {
+                        photoPreviewContainer.innerHTML = '';
+                        photoPreviewContainer.style.display = 'flex';
+                        photoPreviewContainer.style.flexWrap = 'wrap';
+                        photoPreviewContainer.style.gap = '10px';
+                        
+                        uploadedPhotoUrls.forEach((photoUrl, index) => {
+                            const photoDiv = document.createElement('div');
+                            photoDiv.className = 'photo-item';
+                            photoDiv.style.cssText = 'position: relative; display: inline-block; margin: 8px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #f8f9fa; border: 2px solid #dee2e6;';
+                            
+                            const img = document.createElement('img');
+                            img.src = photoUrl;
+                            img.alt = `Photo ${index + 1}`;
+                            img.style.cssText = 'display: block !important; width: 120px !important; height: 120px !important; object-fit: cover; background: #fff;';
+                            img.onerror = function() {
+                                this.style.display = 'none';
+                                photoDiv.innerHTML = '<div style="width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; color: #dc2626; font-size: 0.8rem;">⚠️ Failed to load</div>';
+                            };
+                            
+                            photoDiv.appendChild(img);
+                            photoPreviewContainer.appendChild(photoDiv);
+                        });
+                        
+                        if (photoCount) {
+                            photoCount.textContent = `${uploadedPhotoUrls.length} photo(s) uploaded`;
+                            photoCount.style.display = 'block';
+                        }
+                    }
                 }
                 
                 // Load signatures
                 function loadSignatures() {
-                    const pads = window.signaturePads;
-                    if (!pads || !pads.tech || !pads.contact) {
-                        setTimeout(loadSignatures, 200);
-                        return;
-                    }
-                    
-                    // Load technician signature - show as read-only for supervisor/manager
+                    {% if is_supervisor_edit %}
+                    // For supervisor edit, load signature directly without waiting for pads
                     if (formData.tech_signature || formData.tech_signature_url) {
                         let techSig = formData.tech_signature || formData.tech_signature_url;
                         // Handle object format with url property (from Cloudinary)
                         if (techSig && typeof techSig === 'object' && techSig.url) {
                             techSig = techSig.url;
                         }
-                        if (techSig && typeof techSig === 'string' && (techSig.startsWith('data:image') || techSig.startsWith('http'))) {
-                            {% if is_supervisor_edit %}
+                        if (techSig && typeof techSig === 'string' && (techSig.startsWith('data:image') || techSig.startsWith('http') || techSig.startsWith('/'))) {
                             // Show in read-only display for supervisor/manager
                             const techDisplay = document.getElementById('techSignatureDisplay');
                             if (techDisplay) {
@@ -1244,10 +1312,27 @@
                                 techDisplay.appendChild(sigImg);
                                 
                                 // Store in hidden input for submission  
-                                const techSigInput = document.getElementById('tech_signature_data');
+                                const techSigInput = document.getElementById('techSignatureData');
                                 if (techSigInput) techSigInput.value = techSig;
                             }
-                            {% else %}
+                        }
+                    }
+                    {% else %}
+                    // Normal edit mode - wait for pads to initialize
+                    const pads = window.signaturePads;
+                    if (!pads || !pads.tech) {
+                        setTimeout(loadSignatures, 200);
+                        return;
+                    }
+                    
+                    // Load technician signature - show as read-only for supervisor/manager
+                    if (formData.tech_signature || formData.tech_signature_url) {
+                        let techSig = formData.tech_signature || formData.tech_signature_url;
+                        // Handle object format with url property (from Cloudinary)
+                        if (techSig && typeof techSig === 'object' && techSig.url) {
+                            techSig = techSig.url;
+                        }
+                        if (techSig && typeof techSig === 'string' && (techSig.startsWith('data:image') || techSig.startsWith('http') || techSig.startsWith('/'))) {
                             // Normal edit mode - show in canvas
                             if (techCanvas && pads.tech) {
                                 // Hide canvas and show signature as image instead (more reliable)
@@ -1269,9 +1354,9 @@
                                 const hintSpan = techCanvas.parentElement.querySelector('.signature-hint');
                                 if (hintSpan) hintSpan.style.display = 'none';
                             }
-                            {% endif %}
                         }
                     }
+                    {% endif %}
                     
                     // Load supervisor comments and signature if supervisor is editing
                     {% if is_supervisor_edit or user_designation == 'supervisor' %}
@@ -1321,37 +1406,6 @@
                     }
                     {% endif %}
                     
-                    if (formData.contact_signature) {
-                        let contactSig = formData.contact_signature;
-                        // Handle object format with url property (from Cloudinary)
-                        if (contactSig && typeof contactSig === 'object' && contactSig.url) {
-                            contactSig = contactSig.url;
-                        }
-                        if (contactSig && typeof contactSig === 'string' && (contactSig.startsWith('data:image') || contactSig.startsWith('http'))) {
-                            // Hide canvas and show signature as image instead (more reliable)
-                            contactCanvas.style.display = 'none';
-                            
-                            // Create image element to display the signature
-                            const sigImg = document.createElement('img');
-                            sigImg.src = contactSig;
-                            sigImg.alt = 'Client Signature';
-                            sigImg.style.cssText = 'width: 100%; max-height: 180px; object-fit: contain; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px;';
-                            contactCanvas.parentElement.insertBefore(sigImg, contactCanvas);
-                            
-                            const clearBtn = contactCanvas.parentElement.querySelector('button');
-                            if (clearBtn) clearBtn.style.display = 'none';
-                            const contactLabel = contactCanvas.parentElement.querySelector('label');
-                            if (contactLabel) {
-                                contactLabel.innerHTML = 'Client Signature <span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
-                            }
-                            const hintSpan = contactCanvas.parentElement.querySelector('.signature-hint');
-                            if (hintSpan) hintSpan.style.display = 'none';
-                            const contactInfo = document.createElement('div');
-                            contactInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
-                            contactInfo.textContent = '⚠️ This signature was already provided and cannot be modified.';
-                            contactCanvas.parentElement.appendChild(contactInfo);
-                        }
-                    }
                 }
                 
                 setTimeout(loadSignatures, 300);
@@ -1877,7 +1931,6 @@
         function saveDraft() {
             try {
                 const draft = {
-                    client_name: document.getElementById('client_name')?.value || '',
                     project_name: document.getElementById('project_name')?.value || '',
                     date_of_visit: document.getElementById('date_of_visit')?.value || '',
                     photoCount: photoBase64.length,
@@ -1903,7 +1956,6 @@
                 }
                 
                 // Auto-load draft without confirmation
-                if (draft.client_name) document.getElementById('client_name').value = draft.client_name;
                 if (draft.project_name) document.getElementById('project_name').value = draft.project_name;
                 if (draft.date_of_visit) document.getElementById('date_of_visit').value = draft.date_of_visit;
                 
@@ -1929,38 +1981,80 @@
         setInterval(saveDraft, DRAFT_SAVE_INTERVAL);
         
         // Save on field changes
-        ['client_name', 'project_name', 'date_of_visit'].forEach(id => {
+        ['project_name', 'date_of_visit'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', saveDraft);
         });
         
-        // Load draft on page load
-        window.addEventListener('DOMContentLoaded', loadDraft);
+        // Don't auto-load draft on page refresh - always start with a fresh form
+        // window.addEventListener('DOMContentLoaded', loadDraft); // DISABLED - forms should be fresh on refresh
+        
+        // Set default date to today and max date to today (prevent future dates)
+        window.addEventListener('DOMContentLoaded', function() {
+          const dateField = document.getElementById('date_of_visit');
+          if (dateField) {
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            dateField.setAttribute('max', todayStr);
+            if (!dateField.value) {
+              dateField.value = todayStr;
+            }
+          }
+          // Clear any existing drafts on page load to ensure fresh form
+          clearDraft();
+        });
 
         // Form Submission with Enhancements
         form.addEventListener('submit', async function(event) {
             event.preventDefault();
 
             // CUSTOM VALIDATION
-            const clientName = document.getElementById('client_name').value.trim();
-            const projectName = document.getElementById('project_name').value.trim();
-            const visitDate = document.getElementById('date_of_visit').value.trim();
+            const projectName = document.getElementById('project_name')?.value?.trim() || '';
+            const visitDate = document.getElementById('date_of_visit')?.value?.trim() || '';
             
-            if (!clientName || !projectName || !visitDate) {
+            if (!projectName || !visitDate) {
                 statusDiv.className = 'alert alert-warning';
-                statusDiv.textContent = 'Please fill in Client Name, Project Name, and Visit Date (Tab 1)';
+                statusDiv.textContent = 'Please fill in Project Name and Visit Date (Tab 1)';
                 statusDiv.classList.remove('d-none');
                 goToTab(1);
                 return;
             }
             
-            // Check if photos have been uploaded
-            if (photoQueue && (!photosUploaded || uploadedPhotoUrls.length === 0)) {
-                statusDiv.className = 'alert alert-warning';
-                statusDiv.textContent = '⚠️ Please upload images first using the "Upload Images" button before generating reports.';
-                statusDiv.classList.remove('d-none');
-                goToTab(4); // Go to photos tab
-                return;
+            // Ensure signature pad is initialized
+            if (!techSignaturePad && document.getElementById('tech_signature_canvas')) {
+                console.warn('Signature pad not initialized, attempting to initialize...');
+                const techCanvas = document.getElementById('tech_signature_canvas');
+                if (techCanvas) {
+                    techSignaturePad = new SignaturePad(techCanvas, { 
+                        backgroundColor: 'rgb(255, 255, 255)',
+                        penColor: 'rgb(0, 0, 0)',
+                        minWidth: 1,
+                        maxWidth: 3,
+                        throttle: 16
+                    });
+                    
+                    // Save signature to hidden input when pad changes
+                    techSignaturePad.addEventListener('endStroke', () => {
+                        const techSigInput = document.getElementById('techSignatureData');
+                        if (techSigInput && !techSignaturePad.isEmpty()) {
+                            techSigInput.value = techSignaturePad.toDataURL('image/png');
+                        }
+                    });
+                }
+            }
+            
+            // Photos are optional - allow submission with or without photos
+            // Only warn if user has queued photos but hasn't uploaded them
+            if (photoQueue && uploadedPhotoUrls.length === 0) {
+                // Check if there are photos in the queue that haven't been uploaded
+                const hasQueuedPhotos = photoQueue && typeof photoQueue.getStats === 'function' && photoQueue.getStats().queued > 0;
+                if (hasQueuedPhotos && !photosUploaded) {
+                    statusDiv.className = 'alert alert-warning';
+                    statusDiv.textContent = '⚠️ You have photos queued. Please upload them using the "Upload Images" button, or clear them to submit without photos.';
+                    statusDiv.classList.remove('d-none');
+                    goToTab(4); // Go to photos tab
+                    return;
+                }
             }
 
             const formData = new FormData(form);
@@ -1973,21 +2067,19 @@
             
             // Get signatures - preserve original in edit mode
             let techSig = '';
-            let contactSig = '';
             
-            {% if is_edit_mode %}
-            // In edit mode, use existing signatures (read-only)
-            if (techSignaturePad && !techSignaturePad.isEmpty()) {
-                techSig = techSignaturePad.toDataURL();
+            // Get from hidden input (populated by signature pad onChange)
+            const techSigInput = document.getElementById('techSignatureData');
+            if (techSigInput && techSigInput.value) {
+                techSig = techSigInput.value;
+            } else if (techSignaturePad && !techSignaturePad.isEmpty()) {
+                // Fallback: get directly from pad if input is empty
+                techSig = techSignaturePad.toDataURL('image/png');
+                if (techSigInput) techSigInput.value = techSig;
             }
-            if (contactSignaturePad && !contactSignaturePad.isEmpty()) {
-                contactSig = contactSignaturePad.toDataURL();
-            }
-            {% else %}
-            // Normal mode - get from signature pads
-            techSig = techSignaturePad && !techSignaturePad.isEmpty() ? techSignaturePad.toDataURL() : '';
-            contactSig = contactSignaturePad && !contactSignaturePad.isEmpty() ? contactSignaturePad.toDataURL() : '';
-            {% endif %}
+            
+            // Get technician name
+            const technicianName = document.getElementById('technician_name')?.value || '';
             
             // Get supervisor signature and comments if supervisor is submitting
             let supervisorData = '';
@@ -2006,21 +2098,14 @@
                 supervisorComments = supervisorCommentsField.value || '';
             }
             supervisorVerified = isVerified || false;
-            
-            // Validate supervisor signature if submitting as supervisor
-            if (!supervisorData) {
-                alert('Please provide your supervisor signature before submitting.');
-                submitButton.disabled = false;
-                return;
-            }
             {% endif %}
             
             // Prepare payload with photo URLs array
             const payload = {
                 ...data,
                 photo_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : [],
+                technician_name: technicianName,
                 tech_signature: techSig,
-                contact_signature: contactSig,
                 supervisor_signature: supervisorData || '',
                 supervisor_comments: supervisorComments || ''
             };
@@ -2029,6 +2114,22 @@
             console.log('📋 Payload:', { ...payload, photo_urls: `[${uploadedPhotoUrls.length} URLs]` });
 
             const submitButton = form.querySelector('button[type="submit"]');
+            
+            // Validate supervisor signature if submitting as supervisor (after getting submitButton)
+            {% if is_supervisor_edit or user_designation == 'supervisor' %}
+            if (!supervisorData) {
+                if (submitButton) submitButton.disabled = false;
+                alert('Please provide your supervisor signature before submitting.');
+                return;
+            }
+            {% endif %}
+            if (!submitButton) {
+                console.error('Submit button not found!');
+                statusDiv.className = 'alert alert-danger';
+                statusDiv.textContent = '❌ Error: Submit button not found. Please refresh the page.';
+                statusDiv.classList.remove('d-none');
+                return;
+            }
             submitButton.disabled = true;
             statusDiv.className = 'alert alert-info';
             statusDiv.textContent = 'Submitting...';
@@ -2050,7 +2151,7 @@
                     method: 'PUT',
                     headers: headers,
                     body: JSON.stringify({
-                        site_name: payload.client_name || payload.project_name,
+                        site_name: payload.project_name,
                         visit_date: payload.date_of_visit,
                         form_data: payload
                     }),
@@ -2102,7 +2203,7 @@
                     method: 'PUT',
                     headers: headers,
                     body: JSON.stringify({
-                        site_name: payload.client_name || payload.project_name,
+                        site_name: payload.project_name,
                         visit_date: payload.date_of_visit,
                         form_data: payload
                     }),
@@ -2158,8 +2259,19 @@
                     credentials: 'include'  // Include cookies for JWT
                 });
                 
+                if (!response.ok) {
+                    let errorMessage = 'Submission failed';
+                    try {
+                        const errorResult = await response.json();
+                        errorMessage = errorResult.error || errorResult.message || errorMessage;
+                    } catch (e) {
+                        const text = await response.text();
+                        errorMessage = `Server error: ${response.status} ${response.statusText}` + (text ? ` - ${text.substring(0, 200)}` : '');
+                    }
+                    throw new Error(errorMessage);
+                }
+                
                 const result = await response.json();
-                if (!response.ok) throw new Error(result.error || 'Submission failed');
                 
                 // Hide upload modal, show loading overlay
                 uploadModal.style.display = 'none';
@@ -2217,37 +2329,37 @@
                 const results = jobData.results || jobData.result_data || {};
                 
                 if (isDone) {
-                    statusDiv.className = 'alert alert-success';
                     const excelUrl = results.excel || results.excel_url || '';
                     const pdfUrl = results.pdf || results.pdf_url || '';
                     const excelFilename = results.excel_filename || 'cleaning_report.xlsx';
                     const pdfFilename = results.pdf_filename || 'cleaning_report.pdf';
                     
-                    let linksHtml = '<strong>✅ Success!</strong> Reports generated.<br><br>';
+                    const links = [];
                     const modulePrefix = '/cleaning';
                     const jobId = jobData?.job_id;
                     
                     if (excelUrl || jobId) {
                       const downloadUrl = jobId ? `${modulePrefix}/download/${jobId}/excel` : excelUrl;
-                      linksHtml += `<a href="${downloadUrl}" download="${excelFilename}" class="btn btn-success me-2 mt-2" style="text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">📥 Download Excel Report</a>`;
-                      // Auto-download for mobile
-                      if (jobId && typeof downloadWithRetry !== 'undefined') {
-                        setTimeout(() => downloadWithRetry(downloadUrl, excelFilename, 2), 500);
-                      }
+                      links.push(`<a href="${downloadUrl}" download="${excelFilename}" class="btn btn-success me-2 mt-2" style="text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">📥 Download Excel Report</a>`);
                     }
                     
                     if (pdfUrl || jobId) {
                       const downloadUrl = jobId ? `${modulePrefix}/download/${jobId}/pdf` : pdfUrl;
-                      linksHtml += `<a href="${downloadUrl}" download="${pdfFilename}" class="btn btn-danger me-2 mt-2" style="text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">📥 Download PDF Report</a>`;
-                      // Auto-download for mobile
-                      if (jobId && typeof downloadWithRetry !== 'undefined') {
-                        setTimeout(() => downloadWithRetry(downloadUrl, pdfFilename, 2), 700);
-                      }
+                      links.push(`<a href="${downloadUrl}" download="${pdfFilename}" class="btn btn-success me-2 mt-2" style="text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;">📥 Download PDF Report</a>`);
                     }
                     
-                    linksHtml += '<div class="mt-2 text-muted" style="font-size:0.9em;">Click the buttons above to download your reports.</div>';
+                    // Show success message and download links below submit button
+                    const downloadContainer = document.getElementById('download-links-container');
+                    if (downloadContainer && links.length > 0) {
+                      downloadContainer.innerHTML = `<div class="alert alert-success mb-3"><strong>✅ Reports generated successfully!</strong></div>${links.join(' ')}<div class="mt-2 text-muted" style="font-size:0.9em;">Click the buttons above to download your reports.</div>`;
+                      downloadContainer.style.display = 'block';
+                    } else if (downloadContainer && links.length === 0) {
+                      downloadContainer.innerHTML = '<div class="alert alert-warning"><strong>⚠️ Job completed but no download links found.</strong></div>';
+                      downloadContainer.style.display = 'block';
+                    }
                     
-                    statusDiv.innerHTML = linksHtml;
+                    // Clear status div since message is now in download container
+                    statusDiv.classList.add('d-none');
                 } else if (isFailed) {
                     statusDiv.className = 'alert alert-danger';
                     statusDiv.textContent = "❌ Failed: " + (results.error || jobData.error_message || 'Unknown');

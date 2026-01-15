@@ -364,8 +364,9 @@
         const statusClass = getStatusClass(sub.workflow_status);
         const statusDisplay = (sub.workflow_status || 'Submitted').replace(/_/g, ' ');
         const technician = sub.user?.full_name || sub.user?.username || 'Unknown';
-        const visitDate = sub.visit_date ? new Date(sub.visit_date).toLocaleDateString('en-US', {
-          year: 'numeric', month: 'short', day: 'numeric'
+        const visitDate = sub.visit_date ? new Date(sub.visit_date).toLocaleString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
         }) : 'N/A';
         
         const moduleUrl = sub.module_type === 'hvac_mep' ? 'hvac-mep' : sub.module_type;
