@@ -483,6 +483,26 @@
       font-size: 0.9375rem;
     }
     
+    /* Edit mode styling */
+    .item-card[data-edit-mode="true"] {
+      border-color: #059669 !important;
+      box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1) !important;
+    }
+    
+    .item-card[data-edit-mode="false"] .editable-field:disabled {
+      background-color: #f9fafb;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    
+    .edit-asset-toggle .edit-icon {
+      transition: transform 0.2s;
+    }
+    
+    .item-card[data-edit-mode="true"] .edit-asset-toggle .edit-icon {
+      transform: rotate(180deg);
+    }
+    
     /* Signature pad - Standardized size */
     .signature-pad,
     canvas.signature-pad,
@@ -845,15 +865,17 @@
           {% if is_edit_mode and submission_data and submission_data.form_data and submission_data.form_data['items'] %}
           <div id="serverRenderedItems" class="items-list mb-3">
             {% for item in submission_data.form_data['items'] %}
-            <div class="item-card editable-item-card" data-item-index="{{ loop.index0 }}" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div class="item-card editable-item-card" data-item-index="{{ loop.index0 }}" data-edit-mode="false" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
               <div class="d-flex justify-content-between align-items-start mb-3">
                 <div class="d-flex align-items-center gap-2">
                   <h6 style="margin: 0; color: #059669; font-weight: 700;">Item {{ loop.index }}</h6>
                   <span class="badge bg-light text-success border border-success-subtle small px-2 py-1">✓ Already Registered Asset</span>
                 </div>
-                <div class="d-flex flex-column align-items-end">
+                <div class="d-flex flex-column align-items-end gap-2">
                   <button type="button" class="btn btn-sm btn-danger remove-server-item" data-idx="{{ loop.index0 }}">🗑️ Remove</button>
-                  <small class="text-primary mt-1" style="font-weight: 600; font-size: 0.75rem;">✎ Edit this Asset</small>
+                  <button type="button" class="btn btn-sm btn-outline-primary edit-asset-toggle" data-idx="{{ loop.index0 }}" style="display: flex; align-items: center; gap: 0.25rem;">
+                    <span class="edit-icon">✎</span> <span class="edit-text">Edit this Asset</span>
+                  </button>
                 </div>
               </div>
               
@@ -861,43 +883,49 @@
                 <!-- Asset -->
                 <div class="col-md-4">
                   <label class="form-label"><strong>Asset</strong></label>
-                  <input type="text" class="form-control editable-field" data-field="asset" value="{{ item.asset or '' }}" placeholder="Asset name">
+                  <select class="form-select editable-field editable-dropdown" data-field="asset" data-item-index="{{ loop.index0 }}" disabled>
+                    <option value="">Select Asset</option>
+                  </select>
                 </div>
                 
                 <!-- System -->
                 <div class="col-md-4">
                   <label class="form-label"><strong>System</strong></label>
-                  <input type="text" class="form-control editable-field" data-field="system" value="{{ item.system or '' }}" placeholder="System type">
+                  <select class="form-select editable-field editable-dropdown" data-field="system" data-item-index="{{ loop.index0 }}" disabled>
+                    <option value="">Select System</option>
+                  </select>
                 </div>
                 
                 <!-- Description -->
                 <div class="col-md-4">
                   <label class="form-label"><strong>Description</strong></label>
-                  <input type="text" class="form-control editable-field" data-field="description" value="{{ item.description or '' }}" placeholder="Description">
+                  <select class="form-select editable-field editable-dropdown" data-field="description" data-item-index="{{ loop.index0 }}" disabled>
+                    <option value="">Select Description</option>
+                  </select>
                 </div>
                 
                 <!-- Quantity -->
                 <div class="col-md-4">
                   <label class="form-label"><strong>Quantity</strong></label>
-                  <input type="number" class="form-control editable-field" data-field="quantity" value="{{ item.quantity or '1' }}" min="1" placeholder="1">
+                  <input type="number" class="form-control editable-field" data-field="quantity" value="{{ item.quantity or '1' }}" min="1" placeholder="1" disabled>
                 </div>
                 
                 <!-- Brand -->
                 <div class="col-md-4">
                   <label class="form-label"><strong>Brand</strong></label>
-                  <input type="text" class="form-control editable-field" data-field="brand" value="{{ item.brand or '' }}" placeholder="Brand name">
+                  <input type="text" class="form-control editable-field" data-field="brand" value="{{ item.brand or '' }}" placeholder="Brand name" disabled>
                 </div>
                 
                 <!-- Specification -->
                 <div class="col-md-4">
                   <label class="form-label"><strong>Specification</strong></label>
-                  <input type="text" class="form-control editable-field" data-field="specification" value="{{ item.specification or '' }}" placeholder="Specification">
+                  <input type="text" class="form-control editable-field" data-field="specification" value="{{ item.specification or '' }}" placeholder="Specification" disabled>
                 </div>
                 
                 <!-- Comments -->
                 <div class="col-12">
                   <label class="form-label"><strong>Comments</strong></label>
-                  <textarea class="form-control editable-field" data-field="comments" rows="3" placeholder="Enter comments">{{ item.comments or '' }}</textarea>
+                  <textarea class="form-control editable-field" data-field="comments" rows="3" placeholder="Enter comments" disabled>{{ item.comments or '' }}</textarea>
                 </div>
                 
                 <!-- Photos -->
@@ -1076,11 +1104,10 @@
           {% if is_supervisor_edit %}
           <!-- Show technician signature as read-only image when supervisor/manager views -->
           {% set tech_sig = submission_data.form_data.tech_signature if submission_data and submission_data.form_data and submission_data.form_data.tech_signature else none %}
-          {% set tech_sig_url = tech_sig.url if tech_sig is mapping else (tech_sig if tech_sig is string else none) %}
+          {% set tech_sig_url = tech_sig.url if tech_sig is mapping and tech_sig.url else (tech_sig if tech_sig is string else none) %}
           <div id="techSignatureDisplay" style="border: 1px solid #e5e7eb; background: #f9fafb; padding: 10px; border-radius: 4px; min-height: 150px; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 500px;">
             {% if tech_sig_url %}
-            <img src="{{ tech_sig_url }}" alt="Technician Signature" style="width: 100%; max-width: 500px; max-height: 150px; object-fit: contain; border-radius: 4px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <span class="text-muted" style="display: none;">Failed to load signature</span>
+            <img src="{{ tech_sig_url }}" alt="Technician Signature" style="width: 100%; max-width: 500px; max-height: 150px; object-fit: contain; border-radius: 4px;" onerror="console.error('Failed to load signature:', this.src); this.style.display='none'; this.parentElement.innerHTML='<span class=\"text-danger\">⚠️ Signature not accessible (may be stored locally)</span>';">
             {% else %}
             <span class="text-muted">Technician Signature (Loading...)</span>
             {% endif %}
@@ -2275,6 +2302,12 @@
             photo_urls: it.photoUrls || [] // Cloud URLs
           }))
         };
+        
+        // If in edit mode, add the submission_id to payload
+        {% if is_edit_mode %}
+        payload.edit_submission_id = window.editSubmissionId || '{{ submission_data.submission_id if submission_data else '' }}';
+        console.log('📝 Edit mode: Updating submission', payload.edit_submission_id);
+        {% endif %}
 
         console.log('📤 Submitting payload:', payload);
         console.log(`📤 Items count: ${payload.items.length}`);
@@ -2761,13 +2794,13 @@
             // Try multiple paths to find the signature
             if (formData.tech_signature) {
               techSig = formData.tech_signature;
-              console.log('📝 Found tech_signature in formData:', typeof techSig);
+              console.log('📝 Found tech_signature in formData:', typeof techSig, techSig);
             } else if (formData.techSignatureData) {
               techSig = formData.techSignatureData;
               console.log('📝 Found techSignatureData in formData:', typeof techSig);
             } else if (submissionData.form_data && submissionData.form_data.tech_signature) {
               techSig = submissionData.form_data.tech_signature;
-              console.log('📝 Found tech_signature in submissionData.form_data:', typeof techSig);
+              console.log('📝 Found tech_signature in submissionData.form_data:', typeof techSig, techSig);
             }
             
             if (techSig) {
@@ -2776,10 +2809,10 @@
               // Handle object format with url property (from database storage)
               if (typeof techSig === 'object' && techSig !== null) {
                 if (techSig.url) {
-                techSig = techSig.url;
+                  techSig = techSig.url;
                   console.log('📝 Extracted URL from signature object:', techSig);
                 } else {
-                  console.warn('⚠️ Signature object found but no url property:', techSig);
+                  console.warn('⚠️ Signature object found but no url property:', Object.keys(techSig));
                   techSig = null;
                 }
               }
@@ -2793,7 +2826,7 @@
               );
               
               if (isValidUrl) {
-                console.log('✅ Valid signature URL found:', techSig.substring(0, 50) + '...');
+                console.log('✅ Valid signature URL found:', techSig.substring(0, 80));
                 {% if is_supervisor_edit %}
                 // Show in read-only display for supervisor/manager
                 const techDisplay = document.getElementById('techSignatureDisplay');
@@ -2806,7 +2839,7 @@
                   sigImg.onerror = function() {
                     console.error('❌ Failed to load technician signature image:', techSig);
                     this.style.display = 'none';
-                    techDisplay.innerHTML = '<span style="color: #dc2626;">⚠️ Failed to load signature image</span>';
+                    techDisplay.innerHTML = '<span style="color: #dc2626;">⚠️ Signature not accessible. URL: ' + techSig.substring(0, 50) + '...</span>';
                   };
                   sigImg.onload = function() {
                     console.log('✅ Technician signature image loaded successfully');
@@ -3085,11 +3118,162 @@
       // Load items into array immediately
       loadPreloadedItemsIntoArray();
       
+      // Helper functions for cascading dropdowns in edit mode
+      function populateSystemDropdown(assetDropdown, systemDropdown, selectedAsset, currentSystem) {
+        systemDropdown.innerHTML = '<option value="">Select System</option>';
+        const sysObj = (window.DROPDOWN_DATA && window.DROPDOWN_DATA[selectedAsset]) ? window.DROPDOWN_DATA[selectedAsset] : null;
+        
+        // Check if we're in edit mode
+        const card = systemDropdown.closest('.editable-item-card');
+        const isEditMode = card && card.dataset.editMode === 'true';
+        
+        if (sysObj && typeof sysObj === 'object') {
+          Object.keys(sysObj).forEach(sk => {
+            const option = document.createElement('option');
+            option.value = sk;
+            option.textContent = sk;
+            systemDropdown.appendChild(option);
+          });
+          // Only enable if in edit mode
+          systemDropdown.disabled = !isEditMode;
+          
+          // Set current value if provided
+          if (currentSystem) {
+            systemDropdown.value = currentSystem;
+            // Get the description dropdown
+            const descriptionDropdown = card ? card.querySelector('select[data-field="description"]') : null;
+            if (descriptionDropdown) {
+              const itemIndex = Number(card.dataset.itemIndex);
+              const currentItem = items[itemIndex];
+              if (currentItem && currentItem.description) {
+                populateDescriptionDropdown(selectedAsset, currentSystem, descriptionDropdown, currentItem.description);
+              }
+            }
+          }
+        } else {
+          systemDropdown.disabled = true;
+        }
+      }
+      
+      function populateDescriptionDropdown(selectedAsset, selectedSystem, descriptionDropdown, currentDescription) {
+        descriptionDropdown.innerHTML = '<option value="">Select Description</option>';
+        const arr = (window.DROPDOWN_DATA && window.DROPDOWN_DATA[selectedAsset]) ? window.DROPDOWN_DATA[selectedAsset][selectedSystem] || [] : [];
+        
+        // Check if we're in edit mode
+        const card = descriptionDropdown.closest('.editable-item-card');
+        const isEditMode = card && card.dataset.editMode === 'true';
+        
+        arr.forEach(v => {
+          const option = document.createElement('option');
+          option.value = v;
+          option.textContent = v;
+          descriptionDropdown.appendChild(option);
+        });
+        // Only enable if in edit mode
+        descriptionDropdown.disabled = !isEditMode;
+        
+        // Set current value if provided
+        if (currentDescription) {
+          descriptionDropdown.value = currentDescription;
+        }
+      }
+      
       // Set up editable fields to sync with items array
       function setupEditableItemFields() {
         document.querySelectorAll('.editable-item-card').forEach(card => {
-          // Sync all editable fields
-          card.querySelectorAll('.editable-field').forEach(field => {
+          const itemIndex = Number(card.dataset.itemIndex);
+          
+          // Get the dropdown elements for this card
+          const assetDropdown = card.querySelector('select[data-field="asset"]');
+          const systemDropdown = card.querySelector('select[data-field="system"]');
+          const descriptionDropdown = card.querySelector('select[data-field="description"]');
+          
+          // Initialize dropdowns with data
+          if (assetDropdown && typeof DROPDOWN_DATA === 'object' && Object.keys(DROPDOWN_DATA).length > 0) {
+            // Populate asset dropdown
+            Object.keys(DROPDOWN_DATA).forEach(cat => {
+              const option = document.createElement('option');
+              option.value = cat;
+              option.textContent = cat;
+              assetDropdown.appendChild(option);
+            });
+            
+            // Get current values from items array
+            const currentItem = items[itemIndex];
+            if (currentItem) {
+              // Set current asset value
+              if (currentItem.asset) {
+                assetDropdown.value = currentItem.asset;
+                // Trigger cascade to populate system
+                populateSystemDropdown(assetDropdown, systemDropdown, currentItem.asset, currentItem.system);
+              }
+            }
+            
+            // Set up cascade event listeners
+            assetDropdown.addEventListener('change', function() {
+              const selectedAsset = this.value;
+              const card = this.closest('.editable-item-card');
+              const isEditMode = card && card.dataset.editMode === 'true';
+              
+              if (!isEditMode) {
+                console.warn('⚠️ Cannot change asset - not in edit mode');
+                return;
+              }
+              
+              populateSystemDropdown(this, systemDropdown, selectedAsset);
+              // Clear description dropdown
+              descriptionDropdown.innerHTML = '<option value="">Select Description</option>';
+              descriptionDropdown.disabled = true;
+              
+              // Update items array
+              if (itemIndex >= 0 && itemIndex < items.length) {
+                items[itemIndex].asset = selectedAsset;
+                items[itemIndex].system = '';
+                items[itemIndex].description = '';
+                console.log(`✅ Updated item ${itemIndex} asset to: ${selectedAsset}`);
+              }
+            });
+            
+            systemDropdown.addEventListener('change', function() {
+              const card = this.closest('.editable-item-card');
+              const isEditMode = card && card.dataset.editMode === 'true';
+              
+              if (!isEditMode) {
+                console.warn('⚠️ Cannot change system - not in edit mode');
+                return;
+              }
+              
+              const selectedAsset = assetDropdown.value;
+              const selectedSystem = this.value;
+              populateDescriptionDropdown(selectedAsset, selectedSystem, descriptionDropdown);
+              
+              // Update items array
+              if (itemIndex >= 0 && itemIndex < items.length) {
+                items[itemIndex].system = selectedSystem;
+                items[itemIndex].description = '';
+                console.log(`✅ Updated item ${itemIndex} system to: ${selectedSystem}`);
+              }
+            });
+            
+            descriptionDropdown.addEventListener('change', function() {
+              const card = this.closest('.editable-item-card');
+              const isEditMode = card && card.dataset.editMode === 'true';
+              
+              if (!isEditMode) {
+                console.warn('⚠️ Cannot change description - not in edit mode');
+                return;
+              }
+              
+              // Update items array
+              if (itemIndex >= 0 && itemIndex < items.length) {
+                items[itemIndex].description = this.value;
+                console.log(`✅ Updated item ${itemIndex} description to: ${this.value}`);
+              }
+            });
+          }
+          
+          // Sync all other editable fields (non-dropdown)
+          card.querySelectorAll('.editable-field:not(.editable-dropdown)').forEach(field => {
             const fieldName = field.dataset.field;
             
             const updateItemArray = function() {
@@ -3147,18 +3331,162 @@
             addPhotosBtn.addEventListener('click', function() {
               const idx = Number(this.dataset.itemIndex);
               console.log(`📷 Add photos button clicked for item ${idx}`);
-              // TODO: Implement photo upload for existing item
-              alert('Photo upload for existing items will be implemented soon. For now, you can add photos to new items.');
+              
+              // Create file input for photo selection
+              const fileInput = document.createElement('input');
+              fileInput.type = 'file';
+              fileInput.accept = 'image/*';
+              fileInput.multiple = true;
+              fileInput.style.display = 'none';
+              
+              fileInput.addEventListener('change', async function() {
+                const files = Array.from(this.files);
+                if (files.length === 0) return;
+                
+                // Show loading overlay
+                if (typeof loadingOverlay !== 'undefined') {
+                  loadingOverlay.style.display = 'flex';
+                  const loadingText = document.getElementById('loadingText');
+                  if (loadingText) {
+                    loadingText.textContent = `Uploading ${files.length} photo(s)...`;
+                  }
+                }
+                
+                try {
+                  // Get submission ID from window.editSubmissionId or template variable
+                  const submissionId = window.editSubmissionId || '{{ submission_data.submission_id if submission_data else '' }}';
+                  
+                  if (!submissionId) {
+                    alert('Cannot add photos: No submission ID found. Please save the form first.');
+                    if (typeof loadingOverlay !== 'undefined') loadingOverlay.style.display = 'none';
+                    return;
+                  }
+                  
+                  // Upload photos using the same endpoint as new items
+                  const uploadedUrls = [];
+                  for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const formData = new FormData();
+                    formData.append('photo', file, file.name);
+                    
+                    const uploadUrl = modulePrefix + '/upload-photo';
+                    const response = await fetch(uploadUrl, {
+                      method: 'POST',
+                      body: formData
+                    });
+                    
+                    if (!response.ok) {
+                      throw new Error(`Upload failed for ${file.name}`);
+                    }
+                    
+                    const result = await response.json();
+                    uploadedUrls.push(result.url);
+                    
+                    // Update loading text with progress
+                    if (typeof loadingOverlay !== 'undefined') {
+                      const loadingText = document.getElementById('loadingText');
+                      if (loadingText) {
+                        loadingText.textContent = `Uploading ${i + 1}/${files.length} photo(s)...`;
+                      }
+                    }
+                  }
+                  
+                  // Add photos to the existing item via backend
+                  const addPhotosUrl = modulePrefix + '/add-photos-to-item';
+                  const addResponse = await fetch(addPhotosUrl, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      submission_id: submissionId,
+                      item_index: idx,
+                      photo_urls: uploadedUrls
+                    })
+                  });
+                  
+                  if (!addResponse.ok) {
+                    const error = await addResponse.json();
+                    throw new Error(error.error || 'Failed to add photos to item');
+                  }
+                  
+                  const result = await addResponse.json();
+                  
+                  // Update the items array with new photos
+                  if (idx >= 0 && idx < items.length) {
+                    if (!items[idx].photoUrls) {
+                      items[idx].photoUrls = [];
+                    }
+                    items[idx].photoUrls.push(...uploadedUrls);
+                    items[idx].photoCount = items[idx].photoUrls.length;
+                    
+                    // Update the card display
+                    const photoCountSpan = card.querySelector('.photo-count');
+                    if (photoCountSpan) {
+                      photoCountSpan.textContent = `${items[idx].photoCount} photo(s)`;
+                    }
+                  }
+                  
+                  console.log(`✅ Added ${uploadedUrls.length} photos to item ${idx}`);
+                  alert(`✅ Successfully added ${uploadedUrls.length} photo(s) to this item!`);
+                  
+                } catch (error) {
+                  console.error('Photo upload error:', error);
+                  alert(`❌ Failed to add photos: ${error.message}`);
+                } finally {
+                  // Hide loading overlay
+                  if (typeof loadingOverlay !== 'undefined') {
+                    loadingOverlay.style.display = 'none';
+                  }
+                }
+              });
+              
+              // Trigger file input
+              fileInput.click();
             });
           }
           
-          // Set up "Edit this Asset" helper
-          const editLabel = card.querySelector('.text-primary.mt-1');
-          if (editLabel) {
-            editLabel.style.cursor = 'pointer';
-            editLabel.addEventListener('click', () => {
-              const firstInput = card.querySelector('.editable-field');
-              if (firstInput) firstInput.focus();
+          // Set up "Edit this Asset" toggle button
+          const editToggleBtn = card.querySelector('.edit-asset-toggle');
+          if (editToggleBtn) {
+            editToggleBtn.addEventListener('click', function() {
+              const isEditMode = card.dataset.editMode === 'true';
+              const newEditMode = !isEditMode;
+              
+              // Toggle edit mode
+              card.dataset.editMode = newEditMode.toString();
+              
+              // Enable/disable all editable fields including dropdowns
+              card.querySelectorAll('.editable-field').forEach(field => {
+                field.disabled = !newEditMode;
+              });
+              
+              // Explicitly enable Asset dropdown when entering edit mode
+              if (newEditMode && assetDropdown) {
+                assetDropdown.disabled = false;
+                console.log('✅ Asset dropdown explicitly enabled');
+              } else if (!newEditMode && assetDropdown) {
+                assetDropdown.disabled = true;
+              }
+              
+              // Update button text and style
+              const editText = this.querySelector('.edit-text');
+              if (newEditMode) {
+                editText.textContent = 'Done Editing';
+                this.classList.remove('btn-outline-primary');
+                this.classList.add('btn-success');
+                console.log(`✏️ Edit mode ENABLED for item ${card.dataset.itemIndex}`);
+              } else {
+                editText.textContent = 'Edit this Asset';
+                this.classList.remove('btn-success');
+                this.classList.add('btn-outline-primary');
+                console.log(`🔒 Edit mode DISABLED for item ${card.dataset.itemIndex}`);
+              }
+              
+              // Focus Asset dropdown (first field) when enabling edit
+              if (newEditMode && assetDropdown) {
+                setTimeout(() => assetDropdown.focus(), 100);
+              }
             });
           }
         });
@@ -3176,10 +3504,22 @@
       }
       
       // Initialize editable fields when DOM is ready
+      function initializeEditableFields() {
+        // Wait for dropdown data to be available
+        if (typeof DROPDOWN_DATA === 'undefined' || Object.keys(DROPDOWN_DATA || {}).length === 0) {
+          console.log('⏳ Waiting for dropdown data...');
+          setTimeout(initializeEditableFields, 100);
+          return;
+        }
+        
+        console.log('✅ Dropdown data available, initializing editable fields...');
+        setupEditableItemFields();
+      }
+      
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupEditableItemFields);
+        document.addEventListener('DOMContentLoaded', initializeEditableFields);
       } else {
-        setTimeout(setupEditableItemFields, 100);
+        setTimeout(initializeEditableFields, 100);
       }
       
       console.log('✅ Server-rendered items initialized');

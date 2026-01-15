@@ -915,7 +915,7 @@
                                         <canvas id="tech_signature_canvas" class="signature-pad"></canvas>
                                         <input type="text" class="form-control mt-2 form-control-sm" name="assessor_name" placeholder="Name (Printed)">
                                         <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="clearSignature('tech_signature_canvas')">Clear</button>
-                                        {% endif %}
+                                    {% endif %}
                                     </div>
                                 </div>
 
@@ -2139,7 +2139,8 @@
                 } else {
                     throw new Error(result.error || 'Update failed');
                 }
-                {% else %}
+                {% endif %}
+            {% else %}
                 // Create new submission
                 const submitUrl = `${modulePrefix}/submit-with-urls`;
                 console.log('Submitting to:', submitUrl);
@@ -2166,7 +2167,6 @@
                 
                 clearDraft(); // Clear draft after successful submission
                 statusDiv.textContent = `Job queued: ${result.job_id}`;
-                {% endif %}
                 
                 // Use pollJobStatus function like civil form
                 // The function signature is: pollJobStatus(modulePrefix, jobId, onUpdate, interval)
@@ -2252,7 +2252,7 @@
                     statusDiv.className = 'alert alert-danger';
                     statusDiv.textContent = "❌ Failed: " + (results.error || jobData.error_message || 'Unknown');
                 }
-                
+                {% endif %}
             } catch (e) {
                 console.error('{% if is_edit_mode %}Update{% else %}Submission{% endif %} error:', e);
                 uploadModal.style.display = 'none';

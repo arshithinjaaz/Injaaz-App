@@ -262,6 +262,7 @@
     /* Clean, spacious container */
     .container {
       max-width: 1200px;
+      width: 100%;
       background: var(--white);
       border-radius: 8px;
       padding: 2rem 2.5rem;
@@ -635,9 +636,40 @@
       display: none;
     }
     
-    /* Work Items Table */
+    /* Tabs styling */
+    .nav-tabs {
+      border-bottom: 1px solid var(--border-light);
+      margin-bottom: 2rem;
+    }
+    
+    .nav-tabs .nav-link {
+      color: var(--text-secondary);
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 0.75rem 1rem;
+      margin-right: 0.5rem;
+      font-weight: 500;
+      font-size: 0.875rem;
+      transition: all 0.15s ease;
+    }
+    
+    .nav-tabs .nav-link.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background-color: transparent;
+      font-weight: 600;
+    }
+    
+    .nav-tabs .nav-link:hover {
+      color: var(--text-primary);
+      border-bottom-color: var(--border-light);
+    }
+    
+    /* Work Items Table - Better alignment and spacing */
     .table {
       font-size: 0.875rem;
+      border-collapse: separate;
+      border-spacing: 0;
     }
     
     .table th {
@@ -645,15 +677,171 @@
       font-weight: 600;
       color: var(--text-primary);
       border-bottom: 2px solid var(--border-light);
+      padding: 0.875rem 0.75rem;
+      text-align: center;
+      vertical-align: middle;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
     
     .table td {
       vertical-align: middle;
+      padding: 0.75rem 0.5rem;
+      text-align: center;
+    }
+    
+    .table td input,
+    .table td textarea,
+    .table td select {
+      width: 100%;
+      min-width: 0;
+    }
+
+    /* Make the work-items table fit the container without horizontal scrolling */
+    .work-items-table-wrap {
+      width: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
+      max-height: 300px;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      background: var(--white);
+      margin-bottom: 1rem;
+    }
+
+    /* Work Items: each work asset is a block containing two tables */
+    #workItemsContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 0.75rem;
+    }
+
+    .work-item-block {
+      position: relative;
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      background: var(--white);
+      padding: 0.9rem 1rem 0.4rem;
+    }
+
+    .work-item-block::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--primary);
+      opacity: 0.8;
+    }
+
+    .work-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding-left: 0.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .work-item-title {
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.2px;
+    }
+
+    .work-item-meta {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    /* Linked highlight across both tables inside a block */
+    .work-items-table tbody tr.row-active {
+      background: rgba(18, 84, 53, 0.07) !important;
+    }
+
+    .work-items-table tbody tr.row-active td {
+      box-shadow: inset 0 0 0 1px rgba(18, 84, 53, 0.18);
+    }
+
+    .work-item-block.active {
+      box-shadow: 0 0 0 3px rgba(18, 84, 53, 0.08);
+      border-color: rgba(18, 84, 53, 0.25);
+    }
+
+    .work-items-table {
+      width: 100%;
+      table-layout: fixed;
+      margin-bottom: 0;
+    }
+
+    .work-items-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #f8faf9;
+    }
+
+    .work-items-table tbody tr:nth-child(even) {
+      background: #fbfcfd;
+    }
+
+    .work-items-table tbody tr:hover {
+      background: #f1f5f9;
+    }
+
+    .work-items-table th,
+    .work-items-table td {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .work-items-table th:nth-child(1),
+    .work-items-table th:last-child {
+      white-space: nowrap;
+      word-break: normal;
+    }
+
+    .work-items-table .form-control-sm {
+      background: var(--white);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 0.45rem 0.6rem;
+    }
+
+    .work-items-table textarea.form-control-sm {
+      min-height: 42px;
+    }
+
+    .work-items-table textarea {
+      resize: vertical;
+    }
+
+    .work-items-section-title {
+      font-weight: 700;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      margin: 0.75rem 0 0.5rem;
+    }
+    
+    .table td:first-child {
+      text-align: center;
+      font-weight: 600;
+      color: var(--text-secondary);
     }
     
     .form-control-sm {
       font-size: 0.8125rem;
-      padding: 0.375rem 0.5rem;
+      padding: 0.5rem 0.625rem;
+      text-align: left;
+    }
+    
+    .table-responsive {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 1.5rem;
     }
     
     /* Button states */
@@ -743,8 +931,18 @@
     </p>
 
     <form id="mainForm">
+      <!-- Tab Navigation -->
+      <ul class="nav nav-tabs" id="civilTabs" role="tablist">
+        <li class="nav-item" role="presentation"><button class="nav-link active" id="tab-1-link" data-bs-toggle="tab" data-bs-target="#tab-1" type="button" role="tab">1. Project Info</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-2-link" data-bs-toggle="tab" data-bs-target="#tab-2" type="button" role="tab">2. Work Items</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab">3. Photos & Time</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-4-link" data-bs-toggle="tab" data-bs-target="#tab-4" type="button" role="tab">4. Sign-off & Submit</button></li>
+      </ul>
 
-      <h5>Project Information</h5>
+      <div class="tab-content" id="civilTabContent">
+        <!-- TAB 1: Project Information -->
+        <div class="tab-pane fade show active" id="tab-1" role="tabpanel">
+          <h5>Project Information</h5>
       <div class="row g-3">
         <div class="col-md-6 mb-3">
           <label for="date">Date</label>
@@ -762,26 +960,31 @@
         </div>
         
         <div class="col-md-6 mb-3">
-          <label for="location_name">Location Name</label>
-          <input id="location_name" name="location_name" class="form-control">
+          <label for="area">Area</label>
+          <select id="area" name="area" class="form-control" onchange="handleAreaChange()">
+            <option value="">Select Area</option>
+            <option value="General">General</option>
+            <option value="Basement">Basement</option>
+            <option value="Floor">Floor</option>
+            <option value="Parking">Parking</option>
+            <option value="Rooftop">Rooftop</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
         
-        <div class="col-md-6 mb-3">
-          <label for="floor">Floor</label>
-          <input id="floor" name="floor" class="form-control">
-        </div>
-        
-        <div class="col-md-6 mb-3">
-          <label for="developer_client">Developer/Client</label>
-          <input id="developer_client" name="developer_client" class="form-control">
-        </div>
-        
-        <div class="col-md-6 mb-3">
-          <label for="city_area">City/Area</label>
-          <input id="city_area" name="city_area" class="form-control">
+        <div class="col-md-6 mb-3" id="area_other_container" style="display: none;">
+          <label for="area_other">Specify Other Area</label>
+          <input id="area_other" name="area_other" class="form-control" placeholder="Enter area name">
         </div>
       </div>
-
+      
+      <div class="d-flex justify-content-end mt-4">
+        <button type="button" class="btn btn-primary" onclick="goToTab(2)">Next →</button>
+      </div>
+    </div>
+    
+    <!-- TAB 2: Work Items -->
+    <div class="tab-pane fade" id="tab-2" role="tabpanel">
       <h5>Work Items</h5>
       {% if is_supervisor_edit %}
       <p class="text-muted" style="font-size: 0.9rem;">Review and edit the work items submitted by the inspector below. You can modify fields or add new items.</p>
@@ -790,39 +993,93 @@
         <button type="button" id="addRowBtn" class="btn btn-outline-secondary btn-sm">+ Add Work Item</button>
       </div>
       
-      <div class="table-responsive mb-4">
-        <table class="table table-bordered" id="workItemsTable">
-          <thead>
-            <tr>
-              <th style="width: 40px;">SN</th>
-              <th style="width: 200px;">Work Description</th>
-              <th style="width: 80px;">Quantity</th>
-              <th style="width: 180px;">Material Required with Brand</th>
-              <th style="width: 80px;">Quantity</th>
-              <th style="width: 120px;">Specification</th>
-              <th style="width: 80px;">Price</th>
-              <th style="width: 150px;">Labour Needed (Hours/Day)</th>
-              <th style="width: 150px;">Comments</th>
-              <th style="width: 60px;">Action</th>
-            </tr>
-          </thead>
-          <tbody id="workItemsBody">
-            <tr>
-              <td>1</td>
-              <td><input type="text" class="form-control form-control-sm" name="work_desc[]"></td>
-              <td><input type="number" class="form-control form-control-sm" name="work_qty[]"></td>
-              <td><input type="text" class="form-control form-control-sm" name="material[]"></td>
-              <td><input type="number" class="form-control form-control-sm" name="material_qty[]"></td>
-              <td><input type="text" class="form-control form-control-sm" name="specification[]"></td>
-              <td><input type="number" class="form-control form-control-sm" name="price[]" step="0.01"></td>
-              <td><input type="text" class="form-control form-control-sm" name="labour[]"></td>
-              <td><textarea class="form-control form-control-sm" name="comments[]" rows="2"></textarea></td>
-              <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">×</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <div id="workItemsContainer" aria-label="Work items">
+        <div class="work-item-block" data-index="1">
+          <div class="work-item-header">
+            <div>
+              <div class="work-item-title">Work Item 1</div>
+              <div class="work-item-meta">Details + Pricing</div>
+            </div>
+          </div>
 
+          <div class="work-items-section-title">Work Item Details</div>
+          <div class="work-items-table-wrap">
+            <table class="table table-bordered work-items-table">
+              <colgroup>
+                <col style="width: 56px;">
+                <col style="width: 28%;">
+                <col style="width: 10%;">
+                <col style="width: 32%;">
+                <col style="width: 10%;">
+                <col style="width: 20%;">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>SN</th>
+                  <th>Work Description</th>
+                  <th>Qty</th>
+                  <th>Material Required with Brand</th>
+                  <th>Qty</th>
+                  <th>Specification</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="work-item-sn">1</td>
+                  <td><input type="text" class="form-control form-control-sm" name="work_desc[]"></td>
+                  <td><input type="number" class="form-control form-control-sm" name="work_qty[]"></td>
+                  <td><input type="text" class="form-control form-control-sm" name="material[]"></td>
+                  <td><input type="number" class="form-control form-control-sm" name="material_qty[]"></td>
+                  <td><input type="text" class="form-control form-control-sm" name="specification[]"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="work-items-section-title">Pricing & Comments</div>
+          <div class="work-items-table-wrap">
+            <table class="table table-bordered work-items-table">
+              <colgroup>
+                <col style="width: 56px;">
+                <col style="width: 14%;">
+                <col style="width: 14%;">
+                <col style="width: 22%;">
+                <col style="width: 40%;">
+                <col style="width: 76px;">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>SN</th>
+                  <th>Unit Price</th>
+                  <th>Price</th>
+                  <th>Labour Needed (Hours/Day)</th>
+                  <th>Comments</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="work-item-sn">1</td>
+                  <td><input type="number" class="form-control form-control-sm" name="unit_price[]" step="0.01" placeholder="Unit"></td>
+                  <td><input type="number" class="form-control form-control-sm" name="price[]" step="0.01"></td>
+                  <td><input type="text" class="form-control form-control-sm" name="labour[]"></td>
+                  <td><textarea class="form-control form-control-sm" name="comments[]" rows="2"></textarea></td>
+                  <td><button type="button" class="btn btn-sm btn-outline-danger remove-work-item" title="Remove work item">×</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-between mt-4">
+        <button type="button" class="btn btn-outline-secondary" onclick="goToTab(1)">← Previous</button>
+        <button type="button" class="btn btn-primary" onclick="goToTab(3)">Next →</button>
+      </div>
+    </div>
+    
+    <!-- TAB 3: Photos & Time Estimate -->
+    <div class="tab-pane fade" id="tab-3" role="tabpanel">
       <h5>Pictures from Site</h5>
       
       <!-- Photos - Matching HVAC structure exactly -->
@@ -857,7 +1114,15 @@
         <label for="estimated_time">Project Estimated Time to Finish</label>
         <input id="estimated_time" name="estimated_time" class="form-control" placeholder="e.g., 2 weeks, 10 days">
       </div>
-
+      
+      <div class="d-flex justify-content-between mt-4">
+        <button type="button" class="btn btn-outline-secondary" onclick="goToTab(2)">← Previous</button>
+        <button type="button" class="btn btn-primary" onclick="goToTab(4)">Next →</button>
+      </div>
+    </div>
+    
+    <!-- TAB 4: Sign-off & Submit -->
+    <div class="tab-pane fade" id="tab-4" role="tabpanel">
       <h5>Inspector & Manager Sign-off</h5>
       
       <div class="row g-3 mb-4">
@@ -869,11 +1134,15 @@
       </div>
 
       {% if user_designation == 'technician' and not is_edit_mode %}
-      <div style="margin-bottom: 1rem; padding: 0.75rem 1rem; border: 1px solid #cfe9df; background: #eef6f3; color: #0f5132; border-radius: 8px;">
+      <div class="alert alert-info" role="alert" style="font-weight: 600; margin-bottom: 1rem;">
         Technician submissions only require your signature. Supervisor/manager approval will be collected during review.
       </div>
+      {% elif is_supervisor_edit %}
+      <div class="alert alert-warning" role="alert" style="font-weight: 600; margin-bottom: 1rem;">
+        Inspector signature is locked. Review and add your approval notes before updating.
+      </div>
       {% endif %}
-
+      
       <div class="row g-3">
         <div class="col-md-6 mb-3">
           <div class="signature-container">
@@ -887,14 +1156,20 @@
             </div>
           {% if is_supervisor_edit %}
           <!-- Show inspector signature as read-only image when supervisor/manager views -->
-          <div id="techSignatureDisplay" style="border: 1px solid #e5e7eb; background: #f9fafb; padding: 10px; border-radius: 4px; min-height: 150px; display: flex; align-items: center; justify-content: center;">
+          {% set tech_sig = submission_data.form_data.inspector_signature if submission_data and submission_data.form_data and submission_data.form_data.inspector_signature else none %}
+          {% set tech_sig_url = tech_sig.url if tech_sig is mapping and tech_sig.url else (tech_sig if tech_sig is string else none) %}
+          <div id="techSignatureDisplay" style="border: 1px solid #e5e7eb; background: #f9fafb; padding: 10px; border-radius: 4px; min-height: 150px; display: flex; align-items: center; justify-content: center; max-width: 500px;">
+            {% if tech_sig_url %}
+            <img src="{{ tech_sig_url }}" alt="Inspector Signature" style="width: 100%; max-width: 500px; max-height: 150px; object-fit: contain; border-radius: 4px;">
+            {% else %}
             <span class="text-muted">Inspector Signature (Read-only)</span>
+            {% endif %}
           </div>
           {% else %}
             <canvas id="techSignaturePad" class="signature-pad"></canvas>
-            <input type="hidden" id="techSignatureData" name="inspector_signature">
-            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="pads.techPad.clear()">Clear</button>
-            {% endif %}
+            <input type="hidden" id="techSignatureData" name="tech_signature">
+            <button type="button" id="clearTech" class="btn btn-outline-secondary btn-sm mt-2">Clear</button>
+          {% endif %}
           </div>
         </div>
 
@@ -941,7 +1216,7 @@
               {% endif %}
             </div>
             <canvas id="opManSignaturePad" class="signature-pad"></canvas>
-            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="pads.opPad.clear()">Clear</button>
+            <button type="button" id="clearOp" class="btn btn-outline-secondary btn-sm mt-2">Clear</button>
           </div>
         </div>
         {% elif user_designation != 'technician' or is_edit_mode %}
@@ -956,23 +1231,31 @@
               {% endif %}
             </div>
             <canvas id="opManSignaturePad" class="signature-pad"></canvas>
-            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="pads.opPad.clear()">Clear</button>
+            <button type="button" id="clearOp" class="btn btn-outline-secondary btn-sm mt-2">Clear</button>
           </div>
         </div>
         {% endif %}
       </div>
 
-      <div class="d-flex gap-2 mb-3">
-        <button type="button" id="uploadImagesBtn" class="btn btn-success btn-lg">
-          <span id="uploadImagesBtnText">📤 Upload Images</span>
+      <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+        <button type="button" class="btn btn-outline-secondary" onclick="goToTab(3)">← Previous</button>
+        <div class="d-flex gap-2">
+          <button type="button" id="uploadImagesBtn" class="btn btn-success btn-lg">
+            <span id="uploadImagesBtnText">📤 Upload Images</span>
           <span id="uploadImagesBtnSpinner" class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
         </button>
         <button type="button" id="submitBtn" class="btn btn-primary btn-lg" disabled>
           <span id="submitBtnText">{% if is_edit_mode %}Update Submission{% else %}📄 Generate Reports{% endif %}</span>
         </button>
+        </div>
       </div>
       <div id="uploadStatus" class="alert alert-info d-none mb-3"></div>
       <div id="statusBox" class="mt-3"></div>
+    </div>
+    <!-- End TAB 4 -->
+    
+    </div>
+    <!-- End tab-content -->
     </form>
   </div>
 
@@ -1050,8 +1333,38 @@
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     const DRAFT_SAVE_INTERVAL = 30000; // 30 seconds
 
+    // Tab navigation function
+    function goToTab(tabNumber) {
+      const tabLink = document.getElementById(`tab-${tabNumber}-link`);
+      if (tabLink) {
+        tabLink.click();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+    
+    // Handle Area dropdown - show/hide "Other" text field
+    function handleAreaChange() {
+      const areaSelect = document.getElementById('area');
+      const otherContainer = document.getElementById('area_other_container');
+      const otherInput = document.getElementById('area_other');
+      
+      if (areaSelect.value === 'Other') {
+        otherContainer.style.display = 'block';
+        otherInput.required = true;
+      } else {
+        otherContainer.style.display = 'none';
+        otherInput.required = false;
+        otherInput.value = '';
+      }
+    }
+
     // Define initSignaturePads if not already defined in form.js
     function initSignaturePads() {
+      if (typeof SignaturePad === 'undefined') {
+        console.error('❌ SignaturePad library not loaded. Signature capture disabled.');
+        return { techPad: null, opPad: null, supervisorPad: null, tech: null, op: null };
+      }
+
       const techPadEl = document.getElementById('techSignaturePad');
       const opPadEl = document.getElementById('opManSignaturePad');
       const supervisorPadEl = document.getElementById('supervisorSignaturePad');
@@ -1071,6 +1384,13 @@
         function resizeCanvas() {
           const ratio = Math.max(window.devicePixelRatio || 1, 1);
           const rect = canvas.getBoundingClientRect();
+
+          // If this canvas is in a hidden tab, it may report 0x0.
+          // We'll retry resizing when the Sign-off tab is shown.
+          if (!rect.width || !rect.height) {
+            pad._needsResize = true;
+            return;
+          }
           
           // Set display size
           canvas.style.width = rect.width + 'px';
@@ -1082,7 +1402,7 @@
           
           // Scale the drawing context so everything draws at correct size
           const ctx = canvas.getContext('2d');
-          ctx.scale(ratio, ratio);
+          ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
           
           // Redraw signature if it exists
           if (!pad.isEmpty()) {
@@ -1090,6 +1410,8 @@
             pad.clear();
             pad.fromData(data);
           }
+
+          pad._needsResize = false;
         }
         
         // Initial resize
@@ -1097,6 +1419,10 @@
         
         // Resize on window resize
         window.addEventListener('resize', resizeCanvas);
+
+        // Expose resize hook so we can resize when the tab becomes visible
+        pad._resizeCanvas = resizeCanvas;
+        pad._needsResize = false;
         
         return pad;
       }
@@ -1228,10 +1554,47 @@
       let photosUploaded = false;
       let uploadedPhotoUrls = [];
       
-      const pads = initSignaturePads();
+      // Initialize signature pads after DOM is fully loaded
+      let pads = null;
+      document.addEventListener('DOMContentLoaded', function() {
+        pads = initSignaturePads();
+        // Make pads available globally
+        window.signaturePads = pads;
+        window.pads = pads;
+        
+        console.log('Signature pads initialized:', pads);
+
+        // When the Sign-off tab becomes visible, resize canvases (Bootstrap tabs hide them by default)
+        const tab4Link = document.getElementById('tab-4-link');
+        if (tab4Link) {
+          tab4Link.addEventListener('shown.bs.tab', () => {
+            if (!pads) {
+              pads = initSignaturePads();
+              window.signaturePads = pads;
+              window.pads = pads;
+            }
+
+            ['techPad', 'opPad', 'supervisorPad'].forEach((key) => {
+              const pad = pads && pads[key];
+              if (pad && typeof pad._resizeCanvas === 'function') {
+                pad._resizeCanvas();
+              }
+            });
+          });
+        }
+      });
       
-      // Make pads available globally for loadSubmissionData
-      window.signaturePads = pads;
+      // Also try immediate initialization in case DOMContentLoaded already fired
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(function() {
+          if (!pads) {
+            pads = initSignaturePads();
+            window.signaturePads = pads;
+            window.pads = pads;
+            console.log('Signature pads initialized (immediate):', pads);
+          }
+        }, 100);
+      }
 
       // Load submission data if in edit mode
       function loadSubmissionData() {
@@ -1250,14 +1613,33 @@
             if (dateField) dateField.value = submissionData.visit_date;
           }
           
-          // Load other fields from formData
-          ['location', 'inspector_name', 'manager_name', 'description_of_work', 'floor', 'developer_client', 'city_area', 'estimated_time'].forEach(field => {
-            const fieldId = field === 'location' ? 'location_name' : field;
-            const fieldEl = document.getElementById(fieldId);
+          // Load other fields from formData (guarded; some legacy fields were removed)
+          ['inspector_name', 'manager_name', 'description_of_work', 'estimated_time'].forEach(field => {
+            const fieldEl = document.getElementById(field);
             if (fieldEl && formData[field]) {
               fieldEl.value = formData[field];
             }
           });
+
+          // Area dropdown (replaces old location/floor/developer/city_area inputs)
+          const areaEl = document.getElementById('area');
+          const areaOtherEl = document.getElementById('area_other');
+          const areaOtherContainer = document.getElementById('area_other_container');
+          if (areaEl && formData.area) {
+            areaEl.value = formData.area;
+          }
+          if (areaOtherEl && formData.area_other) {
+            areaOtherEl.value = formData.area_other;
+          }
+          if (areaEl && areaOtherContainer && areaOtherEl) {
+            if (areaEl.value === 'Other') {
+              areaOtherContainer.style.display = 'block';
+              areaOtherEl.required = true;
+            } else {
+              areaOtherContainer.style.display = 'none';
+              areaOtherEl.required = false;
+            }
+          }
           
           // Load photo URLs
           if (formData.photo_urls && Array.isArray(formData.photo_urls)) {
@@ -1265,6 +1647,59 @@
             photosUploaded = uploadedPhotoUrls.length > 0;
             if (photosUploaded) {
               updatePhotoCount();
+            }
+          }
+
+          // Load work items into the new block-based UI
+          if (Array.isArray(formData.work_items)) {
+            const container = document.getElementById('workItemsContainer');
+            if (container) {
+              const template = container.querySelector('.work-item-block');
+              const templateClone = template ? template.cloneNode(true) : null;
+              container.innerHTML = '';
+
+              const ensureTemplate = () => {
+                if (templateClone) {
+                  const c = templateClone.cloneNode(true);
+                  // clear all values
+                  c.querySelectorAll('input').forEach((input) => {
+                    if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;
+                    else input.value = '';
+                  });
+                  c.querySelectorAll('textarea').forEach((ta) => (ta.value = ''));
+                  c.classList.remove('active');
+                  c.querySelectorAll('tr.row-active').forEach((tr) => tr.classList.remove('row-active'));
+                  return c;
+                }
+                return null;
+              };
+
+              const items = formData.work_items.length ? formData.work_items : [{}];
+              items.forEach((wi, idx) => {
+                const block = ensureTemplate();
+                if (!block) return;
+                const setIf = (sel, val) => {
+                  const el = block.querySelector(sel);
+                  if (el && val !== undefined && val !== null) el.value = String(val);
+                };
+
+                setIf('input[name="work_desc[]"]', wi.description ?? wi.work_desc);
+                setIf('input[name="work_qty[]"]', wi.quantity ?? wi.work_qty);
+                setIf('input[name="material[]"]', wi.material);
+                setIf('input[name="material_qty[]"]', wi.material_qty);
+                setIf('input[name="specification[]"]', wi.specification);
+                setIf('input[name="unit_price[]"]', wi.unit_price);
+                setIf('input[name="price[]"]', wi.price);
+                setIf('input[name="labour[]"]', wi.labour);
+                setIf('textarea[name="comments[]"]', wi.comments);
+
+                container.appendChild(block);
+              });
+
+              // Renumber blocks + SN display
+              if (typeof renumberWorkItems === 'function') {
+                renumberWorkItems();
+              }
             }
           }
           
@@ -1583,45 +2018,97 @@
         document.body.removeChild(a);
       }
 
-      // Add Work Item Row
+      function getWorkItemBlocks() {
+        return Array.from(document.querySelectorAll('#workItemsContainer .work-item-block'));
+      }
+
+      function renumberWorkItems() {
+        const blocks = getWorkItemBlocks();
+        blocks.forEach((block, idx) => {
+          const n = idx + 1;
+          block.dataset.index = String(n);
+          const title = block.querySelector('.work-item-title');
+          if (title) title.textContent = `Work Item ${n}`;
+          block.querySelectorAll('.work-item-sn').forEach((el) => (el.textContent = String(n)));
+        });
+        workItemCounter = blocks.length;
+      }
+
+      function cloneEmptyWorkItemBlock() {
+        const container = document.getElementById('workItemsContainer');
+        if (!container) return null;
+        const template = container.querySelector('.work-item-block');
+        if (!template) return null;
+        const clone = template.cloneNode(true);
+
+        // Clear all inputs/textarea values
+        clone.querySelectorAll('input').forEach((input) => {
+          if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;
+          else input.value = '';
+        });
+        clone.querySelectorAll('textarea').forEach((ta) => (ta.value = ''));
+
+        // Ensure active state cleared
+        clone.classList.remove('active');
+        clone.querySelectorAll('tr.row-active').forEach((tr) => tr.classList.remove('row-active'));
+
+        return clone;
+      }
+
+      // Add Work Item Block (each work item is its own asset)
       document.getElementById('addRowBtn').addEventListener('click', () => {
-        workItemCounter++;
-        const tbody = document.getElementById('workItemsBody');
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${workItemCounter}</td>
-          <td><input type="text" class="form-control form-control-sm" name="work_desc[]"></td>
-          <td><input type="number" class="form-control form-control-sm" name="work_qty[]"></td>
-          <td><input type="text" class="form-control form-control-sm" name="material[]"></td>
-          <td><input type="number" class="form-control form-control-sm" name="material_qty[]"></td>
-          <td><input type="text" class="form-control form-control-sm" name="specification[]"></td>
-          <td><input type="number" class="form-control form-control-sm" name="price[]" step="0.01"></td>
-          <td><input type="text" class="form-control form-control-sm" name="labour[]"></td>
-          <td><textarea class="form-control form-control-sm" name="comments[]" rows="2"></textarea></td>
-          <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">×</button></td>
-        `;
-        tbody.appendChild(row);
+        const container = document.getElementById('workItemsContainer');
+        if (!container) return;
+        const newBlock = cloneEmptyWorkItemBlock();
+        if (!newBlock) return;
+        container.appendChild(newBlock);
+        renumberWorkItems();
         saveDraft();
       });
 
-      // Remove Work Item Row
-      document.getElementById('workItemsTable').addEventListener('click', (e) => {
-        if (e.target.classList.contains('remove-row')) {
-          const tbody = document.getElementById('workItemsBody');
-          if (tbody.children.length > 1) {
-            e.target.closest('tr').remove();
-            // Renumber rows
-            Array.from(tbody.children).forEach((row, idx) => {
-              row.children[0].textContent = idx + 1;
-            });
-            workItemCounter = tbody.children.length;
-            saveDraft();
-          } else {
-            statusBox.innerHTML = '<div class="alert alert-warning">⚠️ At least one work item is required</div>';
-            return;
-          }
+      // Remove Work Item Block (button exists inside Pricing table)
+      document.getElementById('workItemsContainer')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.remove-work-item');
+        if (!btn) return;
+        const container = document.getElementById('workItemsContainer');
+        if (!container) return;
+        const blocks = getWorkItemBlocks();
+        if (blocks.length <= 1) {
+          statusBox.innerHTML = '<div class="alert alert-warning">⚠️ At least one work item is required</div>';
+          return;
         }
+        const block = btn.closest('.work-item-block');
+        if (block) block.remove();
+        renumberWorkItems();
+        saveDraft();
       });
+
+      // Active block highlighting (keeps the two internal tables visually linked)
+      const workItemsContainer = document.getElementById('workItemsContainer');
+      if (workItemsContainer) {
+        const clearActive = () => {
+          workItemsContainer.querySelectorAll('.work-item-block.active').forEach((b) => b.classList.remove('active'));
+          workItemsContainer.querySelectorAll('tbody tr.row-active').forEach((tr) => tr.classList.remove('row-active'));
+        };
+
+        const activateBlock = (block) => {
+          if (!block) return;
+          clearActive();
+          block.classList.add('active');
+          block.querySelectorAll('tbody tr').forEach((tr) => tr.classList.add('row-active'));
+        };
+
+        workItemsContainer.addEventListener('focusin', (e) => {
+          activateBlock(e.target.closest('.work-item-block'));
+        });
+        workItemsContainer.addEventListener('mouseover', (e) => {
+          activateBlock(e.target.closest('.work-item-block'));
+        });
+        workItemsContainer.addEventListener('mouseleave', () => {
+          if (document.activeElement && workItemsContainer.contains(document.activeElement)) return;
+          clearActive();
+        });
+      }
 
       // Image Compression Function
       async function compressImage(file) {
@@ -1924,17 +2411,20 @@
       // Draft Auto-Save
       function saveDraft() {
         try {
+          const safeValue = (id) => {
+            const el = document.getElementById(id);
+            return el ? (el.value || '') : '';
+          };
+
           const draft = {
-            date: document.getElementById('date').value || '',
-            project_name: document.getElementById('project_name').value || '',
-            description_of_work: document.getElementById('description_of_work').value || '',
-            location_name: document.getElementById('location_name').value || '',
-            floor: document.getElementById('floor').value || '',
-            developer_client: document.getElementById('developer_client').value || '',
-            city_area: document.getElementById('city_area').value || '',
-            estimated_time: document.getElementById('estimated_time').value || '',
-            inspector_name: document.getElementById('inspector_name').value || '',
-            workItemsCount: document.getElementById('workItemsBody').children.length,
+            date: safeValue('date'),
+            project_name: safeValue('project_name'),
+            description_of_work: safeValue('description_of_work'),
+            area: safeValue('area'),
+            area_other: safeValue('area_other'),
+            estimated_time: safeValue('estimated_time'),
+            inspector_name: safeValue('inspector_name'),
+            workItemsCount: document.querySelectorAll('#workItemsContainer .work-item-block').length,
             photoCount: currentFiles.length,
             timestamp: Date.now()
           };
@@ -1958,15 +2448,31 @@
           }
           
           // Auto-load draft without confirmation
-          document.getElementById('date').value = draft.date || '';
-          document.getElementById('project_name').value = draft.project_name || '';
-          document.getElementById('description_of_work').value = draft.description_of_work || '';
-          document.getElementById('location_name').value = draft.location_name || '';
-          document.getElementById('floor').value = draft.floor || '';
-          document.getElementById('developer_client').value = draft.developer_client || '';
-          document.getElementById('city_area').value = draft.city_area || '';
-          document.getElementById('estimated_time').value = draft.estimated_time || '';
-          document.getElementById('inspector_name').value = draft.inspector_name || '';
+          const safeSet = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.value = value || '';
+          };
+
+          // Backward compatibility for older drafts (before Area dropdown)
+          if (!draft.area && (draft.location_name || draft.city_area || draft.floor || draft.developer_client)) {
+            const legacyBits = [draft.location_name, draft.city_area, draft.floor, draft.developer_client]
+              .filter(Boolean)
+              .join(' - ');
+            draft.area = 'Other';
+            draft.area_other = legacyBits;
+          }
+
+          safeSet('date', draft.date);
+          safeSet('project_name', draft.project_name);
+          safeSet('description_of_work', draft.description_of_work);
+          safeSet('area', draft.area);
+          safeSet('area_other', draft.area_other);
+          safeSet('estimated_time', draft.estimated_time);
+          safeSet('inspector_name', draft.inspector_name);
+
+          if (typeof handleAreaChange === 'function') {
+            handleAreaChange();
+          }
           
           // Draft loaded silently
           if (draft.workItemsCount > 0 || draft.photoCount > 0) {
@@ -1991,8 +2497,8 @@
       setInterval(saveDraft, DRAFT_SAVE_INTERVAL);
       
       // Save on field changes
-      ['date', 'project_name', 'description_of_work', 'location_name', 'floor', 
-       'developer_client', 'city_area', 'estimated_time', 'inspector_name'].forEach(id => {
+      ['date', 'project_name', 'description_of_work', 'area', 'area_other',
+       'estimated_time', 'inspector_name'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
           el.addEventListener('input', saveDraft);
@@ -2100,6 +2606,36 @@
 
       // Submit Handler - Using HVAC method with JSON payload
       submitBtn.addEventListener('click', async () => {
+        // Basic required field validation (browser built-in validation does not run because this is a JS submit)
+        const projectNameValue = (document.getElementById('project_name')?.value || '').trim();
+        const visitDateValue = (document.getElementById('date')?.value || '').trim();
+        const areaValue = (document.getElementById('area')?.value || '').trim();
+
+        if (!projectNameValue) {
+          alert('Please enter the Project Name before submitting.');
+          goToTab(1);
+          return;
+        }
+
+        if (!visitDateValue) {
+          alert('Please select the Date before submitting.');
+          goToTab(1);
+          return;
+        }
+
+        if (!areaValue) {
+          alert('Please select an Area before submitting.');
+          goToTab(1);
+          return;
+        }
+
+        // Ensure pads are initialized
+        if (!pads || !window.signaturePads) {
+          pads = initSignaturePads();
+          window.signaturePads = pads;
+          window.pads = pads;
+        }
+        
         // In edit mode, preserve original signatures
         let techSig = '';
         let opSig = '';
@@ -2108,16 +2644,24 @@
         // In edit mode, use existing signatures (read-only)
         const techCanvas = document.getElementById('techSignaturePad');
         const opCanvas = document.getElementById('opManSignaturePad');
-        if (techCanvas && pads.tech && !pads.tech.isEmpty()) {
-          techSig = pads.tech.toDataURL('image/png');
+        if (techCanvas && pads && pads.techPad && !pads.techPad.isEmpty()) {
+          techSig = pads.techPad.toDataURL('image/png');
         }
-        if (opCanvas && pads.op && !pads.op.isEmpty()) {
-          opSig = pads.op.toDataURL('image/png');
+        if (opCanvas && pads && pads.opPad && !pads.opPad.isEmpty()) {
+          opSig = pads.opPad.toDataURL('image/png');
         }
         {% else %}
         // Normal mode - get from signature pads
-        techSig = (pads.tech && !pads.tech.isEmpty()) ? pads.tech.toDataURL('image/png') : '';
-        opSig = (pads.op && !pads.op.isEmpty()) ? pads.op.toDataURL('image/png') : '';
+        if (pads && pads.techPad && !pads.techPad.isEmpty()) {
+          techSig = pads.techPad.toDataURL('image/png');
+          const techSigInput = document.getElementById('techSignatureData');
+          if (techSigInput) techSigInput.value = techSig;
+        }
+        if (pads && pads.opPad && !pads.opPad.isEmpty()) {
+          opSig = pads.opPad.toDataURL('image/png');
+          const opSigInput = document.getElementById('opManSignatureData');
+          if (opSigInput) opSigInput.value = opSig;
+        }
         {% endif %}
         
         // Check if photos have been uploaded
@@ -2130,28 +2674,48 @@
         console.log('📸 Using pre-uploaded photo URLs:', uploadedPhotoUrls);
         console.log('📸 Total photos to submit:', uploadedPhotoUrls.length);
         
-        // Collect work items from table
-        const workItemsBody = document.getElementById('workItemsBody');
+        // Collect work items from the block-based UI
         const workItems = [];
-        const rows = workItemsBody.querySelectorAll('tr');
-        
-        rows.forEach((row, index) => {
-          const inputs = row.querySelectorAll('input');
-          const textareas = row.querySelectorAll('textarea');
-          if (inputs.length >= 7) {
-            workItems.push({
-              item_number: index + 1,
-              description: inputs[0].value || '', // work_desc
-              quantity: inputs[1].value || '', // work_qty
-              material: inputs[2].value || '', // material (brand)
-              material_qty: inputs[3].value || '', // material_qty
-              specification: inputs[4].value || '', // specification
-              price: inputs[5].value || '', // price
-              labour: inputs[6].value || '', // labour
-              comments: textareas.length > 0 ? (textareas[0].value || '') : '', // comments
-              photo_urls: uploadedPhotoUrls // All photos attached to each work item
-            });
-          }
+        const blocks = Array.from(document.querySelectorAll('#workItemsContainer .work-item-block'));
+
+        const getVal = (root, selector) => {
+          const el = root.querySelector(selector);
+          return el ? (el.value || '') : '';
+        };
+
+        const isAnyFieldFilled = (item) => {
+          const fields = [
+            item.description,
+            item.quantity,
+            item.material,
+            item.material_qty,
+            item.specification,
+            item.unit_price,
+            item.price,
+            item.labour,
+            item.comments
+          ];
+          return fields.some(v => String(v || '').trim() !== '');
+        };
+
+        blocks.forEach((block, index) => {
+          const item = {
+            item_number: index + 1,
+            description: getVal(block, 'input[name="work_desc[]"]'),
+            quantity: getVal(block, 'input[name="work_qty[]"]'),
+            material: getVal(block, 'input[name="material[]"]'),
+            material_qty: getVal(block, 'input[name="material_qty[]"]'),
+            specification: getVal(block, 'input[name="specification[]"]'),
+            unit_price: getVal(block, 'input[name="unit_price[]"]'),
+            price: getVal(block, 'input[name="price[]"]'),
+            labour: getVal(block, 'input[name="labour[]"]'),
+            comments: getVal(block, 'textarea[name="comments[]"]'),
+            photo_urls: uploadedPhotoUrls
+          };
+
+          // Skip completely empty blocks
+          if (!isAnyFieldFilled(item)) return;
+          workItems.push(item);
         });
         
         if (workItems.length === 0) {
@@ -2182,7 +2746,7 @@
         const supervisorCommentsField = document.getElementById('supervisorComments');
         const supervisorSignatureData = document.getElementById('supervisorSignatureData');
         {% if is_supervisor_edit or user_designation == 'supervisor' %}
-        if (pads.supervisorPad && !pads.supervisorPad.isEmpty()) {
+        if (pads && pads.supervisorPad && !pads.supervisorPad.isEmpty()) {
           supervisorData = pads.supervisorPad.toDataURL('image/png');
           if (supervisorSignatureData) supervisorSignatureData.value = supervisorData;
         } else if (supervisorSignatureData) {
@@ -2196,15 +2760,33 @@
         // Validate supervisor signature if submitting as supervisor
         if (!supervisorData) {
           alert('Please provide your supervisor signature before submitting.');
+          loadingOverlay.style.display = 'none';
+          return;
+        }
+        {% else %}
+        // Validate technician signature for regular submissions
+        if (!techSig) {
+          alert('Please provide your inspector signature before submitting.');
+          loadingOverlay.style.display = 'none';
           return;
         }
         {% endif %}
         
         // Prepare JSON payload (photos already in cloud)
+        const area = document.getElementById('area')?.value || '';
+        const areaOther = document.getElementById('area_other')?.value || '';
+        const location = (area === 'Other') ? (areaOther || 'Other') : area;
+
+        if (!location) {
+          alert('Please select an Area before submitting.');
+          loadingOverlay.style.display = 'none';
+          return;
+        }
+
         const payload = {
-          project_name: document.getElementById('project_name').value || '',
-          location: document.getElementById('location_name').value || '',
-          visit_date: document.getElementById('date').value || '',
+          project_name: projectNameValue,
+          location: location,
+          visit_date: visitDateValue,
           inspector_name: document.getElementById('inspector_name').value || '',
           inspector_signature: techSig || '',
           manager_name: document.getElementById('manager_name')?.value || '',
@@ -2212,9 +2794,8 @@
           supervisor_signature: supervisorData || '',
           supervisor_comments: supervisorComments || '',
           description_of_work: document.getElementById('description_of_work').value || '',
-          floor: document.getElementById('floor').value || '',
-          developer_client: document.getElementById('developer_client').value || '',
-          city_area: document.getElementById('city_area').value || '',
+          area: area,
+          area_other: areaOther,
           estimated_time: document.getElementById('estimated_time').value || '',
           estimated_completion: document.getElementById('estimated_completion')?.value || '',
           work_items: workItems
@@ -2337,7 +2918,8 @@
           } else {
             throw new Error(json.error || 'Update failed');
           }
-          {% else %}
+          {% endif %}
+        {% else %}
           // Create new submission
           const submitUrl = modulePrefix + '/submit-with-urls';
           const token = localStorage.getItem('access_token');
@@ -2354,7 +2936,14 @@
           
           if (!res.ok) {
             const txt = await res.text();
-            throw new Error('Server error: ' + res.status + ' ' + txt);
+            let message = txt;
+            try {
+              const parsed = JSON.parse(txt);
+              message = parsed.error || parsed.message || parsed.details || txt;
+            } catch (e) {
+              // not JSON
+            }
+            throw new Error(`Server error: ${res.status} ${message}`);
           }
           
           const json = await res.json();
@@ -2367,7 +2956,6 @@
             clearDraft(); // Clear draft after successful submission
             
             // Ensure pollJobStatusFn is available - use multiple fallbacks
-          {% endif %}
             let pollFn = null;
             try {
               // First try: use the pollJobStatusFn defined at the top of the IIFE
@@ -2481,6 +3069,7 @@
             loadingOverlay.style.display = 'none';
             statusBox.innerHTML = '<div class="alert alert-warning">Submission accepted but no job ID</div>';
           }
+          {% endif %}
         } catch (err) {
           loadingOverlay.style.display = 'none';
           statusBox.innerHTML = `<div class="alert alert-danger">❌ Submission failed: ${err.message}</div>`;

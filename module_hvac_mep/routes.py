@@ -315,6 +315,9 @@ def submit():
     os.makedirs(JOBS_DIR, exist_ok=True)
 
     try:
+        # Check if this is an edit/update request
+        edit_submission_id = request.args.get('edit') or request.form.get('edit_submission_id')
+        
         # If the client used the multi-item UI, it will post items_count and item_* fields.
         # We'll handle both cases: multi-item (items_count present) and legacy single-file uploads.
 
@@ -341,12 +344,31 @@ def submit():
 
         tech_sig_file = None
         opman_sig_file = None
-        if tech_sig_dataurl:
+        
+        # If editing, preserve existing signatures if no new signature provided
+        if edit_submission_id:
+            from common.db_utils import get_submission_db
+            existing_submission = get_submission_db(edit_submission_id)
+            if existing_submission and existing_submission.get('form_data'):
+                existing_form_data = existing_submission['form_data']
+                
+                # Preserve tech signature if not provided
+                if not tech_sig_dataurl and existing_form_data.get('tech_signature'):
+                    tech_sig_file = existing_form_data['tech_signature']
+                    logger.info(f"✅ Preserving existing tech signature from submission")
+                
+                # Preserve opman signature if not provided
+                if not opman_sig_dataurl and existing_form_data.get('opman_signature'):
+                    opman_sig_file = existing_form_data['opman_signature']
+                    logger.info(f"✅ Preserving existing opman signature from submission")
+        
+        # Upload new signatures if provided
+        if tech_sig_dataurl and not tech_sig_file:
             # Upload to cloud and get URL
             fname, fpath, url = save_signature_dataurl(tech_sig_dataurl, UPLOADS_DIR, prefix="tech_sig")
             if url:  # Check for URL, not fname (cloud upload returns None for fname)
                 tech_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
-        if opman_sig_dataurl:
+        if opman_sig_dataurl and not opman_sig_file:
             fname, fpath, url = save_signature_dataurl(opman_sig_dataurl, UPLOADS_DIR, prefix="opman_sig")
             if url:  # Check for URL, not fname (cloud upload returns None for fname)
                 opman_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
@@ -771,6 +793,10 @@ def submit_with_urls():
         
         site_name = payload.get("site_name", "")
         visit_date = payload.get("visit_date", "")
+        edit_submission_id = payload.get("edit_submission_id") or payload.get("submission_id")
+        
+        # Check if this is an update/edit request
+        is_edit_mode = bool(edit_submission_id)
         
         # Process signatures
         tech_sig_dataurl = payload.get("tech_signature", "")
@@ -782,17 +808,43 @@ def submit_with_urls():
         opman_sig_file = None
         supervisor_sig_file = None
         
-        if tech_sig_dataurl:
+        # If editing, preserve existing signatures if no new signature provided
+        if is_edit_mode:
+            from common.db_utils import get_submission_db
+            existing_submission = get_submission_db(edit_submission_id)
+            if existing_submission and existing_submission.get('form_data'):
+                existing_form_data = existing_submission['form_data']
+                
+                # Preserve tech signature if not provided
+                if not tech_sig_dataurl:
+                    tech_sig_file = existing_form_data.get('tech_signature')
+                    if tech_sig_file:
+                        logger.info(f"✅ Preserving existing tech signature from submission")
+                
+                # Preserve opman signature if not provided
+                if not opman_sig_dataurl:
+                    opman_sig_file = existing_form_data.get('opMan_signature')
+                    if opman_sig_file:
+                        logger.info(f"✅ Preserving existing opman signature from submission")
+                
+                # Preserve supervisor signature if not provided
+                if not supervisor_sig_dataurl:
+                    supervisor_sig_file = existing_form_data.get('supervisor_signature')
+                    if supervisor_sig_file:
+                        logger.info(f"✅ Preserving existing supervisor signature from submission")
+        
+        # Upload new signatures if provided
+        if tech_sig_dataurl and not tech_sig_file:
             fname, fpath, url = save_signature_dataurl(tech_sig_dataurl, UPLOADS_DIR, prefix="tech_sig")
             if url:  # Check for URL, not fname (cloud upload returns None for fname)
                 tech_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
         
-        if opman_sig_dataurl:
+        if opman_sig_dataurl and not opman_sig_file:
             fname, fpath, url = save_signature_dataurl(opman_sig_dataurl, UPLOADS_DIR, prefix="opman_sig")
             if url:  # Check for URL, not fname (cloud upload returns None for fname)
                 opman_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
         
-        if supervisor_sig_dataurl:
+        if supervisor_sig_dataurl and not supervisor_sig_file:
             fname, fpath, url = save_signature_dataurl(supervisor_sig_dataurl, UPLOADS_DIR, prefix="supervisor_sig")
             if url:
                 supervisor_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
@@ -832,13 +884,8 @@ def submit_with_urls():
                 "photos": photos_saved
             })
         
-        # Create submission ID and save
-        sub_id = random_id("sub")
-        sub_dir = os.path.join(GENERATED_DIR, "submissions")
-        os.makedirs(sub_dir, exist_ok=True)
-        
+        # Create or update submission
         submission_data = {
-            "submission_id": sub_id,
             "site_name": site_name,
             "visit_date": visit_date,
             "tech_signature": tech_sig_file,
@@ -868,17 +915,41 @@ def submit_with_urls():
             logger.debug(f"JWT verification error: {e}")
             pass  # JWT not available
         
-        # Save submission to database
-        submission_db = create_submission_db(
-            module_type='hvac_mep',
-            form_data=submission_data,
-            site_name=site_name,
-            visit_date=visit_date,
-            user_id=user_id
-        )
-        sub_id = submission_db.submission_id
-        
-        logger.info(f"✅ Submission {sub_id} saved to database with {len(items)} items")
+        # Handle edit vs new submission
+        if is_edit_mode:
+            from common.db_utils import update_submission_db
+            
+            # Add submission_id to the data for consistency
+            submission_data["submission_id"] = edit_submission_id
+            
+            # Update existing submission
+            submission_db = update_submission_db(
+                submission_id=edit_submission_id,
+                form_data=submission_data,
+                site_name=site_name,
+                visit_date=visit_date,
+                preserve_signatures=True  # Keep existing signatures if not replaced
+            )
+            
+            if not submission_db:
+                return jsonify({"status": "error", "error": "Submission not found"}), 404
+            
+            sub_id = submission_db.submission_id
+            logger.info(f"✅ Updated submission {sub_id} with {len(items)} items")
+        else:
+            # Create new submission
+            sub_id = random_id("sub")
+            submission_data["submission_id"] = sub_id
+            
+            submission_db = create_submission_db(
+                module_type='hvac_mep',
+                form_data=submission_data,
+                site_name=site_name,
+                visit_date=visit_date,
+                user_id=user_id
+            )
+            sub_id = submission_db.submission_id
+            logger.info(f"✅ Created submission {sub_id} with {len(items)} items")
         
         # Create job in database
         job = create_job_db(submission_db)
@@ -924,3 +995,181 @@ def submit_with_urls():
         logger.error(f"❌ Submit with URLs failed: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@hvac_mep_bp.route("/add-photos-to-item", methods=["POST"])
+def add_photos_to_item():
+    """
+    Add additional photos to an existing item in a submission.
+    
+    Expected JSON payload:
+    {
+        "submission_id": "sub_abc123",
+        "item_index": 0,
+        "photo_urls": ["https://cloudinary.../photo1.jpg", "https://cloudinary.../photo2.jpg"]
+    }
+    
+    Or multipart/form-data with:
+    - submission_id
+    - item_index
+    - photo files as file uploads
+    """
+    try:
+        GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+        
+        # Check if request has files (multipart) or JSON
+        if request.files:
+            # Multipart form data with file uploads
+            submission_id = request.form.get("submission_id")
+            item_index = request.form.get("item_index")
+            
+            if not submission_id or item_index is None:
+                return jsonify({"error": "submission_id and item_index are required"}), 400
+            
+            try:
+                item_index = int(item_index)
+            except ValueError:
+                return jsonify({"error": "item_index must be a number"}), 400
+            
+            # Get the submission from database
+            from common.db_utils import get_submission_db
+            submission = get_submission_db(submission_id)
+            
+            if not submission:
+                return jsonify({"error": "Submission not found"}), 404
+            
+            # Parse form_data JSON (submission is a dict, not an object)
+            form_data = submission.get('form_data', {})
+            items = form_data.get("items", [])
+            
+            if item_index < 0 or item_index >= len(items):
+                return jsonify({"error": f"Item index {item_index} out of range (0-{len(items)-1})"}), 400
+            
+            # Upload new photos
+            new_photos = []
+            photo_files = request.files.getlist("photos")
+            
+            for photo_file in photo_files:
+                if photo_file and getattr(photo_file, "filename", None):
+                    try:
+                        # Upload to cloud storage
+                        result = save_uploaded_file_cloud(photo_file, UPLOADS_DIR, folder="hvac_photos")
+                        new_photos.append({
+                            "saved": result.get("filename"),
+                            "path": None,
+                            "url": result["url"],
+                            "is_cloud": result.get("is_cloud", True)
+                        })
+                        logger.info(f"✅ Uploaded photo: {result['url']}")
+                    except Exception as e:
+                        logger.error(f"Failed to upload photo: {e}")
+                        return jsonify({"error": f"Photo upload failed: {str(e)}"}), 500
+            
+            if not new_photos:
+                return jsonify({"error": "No valid photos provided"}), 400
+            
+            # Add photos to the item
+            if "photos" not in items[item_index]:
+                items[item_index]["photos"] = []
+            
+            items[item_index]["photos"].extend(new_photos)
+            
+            # Update the submission in database
+            from common.db_utils import update_submission_db
+            updated_submission = update_submission_db(
+                submission_id=submission_id,
+                form_data=form_data,
+                site_name=submission.get('site_name'),
+                visit_date=submission.get('visit_date'),
+                preserve_signatures=True
+            )
+            
+            if not updated_submission:
+                return jsonify({"error": "Failed to update submission"}), 500
+            
+            logger.info(f"✅ Added {len(new_photos)} photos to item {item_index} in submission {submission_id}")
+            
+            return jsonify({
+                "status": "success",
+                "message": f"Added {len(new_photos)} photo(s) to item",
+                "photos": new_photos,
+                "total_photos": len(items[item_index]["photos"])
+            })
+            
+        else:
+            # JSON payload with pre-uploaded photo URLs
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({"error": "No data provided"}), 400
+            
+            submission_id = data.get("submission_id")
+            item_index = data.get("item_index")
+            photo_urls = data.get("photo_urls", [])
+            
+            if not submission_id or item_index is None:
+                return jsonify({"error": "submission_id and item_index are required"}), 400
+            
+            if not photo_urls or not isinstance(photo_urls, list):
+                return jsonify({"error": "photo_urls must be a non-empty array"}), 400
+            
+            try:
+                item_index = int(item_index)
+            except ValueError:
+                return jsonify({"error": "item_index must be a number"}), 400
+            
+            # Get the submission from database
+            from common.db_utils import get_submission_db
+            submission = get_submission_db(submission_id)
+            
+            if not submission:
+                return jsonify({"error": "Submission not found"}), 404
+            
+            # Parse form_data JSON (submission is a dict, not an object)
+            form_data = submission.get('form_data', {})
+            items = form_data.get("items", [])
+            
+            if item_index < 0 or item_index >= len(items):
+                return jsonify({"error": f"Item index {item_index} out of range (0-{len(items)-1})"}), 400
+            
+            # Add photo URLs to the item
+            new_photos = []
+            for url in photo_urls:
+                new_photos.append({
+                    "saved": None,
+                    "path": None,
+                    "url": url,
+                    "is_cloud": True
+                })
+            
+            if "photos" not in items[item_index]:
+                items[item_index]["photos"] = []
+            
+            items[item_index]["photos"].extend(new_photos)
+            
+            # Update the submission in database
+            from common.db_utils import update_submission_db
+            updated_submission = update_submission_db(
+                submission_id=submission_id,
+                form_data=form_data,
+                site_name=submission.get('site_name'),
+                visit_date=submission.get('visit_date'),
+                preserve_signatures=True
+            )
+            
+            if not updated_submission:
+                return jsonify({"error": "Failed to update submission"}), 500
+            
+            logger.info(f"✅ Added {len(new_photos)} photo URLs to item {item_index} in submission {submission_id}")
+            
+            return jsonify({
+                "status": "success",
+                "message": f"Added {len(new_photos)} photo(s) to item",
+                "photos": new_photos,
+                "total_photos": len(items[item_index]["photos"])
+            })
+            
+    except Exception as e:
+        logger.error(f"❌ Add photos to item failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500

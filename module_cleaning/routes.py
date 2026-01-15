@@ -187,10 +187,12 @@ def form():
                                  module='Cleaning',
                                  message='Your account is inactive. Please contact an administrator.'), 403
         
-        # Allow admins, supervisors, and managers to edit submissions even if they don't have module access
-        edit_submission_id = request.args.get('edit')
+        # Initialize variables
         submission_data = None
         is_edit_mode = False
+        
+        # Allow admins, supervisors, and managers to edit submissions even if they don't have module access
+        edit_submission_id = request.args.get('edit')
         
         if edit_submission_id:
             # Check if user can edit (admin, or supervisor/manager of this submission)

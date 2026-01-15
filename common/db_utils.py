@@ -299,3 +299,66 @@ def get_submission_db(submission_id):
     except Exception as e:
         logger.error(f"❌ Failed to get submission: {e}")
         return None
+
+
+def update_submission_db(submission_id, form_data=None, site_name=None, visit_date=None, preserve_signatures=True):
+    """
+    Update an existing submission in the database
+    
+    Args:
+        submission_id: Submission ID string (e.g., 'sub_abc123')
+        form_data: Updated form data dictionary (optional)
+        site_name: Updated site name (optional)
+        visit_date: Updated visit date (optional)
+        preserve_signatures: If True, keep existing signatures if not provided in form_data (default: True)
+    
+    Returns:
+        Updated Submission object, or None if not found
+    """
+    try:
+        submission = Submission.query.filter_by(submission_id=submission_id).first()
+        if not submission:
+            logger.warning(f"Submission not found: {submission_id}")
+            return None
+        
+        # Update basic fields
+        if site_name is not None:
+            submission.site_name = site_name
+        
+        if visit_date is not None:
+            if isinstance(visit_date, str):
+                try:
+                    submission.visit_date = datetime.strptime(visit_date, '%Y-%m-%d').date()
+                except ValueError:
+                    logger.warning(f"Invalid date format: {visit_date}")
+            else:
+                submission.visit_date = visit_date
+        
+        # Update form_data while preserving signatures if requested
+        if form_data is not None:
+            # Get existing form_data
+            existing_form_data = submission.form_data or {}
+            
+            if preserve_signatures:
+                # Preserve existing signatures if not provided in new form_data
+                signature_fields = ['tech_signature', 'opMan_signature', 'supervisor_signature']
+                for sig_field in signature_fields:
+                    # If new form_data doesn't have signature, use existing one
+                    if sig_field not in form_data or not form_data[sig_field]:
+                        if sig_field in existing_form_data and existing_form_data[sig_field]:
+                            form_data[sig_field] = existing_form_data[sig_field]
+                            logger.info(f"✅ Preserved existing {sig_field} from database")
+            
+            submission.form_data = form_data
+        
+        submission.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        logger.info(f"✅ Updated submission {submission_id}")
+        
+        return submission
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ Failed to update submission: {e}")
+        raise

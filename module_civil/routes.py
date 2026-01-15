@@ -74,10 +74,12 @@ def index():
                                  module='Civil Works',
                                  message='Your account is inactive. Please contact an administrator.'), 403
         
-        # Allow admins, supervisors, and managers to edit submissions even if they don't have module access
-        edit_submission_id = request.args.get('edit')
+        # Initialize variables
         submission_data = None
         is_edit_mode = False
+        
+        # Allow admins, supervisors, and managers to edit submissions even if they don't have module access
+        edit_submission_id = request.args.get('edit')
         
         if edit_submission_id:
             # Check if user can edit (admin, or supervisor/manager of this submission)
@@ -559,6 +561,7 @@ def submit_with_urls():
                 "material": item_data.get("material", ""),
                 "material_qty": item_data.get("material_qty", ""),
                 "specification": item_data.get("specification", ""),
+                "unit_price": item_data.get("unit_price", ""),
                 "price": item_data.get("price", ""),
                 "labour": item_data.get("labour", ""),
                 "comments": item_data.get("comments", ""),
@@ -589,6 +592,8 @@ def submit_with_urls():
             "supervisor_signature": supervisor_sig_file,
             "supervisor_comments": supervisor_comments,
             "description_of_work": payload.get("description_of_work", ""),
+            "area": payload.get("area", ""),
+            "area_other": payload.get("area_other", ""),
             "floor": payload.get("floor", ""),
             "developer_client": payload.get("developer_client", ""),
             "city_area": payload.get("city_area", ""),
