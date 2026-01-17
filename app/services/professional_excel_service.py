@@ -48,7 +48,7 @@ def create_professional_excel_workbook(title="Inspection Report", sheet_name="Re
     return wb, ws
 
 
-def add_logo_and_title(ws, title, subtitle=None, start_row=1):
+def add_logo_and_title(ws, title, subtitle=None, start_row=1, max_columns=5):
     """Add logo and title to worksheet
     
     Args:
@@ -56,6 +56,7 @@ def add_logo_and_title(ws, title, subtitle=None, start_row=1):
         title: Report title
         subtitle: Optional subtitle
         start_row: Starting row number
+        max_columns: Number of columns to span (default 5, use 8 for wider tables)
         
     Returns:
         int: Next available row number
@@ -63,6 +64,7 @@ def add_logo_and_title(ws, title, subtitle=None, start_row=1):
     from openpyxl.styles import Alignment
     
     current_row = start_row
+    max_col_letter = get_column_letter(max_columns)
     
     # Set row heights for logo area
     ws.row_dimensions[current_row].height = 45
@@ -84,7 +86,7 @@ def add_logo_and_title(ws, title, subtitle=None, start_row=1):
     title_cell.value = title
     title_cell.font = Font(bold=True, size=16, color=PRIMARY_COLOR, name='Calibri')
     title_cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=False)
-    ws.merge_cells(f'B{current_row}:E{current_row}')
+    ws.merge_cells(f'B{current_row}:{max_col_letter}{current_row}')
     
     # Add company name
     company_cell = ws[f'B{current_row + 1}']
@@ -101,14 +103,14 @@ def add_logo_and_title(ws, title, subtitle=None, start_row=1):
         subtitle_cell.value = subtitle
         subtitle_cell.font = Font(bold=True, size=11, color=SECONDARY_COLOR, name='Calibri')
         subtitle_cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
-        ws.merge_cells(f'A{current_row}:E{current_row}')
+        ws.merge_cells(f'A{current_row}:{max_col_letter}{current_row}')
         current_row += 1
     
     current_row += 1  # Add spacing
     return current_row
 
 
-def add_info_section(ws, info_data, start_row, title="Information"):
+def add_info_section(ws, info_data, start_row, title="Information", max_columns=4):
     """Add an information section with key-value pairs
     
     Args:
@@ -116,22 +118,25 @@ def add_info_section(ws, info_data, start_row, title="Information"):
         info_data: List of (label, value) tuples
         start_row: Starting row number
         title: Section title
+        max_columns: Number of columns to span (default 4, use 8 for wider tables)
         
     Returns:
         int: Next available row number
     """
     current_row = start_row
+    max_col_letter = get_column_letter(max_columns)
     
     # Section title
     title_cell = ws[f'A{current_row}']
     title_cell.value = title
     title_cell.font = Font(bold=True, size=14, color=PRIMARY_COLOR, name='Calibri')
     title_cell.fill = PatternFill(start_color=ACCENT_COLOR, end_color=ACCENT_COLOR, fill_type="solid")
-    ws.merge_cells(f'A{current_row}:D{current_row}')
+    ws.merge_cells(f'A{current_row}:{max_col_letter}{current_row}')
     
-    # Add border
-    for col in ['A', 'B', 'C', 'D']:
-        cell = ws[f'{col}{current_row}']
+    # Add border to all columns in the span
+    for col_idx in range(1, max_columns + 1):
+        col_letter = get_column_letter(col_idx)
+        cell = ws[f'{col_letter}{current_row}']
         cell.border = Border(
             top=Side(style='medium', color=PRIMARY_COLOR),
             bottom=Side(style='medium', color=PRIMARY_COLOR),

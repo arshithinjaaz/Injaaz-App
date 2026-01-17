@@ -998,9 +998,11 @@
             <td data-label="Designation">
               <select class="designation-select" onchange="setDesignation(${user.id}, this.value, this)" data-original-value="${user.designation || ''}" data-user-id="${user.id}">
                 <option value="">None</option>
-                <option value="technician" ${user.designation === 'technician' ? 'selected' : ''}>Technician</option>
                 <option value="supervisor" ${user.designation === 'supervisor' ? 'selected' : ''}>Supervisor</option>
-                <option value="manager" ${user.designation === 'manager' ? 'selected' : ''}>Manager</option>
+                <option value="operations_manager" ${user.designation === 'operations_manager' ? 'selected' : ''}>Operations Manager</option>
+                <option value="business_development" ${user.designation === 'business_development' ? 'selected' : ''}>Business Development</option>
+                <option value="procurement" ${user.designation === 'procurement' ? 'selected' : ''}>Procurement</option>
+                <option value="general_manager" ${user.designation === 'general_manager' ? 'selected' : ''}>General Manager</option>
               </select>
             </td>
             <td data-label="Status"><span class="badge ${statusBadge}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
@@ -1340,7 +1342,7 @@
         // Prepare the designation value (empty string becomes null)
         const designationValue = designation === '' || designation === 'None' ? null : designation;
 
-        const response = await fetch(`/api/admin/users/${userId}/designation`, {
+        const response = await fetch(`/api/admin/users/${userId}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,

@@ -237,6 +237,75 @@
         width: 100%;
         margin-bottom: 0.75rem;
       }
+      
+      /* Form inputs */
+      .form-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+      
+      .form-control, .form-select, textarea {
+        font-size: 1rem;
+        padding: 0.75rem;
+        min-height: 48px;
+      }
+      
+      textarea.form-control {
+        min-height: 100px;
+      }
+      
+      /* Buttons */
+      .btn {
+        min-height: 48px;
+        font-size: 1rem;
+        padding: 0.75rem 1.5rem;
+        touch-action: manipulation;
+      }
+      
+      .btn-sm {
+        min-height: 40px;
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+      }
+      
+      /* Work items */
+      .work-item {
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+      
+      .work-item h6 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+      }
+      
+      /* Signature canvas */
+      canvas {
+        max-width: 100%;
+        height: auto;
+        min-height: 150px;
+        touch-action: none;
+        border: 2px solid var(--border-light);
+        border-radius: 8px;
+      }
+      
+      /* Photo preview */
+      .photo-preview {
+        width: 100%;
+        max-width: 150px;
+        height: 150px;
+        object-fit: cover;
+      }
+      
+      /* Download links container */
+      #download-links-container {
+        margin-top: 1.5rem;
+      }
+      
+      #download-links-container .btn {
+        width: 100%;
+        margin-bottom: 0.75rem;
+      }
     }
     
     @media (max-width: 480px) {
@@ -256,6 +325,24 @@
       
       h2 {
         font-size: 1.35rem;
+      }
+      
+      .form-control, .form-select, textarea {
+        font-size: 0.9375rem;
+      }
+      
+      .btn {
+        font-size: 0.9375rem;
+        padding: 0.625rem 1.25rem;
+      }
+      
+      .work-item {
+        padding: 0.875rem;
+      }
+      
+      .photo-preview {
+        max-width: 120px;
+        height: 120px;
       }
     }
     
@@ -930,7 +1017,7 @@
       {% endif %}
     </p>
 
-    <form id="mainForm">
+    <form id="mainForm" novalidate>
       <!-- Tab Navigation -->
       <ul class="nav nav-tabs" id="civilTabs" role="tablist">
         <li class="nav-item" role="presentation"><button class="nav-link active" id="tab-1-link" data-bs-toggle="tab" data-bs-target="#tab-1" type="button" role="tab">1. Project Info</button></li>
@@ -1131,7 +1218,7 @@
 
       {% if user_designation == 'technician' and not is_edit_mode %}
       <div class="alert alert-info" role="alert" style="font-weight: 600; margin-bottom: 1rem;">
-        Technician submissions only require your signature. Supervisor/manager approval will be collected during review.
+        Supervisor submissions only require your signature. Manager approval will be collected during review workflow.
       </div>
       {% elif is_supervisor_edit %}
       <div class="alert alert-warning" role="alert" style="font-weight: 600; margin-bottom: 1rem;">
@@ -2868,7 +2955,20 @@
           
           if (approveJson.success) {
             loadingOverlay.style.display = 'none';
-            statusBox.innerHTML = '<div class="alert alert-success">✅ Submission reviewed and approved! Forwarded to manager. <a href="/api/workflow/dashboard">Return to Supervisor Dashboard</a></div>';
+            statusBox.innerHTML = `
+              <div class="alert alert-success">
+                <h5 class="alert-heading">✅ Form Signed Successfully!</h5>
+                <hr>
+                <p class="mb-2"><strong>This form will now be sent to:</strong></p>
+                <ul class="mb-0" style="list-style-position: inside;">
+                  <li>→ Operations Manager</li>
+                  <li>→ Business Development & Procurement (parallel review)</li>
+                  <li>→ General Manager (final approval)</li>
+                </ul>
+                <hr class="mt-3 mb-2">
+                <a href="/api/workflow/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
+              </div>
+            `;
             clearDraft();
           } else {
             throw new Error(approveJson.error || 'Approval failed');

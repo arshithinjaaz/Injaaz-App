@@ -442,6 +442,11 @@ def create_app():
     def pwa_manifest():
         """Serve PWA manifest"""
         return send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
+    
+    @app.route('/favicon.ico')
+    def favicon():
+        """Serve favicon"""
+        return send_from_directory('static', 'logo.png', mimetype='image/png')
 
     # Register blueprints only if they were imported successfully.
     if hvac_mep_bp:
@@ -576,6 +581,16 @@ def create_app():
     def about():
         """About page - accessible to all users"""
         return render_template('about.html')
+    
+    @app.route('/workflow/pending-reviews')
+    def pending_reviews():
+        """Pending reviews page - requires reviewer authentication"""
+        return render_template('pending_reviews.html')
+    
+    @app.route('/workflow/submitted-forms')
+    def submitted_forms():
+        """Submitted forms page - supervisors can view their submissions"""
+        return render_template('submitted_forms.html')
     
     @app.route('/admin/dashboard')
     def admin_dashboard():

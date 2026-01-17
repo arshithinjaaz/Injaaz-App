@@ -64,14 +64,15 @@ def create_excel_report(data, output_dir):
             sheet_name="HVAC MEP Inspection"
         )
         
-        # Add logo and title
+        # Add logo and title (span across all 8 columns)
         current_row = add_logo_and_title(
             ws,
             title="HVAC & MEP INSPECTION REPORT",
-            subtitle=f"Site: {data.get('site_name', 'N/A')}"
+            subtitle=f"Site: {data.get('site_name', 'N/A')}",
+            max_columns=8
         )
         
-        # Site Information Section
+        # Site Information Section (span across all 8 columns)
         site_info = [
             ('Site Name', data.get('site_name', 'N/A')),
             ('Visit Date', data.get('visit_date', 'N/A')),
@@ -79,7 +80,7 @@ def create_excel_report(data, output_dir):
             ('Total Items', str(len(data.get('items', []))))
         ]
         
-        current_row = add_info_section(ws, site_info, current_row, title="Site Information")
+        current_row = add_info_section(ws, site_info, current_row, title="Site Information", max_columns=8)
         
         # Items data
         items = data.get('items', [])
@@ -87,29 +88,34 @@ def create_excel_report(data, output_dir):
         # Inspection Items Table
         items = data.get('items', [])
         if items:
-            current_row = add_section_header(ws, "Inspection Items", current_row)
+            current_row = add_section_header(ws, "Inspection Items", current_row, span_columns=8)
             
-            # Prepare table data
-            headers = ['#', 'Asset', 'System', 'Description', 'Photos']
+            # Prepare table data with all fields (no photos)
+            headers = ['#', 'Asset', 'System', 'Description', 'Quantity', 'Brand', 'Specification', 'Comments']
             table_data = []
             
             for idx, item in enumerate(items, 1):
-                photos = item.get('photos', [])
                 table_data.append([
                     str(idx),
                     item.get('asset', 'N/A'),
                     item.get('system', 'N/A'),
                     item.get('description', 'N/A'),
-                    str(len(photos))
+                    str(item.get('quantity', 'N/A')),
+                    item.get('brand', 'N/A'),
+                    item.get('specification', 'N/A'),
+                    item.get('comments', 'N/A')
                 ])
             
             # Column widths for inspection items
             col_widths = {
-                'A': 6,
-                'B': 22,
-                'C': 22,
-                'D': 50,
-                'E': 12
+                'A': 6,   # #
+                'B': 18,  # Asset
+                'C': 18,  # System
+                'D': 25,  # Description
+                'E': 10,  # Quantity
+                'F': 15,  # Brand
+                'G': 20,  # Specification
+                'H': 30   # Comments
             }
             
             current_row = add_data_table(
@@ -218,9 +224,9 @@ def create_pdf_report(data, output_dir):
         tech_sig = data.get('tech_signature', '')
         if tech_sig:
             if isinstance(tech_sig, dict) and tech_sig.get('url'):
-                signatures['Technician'] = tech_sig
-            elif isinstance(tech_sig, str) and (tech_sig.startswith('data:image') or tech_sig.startswith('http')):
-                signatures['Technician'] = tech_sig
+                signatures['Supervisor'] = tech_sig
+            elif isinstance(tech_sig, str) and (tech_sig.startsWith('data:image') or tech_sig.startswith('http')):
+                signatures['Supervisor'] = tech_sig
         
         # Check for both 'opMan_signature' (with capital M) and 'opman_signature' (all lowercase)
         opman_sig = data.get('opMan_signature', '') or data.get('opman_signature', '')
@@ -233,8 +239,8 @@ def create_pdf_report(data, output_dir):
         # Always add signature section (shows "Not signed" if no signatures)
         if not signatures:
             signatures = {
-                'Technician': None,
-                'Operation Manager': None
+                'Supervisor': None,
+                'Operations Manager': None
             }
         
         add_signatures_section(story, signatures)

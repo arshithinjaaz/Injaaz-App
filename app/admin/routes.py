@@ -286,11 +286,18 @@ def update_user(user_id):
             if existing and existing.id != user_id:
                 return jsonify({'error': 'Username already in use'}), 400
             user.username = data['username']
-        if 'role' in data and data['role'] in ['admin', 'inspector', 'user']:
+        if 'role' in data and data['role'] in ['admin', 'user']:
             # Prevent changing your own role
             if user_id == admin_id and data['role'] != 'admin':
                 return jsonify({'error': 'Cannot change your own role'}), 400
             user.role = data['role']
+        
+        # Update designation if provided
+        if 'designation' in data:
+            valid_designations = ['supervisor', 'operations_manager', 'business_development', 'procurement', 'general_manager', None]
+            if data['designation'] not in valid_designations:
+                return jsonify({'error': 'Invalid designation'}), 400
+            user.designation = data['designation']
         
         db.session.commit()
         
@@ -479,15 +486,28 @@ def log_audit(user_id, action, resource_type=None, resource_id=None, details=Non
 @jwt_required()
 @admin_required
 def set_user_designation(user_id):
-    """Set user designation (technician, supervisor, manager)"""
+    """Set user designation for new 5-stage workflow"""
     try:
         admin_id = get_jwt_identity()
         data = request.get_json()
         designation = data.get('designation')
         
-        if designation not in ['technician', 'supervisor', 'manager', None]:
-            return error_response('Invalid designation. Must be: technician, supervisor, manager, or null', 
-                                status_code=400, error_code='VALIDATION_ERROR')
+        # New valid designations for 5-stage workflow
+        valid_designations = [
+            'supervisor',           # Stage 1: Creates and submits forms
+            'operations_manager',   # Stage 2: First approval
+            'business_development', # Stage 3: Parallel review
+            'procurement',          # Stage 3: Parallel review
+            'general_manager',      # Stage 4: Final approval
+            None                    # No designation (regular user)
+        ]
+        
+        if designation not in valid_designations:
+            return error_response(
+                'Invalid designation. Must be one of: supervisor, operations_manager, business_development, procurement, general_manager, or null', 
+                status_code=400, 
+                error_code='VALIDATION_ERROR'
+            )
         
         user = User.query.get_or_404(user_id)
         old_designation = user.designation
@@ -687,4 +707,134 @@ def get_submission(submission_id):
     except Exception as e:
         current_app.logger.error(f"Error getting submission: {str(e)}", exc_info=True)
         return error_response('Failed to get submission', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/users/by-designation/<designation>', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_users_by_designation(designation):
+    """Get all users with a specific designation"""
+    try:
+        valid_designations = [
+            'supervisor',
+            'operations_manager',
+            'business_development',
+            'procurement',
+            'general_manager'
+        ]
+        
+        if designation not in valid_designations:
+            return error_response(
+                'Invalid designation',
+                status_code=400,
+                error_code='VALIDATION_ERROR'
+            )
+        
+        users = User.query.filter_by(designation=designation, is_active=True).all()
+        
+        return success_response({
+            'users': [user.to_dict() for user in users],
+            'count': len(users),
+            'designation': designation
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error getting users by designation: {str(e)}", exc_info=True)
+        return error_response('Failed to get users', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/workflow/stats', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_workflow_stats():
+    """Get workflow statistics for dashboard"""
+    try:
+        from app.models import Submission
+        
+        # Count submissions by workflow status
+        stats = {
+            'total_submissions': Submission.query.count(),
+            'by_status': {},
+            'by_designation': {}
+        }
+        
+        # Count by workflow status
+        statuses = [
+            'submitted',
+            'operations_manager_review',
+            'operations_manager_approved',
+            'bd_procurement_review',
+            'general_manager_review',
+            'completed',
+            'rejected'
+        ]
+        
+        for status in statuses:
+            count = Submission.query.filter_by(workflow_status=status).count()
+            stats['by_status'][status] = count
+        
+        # Count users by designation
+        designations = [
+            'supervisor',
+            'operations_manager',
+            'business_development',
+            'procurement',
+            'general_manager'
+        ]
+        
+        for designation in designations:
+            count = User.query.filter_by(designation=designation, is_active=True).count()
+            stats['by_designation'][designation] = count
+        
+        return success_response(stats)
+    except Exception as e:
+        current_app.logger.error(f"Error getting workflow stats: {str(e)}", exc_info=True)
+        return error_response('Failed to get statistics', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/designations', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_valid_designations():
+    """Get list of valid designations with descriptions"""
+    try:
+        designations = [
+            {
+                'value': 'supervisor',
+                'label': 'Supervisor/Inspector',
+                'description': 'Stage 1: Creates and submits forms',
+                'stage': 1
+            },
+            {
+                'value': 'operations_manager',
+                'label': 'Operations Manager',
+                'description': 'Stage 2: First approval level',
+                'stage': 2
+            },
+            {
+                'value': 'business_development',
+                'label': 'Business Development',
+                'description': 'Stage 3: Parallel review with Procurement',
+                'stage': 3
+            },
+            {
+                'value': 'procurement',
+                'label': 'Procurement',
+                'description': 'Stage 3: Parallel review with Business Development',
+                'stage': 3
+            },
+            {
+                'value': 'general_manager',
+                'label': 'General Manager',
+                'description': 'Stage 4: Final approval',
+                'stage': 4
+            }
+        ]
+        
+        return success_response({
+            'designations': designations,
+            'count': len(designations)
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error getting designations: {str(e)}", exc_info=True)
+        return error_response('Failed to get designations', status_code=500, error_code='DATABASE_ERROR')
 

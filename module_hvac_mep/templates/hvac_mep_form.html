@@ -203,6 +203,82 @@
       h2 {
         font-size: 1.5rem;
       }
+      
+      /* Tab navigation for mobile */
+      .nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        border-bottom: 1px solid var(--border-light);
+        margin-bottom: 1.5rem;
+      }
+      
+      .nav-tabs::-webkit-scrollbar {
+        display: none;
+      }
+      
+      .nav-tabs .nav-link {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      
+      /* Form inputs */
+      .form-label {
+        font-size: 0.9rem;
+      }
+      
+      .form-control, .form-select {
+        font-size: 1rem;
+        padding: 0.75rem;
+        min-height: 48px;
+      }
+      
+      textarea.form-control {
+        min-height: 100px;
+      }
+      
+      /* Buttons */
+      .btn {
+        min-height: 48px;
+        font-size: 1rem;
+        padding: 0.75rem 1.5rem;
+      }
+      
+      .btn-sm {
+        min-height: 40px;
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+      }
+      
+      /* Item cards */
+      .item-card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+      
+      .item-card h6 {
+        font-size: 1rem;
+      }
+      
+      /* Signature canvas */
+      canvas {
+        max-width: 100%;
+        height: auto;
+        min-height: 150px;
+        touch-action: none;
+      }
+      
+      /* Photo grid */
+      .photo-preview {
+        width: 100%;
+        max-width: 150px;
+        height: 150px;
+      }
     }
     
     @media (max-width: 480px) {
@@ -234,6 +310,51 @@
       box-shadow: var(--shadow-sm);
       margin: 1.5rem auto;
       border: 1px solid var(--border-light);
+    }
+    
+    /* Tab Navigation Styling */
+    .nav-tabs {
+      border-bottom: 2px solid var(--border-light);
+      margin-bottom: 2rem;
+      gap: 0.5rem;
+    }
+    
+    .nav-tabs .nav-link {
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--text-secondary);
+      font-weight: 500;
+      padding: 0.75rem 1.5rem;
+      transition: all 0.2s ease;
+      background: transparent;
+    }
+    
+    .nav-tabs .nav-link:hover {
+      border-bottom-color: var(--primary-light);
+      color: var(--primary);
+    }
+    
+    .nav-tabs .nav-link.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: transparent;
+    }
+    
+    .tab-content {
+      padding: 1.5rem 0;
+    }
+    
+    .tab-pane {
+      min-height: 300px;
+    }
+    
+    .section-heading {
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 1.25rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--primary);
     }
     
     /* Minimal typography */
@@ -786,6 +907,29 @@
       .container {
         padding: 1rem 0.75rem;
       }
+      
+      .nav-tabs .nav-link {
+        padding: 0.625rem 0.75rem;
+        font-size: 0.8125rem;
+      }
+      
+      .form-control, .form-select {
+        font-size: 0.9375rem;
+      }
+      
+      .btn {
+        font-size: 0.9375rem;
+        padding: 0.625rem 1.25rem;
+      }
+      
+      .item-card {
+        padding: 0.875rem;
+      }
+      
+      .photo-preview {
+        max-width: 120px;
+        height: 120px;
+      }
     }
   </style>
 </head>
@@ -820,33 +964,59 @@
       {% endif %}
     </p>
 
-    <form id="mainForm" enctype="multipart/form-data" onsubmit="return false;">
-      <div class="row g-3">
-        <!-- Site Info -->
-        <div class="col-md-6 mb-3">
-          <label for="site_name" class="form-label">Site Name</label>
-          <input id="site_name" name="site_name" class="form-control" 
-                 {% if is_edit_mode and submission_data %}value="{{ submission_data.site_name or (submission_data.form_data.site_name if submission_data.form_data else '') }}"{% endif %}
-                 {% if not is_supervisor_edit %}required{% endif %}>
+    <form id="mainForm" enctype="multipart/form-data" onsubmit="return false;" novalidate>
+      <!-- Tab Navigation -->
+      <ul class="nav nav-tabs" id="hvacTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="tab-1-link" data-bs-toggle="tab" data-bs-target="#tab-1" type="button" role="tab">1. Project Info</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="tab-2-link" data-bs-toggle="tab" data-bs-target="#tab-2" type="button" role="tab">2. Work Items</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab">3. Sign-off & Submit</button>
+        </li>
+      </ul>
+
+      <div class="tab-content" id="hvacTabContent">
+        <!-- TAB 1: Project Info -->
+        <div class="tab-pane fade show active" id="tab-1" role="tabpanel">
+          <h4 class="section-heading">Project Information</h4>
+          <div class="row g-3">
+            <div class="col-md-6 mb-3">
+              <label for="site_name" class="form-label">Site Name</label>
+              <input id="site_name" name="site_name" class="form-control" 
+                     {% if is_edit_mode and submission_data %}value="{{ submission_data.site_name or (submission_data.form_data.site_name if submission_data.form_data else '') }}"{% endif %}
+                     {% if not is_supervisor_edit %}required{% endif %}>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label for="visit_date" class="form-label">Visit Date</label>
+              <input id="visit_date" name="visit_date" type="date" class="form-control" 
+                     {% if is_edit_mode and submission_data %}value="{{ submission_data.visit_date or (submission_data.form_data.visit_date if submission_data.form_data else '') }}"{% endif %}
+                     {% if not is_supervisor_edit %}required{% endif %} max="">
+            </div>
+          </div>
+
+          <div class="d-flex mt-4">
+            <button type="button" class="btn btn-primary ms-auto" onclick="goToTab(2)">Next: Work Items &raquo;</button>
+          </div>
         </div>
 
-        <div class="col-md-6 mb-3">
-          <label for="visit_date" class="form-label">Visit Date</label>
-          <input id="visit_date" name="visit_date" type="date" class="form-control" 
-                 {% if is_edit_mode and submission_data %}value="{{ submission_data.visit_date or (submission_data.form_data.visit_date if submission_data.form_data else '') }}"{% endif %}
-                 {% if not is_supervisor_edit %}required{% endif %} max="">
-        </div>
-        
-        {% if is_edit_mode and submission_data %}
-        <!-- Debug: Submission data loaded -->
-        <script>
-          console.log('🔍 DEBUG: Submission data from Jinja:', {{ submission_data|tojson|safe }});
-        </script>
-        {% endif %}
+        <!-- TAB 2: Work Items -->
+        <div class="tab-pane fade" id="tab-2" role="tabpanel">
+          
+          {% if is_edit_mode and submission_data %}
+          <!-- Debug: Submission data loaded -->
+          <script>
+            console.log('🔍 DEBUG: Submission data from Jinja:', {{ submission_data|tojson|safe }});
+          </script>
+          {% endif %}
 
-        <!-- ============================================= -->
-        <!-- SUPERVISOR/MANAGER VIEW: Submitted Items First -->
-        <!-- ============================================= -->
+          <div class="row g-3">
+          <!-- ============================================= -->
+          <!-- SUPERVISOR/MANAGER VIEW: Submitted Items First -->
+          <!-- ============================================= -->
         {% if is_supervisor_edit %}
         
         <!-- Submitted Inspection Items (TOP for Supervisor/Manager) -->
@@ -961,8 +1131,6 @@
           <div class="alert alert-info">No items submitted yet.</div>
           {% endif %}
           
-          <!-- Newly added items by supervisor (JavaScript-managed) -->
-          <div id="itemsList" class="items-list"></div>
         </div>
         
         <!-- Add New Item Section (BELOW submitted items for Supervisor) -->
@@ -973,10 +1141,10 @@
         
         {% else %}
         <!-- ============================================= -->
-        <!-- TECHNICIAN VIEW: Add Item Form First -->
+        <!-- SUPERVISOR VIEW: Add Item Form First -->
         <!-- ============================================= -->
         
-        <!-- Add Inspection Item Section (FIRST for Technician) -->
+        <!-- Add Inspection Item Section (FIRST for Supervisor) -->
         <div class="col-12 mb-section">
           <h5>Add Inspection Item</h5>
         </div>
@@ -1083,49 +1251,37 @@
         </script>
         {% endif %}
 
-        <!-- Signatures -->
-        <div class="col-md-6 mb-3">
-          <div class="signature-container">
-          <div class="signature-label">
-              <label class="form-label mb-0" style="flex: 1;">Technician Signature</label>
-              {% if is_supervisor_edit %}
-              <span class="signature-hint" style="color: #059669; font-weight: 600;">✓ Technician has signed</span>
-              {% else %}
-            <span class="signature-hint">Draw signature</span>
-              {% endif %}
           </div>
-          {% if is_supervisor_edit %}
-          <!-- Show technician signature as read-only image when supervisor/manager views -->
-          {% set tech_sig = submission_data.form_data.tech_signature if submission_data and submission_data.form_data and submission_data.form_data.tech_signature else none %}
-          {% set tech_sig_url = tech_sig.url if tech_sig is mapping and tech_sig.url else (tech_sig if tech_sig is string else none) %}
-          <div id="techSignatureDisplay" style="border: 1px solid #e5e7eb; background: #f9fafb; padding: 10px; border-radius: 4px; min-height: 150px; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 500px;">
-            {% if tech_sig_url %}
-            <img src="{{ tech_sig_url }}" alt="Technician Signature" style="width: 100%; max-width: 500px; max-height: 150px; object-fit: contain; border-radius: 4px;" onerror="console.error('Failed to load signature:', this.src); this.style.display='none'; this.parentElement.innerHTML='<span class=\"text-danger\">⚠️ Signature not accessible (may be stored locally)</span>';">
-            {% else %}
-            <span class="text-muted">Technician Signature (Loading...)</span>
-            {% endif %}
-          </div>
-          {% else %}
-          <canvas id="techSignaturePad" class="signature-pad"></canvas>
-          <input type="hidden" id="techSignatureData" name="tech_signature">
-          <button type="button" id="clearTech" class="btn btn-outline-secondary btn-sm mt-2">Clear</button>
-            {% endif %}
+
+          <div class="d-flex justify-content-between mt-4">
+            <button type="button" class="btn btn-secondary" onclick="goToTab(1)">&laquo; Previous</button>
+            <button type="button" class="btn btn-primary" onclick="goToTab(3)">Next: Sign-off & Submit &raquo;</button>
           </div>
         </div>
 
+        <!-- TAB 3: Sign-off & Submit -->
+        <div class="tab-pane fade" id="tab-3" role="tabpanel">
+          <h4 class="section-heading">Signatures & Submission</h4>
+          <div class="row g-3">
+        
+        {% if not (user_designation == 'supervisor' or is_supervisor_edit) %}
+        <!-- Supervisor signature display - Hidden for all supervisor users -->
+        <div class="col-md-6 mb-3">
+          <div class="signature-container">
+          <div class="signature-label">
+              <label class="form-label mb-0" style="flex: 1;">Supervisor Signature</label>
+              <span class="signature-hint">Draw signature</span>
+          </div>
+          <canvas id="techSignaturePad" class="signature-pad"></canvas>
+          <input type="hidden" id="techSignatureData" name="tech_signature">
+          <button type="button" id="clearTech" class="btn btn-outline-secondary btn-sm mt-2">Clear</button>
+          </div>
+        </div>
+        {% endif %}
+
         {% if is_supervisor_edit or user_designation == 'supervisor' %}
         <!-- Supervisor Review Section -->
-        <div class="col-12 mb-4" style="border-top: 3px solid var(--primary); padding-top: 1.5rem; margin-top: 2rem;">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 style="color: var(--primary); margin: 0; font-weight: 700;">SUPERVISOR REVIEW & APPROVAL</h5>
-            <div>
-              <button type="button" id="verifiedBtn" class="btn btn-success btn-sm">
-                <span id="verifiedBtnIcon">✓</span> Verify Submission
-              </button>
-              <span id="verifiedStatus" class="ms-2" style="display: none; color: #059669; font-weight: 600;">✓ Verified</span>
-            </div>
-          </div>
-          
+        <div class="col-12 mb-4">
           <div class="row">
             <div class="col-lg-7 mb-3">
               <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
@@ -1147,32 +1303,13 @@
         </div>
         {% endif %}
 
-        {% if user_designation == 'manager' or (is_edit_mode and user_designation == 'manager') %}
+        {% if user_designation == 'operations_manager' and is_edit_mode %}
+        <!-- Operations Manager signature section - only show when Operations Manager is reviewing -->
         <div class="col-md-6 mb-4" id="opManSignatureContainer">
           <div class="signature-container">
             <div class="signature-label">
-              <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operation Manager Signature</label>
-              {% if is_supervisor_edit %}
-                <span class="signature-hint text-primary small">Sign as Manager</span>
-              {% else %}
-                <span class="signature-hint small">Draw signature</span>
-              {% endif %}
-            </div>
-            <canvas id="opManSignaturePad" class="signature-pad" style="height: 140px !important; min-height: 140px !important;"></canvas>
-            <input type="hidden" id="opManSignatureData" name="opMan_signature">
-            <button type="button" id="clearOp" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
-          </div>
-        </div>
-        {% elif user_designation != 'technician' or is_edit_mode %}
-        <div class="col-md-6 mb-4" id="opManSignatureContainer">
-          <div class="signature-container">
-            <div class="signature-label">
-              <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operation Manager Signature</label>
-              {% if is_supervisor_edit %}
-                <span class="signature-hint text-primary small">Sign as Manager</span>
-              {% else %}
-                <span class="signature-hint small">Draw signature</span>
-              {% endif %}
+              <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operations Manager Signature</label>
+              <span class="signature-hint small">Draw signature</span>
             </div>
             <canvas id="opManSignaturePad" class="signature-pad" style="height: 140px !important; min-height: 140px !important;"></canvas>
             <input type="hidden" id="opManSignatureData" name="opMan_signature">
@@ -1183,6 +1320,9 @@
 
         <!-- Submit Section -->
         <div class="col-12 mb-5 mt-4 text-center">
+          <div class="d-flex justify-content-between mb-3">
+            <button type="button" class="btn btn-secondary" onclick="goToTab(2)">&laquo; Previous</button>
+          </div>
           <button type="button" id="submitAllBtn" class="btn btn-success px-5 py-2 shadow-sm" style="font-weight: 700; letter-spacing: 0.5px; border-radius: 8px;">
             {% if is_edit_mode %}✓ UPDATE SUBMISSION{% else %}🚀 SUBMIT INSPECTION{% endif %}
           </button>
@@ -1196,9 +1336,10 @@
               <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>
             </div>
           </div>
-          <div id="downloadLinks" class="download-links" style="display:none;">
-            <a id="excelLink" href="#" download="hvac_mep_report.xlsx" target="_blank">Download Excel Report</a>
-            <a id="pdfLink" href="#" download="hvac_mep_report.pdf" target="_blank">Download PDF Report</a>
+          
+          <!-- Download Links Container (green buttons below submit) -->
+          <div id="downloadLinks" class="mt-3"></div>
+        </div>
           </div>
         </div>
       </div>
@@ -1243,6 +1384,49 @@
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     const UPLOAD_RETRY_ATTEMPTS = 3;
     const DRAFT_SAVE_INTERVAL = 30000; // 30 seconds
+
+    // Define goToTab function early for onclick handlers
+    function goToTab(tabNumber) {
+      console.log('🔄 goToTab called with tabNumber:', tabNumber);
+      
+      // Check if Bootstrap is loaded
+      if (typeof bootstrap === 'undefined') {
+        console.error('❌ Bootstrap is not loaded yet!');
+        return;
+      }
+      
+      const tabLink = document.getElementById(`tab-${tabNumber}-link`);
+      console.log('  Tab link element:', tabLink);
+      
+      if (tabLink) {
+        try {
+          const tab = new bootstrap.Tab(tabLink);
+          tab.show();
+          console.log('✅ Tab switched successfully to tab', tabNumber);
+          
+          // Scroll to top of form
+          const hvacTabs = document.getElementById('hvacTabs');
+          if (hvacTabs) {
+            hvacTabs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        } catch (error) {
+          console.error('❌ Error switching tab:', error);
+        }
+      } else {
+        console.error('❌ Tab link not found for tab:', tabNumber);
+        console.log('  Available tab links:');
+        for (let i = 1; i <= 3; i++) {
+          const link = document.getElementById(`tab-${i}-link`);
+          console.log(`    tab-${i}-link:`, link);
+        }
+      }
+    }
+    
+    // Make goToTab available globally immediately
+    window.goToTab = goToTab;
+    console.log('✅ goToTab function defined and available globally');
+
+    // Initialize form will be called later in attemptLoadData()
 
     function checkBrowserSupport() {
       if (!window.FileReader) {
@@ -1386,40 +1570,11 @@
       const progressContainer = document.getElementById('progressContainer');
       const progressBar = document.getElementById('progressBar');
       const downloadLinks = document.getElementById('downloadLinks');
-      const excelLink = document.getElementById('excelLink');
-      const pdfLink = document.getElementById('pdfLink');
       
       const pads = initSignaturePads();
       
       // Make pads available globally for loadSubmissionData
       window.signaturePads = pads;
-      
-      // Verified button handler (for supervisor)
-      const verifiedBtn = document.getElementById('verifiedBtn');
-      const verifiedStatus = document.getElementById('verifiedStatus');
-      let isVerified = false;
-      
-      if (verifiedBtn) {
-        verifiedBtn.addEventListener('click', () => {
-          isVerified = !isVerified;
-          if (isVerified) {
-            verifiedBtn.classList.remove('btn-success');
-            verifiedBtn.classList.add('btn-outline-success');
-            verifiedBtn.innerHTML = '<span id="verifiedBtnIcon">✓</span> Verified';
-            if (verifiedStatus) {
-              verifiedStatus.style.display = 'inline';
-              verifiedStatus.textContent = '✓ Verified';
-            }
-          } else {
-            verifiedBtn.classList.remove('btn-outline-success');
-            verifiedBtn.classList.add('btn-success');
-            verifiedBtn.innerHTML = '<span id="verifiedBtnIcon">✓</span> Verify';
-            if (verifiedStatus) {
-              verifiedStatus.style.display = 'none';
-            }
-          }
-        });
-      }
 
       // Initialize Upload Queue System
       let photoQueue = null;
@@ -2128,11 +2283,6 @@
               const pdfUrl = results.pdf_url || results.pdf;
               
               if (excelUrl || pdfUrl) {
-                // Show success message above download links
-                const successMsg = document.createElement('div');
-                successMsg.className = 'alert alert-success mb-3';
-                successMsg.innerHTML = '<strong>✅ Reports generated successfully!</strong>';
-                
                 // Remove any existing success message or h5
                 const existingSuccess = downloadLinks.querySelector('.alert.alert-success');
                 const existingH5 = downloadLinks.querySelector('h5');
@@ -2143,36 +2293,39 @@
                   existingH5.remove();
                 }
                 
+                // Show success message above download links
+                const successMsg = document.createElement('div');
+                successMsg.className = 'alert alert-success mb-3';
+                successMsg.innerHTML = '<strong>✅ Reports generated successfully!</strong>';
+                
                 // Insert success message at the top
                 downloadLinks.insertBefore(successMsg, downloadLinks.firstChild);
                 
                 // Clear statusBox since message is now in download container
                 statusBox.style.display = 'none';
                 
-                // Show download links (no auto-download) - using standardized Civil form style
-                downloadLinks.style.display = 'block';
-                
+                // Create and add download buttons
                 if (excelUrl) {
-                  excelLink.href = `${modulePrefix}/download/${jobId}/excel`;
-                  excelLink.download = results.excel_filename || 'hvac_report.xlsx';
-                  excelLink.className = 'btn btn-success me-2 mt-2';
-                  excelLink.style.cssText = 'text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;';
-                  excelLink.textContent = '📥 Download Excel Report';
-                  excelLink.style.display = 'inline-block';
-                } else {
-                  excelLink.style.display = 'none';
+                  const excelBtn = document.createElement('a');
+                  excelBtn.href = `${modulePrefix}/download/${jobId}/excel`;
+                  excelBtn.download = results.excel_filename || 'hvac_report.xlsx';
+                  excelBtn.className = 'btn btn-success me-2 mt-2';
+                  excelBtn.style.cssText = 'text-decoration: none; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; display: inline-block; font-weight: 600;';
+                  excelBtn.textContent = '📥 Download Excel Report';
+                  downloadLinks.appendChild(excelBtn);
                 }
                 
                 if (pdfUrl) {
-                  pdfLink.href = `${modulePrefix}/download/${jobId}/pdf`;
-                  pdfLink.download = results.pdf_filename || 'hvac_report.pdf';
-                  pdfLink.className = 'btn btn-success me-2 mt-2';
-                  pdfLink.style.cssText = 'text-decoration: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block;';
-                  pdfLink.textContent = '📥 Download PDF Report';
-                  pdfLink.style.display = 'inline-block';
-                } else {
-                  pdfLink.style.display = 'none';
+                  const pdfBtn = document.createElement('a');
+                  pdfBtn.href = `${modulePrefix}/download/${jobId}/pdf`;
+                  pdfBtn.download = results.pdf_filename || 'hvac_report.pdf';
+                  pdfBtn.className = 'btn btn-success me-2 mt-2';
+                  pdfBtn.style.cssText = 'text-decoration: none; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; display: inline-block; font-weight: 600;';
+                  pdfBtn.textContent = '📥 Download PDF Report';
+                  downloadLinks.appendChild(pdfBtn);
                 }
+                
+                downloadLinks.style.display = 'block';
               }
             } else if (isFailed) {
               clearInterval(pollingInterval);
@@ -2266,7 +2419,6 @@
         // Get supervisor signature and comments if supervisor is submitting
         let supervisorData = '';
         let supervisorComments = '';
-        let supervisorVerified = false;
         const supervisorCommentsField = document.getElementById('supervisorComments');
         const supervisorSignatureData = document.getElementById('supervisorSignatureData');
         {% if is_supervisor_edit or user_designation == 'supervisor' %}
@@ -2279,7 +2431,6 @@
         if (supervisorCommentsField) {
           supervisorComments = supervisorCommentsField.value || '';
         }
-        supervisorVerified = isVerified || false;
         
         // Validate supervisor signature if submitting as supervisor
         if (!supervisorData) {
@@ -2360,7 +2511,6 @@
             body: JSON.stringify({
               comments: supervisorComments,
               supervisor_signature: supervisorData,
-              verified: supervisorVerified,
               items: payload.items // Send updated items here as well
             }),
             credentials: 'include'
@@ -2375,7 +2525,20 @@
           
           if (approveJson.success) {
             loadingOverlay.style.display = 'none';
-            statusBox.innerHTML = '<div class="alert alert-success">✅ Submission reviewed and approved! Forwarded to manager. <a href="/api/workflow/dashboard">Return to Supervisor Dashboard</a></div>';
+            statusBox.innerHTML = `
+              <div class="alert alert-success">
+                <h5 class="alert-heading">✅ Form Signed Successfully!</h5>
+                <hr>
+                <p class="mb-2"><strong>This form will now be sent to:</strong></p>
+                <ul class="mb-0" style="list-style-position: inside;">
+                  <li>→ Operations Manager</li>
+                  <li>→ Business Development & Procurement (parallel review)</li>
+                  <li>→ General Manager (final approval)</li>
+                </ul>
+                <hr class="mt-3 mb-2">
+                <a href="/api/workflow/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
+              </div>
+            `;
             clearDraft();
           } else {
             throw new Error(approveJson.error || 'Approval failed');
@@ -2465,6 +2628,9 @@
       }
 
       submitAllBtn.addEventListener('click', submitAll);
+
+      // Tab Navigation Function
+      // goToTab function already defined at top of script for onclick handlers
 
       // Draft Auto-Save Functionality
       function saveDraft() {
@@ -2839,7 +3005,7 @@
                   console.log('✅ Displaying technician signature in read-only mode');
                   const sigImg = document.createElement('img');
                   sigImg.src = techSig;
-                  sigImg.alt = 'Technician Signature';
+                  sigImg.alt = 'Supervisor Signature';
                   sigImg.style.cssText = 'width: 100%; max-width: 500px; max-height: 150px; object-fit: contain; border-radius: 4px; border: 1px solid #e5e7eb;';
                   sigImg.onerror = function() {
                     console.error('❌ Failed to load technician signature image:', techSig);
@@ -2847,7 +3013,7 @@
                     techDisplay.innerHTML = '<span style="color: #dc2626;">⚠️ Signature not accessible. URL: ' + techSig.substring(0, 50) + '...</span>';
                   };
                   sigImg.onload = function() {
-                    console.log('✅ Technician signature image loaded successfully');
+                    console.log('✅ Supervisor signature image loaded successfully');
                   };
                   techDisplay.innerHTML = '';
                   techDisplay.appendChild(sigImg);
@@ -2882,7 +3048,7 @@
                   // Create image element to display the signature
                   const sigImg = document.createElement('img');
                   sigImg.src = techSig;
-                  sigImg.alt = 'Technician Signature';
+                  sigImg.alt = 'Supervisor Signature';
                   sigImg.style.cssText = 'width: 100%; max-height: 180px; object-fit: contain; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px;';
                   techCanvas.parentElement.insertBefore(sigImg, techCanvas);
                   
@@ -2897,7 +3063,7 @@
                   // Add label and message
                   const techLabel = techCanvas.parentElement.querySelector('label');
                   if (techLabel) {
-                    techLabel.innerHTML = 'TECHNICIAN SIGNATURE <span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                    techLabel.innerHTML = 'SUPERVISOR SIGNATURE <span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
                   }
                   
                   // Update hint text
@@ -3048,18 +3214,34 @@
         }
         {% else %}
         // Don't auto-load draft on page refresh - always start with a fresh form
-        // console.log('📝 Loading draft (not in edit mode)');
-        // loadDraft(); // DISABLED - forms should be fresh on refresh
+        console.log('📝 Initializing new form (not in edit mode)');
         
         // Set default date to today and max date to today (prevent future dates)
         const visitDateField = document.getElementById('visit_date');
         if (visitDateField) {
           const today = new Date();
           const todayStr = today.toISOString().split('T')[0];
+          console.log('📅 Setting visit date to today:', todayStr);
           visitDateField.setAttribute('max', todayStr);
           if (!visitDateField.value) {
             visitDateField.value = todayStr;
+            console.log('✅ Visit date set to:', visitDateField.value);
+          } else {
+            console.log('⚠️ Visit date already has value:', visitDateField.value);
           }
+        } else {
+          console.error('❌ Visit date field not found!');
+          // Retry after a short delay
+          setTimeout(() => {
+            const retryField = document.getElementById('visit_date');
+            if (retryField && !retryField.value) {
+              const today = new Date();
+              const todayStr = today.toISOString().split('T')[0];
+              retryField.setAttribute('max', todayStr);
+              retryField.value = todayStr;
+              console.log('✅ Visit date set on retry:', retryField.value);
+            }
+          }, 200);
         }
         // Clear any existing drafts on page load to ensure fresh form
         clearDraft();

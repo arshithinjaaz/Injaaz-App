@@ -20,8 +20,8 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     full_name = db.Column(db.String(120))
-    role = db.Column(db.String(20), default='user')  # 'admin', 'inspector', 'user'
-    designation = db.Column(db.String(20), default=None)  # 'technician', 'supervisor', 'manager'
+    role = db.Column(db.String(20), default='user')  # 'admin', 'user'
+    designation = db.Column(db.String(30), default=None)  # 'supervisor', 'operations_manager', 'business_development', 'procurement', 'general_manager'
     is_active = db.Column(db.Boolean, default=True)
     password_changed = db.Column(db.Boolean, default=False)  # Track if password was changed from default
     # Module access permissions (admin has access to all by default)
@@ -34,6 +34,11 @@ class User(db.Model):
     # Relationships
     submissions = db.relationship('Submission', foreign_keys='Submission.user_id', backref='user', lazy='dynamic')
     supervised_submissions = db.relationship('Submission', foreign_keys='Submission.supervisor_id', backref='supervisor', lazy='dynamic')
+    ops_manager_submissions = db.relationship('Submission', foreign_keys='Submission.operations_manager_id', backref='operations_manager', lazy='dynamic')
+    business_dev_submissions = db.relationship('Submission', foreign_keys='Submission.business_dev_id', backref='business_dev', lazy='dynamic')
+    procurement_submissions = db.relationship('Submission', foreign_keys='Submission.procurement_id', backref='procurement_user', lazy='dynamic')
+    general_manager_submissions = db.relationship('Submission', foreign_keys='Submission.general_manager_id', backref='general_manager', lazy='dynamic')
+    # Legacy
     managed_submissions = db.relationship('Submission', foreign_keys='Submission.manager_id', backref='manager', lazy='dynamic')
     audit_logs = db.relationship('AuditLog', backref='user', lazy='dynamic')
     sessions = db.relationship('Session', backref='user', lazy='dynamic', cascade='all, delete-orphan')
@@ -91,13 +96,43 @@ class Submission(db.Model):
     site_name = db.Column(db.String(255))
     visit_date = db.Column(db.Date)
     status = db.Column(db.String(20), default='draft', index=True)  # 'draft', 'submitted', 'processing', 'completed'
-    workflow_status = db.Column(db.String(30), default='submitted', index=True)  # 'submitted', 'supervisor_notified', 'supervisor_reviewing', 'manager_notified', 'manager_reviewing', 'approved'
-    supervisor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Assigned supervisor
-    manager_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Assigned manager
-    supervisor_notified_at = db.Column(db.DateTime, nullable=True)
-    supervisor_reviewed_at = db.Column(db.DateTime, nullable=True)
-    manager_notified_at = db.Column(db.DateTime, nullable=True)
-    manager_reviewed_at = db.Column(db.DateTime, nullable=True)
+    workflow_status = db.Column(db.String(40), default='submitted', index=True)  # 'submitted', 'operations_manager_review', 'operations_manager_approved', 'bd_procurement_review', 'bd_approved', 'procurement_approved', 'general_manager_review', 'general_manager_approved', 'completed', 'rejected'
+    
+    # Workflow participants
+    supervisor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Original submitter
+    operations_manager_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    business_dev_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    procurement_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    general_manager_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    
+    # Legacy fields (kept for backwards compatibility, deprecated)
+    manager_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Deprecated - use operations_manager_id
+    supervisor_notified_at = db.Column(db.DateTime, nullable=True)  # Deprecated
+    supervisor_reviewed_at = db.Column(db.DateTime, nullable=True)  # Deprecated
+    manager_notified_at = db.Column(db.DateTime, nullable=True)  # Deprecated
+    manager_reviewed_at = db.Column(db.DateTime, nullable=True)  # Deprecated
+    
+    # New workflow timestamps
+    operations_manager_notified_at = db.Column(db.DateTime, nullable=True)
+    operations_manager_approved_at = db.Column(db.DateTime, nullable=True)
+    business_dev_notified_at = db.Column(db.DateTime, nullable=True)
+    business_dev_approved_at = db.Column(db.DateTime, nullable=True)
+    procurement_notified_at = db.Column(db.DateTime, nullable=True)
+    procurement_approved_at = db.Column(db.DateTime, nullable=True)
+    general_manager_notified_at = db.Column(db.DateTime, nullable=True)
+    general_manager_approved_at = db.Column(db.DateTime, nullable=True)
+    
+    # Approval comments and signatures
+    operations_manager_comments = db.Column(db.Text, nullable=True)
+    business_dev_comments = db.Column(db.Text, nullable=True)
+    procurement_comments = db.Column(db.Text, nullable=True)
+    general_manager_comments = db.Column(db.Text, nullable=True)
+    
+    # Rejection tracking
+    rejection_stage = db.Column(db.String(40), nullable=True)  # Which stage rejected
+    rejection_reason = db.Column(db.Text, nullable=True)
+    rejected_at = db.Column(db.DateTime, nullable=True)
+    rejected_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     form_data = db.Column(JSON, nullable=False)  # All form fields as JSON
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

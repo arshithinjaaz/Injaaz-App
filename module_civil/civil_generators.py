@@ -78,34 +78,34 @@ def create_excel_report(data, output_dir):
             sheet_name="Civil Works Report"
         )
         
-        # Add logo and title
+        # Add logo and title (span across all 7 columns)
         current_row = add_logo_and_title(
             ws,
             title="CIVIL WORKS INSPECTION REPORT",
-            subtitle=f"Project: {project_name.replace('_', ' ')}"
+            subtitle=f"Project: {project_name.replace('_', ' ')}",
+            max_columns=7
         )
         
-        # Project Information Section
+        # Project Information Section (span across all 7 columns)
         project_info = [
             ('Project Name', data.get('project_name', 'N/A')),
             ('Visit Date', data.get('visit_date', 'N/A')),
             ('Location', data.get('location', 'N/A')),
             ('Inspector', data.get('inspector_name', 'N/A')),
             ('Report Generated', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-            ('Total Photos', str(len(all_photos)))
+            ('Total Items', str(len(work_items)))
         ]
         
-        current_row = add_info_section(ws, project_info, current_row, title="Project Information")
+        current_row = add_info_section(ws, project_info, current_row, title="Project Information", max_columns=7)
         
-        # Work Items Section - Use work_items array directly
+        # Work Items Section - Use work_items array directly (Photos column removed)
         if work_items:
-            current_row = add_section_header(ws, "Work Items", current_row)
+            current_row = add_section_header(ws, "Work Items", current_row, span_columns=7)
             
-            headers = ['#', 'Description', 'Quantity', 'Material', 'Material Qty', 'Price', 'Labour', 'Photos']
+            headers = ['#', 'Description', 'Quantity', 'Material', 'Material Qty', 'Price', 'Labour']
             table_data = []
             
             for idx, item in enumerate(work_items, 1):
-                photos = item.get('photos', [])
                 table_data.append([
                     str(idx),
                     item.get('description', 'N/A'),
@@ -113,19 +113,17 @@ def create_excel_report(data, output_dir):
                     item.get('material', 'N/A'),
                     item.get('material_qty', 'N/A'),
                     item.get('price', 'N/A'),
-                    item.get('labour', 'N/A'),
-                    str(len(photos))
+                    item.get('labour', 'N/A')
                 ])
             
             col_widths = {
-                'A': 6,
-                'B': 35,
-                'C': 12,
-                'D': 20,
-                'E': 12,
-                'F': 12,
-                'G': 15,
-                'H': 10
+                'A': 6,   # #
+                'B': 35,  # Description
+                'C': 12,  # Quantity
+                'D': 20,  # Material
+                'E': 12,  # Material Qty
+                'F': 12,  # Price
+                'G': 15   # Labour
             }
             
             current_row = add_data_table(ws, headers, table_data, current_row, col_widths=col_widths)
