@@ -998,7 +998,7 @@
       <div class="module-badge">Civil Works</div>
       <div class="navbar-nav">
         {% if is_edit_mode %}
-        <a href="/admin/dashboard" class="nav-btn next-btn">← Back to Admin</a>
+        <a href="/dashboard" class="nav-btn next-btn">← Back to Dashboard</a>
         {% else %}
         <a href="/hvac-mep/form" class="nav-btn prev-btn">← Previous</a>
         <a href="/cleaning/form" class="nav-btn next-btn">Next →</a>
@@ -3014,7 +3014,7 @@
                 }).then(result => {
                   loadingOverlay.style.display = 'none';
                   if (result.state === 'done' || result.status === 'completed') {
-                    statusBox.innerHTML = '<div class="alert alert-success">✅ Documents regenerated successfully! <a href="/admin/dashboard">Return to Admin Dashboard</a></div>';
+                    statusBox.innerHTML = '<div class="alert alert-success">✅ Documents regenerated successfully! <a href="/dashboard">Return to Dashboard</a></div>';
                   } else {
                     statusBox.innerHTML = '<div class="alert alert-danger">❌ Document regeneration failed. Please try again.</div>';
                   }
@@ -3025,11 +3025,11 @@
               } else {
                 // Fallback: just show success message
                 loadingOverlay.style.display = 'none';
-                statusBox.innerHTML = '<div class="alert alert-success">✅ Submission updated! Documents are being regenerated in the background. <a href="/admin/dashboard">Return to Admin Dashboard</a></div>';
+                statusBox.innerHTML = '<div class="alert alert-success">✅ Submission updated! Documents are being regenerated in the background. <a href="/dashboard">Return to Dashboard</a></div>';
               }
             } else {
               loadingOverlay.style.display = 'none';
-              statusBox.innerHTML = '<div class="alert alert-success">✅ Submission updated successfully! <a href="/admin/dashboard">Return to Admin Dashboard</a></div>';
+              statusBox.innerHTML = '<div class="alert alert-success">✅ Submission updated successfully! <a href="/dashboard">Return to Dashboard</a></div>';
               clearDraft();
             }
           } else {

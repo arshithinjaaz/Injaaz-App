@@ -364,20 +364,38 @@
         const statusClass = getStatusClass(sub.workflow_status);
         const statusDisplay = (sub.workflow_status || 'Submitted').replace(/_/g, ' ');
         const technician = sub.user?.full_name || sub.user?.username || 'Unknown';
-        const visitDate = sub.visit_date ? new Date(sub.visit_date).toLocaleString('en-US', {
+        // Helper function to ensure UTC date strings are properly parsed
+        const parseUTCDate = (dateString) => {
+          if (!dateString) return null;
+          let utcString = dateString;
+          if (!utcString.endsWith('Z') && !utcString.includes('+') && !utcString.includes('-', 10)) {
+            utcString = utcString + 'Z';
+          }
+          return new Date(utcString);
+        };
+        
+        const visitDate = sub.visit_date ? parseUTCDate(sub.visit_date).toLocaleString('en-US', {
           year: 'numeric', month: 'short', day: 'numeric',
-          hour: '2-digit', minute: '2-digit'
-        }) : 'N/A';
+          hour: '2-digit', minute: '2-digit',
+          timeZone: 'Asia/Dubai'
+        }) + ' (GST)' : 'N/A';
         
         const moduleUrl = sub.module_type === 'hvac_mep' ? 'hvac-mep' : sub.module_type;
 
+        // Format Operations Manager approval timestamp if present
+        let omApprovalTime = '';
+        if (sub.operations_manager_approved_at) {
+          const omDate = parseUTCDate(sub.operations_manager_approved_at);
+          omApprovalTime = `<br><small style="color: #10b981; font-size: 0.75rem;">✓ Signed: ${omDate.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai' })} (GST)</small>`;
+        }
+        
         html += `
           <tr>
             <td data-label="Site Name"><strong>${escapeHtml(sub.site_name || 'N/A')}</strong><br><small style="color:#9ca3af; font-family:monospace;">${sub.submission_id}</small></td>
             <td data-label="Module"><span class="module-tag">${moduleNames[sub.module_type] || sub.module_type}</span></td>
             <td data-label="Technician">${escapeHtml(technician)}</td>
             <td data-label="Visit Date">${visitDate}</td>
-            <td data-label="Status"><span class="badge ${statusClass}">${statusDisplay}</span></td>
+            <td data-label="Status"><span class="badge ${statusClass}">${statusDisplay}</span>${omApprovalTime}</td>
             <td data-label="Actions">
               <a href="/${moduleUrl}/form?edit=${sub.submission_id}&review=true" class="action-btn">
                 ${sub.workflow_status === 'approved' ? '👁️ View' : '✏️ Review'}

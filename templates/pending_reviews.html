@@ -403,14 +403,26 @@
           const moduleName = moduleNames[sub.module_type] || sub.module_type;
           const moduleUrl = sub.module_type === 'hvac_mep' ? 'hvac-mep' : sub.module_type;
           const submittedBy = sub.user?.full_name || sub.user?.username || 'Unknown';
-          const visitDate = sub.visit_date ? new Date(sub.visit_date).toLocaleString('en-US', {
+          // Helper function to ensure UTC date strings are properly parsed
+          const parseUTCDate = (dateString) => {
+            if (!dateString) return null;
+            let utcString = dateString;
+            if (!utcString.endsWith('Z') && !utcString.includes('+') && !utcString.includes('-', 10)) {
+              utcString = utcString + 'Z';
+            }
+            return new Date(utcString);
+          };
+          
+          const visitDate = sub.visit_date ? parseUTCDate(sub.visit_date).toLocaleString('en-US', {
             year: 'numeric', month: 'short', day: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-          }) : 'N/A';
-          const createdAt = sub.created_at ? new Date(sub.created_at).toLocaleString('en-US', {
+            hour: '2-digit', minute: '2-digit',
+            timeZone: 'Asia/Dubai'
+          }) + ' (GST)' : 'N/A';
+          const createdAt = sub.created_at ? parseUTCDate(sub.created_at).toLocaleString('en-US', {
             year: 'numeric', month: 'short', day: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-          }) : '';
+            hour: '2-digit', minute: '2-digit',
+            timeZone: 'Asia/Dubai'
+          }) + ' (GST)' : '';
           
           return `
             <div class="submission-card" onclick="openSubmissionForReview('${sub.submission_id}', '${moduleUrl}')">

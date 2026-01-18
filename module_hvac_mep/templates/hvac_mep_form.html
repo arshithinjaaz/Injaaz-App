@@ -948,7 +948,7 @@
       <div class="module-badge">HVAC & MEP</div>
       <div class="navbar-nav">
         {% if is_edit_mode %}
-        <a href="/admin/dashboard" class="nav-btn next-btn">← Back to Admin</a>
+        <a href="/dashboard" class="nav-btn next-btn">← Back to Dashboard</a>
         {% else %}
         <a href="/civil/form" class="nav-btn next-btn">Next →</a>
         {% endif %}
@@ -2472,7 +2472,12 @@
                     <p class="mb-0"><strong>Your form has been updated with new details and will be sent to Operations Manager for review.</strong></p>
                   `;
                 } else {
+                  // Check if this is Operations Manager approval
+                  {% if user_designation == 'operations_manager' %}
+                  successMsg.innerHTML = '<strong>✅ Form Approved & Reports Generated Successfully!</strong>';
+                  {% else %}
                   successMsg.innerHTML = '<strong>✅ Reports generated successfully!</strong>';
+                  {% endif %}
                 }
                 
                 // Clear the flag after use
@@ -2805,8 +2810,8 @@
             // Supervisor is reviewing/approving another's submission - use approval workflow
             console.log('✅ Supervisor reviewing another\'s submission - using approval endpoint');
             
-            // First update the submission with new data
-            const updateRes = await fetch(`/api/admin/submissions/${submissionId}`, {
+            // First update the submission with new data using workflow endpoint
+            const updateRes = await fetch(`/api/workflow/submissions/${submissionId}/update`, {
               method: 'PUT',
               headers: headers,
               body: JSON.stringify({
@@ -2843,15 +2848,46 @@
             
             if (approveJson.success) {
               loadingOverlay.style.display = 'none';
+              // Show correct workflow hierarchy based on who is approving
+              {% if user_designation == 'supervisor' %}
+              // Supervisor is submitting/approving - form goes to Operations Manager first
+              const workflowList = `
+                <li>→ Operations Manager</li>
+                <li>→ Business Development & Procurement (parallel review)</li>
+                <li>→ General Manager (final approval)</li>
+              `;
+              {% elif user_designation == 'operations_manager' %}
+              // Operations Manager is approving - form goes to BD & Procurement, then GM
+              const workflowList = `
+                <li>→ Business Development & Procurement (parallel review)</li>
+                <li>→ General Manager (final approval)</li>
+              `;
+              {% elif user_designation in ['business_development', 'procurement'] %}
+              // BD or Procurement is approving - form goes to GM (if both approved) or stays in BD/Proc review
+              const workflowList = `
+                <li>→ General Manager (final approval)</li>
+              `;
+              {% elif user_designation == 'general_manager' %}
+              // General Manager is approving - form is complete
+              const workflowList = `
+                <li>→ Form Completed ✓</li>
+              `;
+              {% else %}
+              // Default fallback
+              const workflowList = `
+                <li>→ Operations Manager</li>
+                <li>→ Business Development & Procurement (parallel review)</li>
+                <li>→ General Manager (final approval)</li>
+              `;
+              {% endif %}
+              
               statusBox.innerHTML = `
                 <div class="alert alert-success">
                   <h5 class="alert-heading">✅ Form Signed Successfully!</h5>
                   <hr>
                   <p class="mb-2"><strong>This form will now be sent to:</strong></p>
                   <ul class="mb-0" style="list-style-position: inside;">
-                    <li>→ Operations Manager</li>
-                    <li>→ Business Development & Procurement (parallel review)</li>
-                    <li>→ General Manager (final approval)</li>
+                    ${workflowList}
                   </ul>
                   <hr class="mt-3 mb-2">
                   <a href="/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
@@ -2863,7 +2899,7 @@
             }
           }
           {% else %}
-          // Admin or regular edit mode
+          // Edit mode for reviewers (operations_manager, business_development, procurement, general_manager) or admin
           const submissionId = window.editSubmissionId;
           const token = localStorage.getItem('access_token');
           const headers = { 'Content-Type': 'application/json' };
@@ -2871,38 +2907,162 @@
             headers['Authorization'] = `Bearer ${token}`;
           }
           
-          const res = await fetch(`/api/admin/submissions/${submissionId}`, {
+          {% if user_designation == 'operations_manager' %}
+          // Operations Manager: First update, then approve (to trigger document generation)
+          const updateUrl = `/api/workflow/submissions/${submissionId}/update`;
+          const updateBody = {
+            site_name: payload.site_name,
+            visit_date: payload.visit_date,
+            form_data: payload
+          };
+          
+          // Step 1: Update the submission
+          const updateRes = await fetch(updateUrl, {
             method: 'PUT',
             headers: headers,
+            body: JSON.stringify(updateBody),
+            credentials: 'include'
+          });
+          
+          if (!updateRes.ok) {
+            const txt = await updateRes.text();
+            throw new Error('Update failed: ' + updateRes.status + ' ' + txt);
+          }
+          
+          const updateJson = await updateRes.json();
+          
+          if (!updateJson.success) {
+            throw new Error(updateJson.error || 'Update failed');
+          }
+          
+          // Step 2: Approve to trigger document generation and move to next stage
+          const approveRes = await fetch(`/api/workflow/submissions/${submissionId}/approve-ops-manager`, {
+            method: 'POST',
+            headers: headers,
             body: JSON.stringify({
-              site_name: payload.site_name,
-              visit_date: payload.visit_date,
+              comments: operationsManagerComments || '',
+              signature: opData || '',
               form_data: payload
             }),
             credentials: 'include'
           });
           
+          if (!approveRes.ok) {
+            const txt = await approveRes.text();
+            throw new Error('Approval failed: ' + approveRes.status + ' ' + txt);
+          }
+          
+          const approveJson = await approveRes.json();
+          
+          if (approveJson.success) {
+            // Check if documents are being regenerated
+            const jobId = approveJson.data?.job_id || updateJson.data?.job_id;
+            const isRegenerating = approveJson.data?.regenerating || updateJson.data?.regenerating || false;
+            
+            if (jobId && isRegenerating) {
+              statusBox.innerHTML = '<div class="alert alert-info">✅ Form approved! Regenerating documents with your comments and signature... This may take a moment.</div>';
+              loadingOverlay.style.display = 'flex';
+              pollJobStatus(jobId);
+            } else {
+              loadingOverlay.style.display = 'none';
+              statusBox.innerHTML = `
+                <div class="alert alert-success">
+                  <h5 class="alert-heading">✅ Form Approved & Signed Successfully!</h5>
+                  <hr>
+                  <p class="mb-2"><strong>This form will now be sent to:</strong></p>
+                  <ul class="mb-0" style="list-style-position: inside;">
+                    <li>→ Business Development & Procurement (parallel review)</li>
+                    <li>→ General Manager (final approval)</li>
+                  </ul>
+                  <hr class="mt-3 mb-2">
+                  <a href="/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
+                </div>
+              `;
+              clearDraft();
+            }
+          } else {
+            throw new Error(approveJson.error || 'Approval failed');
+          }
+          
+          {% elif user_designation in ['business_development', 'procurement', 'general_manager'] %}
+          // Other reviewers - just update for now
+          const updateUrl = `/api/workflow/submissions/${submissionId}/update`;
+          const updateBody = {
+            site_name: payload.site_name,
+            visit_date: payload.visit_date,
+            form_data: payload
+          };
+          
+          const res = await fetch(updateUrl, {
+            method: 'PUT',
+            headers: headers,
+            body: JSON.stringify(updateBody),
+            credentials: 'include'
+          });
+          
           if (!res.ok) {
             const txt = await res.text();
-            throw new Error('Server error: ' + res.status + ' ' + txt);
+            throw new Error('Update failed: ' + res.status + ' ' + txt);
           }
           
           const json = await res.json();
           
           if (json.success) {
-            // If documents are being regenerated, poll job status
-            if (json.data && json.data.job_id && json.data.regenerating) {
+            const jobId = json.data?.job_id || json.job_id;
+            const isRegenerating = json.data?.regenerating || json.regenerating || false;
+            
+            if (jobId && isRegenerating) {
               statusBox.innerHTML = '<div class="alert alert-info">✅ Submission updated! Regenerating documents... This may take a moment.</div>';
               loadingOverlay.style.display = 'flex';
-              pollJobStatus(json.data.job_id);
+              pollJobStatus(jobId);
             } else {
               loadingOverlay.style.display = 'none';
-              statusBox.innerHTML = '<div class="alert alert-success">✅ Submission updated successfully! <a href="/admin/dashboard">Return to Admin Dashboard</a></div>';
+              statusBox.innerHTML = '<div class="alert alert-success">✅ Submission updated successfully! <a href="/dashboard">Return to Dashboard</a></div>';
               clearDraft();
             }
           } else {
             throw new Error(json.error || 'Update failed');
           }
+          {% else %}
+          // Admin role - use admin endpoint
+          const updateUrl = `/api/admin/submissions/${submissionId}`;
+          const updateBody = {
+            site_name: payload.site_name,
+            visit_date: payload.visit_date,
+            form_data: payload
+          };
+          
+          const res = await fetch(updateUrl, {
+            method: 'PUT',
+            headers: headers,
+            body: JSON.stringify(updateBody),
+            credentials: 'include'
+          });
+          
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error('Update failed: ' + res.status + ' ' + txt);
+          }
+          
+          const json = await res.json();
+          
+          if (json.success) {
+            const jobId = json.data?.job_id || json.job_id;
+            const isRegenerating = json.data?.regenerating || json.regenerating || false;
+            
+            if (jobId && isRegenerating) {
+              statusBox.innerHTML = '<div class="alert alert-info">✅ Submission updated! Regenerating documents... This may take a moment.</div>';
+              loadingOverlay.style.display = 'flex';
+              pollJobStatus(jobId);
+            } else {
+              loadingOverlay.style.display = 'none';
+              statusBox.innerHTML = '<div class="alert alert-success">✅ Submission updated successfully! <a href="/dashboard">Return to Dashboard</a></div>';
+              clearDraft();
+            }
+          } else {
+            throw new Error(json.error || 'Update failed');
+          }
+          {% endif %}
           {% endif %}
           {% else %}
           // Create new submission
@@ -3022,10 +3182,16 @@
           // Get submission data - prefer Jinja-rendered, fall back to window global
           let submissionData = null;
           try {
-            submissionData = {{ submission_data|tojson }};
+            {% if submission_data %}
+            submissionData = {{ submission_data|tojson|safe }};
             console.log('📦 Using Jinja-rendered submission data');
+            {% else %}
+            console.warn('⚠️ No submission_data from Jinja, using window.preloadedSubmissionData');
+            submissionData = window.preloadedSubmissionData || {};
+            {% endif %}
           } catch (e) {
-            console.warn('⚠️ Failed to parse Jinja submission_data, trying window.preloadedSubmissionData:', e);
+            console.error('❌ Error parsing submission_data:', e);
+            console.warn('⚠️ Failed to parse Jinja submission_data, trying window.preloadedSubmissionData');
             submissionData = window.preloadedSubmissionData || {};
           }
           
@@ -3591,45 +3757,134 @@
             }
             {% endif %}
             
-            if (formData.opMan_signature || formData.opManSignatureData) {
-              let opSig = formData.opMan_signature || formData.opManSignatureData;
+            // Load Operations Manager comments
+            {% if user_designation == 'operations_manager' %}
+            let operationsManagerComments = null;
+            if (formData && formData.operations_manager_comments) {
+              operationsManagerComments = formData.operations_manager_comments;
+            } else if (submissionData && submissionData.form_data && submissionData.form_data.operations_manager_comments) {
+              operationsManagerComments = submissionData.form_data.operations_manager_comments;
+            } else if (submissionData && submissionData.operations_manager_comments) {
+              operationsManagerComments = submissionData.operations_manager_comments;
+            }
+            
+            if (operationsManagerComments) {
+              const commentsField = document.getElementById('operationsManagerComments');
+              if (commentsField) {
+                commentsField.value = operationsManagerComments;
+                console.log('✅ Loaded Operations Manager comments into field');
+              }
+            }
+            {% endif %}
+            
+            // Load Operations Manager signature
+            if (formData.opMan_signature || formData.opManSignatureData || (submissionData && submissionData.form_data && (submissionData.form_data.opMan_signature || submissionData.form_data.operations_manager_signature))) {
+              let opSig = formData.opMan_signature || formData.opManSignatureData || 
+                         (submissionData && submissionData.form_data && (submissionData.form_data.opMan_signature || submissionData.form_data.operations_manager_signature));
+              
               // Handle object format with url property (from Cloudinary)
               if (opSig && typeof opSig === 'object' && opSig.url) {
                 opSig = opSig.url;
               }
+              
               if (opSig && typeof opSig === 'string' && (opSig.startsWith('data:image') || opSig.startsWith('http'))) {
                 const opCanvas = document.getElementById('opManSignaturePad');
                 if (opCanvas) {
-                  // Hide canvas and show signature as image instead (more reliable)
-                  opCanvas.style.display = 'none';
-                  
-                  // Create image element to display the signature
-                  const sigImg = document.createElement('img');
-                  sigImg.src = opSig;
-                  sigImg.alt = 'Manager Signature';
-                  sigImg.style.cssText = 'width: 100%; max-height: 180px; object-fit: contain; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px;';
-                  opCanvas.parentElement.insertBefore(sigImg, opCanvas);
-                  
-                  // Hide clear button
-                  // Store signature URL in hidden input
-                  const opSigInput = document.getElementById('opManSignatureData');
-                  if (opSigInput) opSigInput.value = opSig;
-                  
-                  // Add label and message
-                  const opLabel = opCanvas.parentElement.querySelector('label');
-                  if (opLabel) {
-                    opLabel.innerHTML = 'OPERATIONS MANAGER SIGNATURE <span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                  // Check if image already exists to avoid duplicates
+                  const existingImg = opCanvas.parentElement.querySelector('img[alt="Manager Signature"]');
+                  if (existingImg) {
+                    console.log('⚠️ Operations Manager signature image already exists, removing duplicate');
+                    existingImg.remove();
                   }
                   
-                  // Update hint text
-                  const hintSpan = opCanvas.parentElement.querySelector('.signature-hint');
-                  if (hintSpan) hintSpan.style.display = 'none';
+                  // Check if this is Operations Manager reviewing during their stage (can edit)
+                  {% if submission_data and submission_data.workflow_status %}
+                  const workflowStatus = {{ submission_data.workflow_status|tojson|safe }};
+                  {% else %}
+                  const workflowStatus = null;
+                  {% endif %}
+                  const canEdit = workflowStatus === 'operations_manager_review';
                   
-                  // Add info message below
-                  const opInfo = document.createElement('div');
-                  opInfo.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem; background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; color: #92400e; font-size: 0.875rem;';
-                  opInfo.textContent = '⚠️ This signature was already provided and cannot be modified.';
-                  opCanvas.parentElement.appendChild(opInfo);
+                  if (canEdit) {
+                    // Operations Manager can edit - load into canvas, allow clear
+                    console.log('✅ Operations Manager editing - loading signature into canvas');
+                    opCanvas.style.display = 'block';
+                    
+                    // Ensure clear button is visible and functional
+                    const clearOpBtn = document.getElementById('clearOp');
+                    if (clearOpBtn) {
+                      clearOpBtn.style.display = 'block';
+                      clearOpBtn.style.visibility = 'visible';
+                      
+                      // Re-attach event listener
+                      const newClearBtn = clearOpBtn.cloneNode(true);
+                      clearOpBtn.parentNode.replaceChild(newClearBtn, clearOpBtn);
+                      
+                      newClearBtn.addEventListener('click', function() {
+                        if (pads && pads.opPad) {
+                          pads.opPad.clear();
+                          const opSigInput = document.getElementById('opManSignatureData');
+                          if (opSigInput) opSigInput.value = '';
+                          console.log('✅ Operations Manager signature cleared');
+                        }
+                      });
+                    }
+                    
+                    // Load signature into pad
+                    const loadOpSig = () => {
+                      if (pads && pads.opPad && opCanvas) {
+                        try {
+                          const img = new Image();
+                          img.crossOrigin = 'anonymous';
+                          img.onload = function() {
+                            try {
+                              pads.opPad.clear();
+                              pads.opPad.fromDataURL(opSig);
+                              console.log('✅ Loaded Operations Manager signature into pad');
+                            } catch (e) {
+                              console.error('❌ Error loading signature into pad:', e);
+                            }
+                          };
+                          img.onerror = function() {
+                            console.error('❌ Failed to load Operations Manager signature image');
+                          };
+                          img.src = opSig;
+                        } catch (e) {
+                          console.error('❌ Error setting up Operations Manager signature image load:', e);
+                        }
+                      } else {
+                        setTimeout(loadOpSig, 200);
+                      }
+                    };
+                    loadOpSig();
+                  } else {
+                    // Read-only view - show as image
+                    opCanvas.style.display = 'none';
+                    
+                    const sigImg = document.createElement('img');
+                    sigImg.src = opSig;
+                    sigImg.alt = 'Manager Signature';
+                    sigImg.style.cssText = 'width: 100%; max-height: 180px; object-fit: contain; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px;';
+                    opCanvas.parentElement.insertBefore(sigImg, opCanvas);
+                    
+                    // Hide clear button
+                    const clearOpBtn = document.getElementById('clearOp');
+                    if (clearOpBtn) clearOpBtn.style.display = 'none';
+                    
+                    // Store signature URL in hidden input
+                    const opSigInput = document.getElementById('opManSignatureData');
+                    if (opSigInput) opSigInput.value = opSig;
+                    
+                    // Update label
+                    const opLabel = opCanvas.parentElement.querySelector('label');
+                    if (opLabel) {
+                      opLabel.innerHTML = 'OPERATIONS MANAGER SIGNATURE <span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                    }
+                    
+                    // Update hint text
+                    const hintSpan = opCanvas.parentElement.querySelector('.signature-hint');
+                    if (hintSpan) hintSpan.style.display = 'none';
+                  }
                 }
               }
             }
@@ -3651,7 +3906,29 @@
         } catch (err) {
           console.error('❌ Failed to load submission data:', err);
           console.error('Error details:', err.message, err.stack);
-          alert('Failed to load submission data. Please check the browser console for details.');
+          // Don't show alert for parse errors - just log and continue with fallback
+          if (err.message && (err.message.includes('parse') || err.message.includes('JSON'))) {
+            console.warn('⚠️ Parse error - continuing with fallback data');
+            // Try to use window.preloadedSubmissionData as fallback
+            if (window.preloadedSubmissionData) {
+              console.log('📦 Using window.preloadedSubmissionData as fallback');
+              try {
+                const fallbackData = window.preloadedSubmissionData;
+                if (fallbackData && fallbackData.form_data) {
+                  // Retry with fallback data
+                  setTimeout(() => {
+                    if (typeof loadSubmissionData === 'function') {
+                      loadSubmissionData();
+                    }
+                  }, 100);
+                }
+              } catch (fallbackErr) {
+                console.error('❌ Fallback also failed:', fallbackErr);
+              }
+            }
+          } else {
+            alert('Failed to load submission data. Please check the browser console for details.');
+          }
         }
         {% else %}
         console.log('⚠️ loadSubmissionData called but conditions not met');

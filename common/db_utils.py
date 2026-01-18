@@ -71,9 +71,19 @@ def create_submission_db(module_type, form_data, site_name=None, visit_date=None
                 parsed_date = visit_date
         
         # Set workflow status
+        # Check if user is supervisor - if so, set to operations_manager_review immediately
         workflow_status = 'submitted'
-        if hasattr(Submission, 'workflow_status'):
-            workflow_status = 'submitted'  # Will trigger supervisor notification
+        is_supervisor_submission = False
+        
+        if user_id:
+            try:
+                from app.models import User
+                user = User.query.get(user_id)
+                if user and user.designation == 'supervisor':
+                    is_supervisor_submission = True
+                    workflow_status = 'operations_manager_review'  # Supervisor submissions go directly to Operations Manager
+            except ImportError:
+                pass
         
         submission = Submission(
             submission_id=submission_id,
@@ -90,13 +100,13 @@ def create_submission_db(module_type, form_data, site_name=None, visit_date=None
         if user_id:
             try:
                 from app.models import User
-            except ImportError:
-                pass
-            else:
                 user = User.query.get(user_id)
                 if user and user.designation == 'supervisor':
                     submission.supervisor_id = user.id
                     logger.info(f"✅ Set supervisor_id to {user.id} for submission {submission_id}")
+                    logger.info(f"✅ Set workflow_status to 'operations_manager_review' for supervisor submission {submission_id}")
+            except ImportError:
+                pass
         
         db.session.add(submission)
         db.session.commit()

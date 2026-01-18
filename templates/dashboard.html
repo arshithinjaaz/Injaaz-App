@@ -1510,7 +1510,9 @@
           // Update module visibility based on access
           updateModuleVisibility(user);
           // Load pending count and show module if reviewer
-          loadPendingCount(user);
+          if (typeof loadPendingCount === 'function') {
+            loadPendingCount(user);
+          }
         } else {
           // Try to fetch user from API if not in localStorage
           const token = localStorage.getItem('access_token');
@@ -1534,8 +1536,10 @@
                 checkAndShowAdminMenu(data.user);
                 // Update module visibility based on access
                 updateModuleVisibility(data.user);
-                // Load pending count and show module if reviewer
-                loadPendingCount(data.user);
+                // Load pending count and show module if reviewer (defined later in script)
+                if (typeof loadPendingCount === 'function') {
+                  loadPendingCount(data.user);
+                }
               }
             })
             .catch(error => {
@@ -1549,7 +1553,10 @@
                 const user = JSON.parse(userStr);
                 checkAndShowAdminMenu(user);
                 updateModuleVisibility(user);
-                loadPendingCount(user);
+                // Load pending count and show module if reviewer (defined later in script)
+                if (typeof loadPendingCount === 'function') {
+                  loadPendingCount(user);
+                }
               } catch (e) {
                 console.error('Error parsing user from localStorage:', e);
               }
@@ -1596,7 +1603,10 @@
               localStorage.setItem('user', JSON.stringify(data.user));
               checkAndShowAdminMenu(data.user);
               updateModuleVisibility(data.user);
-              loadPendingCount(data.user);
+              // Load pending count and show module if reviewer (defined later in script)
+              if (typeof loadPendingCount === 'function') {
+                loadPendingCount(data.user);
+              }
             }
           })
           .catch(error => {
@@ -1644,9 +1654,11 @@
         submittedFormsCard.style.display = isSupervisor ? 'block' : 'none';
         submittedFormsCard.style.visibility = isSupervisor ? 'visible' : 'hidden';
         
-        // Load count of submitted forms for supervisors
+        // Load count of submitted forms for supervisors (defined later in script)
         if (isSupervisor) {
-          loadSubmittedFormsCount(user);
+          if (typeof loadSubmittedFormsCount === 'function') {
+            loadSubmittedFormsCount(user);
+          }
         }
       }
       
@@ -1734,7 +1746,10 @@
           const user = JSON.parse(userStr);
           checkAndShowAdminMenu(user);
           updateModuleVisibility(user);
-          loadPendingCount(user);
+          // Load pending count and show module if reviewer (defined later in script)
+          if (typeof loadPendingCount === 'function') {
+            loadPendingCount(user);
+          }
         } catch (e) {
           console.error('Error parsing user from localStorage:', e);
         }
@@ -1753,7 +1768,10 @@
               localStorage.setItem('user', JSON.stringify(data.user));
               checkAndShowAdminMenu(data.user);
               updateModuleVisibility(data.user);
-              loadPendingCount(data.user);
+              // Load pending count and show module if reviewer (defined later in script)
+              if (typeof loadPendingCount === 'function') {
+                loadPendingCount(data.user);
+              }
             }
           })
           .catch(error => {
@@ -1828,11 +1846,16 @@
       function displayProfileData(user) {
         const profileContent = document.getElementById('profileContent');
         
-        // Format dates
+        // Format dates - Convert from UTC to Dubai time (GST)
         const formatDate = (dateStr) => {
           if (!dateStr) return 'Never';
           try {
-            const date = new Date(dateStr);
+            // Ensure date string is treated as UTC (append 'Z' if not present)
+            let utcDateString = dateStr;
+            if (!utcDateString.endsWith('Z') && !utcDateString.includes('+') && !utcDateString.includes('-', 10)) {
+              utcDateString = utcDateString + 'Z';
+            }
+            const date = new Date(utcDateString);
             return date.toLocaleString('en-US', { 
               year: 'numeric', 
               month: 'long', 
@@ -2323,7 +2346,10 @@
       if (userDataForNotifications) {
         try {
           const userData = JSON.parse(userDataForNotifications);
-          loadPendingCount(userData);
+          // Load pending count and show module if reviewer (defined earlier in script)
+          if (typeof loadPendingCount === 'function') {
+            loadPendingCount(userData);
+          }
         } catch (e) {
           console.error('Error parsing user data for notifications:', e);
         }

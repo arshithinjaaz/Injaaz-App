@@ -1247,27 +1247,37 @@
         let workflowDisplay = doc.workflow_status || 'Submitted';
         workflowDisplay = workflowDisplay.replace(/_/g, ' ');
         
+        // Helper function to ensure UTC date strings are properly parsed
+        const parseUTCDate = (dateString) => {
+          if (!dateString) return null;
+          let utcString = dateString;
+          if (!utcString.endsWith('Z') && !utcString.includes('+') && !utcString.includes('-', 10)) {
+            utcString = utcString + 'Z';
+          }
+          return new Date(utcString);
+        };
+        
         // Add log info if supervisor has reviewed
         let supervisorLog = '';
         if (doc.supervisor_reviewed_at) {
-          const reviewDate = new Date(doc.supervisor_reviewed_at).toLocaleString('en-US', {
+          const reviewDate = parseUTCDate(doc.supervisor_reviewed_at).toLocaleString('en-US', {
             month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai'
           });
-          supervisorLog = `<div style="font-size: 0.7rem; color: var(--success); margin-top: 0.25rem;">✓ Reviewed: ${reviewDate}</div>`;
+          supervisorLog = `<div style="font-size: 0.7rem; color: var(--success); margin-top: 0.25rem;">✓ Reviewed: ${reviewDate} (GST)</div>`;
         }
         
         // Fix date formatting - use GST (Gulf Standard Time, UTC+4)
-        const visitDate = doc.visit_date ? new Date(doc.visit_date + 'T00:00:00').toLocaleDateString('en-US', {
+        const visitDate = doc.visit_date ? parseUTCDate(doc.visit_date + 'T00:00:00Z').toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'short',
           day: 'numeric',
           timeZone: 'Asia/Dubai'
-        }) : 'N/A';
+        }) + ' (GST)' : 'N/A';
         
         // Format created_at properly
         let createdDate = 'N/A';
         if (doc.created_at) {
-          const date = new Date(doc.created_at);
+          const date = parseUTCDate(doc.created_at);
           if (!isNaN(date.getTime())) {
             createdDate = date.toLocaleString('en-US', {
               year: 'numeric',

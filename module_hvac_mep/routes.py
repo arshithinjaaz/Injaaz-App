@@ -155,31 +155,51 @@ def index():
             
             # Allow editing/reviewing based on role and workflow status
             can_edit = False
+            can_view = False
             user_designation = user.designation if hasattr(user, 'designation') else None
             workflow_status = submission.workflow_status if hasattr(submission, 'workflow_status') else None
             
-            # Admin - always can edit
+            # Admin - always can edit/view
             if user.role == 'admin':
                 can_edit = True
-            # Supervisor - can edit their own submissions
+                can_view = True
+            # Supervisor - can edit/view their own submissions
             elif user_designation == 'supervisor' and hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id:
                 can_edit = True
-            # Operations Manager - can review when status is operations_manager_review
-            elif user_designation == 'operations_manager' and workflow_status == 'operations_manager_review':
-                can_edit = True
+                can_view = True
+            # Operations Manager - can review when status is operations_manager_review, can view if they've reviewed it
+            elif user_designation == 'operations_manager':
+                if workflow_status == 'operations_manager_review':
+                    can_edit = True
+                    can_view = True
+                elif hasattr(submission, 'operations_manager_id') and submission.operations_manager_id == user.id:
+                    # Can view forms they've already reviewed (for history/document access)
+                    can_view = True
             # Business Development - can review when status is bd_procurement_review and not yet approved by them
-            elif user_designation == 'business_development' and workflow_status == 'bd_procurement_review':
-                if not hasattr(submission, 'business_dev_approved_at') or not submission.business_dev_approved_at:
-                    can_edit = True
+            elif user_designation == 'business_development':
+                if workflow_status == 'bd_procurement_review':
+                    if not hasattr(submission, 'business_dev_approved_at') or not submission.business_dev_approved_at:
+                        can_edit = True
+                    can_view = True
+                elif hasattr(submission, 'business_dev_id') and submission.business_dev_id == user.id:
+                    can_view = True
             # Procurement - can review when status is bd_procurement_review and not yet approved by them
-            elif user_designation == 'procurement' and workflow_status == 'bd_procurement_review':
-                if not hasattr(submission, 'procurement_approved_at') or not submission.procurement_approved_at:
-                    can_edit = True
+            elif user_designation == 'procurement':
+                if workflow_status == 'bd_procurement_review':
+                    if not hasattr(submission, 'procurement_approved_at') or not submission.procurement_approved_at:
+                        can_edit = True
+                    can_view = True
+                elif hasattr(submission, 'procurement_id') and submission.procurement_id == user.id:
+                    can_view = True
             # General Manager - can review when status is general_manager_review
-            elif user_designation == 'general_manager' and workflow_status == 'general_manager_review':
-                can_edit = True
+            elif user_designation == 'general_manager':
+                if workflow_status == 'general_manager_review':
+                    can_edit = True
+                    can_view = True
+                elif hasattr(submission, 'general_manager_id') and submission.general_manager_id == user.id:
+                    can_view = True
             
-            if not can_edit:
+            if not can_view:
                 return render_template('access_denied.html',
                                      module='HVAC & MEP',
                                      message=f'You do not have permission to review this submission. Current status: {workflow_status}, Your role: {user_designation}'), 403

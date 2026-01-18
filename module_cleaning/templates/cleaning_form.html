@@ -754,7 +754,7 @@
       <div class="module-badge">Cleaning Services</div>
       <div class="navbar-nav">
         {% if is_edit_mode %}
-        <a href="/admin/dashboard" class="nav-btn prev-btn">← Back to Admin</a>
+        <a href="/dashboard" class="nav-btn prev-btn">← Back to Dashboard</a>
         {% else %}
         <a href="/civil/form" class="nav-btn prev-btn">← Previous</a>
         {% endif %}
@@ -2364,7 +2364,7 @@
                             if (isDone) {
                                 loadingOverlay.style.display = 'none';
                                 statusDiv.className = 'alert alert-success';
-                                statusDiv.innerHTML = '✅ Documents regenerated successfully! <a href="/admin/dashboard">Return to Admin Dashboard</a>';
+                                statusDiv.innerHTML = '✅ Documents regenerated successfully! <a href="/dashboard">Return to Dashboard</a>';
                             } else if (isFailed) {
                                 loadingOverlay.style.display = 'none';
                                 statusDiv.className = 'alert alert-danger';
@@ -2374,7 +2374,7 @@
                     } else {
                         loadingOverlay.style.display = 'none';
                         statusDiv.className = 'alert alert-success';
-                        statusDiv.innerHTML = '✅ Submission updated successfully! <a href="/admin/dashboard">Return to Admin Dashboard</a>';
+                        statusDiv.innerHTML = '✅ Submission updated successfully! <a href="/dashboard">Return to Dashboard</a>';
                         clearDraft();
                     }
                 } else {

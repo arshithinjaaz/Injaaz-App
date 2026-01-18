@@ -1,13 +1,7 @@
 # module_hvac_mep package initializer
-from flask import Blueprint
-
-hvac_mep_bp = Blueprint(
-    'hvac_mep_bp',
-    __name__,
-    template_folder='templates',
-    static_folder='static',
-    url_prefix='/hvac-mep'
-)
-
+# Blueprint is defined in routes.py - no need to define it here
 # Import routes when package is imported so blueprint gets registered
 from . import routes  # noqa: F401
+
+# Export the blueprint from routes for convenience
+from .routes import hvac_mep_bp  # noqa: F401

@@ -267,6 +267,8 @@ def get_history_submissions():
                 ).order_by(Submission.created_at.desc()).all()
             
             elif designation == 'operations_manager':
+                # Operations Manager sees all forms they've reviewed (where they're assigned as operations_manager_id)
+                # This includes forms they've approved even if status has moved forward
                 submissions = Submission.query.filter(
                     Submission.operations_manager_id == user.id
                 ).order_by(Submission.created_at.desc()).all()
@@ -415,6 +417,37 @@ def approve_operations_manager(submission_id):
         
         db.session.commit()
         
+        # Regenerate documents if this is an HVAC submission (to include Operations Manager comments/signature)
+        job_id = None
+        if submission.module_type == 'hvac_mep':
+            from common.db_utils import create_job_db
+            from module_hvac_mep.routes import get_paths, process_job
+            from app.models import Job
+            
+            # Delete old jobs to force regeneration
+            old_jobs = Job.query.filter_by(submission_id=submission.id).all()
+            for old_job in old_jobs:
+                db.session.delete(old_job)
+            db.session.commit()
+            
+            # Create new job for regeneration
+            new_job = create_job_db(submission)
+            job_id = new_job.job_id
+            
+            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+            
+            if EXECUTOR:
+                EXECUTOR.submit(
+                    process_job,
+                    submission.submission_id,
+                    job_id,
+                    current_app.config,
+                    current_app._get_current_object()
+                )
+                current_app.logger.info(f"✅ Regeneration job {job_id} queued for Operations Manager approval - submission {submission_id}")
+            else:
+                current_app.logger.error("ThreadPoolExecutor not available for document regeneration")
+        
         log_audit(user_id, 'operations_manager_approved', 'submission', submission_id, {
             'comments': comments,
             'has_signature': bool(signature)
@@ -422,7 +455,9 @@ def approve_operations_manager(submission_id):
         
         return success_response({
             'submission': submission.to_dict(),
-            'message': 'Approved successfully. Forwarded to Business Development and Procurement.'
+            'message': 'Approved successfully. Forwarded to Business Development and Procurement.' + (' Documents are being regenerated.' if job_id else ''),
+            'job_id': job_id,
+            'regenerating': bool(job_id)
         })
     except Exception as e:
         db.session.rollback()

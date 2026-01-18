@@ -326,11 +326,17 @@
       return statusMap[status] || { text: status, class: 'status-pending', message: '' };
     }
     
-    // Format date and time
+    // Format date and time - Convert from UTC to Dubai time (GST)
     function formatDateTime(dateString) {
       if (!dateString) return 'N/A';
       try {
-        const date = new Date(dateString);
+        // Ensure date string is treated as UTC (append 'Z' if not present)
+        let utcDateString = dateString;
+        if (!utcDateString.endsWith('Z') && !utcDateString.includes('+') && !utcDateString.includes('-', 10)) {
+          // If no timezone indicator, assume it's UTC and append 'Z'
+          utcDateString = utcDateString.endsWith('Z') ? utcDateString : utcDateString + 'Z';
+        }
+        const date = new Date(utcDateString);
         return date.toLocaleString('en-US', {
           year: 'numeric',
           month: 'short',
