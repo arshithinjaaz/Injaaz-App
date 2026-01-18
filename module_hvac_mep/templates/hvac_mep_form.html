@@ -629,13 +629,17 @@
     canvas.signature-pad,
     #techSignaturePad,
     #opManSignaturePad,
-    #supervisorSignaturePad {
+    #supervisorSignaturePad,
+    #businessDevSignaturePad,
+    #procurementSignaturePad,
+    #generalManagerSignaturePad {
       border: 2px solid var(--border-light);
       border-radius: 6px;
-      width: 100%;
+      width: 100% !important;
       max-width: 500px;
-      height: 180px;
-      min-height: 180px;
+      height: 160px !important;
+      max-height: 160px !important;
+      min-height: 160px !important;
       background: #ffffff;
       cursor: crosshair;
       display: block;
@@ -1294,7 +1298,7 @@
                   <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Supervisor Signature</label>
                   <span class="signature-hint text-danger small">Required for approval</span>
                 </div>
-                <canvas id="supervisorSignaturePad" class="signature-pad flex-grow-1" style="height: 140px !important; min-height: 140px !important;"></canvas>
+                <canvas id="supervisorSignaturePad" class="signature-pad"></canvas>
                 <input type="hidden" id="supervisorSignatureData" name="supervisor_signature">
                 <button type="button" id="clearSupervisor" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
               </div>
@@ -1304,16 +1308,97 @@
         {% endif %}
 
         {% if user_designation == 'operations_manager' and is_edit_mode %}
-        <!-- Operations Manager signature section - only show when Operations Manager is reviewing -->
-        <div class="col-md-6 mb-4" id="opManSignatureContainer">
-          <div class="signature-container">
-            <div class="signature-label">
-              <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operations Manager Signature</label>
-              <span class="signature-hint small">Draw signature</span>
+        <!-- Operations Manager Review Section -->
+        <div class="col-12 mb-4">
+          <div class="row">
+            <div class="col-lg-7 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
+              <textarea id="operationsManagerComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
             </div>
-            <canvas id="opManSignaturePad" class="signature-pad" style="height: 140px !important; min-height: 140px !important;"></canvas>
-            <input type="hidden" id="opManSignatureData" name="opMan_signature">
-            <button type="button" id="clearOp" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+            
+            <div class="col-lg-5 mb-3">
+              <div class="signature-container h-100 d-flex flex-column">
+                <div class="signature-label">
+                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operations Manager Signature</label>
+                  <span class="signature-hint text-danger small">Required for approval</span>
+                </div>
+                <canvas id="opManSignaturePad" class="signature-pad"></canvas>
+                <input type="hidden" id="opManSignatureData" name="opMan_signature">
+                <button type="button" id="clearOp" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if user_designation == 'business_development' and is_edit_mode %}
+        <!-- Business Development Review Section -->
+        <div class="col-12 mb-4">
+          <div class="row">
+            <div class="col-lg-7 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
+              <textarea id="businessDevComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            </div>
+            
+            <div class="col-lg-5 mb-3">
+              <div class="signature-container h-100 d-flex flex-column">
+                <div class="signature-label">
+                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Business Development Signature</label>
+                  <span class="signature-hint text-danger small">Required for approval</span>
+                </div>
+                <canvas id="businessDevSignaturePad" class="signature-pad"></canvas>
+                <input type="hidden" id="businessDevSignatureData" name="business_dev_signature">
+                <button type="button" id="clearBusinessDev" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if user_designation == 'procurement' and is_edit_mode %}
+        <!-- Procurement Review Section -->
+        <div class="col-12 mb-4">
+          <div class="row">
+            <div class="col-lg-7 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
+              <textarea id="procurementComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            </div>
+            
+            <div class="col-lg-5 mb-3">
+              <div class="signature-container h-100 d-flex flex-column">
+                <div class="signature-label">
+                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Procurement Signature</label>
+                  <span class="signature-hint text-danger small">Required for approval</span>
+                </div>
+                <canvas id="procurementSignaturePad" class="signature-pad"></canvas>
+                <input type="hidden" id="procurementSignatureData" name="procurement_signature">
+                <button type="button" id="clearProcurement" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if user_designation == 'general_manager' and is_edit_mode %}
+        <!-- General Manager Review Section -->
+        <div class="col-12 mb-4">
+          <div class="row">
+            <div class="col-lg-7 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Comments</label>
+              <textarea id="generalManagerComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            </div>
+            
+            <div class="col-lg-5 mb-3">
+              <div class="signature-container h-100 d-flex flex-column">
+                <div class="signature-label">
+                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">General Manager Signature</label>
+                  <span class="signature-hint text-danger small">Required for approval</span>
+                </div>
+                <canvas id="generalManagerSignaturePad" class="signature-pad"></canvas>
+                <input type="hidden" id="generalManagerSignatureData" name="general_manager_signature">
+                <button type="button" id="clearGeneralManager" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+              </div>
+            </div>
           </div>
         </div>
         {% endif %}
@@ -1455,12 +1540,18 @@
       const techCanvas = document.getElementById('techSignaturePad');
       const opCanvas = document.getElementById('opManSignaturePad');
       const supervisorCanvas = document.getElementById('supervisorSignaturePad');
+      const businessDevCanvas = document.getElementById('businessDevSignaturePad');
+      const procurementCanvas = document.getElementById('procurementSignaturePad');
+      const generalManagerCanvas = document.getElementById('generalManagerSignaturePad');
       
       // Enhance touch events for mobile
       if (typeof enhanceTouchEvents !== 'undefined') {
         if (techCanvas) enhanceTouchEvents(techCanvas);
         if (opCanvas) enhanceTouchEvents(opCanvas);
         if (supervisorCanvas) enhanceTouchEvents(supervisorCanvas);
+        if (businessDevCanvas) enhanceTouchEvents(businessDevCanvas);
+        if (procurementCanvas) enhanceTouchEvents(procurementCanvas);
+        if (generalManagerCanvas) enhanceTouchEvents(generalManagerCanvas);
       }
       
       const techPad = techCanvas ? new SignaturePad(techCanvas, {
@@ -1481,7 +1572,31 @@
 
       const supervisorPad = supervisorCanvas ? new SignaturePad(supervisorCanvas, {
         backgroundColor: 'rgb(255, 255, 255)',
-        penColor: '#125435',
+        penColor: 'rgb(0, 0, 0)',
+        minWidth: 1,
+        maxWidth: 3,
+        throttle: 16
+      }) : null;
+
+      const businessDevPad = businessDevCanvas ? new SignaturePad(businessDevCanvas, {
+        backgroundColor: 'rgb(255, 255, 255)',
+        penColor: 'rgb(0, 0, 0)',
+        minWidth: 1,
+        maxWidth: 3,
+        throttle: 16
+      }) : null;
+
+      const procurementPad = procurementCanvas ? new SignaturePad(procurementCanvas, {
+        backgroundColor: 'rgb(255, 255, 255)',
+        penColor: 'rgb(0, 0, 0)',
+        minWidth: 1,
+        maxWidth: 3,
+        throttle: 16
+      }) : null;
+
+      const generalManagerPad = generalManagerCanvas ? new SignaturePad(generalManagerCanvas, {
+        backgroundColor: 'rgb(255, 255, 255)',
+        penColor: 'rgb(0, 0, 0)',
         minWidth: 1,
         maxWidth: 3,
         throttle: 16
@@ -1491,19 +1606,27 @@
         if (!canvas || canvas.offsetParent === null) return; // Skip hidden canvases
         
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
-        const rect = canvas.getBoundingClientRect();
         
-        // Only resize if width changed significantly or not yet set
-        if (canvas.width === rect.width * ratio && canvas.height === rect.height * ratio) return;
+        // Get the CSS size of the canvas
+        const styles = window.getComputedStyle(canvas);
+        const width = parseInt(styles.width, 10);
+        const height = parseInt(styles.height, 10);
+        
+        // Only resize if dimensions changed significantly
+        if (canvas.width === width * ratio && canvas.height === height * ratio) return;
 
-        canvas.width = rect.width * ratio;
-        canvas.height = rect.height * ratio;
+        // Save the current signature data
+        const currentData = pad && !pad.isEmpty() ? pad.toDataURL() : null;
+        
+        canvas.width = width * ratio;
+        canvas.height = height * ratio;
         
         const ctx = canvas.getContext('2d');
         ctx.scale(ratio, ratio);
         
-        if (pad) {
-          pad.clear(); // Resizing clears the canvas
+        // Restore the signature if it existed
+        if (currentData && pad) {
+          pad.fromDataURL(currentData);
         }
       }
       
@@ -1512,6 +1635,9 @@
         if (techCanvas) resizeCanvas(techCanvas, techPad);
         if (opCanvas) resizeCanvas(opCanvas, opPad);
         if (supervisorCanvas) resizeCanvas(supervisorCanvas, supervisorPad);
+        if (businessDevCanvas) resizeCanvas(businessDevCanvas, businessDevPad);
+        if (procurementCanvas) resizeCanvas(procurementCanvas, procurementPad);
+        if (generalManagerCanvas) resizeCanvas(generalManagerCanvas, generalManagerPad);
       }, 500);
       
       // Resize on window resize
@@ -1519,27 +1645,66 @@
         if (techCanvas) resizeCanvas(techCanvas, techPad);
         if (opCanvas) resizeCanvas(opCanvas, opPad);
         if (supervisorCanvas) resizeCanvas(supervisorCanvas, supervisorPad);
+        if (businessDevCanvas) resizeCanvas(businessDevCanvas, businessDevPad);
+        if (procurementCanvas) resizeCanvas(procurementCanvas, procurementPad);
+        if (generalManagerCanvas) resizeCanvas(generalManagerCanvas, generalManagerPad);
       });
 
       const clearTechBtn = document.getElementById('clearTech');
       if (clearTechBtn && techPad) {
-        clearTechBtn.addEventListener('click', () => { techPad.clear(); document.getElementById('techSignatureData').value=''; });
+        clearTechBtn.addEventListener('click', () => { 
+          techPad.clear(); 
+          const techSigInput = document.getElementById('techSignatureData');
+          if (techSigInput) techSigInput.value = '';
+        });
       }
       
       const clearOpBtn = document.getElementById('clearOp');
       if (clearOpBtn && opPad) {
-        clearOpBtn.addEventListener('click', () => { opPad.clear(); document.getElementById('opManSignatureData').value=''; });
+        clearOpBtn.addEventListener('click', () => { 
+          opPad.clear(); 
+          const opSigInput = document.getElementById('opManSignatureData');
+          if (opSigInput) opSigInput.value = '';
+        });
       }
 
       const clearSupervisorBtn = document.getElementById('clearSupervisor');
       if (clearSupervisorBtn && supervisorPad) {
         clearSupervisorBtn.addEventListener('click', () => { 
           supervisorPad.clear(); 
-          document.getElementById('supervisorSignatureData').value=''; 
+          const supervisorSigInput = document.getElementById('supervisorSignatureData');
+          if (supervisorSigInput) supervisorSigInput.value = '';
         });
       }
 
-      return { techPad, opPad, supervisorPad };
+      const clearBusinessDevBtn = document.getElementById('clearBusinessDev');
+      if (clearBusinessDevBtn && businessDevPad) {
+        clearBusinessDevBtn.addEventListener('click', () => { 
+          businessDevPad.clear(); 
+          const businessDevSigInput = document.getElementById('businessDevSignatureData');
+          if (businessDevSigInput) businessDevSigInput.value = '';
+        });
+      }
+
+      const clearProcurementBtn = document.getElementById('clearProcurement');
+      if (clearProcurementBtn && procurementPad) {
+        clearProcurementBtn.addEventListener('click', () => { 
+          procurementPad.clear(); 
+          const procurementSigInput = document.getElementById('procurementSignatureData');
+          if (procurementSigInput) procurementSigInput.value = '';
+        });
+      }
+
+      const clearGeneralManagerBtn = document.getElementById('clearGeneralManager');
+      if (clearGeneralManagerBtn && generalManagerPad) {
+        clearGeneralManagerBtn.addEventListener('click', () => { 
+          generalManagerPad.clear(); 
+          const generalManagerSigInput = document.getElementById('generalManagerSignatureData');
+          if (generalManagerSigInput) generalManagerSigInput.value = '';
+        });
+      }
+
+      return { techPad, opPad, supervisorPad, businessDevPad, procurementPad, generalManagerPad };
     }
 
     (function(){
@@ -2294,9 +2459,24 @@
                 }
                 
                 // Show success message above download links
+                // Check if this is a supervisor updating their own form
+                const isSupervisorOwnUpdate = window.isSupervisorOwnUpdate === true;
+                
                 const successMsg = document.createElement('div');
                 successMsg.className = 'alert alert-success mb-3';
-                successMsg.innerHTML = '<strong>✅ Reports generated successfully!</strong>';
+                
+                if (isSupervisorOwnUpdate) {
+                  successMsg.innerHTML = `
+                    <strong>✅ Form Updated & Reports Generated Successfully!</strong>
+                    <hr style="margin: 0.5rem 0;">
+                    <p class="mb-0"><strong>Your form has been updated with new details and will be sent to Operations Manager for review.</strong></p>
+                  `;
+                } else {
+                  successMsg.innerHTML = '<strong>✅ Reports generated successfully!</strong>';
+                }
+                
+                // Clear the flag after use
+                window.isSupervisorOwnUpdate = false;
                 
                 // Insert success message at the top
                 downloadLinks.insertBefore(successMsg, downloadLinks.firstChild);
@@ -2360,12 +2540,21 @@
         
         {% if is_edit_mode %}
         // In edit mode, use existing signatures (read-only for tech, editable for supervisor)
-        techData = document.getElementById('techSignatureData').value || '';
+        const techSigInput = document.getElementById('techSignatureData');
+        techData = techSigInput ? techSigInput.value || '' : '';
         const opManInput = document.getElementById('opManSignatureData');
         if (opManInput) {
+          // Get signature from pad if Operations Manager is reviewing
+          {% if user_designation == 'operations_manager' %}
+          if (pads && pads.opPad && !pads.opPad.isEmpty()) {
+            opData = pads.opPad.toDataURL('image/png');
+            opManInput.value = opData;
+          } else {
+            opData = opManInput.value || '';
+          }
+          {% elif is_supervisor_edit %}
           // If supervisor is editing, allow them to sign
-          {% if is_supervisor_edit %}
-          if (pads.opPad && !pads.opPad.isEmpty()) {
+          if (pads && pads.opPad && !pads.opPad.isEmpty()) {
             opData = pads.opPad.toDataURL('image/png');
             opManInput.value = opData;
           } else {
@@ -2379,7 +2568,11 @@
         }
         {% else %}
         // Normal mode - get from signature pads
-        techData = pads.techPad.isEmpty() ? '' : pads.techPad.toDataURL('image/png');
+        if (pads.techPad) {
+          techData = pads.techPad.isEmpty() ? '' : pads.techPad.toDataURL('image/png');
+          const techSigInput = document.getElementById('techSignatureData');
+          if (techSigInput) techSigInput.value = techData;
+        }
         const opManInput = document.getElementById('opManSignatureData');
         if (opManInput && pads.opPad) {
           opData = pads.opPad.isEmpty() ? '' : pads.opPad.toDataURL('image/png');
@@ -2387,7 +2580,6 @@
         } else {
           opData = '';
         }
-        document.getElementById('techSignatureData').value = techData;
         {% endif %}
 
         if (items.length === 0) {
@@ -2439,6 +2631,56 @@
         }
         {% endif %}
         
+        // Get reviewer comments and signatures for all roles
+        let operationsManagerComments = '';
+        let businessDevComments = '';
+        let procurementComments = '';
+        let generalManagerComments = '';
+        let businessDevSignature = '';
+        let procurementSignature = '';
+        let generalManagerSignature = '';
+
+        {% if user_designation == 'operations_manager' %}
+        const operationsManagerCommentsField = document.getElementById('operationsManagerComments');
+        if (operationsManagerCommentsField) {
+          operationsManagerComments = operationsManagerCommentsField.value || '';
+        }
+        // Operations Manager signature is already collected in opData above
+        {% endif %}
+
+        {% if user_designation == 'business_development' %}
+        const businessDevCommentsField = document.getElementById('businessDevComments');
+        const businessDevSigInput = document.getElementById('businessDevSignatureData');
+        if (businessDevCommentsField) {
+          businessDevComments = businessDevCommentsField.value || '';
+        }
+        if (businessDevSigInput && pads && pads.businessDevPad && !pads.businessDevPad.isEmpty()) {
+          businessDevSignature = pads.businessDevPad.toDataURL('image/png');
+        }
+        {% endif %}
+
+        {% if user_designation == 'procurement' %}
+        const procurementCommentsField = document.getElementById('procurementComments');
+        const procurementSigInput = document.getElementById('procurementSignatureData');
+        if (procurementCommentsField) {
+          procurementComments = procurementCommentsField.value || '';
+        }
+        if (procurementSigInput && pads && pads.procurementPad && !pads.procurementPad.isEmpty()) {
+          procurementSignature = pads.procurementPad.toDataURL('image/png');
+        }
+        {% endif %}
+
+        {% if user_designation == 'general_manager' %}
+        const generalManagerCommentsField = document.getElementById('generalManagerComments');
+        const generalManagerSigInput = document.getElementById('generalManagerSignatureData');
+        if (generalManagerCommentsField) {
+          generalManagerComments = generalManagerCommentsField.value || '';
+        }
+        if (generalManagerSigInput && pads && pads.generalManagerPad && !pads.generalManagerPad.isEmpty()) {
+          generalManagerSignature = pads.generalManagerPad.toDataURL('image/png');
+        }
+        {% endif %}
+
         // Prepare JSON payload (photos already in cloud)
         const payload = {
           site_name: document.getElementById('site_name').value || '',
@@ -2447,6 +2689,13 @@
           opMan_signature: opData || '',
           supervisor_signature: supervisorData || '',
           supervisor_comments: supervisorComments || '',
+          operations_manager_comments: operationsManagerComments || '',
+          business_dev_comments: businessDevComments || '',
+          business_dev_signature: businessDevSignature || '',
+          procurement_comments: procurementComments || '',
+          procurement_signature: procurementSignature || '',
+          general_manager_comments: generalManagerComments || '',
+          general_manager_signature: generalManagerSignature || '',
           items: items.map(it => ({
             asset: it.asset,
             system: it.system,
@@ -2479,69 +2728,139 @@
         try {
           {% if is_edit_mode %}
           {% if is_supervisor_edit %}
-          // Supervisor is approving/reviewing - use workflow approval endpoint
+          // Check if supervisor is editing their own submission or reviewing another's
           const submissionId = window.editSubmissionId;
+          {% if submission_data and submission_data.workflow_status %}
+          const workflowStatus = {{ submission_data.workflow_status|tojson|safe }};
+          {% else %}
+          const workflowStatus = 'submitted';
+          {% endif %}
+          const isOwnSubmission = workflowStatus === 'submitted' || workflowStatus === 'rejected';
+          
+          console.log('📋 Workflow status:', workflowStatus, '| Is own submission:', isOwnSubmission);
+          
           const token = localStorage.getItem('access_token');
           const headers = { 'Content-Type': 'application/json' };
           if (token) {
             headers['Authorization'] = `Bearer ${token}`;
           }
           
-          // First update the submission with new data
-          const updateRes = await fetch(`/api/admin/submissions/${submissionId}`, {
-            method: 'PUT',
-            headers: headers,
-            body: JSON.stringify({
-              site_name: payload.site_name,
-              visit_date: payload.visit_date,
-              form_data: payload
-            }),
-            credentials: 'include'
-          });
-          
-          if (!updateRes.ok) {
-            const txt = await updateRes.text();
-            throw new Error('Update failed: ' + updateRes.status + ' ' + txt);
-          }
-          
-          // Then approve via workflow endpoint
-          const approveRes = await fetch(`/api/workflow/submissions/${submissionId}/approve`, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify({
-              comments: supervisorComments,
-              supervisor_signature: supervisorData,
-              items: payload.items // Send updated items here as well
-            }),
-            credentials: 'include'
-          });
-          
-          if (!approveRes.ok) {
-            const txt = await approveRes.text();
-            throw new Error('Approval failed: ' + approveRes.status + ' ' + txt);
-          }
-          
-          const approveJson = await approveRes.json();
-          
-          if (approveJson.success) {
-            loadingOverlay.style.display = 'none';
-            statusBox.innerHTML = `
-              <div class="alert alert-success">
-                <h5 class="alert-heading">✅ Form Signed Successfully!</h5>
-                <hr>
-                <p class="mb-2"><strong>This form will now be sent to:</strong></p>
-                <ul class="mb-0" style="list-style-position: inside;">
-                  <li>→ Operations Manager</li>
-                  <li>→ Business Development & Procurement (parallel review)</li>
-                  <li>→ General Manager (final approval)</li>
-                </ul>
-                <hr class="mt-3 mb-2">
-                <a href="/api/workflow/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
-              </div>
-            `;
-            clearDraft();
+          if (isOwnSubmission) {
+            // Supervisor is updating their own submitted/rejected form - just update, don't approve
+            console.log('✅ Supervisor updating their own submission - using workflow update endpoint');
+            
+            const updateRes = await fetch(`/api/workflow/submissions/${submissionId}/update`, {
+              method: 'PUT',
+              headers: headers,
+              body: JSON.stringify({
+                site_name: payload.site_name,
+                visit_date: payload.visit_date,
+                form_data: payload
+              }),
+              credentials: 'include'
+            });
+            
+            if (!updateRes.ok) {
+              const txt = await updateRes.text();
+              throw new Error('Update failed: ' + updateRes.status + ' ' + txt);
+            }
+            
+            const updateJson = await updateRes.json();
+            
+            if (updateJson.success) {
+              // Check if documents are being regenerated
+              const jobId = updateJson.data?.job_id || updateJson.job_id;
+              const isRegenerating = updateJson.data?.regenerating || updateJson.regenerating || false;
+              
+              if (jobId && isRegenerating) {
+                // Documents are being regenerated, poll for status
+                // Set flag to indicate this is a supervisor updating their own form
+                window.isSupervisorOwnUpdate = isOwnSubmission;
+                statusBox.innerHTML = '<div class="alert alert-info">✅ Form updated! Regenerating documents with your changes... This may take a moment.</div>';
+                loadingOverlay.style.display = 'flex';
+                pollJobStatus(jobId);
+              } else {
+                // No regeneration needed (shouldn't happen, but handle gracefully)
+                loadingOverlay.style.display = 'none';
+                statusBox.innerHTML = `
+                  <div class="alert alert-success">
+                    <h5 class="alert-heading">✅ Form Updated Successfully!</h5>
+                    <hr>
+                    <p class="mb-2"><strong>Your form has been updated with the new changes.</strong></p>
+                    ${workflowStatus === 'rejected' ? `
+                      <p class="mb-2">You can resubmit this form to send it back to Operations Manager for review.</p>
+                    ` : `
+                      <p class="mb-2">The form will be sent to Operations Manager for review once you resubmit.</p>
+                    `}
+                    <hr class="mt-3 mb-2">
+                    <a href="/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
+                  </div>
+                `;
+                clearDraft();
+              }
+            } else {
+              throw new Error(updateJson.error || 'Update failed');
+            }
           } else {
-            throw new Error(approveJson.error || 'Approval failed');
+            // Supervisor is reviewing/approving another's submission - use approval workflow
+            console.log('✅ Supervisor reviewing another\'s submission - using approval endpoint');
+            
+            // First update the submission with new data
+            const updateRes = await fetch(`/api/admin/submissions/${submissionId}`, {
+              method: 'PUT',
+              headers: headers,
+              body: JSON.stringify({
+                site_name: payload.site_name,
+                visit_date: payload.visit_date,
+                form_data: payload
+              }),
+              credentials: 'include'
+            });
+            
+            if (!updateRes.ok) {
+              const txt = await updateRes.text();
+              throw new Error('Update failed: ' + updateRes.status + ' ' + txt);
+            }
+            
+            // Then approve via workflow endpoint
+            const approveRes = await fetch(`/api/workflow/submissions/${submissionId}/approve`, {
+              method: 'POST',
+              headers: headers,
+              body: JSON.stringify({
+                comments: supervisorComments,
+                supervisor_signature: supervisorData,
+                items: payload.items // Send updated items here as well
+              }),
+              credentials: 'include'
+            });
+            
+            if (!approveRes.ok) {
+              const txt = await approveRes.text();
+              throw new Error('Approval failed: ' + approveRes.status + ' ' + txt);
+            }
+            
+            const approveJson = await approveRes.json();
+            
+            if (approveJson.success) {
+              loadingOverlay.style.display = 'none';
+              statusBox.innerHTML = `
+                <div class="alert alert-success">
+                  <h5 class="alert-heading">✅ Form Signed Successfully!</h5>
+                  <hr>
+                  <p class="mb-2"><strong>This form will now be sent to:</strong></p>
+                  <ul class="mb-0" style="list-style-position: inside;">
+                    <li>→ Operations Manager</li>
+                    <li>→ Business Development & Procurement (parallel review)</li>
+                    <li>→ General Manager (final approval)</li>
+                  </ul>
+                  <hr class="mt-3 mb-2">
+                  <a href="/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
+                </div>
+              `;
+              clearDraft();
+            } else {
+              throw new Error(approveJson.error || 'Approval failed');
+            }
           }
           {% else %}
           // Admin or regular edit mode
@@ -2757,6 +3076,10 @@
             console.error('❌ visit_date field not found in DOM');
           }
           
+          // Define formData for use in both supervisor and non-supervisor edit modes
+          const formData = submissionData.form_data || {};
+          console.log('📦 formData available for loading:', Object.keys(formData));
+          
           // Pre-populate items - use form_data directly
           // For supervisor edit, we use loadPreloadedItemsIntoArray instead to match server-rendered items
           {% if is_supervisor_edit %}
@@ -2766,8 +3089,6 @@
             console.error('❌ submissionData is null or undefined!');
             return;
           }
-          
-          const formData = submissionData.form_data || {};
           console.log('📦 Loading submission data, formData:', formData);
           console.log('📦 Items in formData:', formData.items);
           console.log('📦 formData keys:', Object.keys(formData));
@@ -3075,49 +3396,198 @@
             
             // Load supervisor comments and signature if supervisor is editing
             {% if is_supervisor_edit or user_designation == 'supervisor' %}
-            if (formData.supervisor_comments) {
+            // Try multiple paths to find supervisor comments
+            let supervisorComments = null;
+            console.log('🔍 Looking for supervisor_comments...');
+            console.log('  formData:', formData);
+            console.log('  formData.supervisor_comments:', formData?.supervisor_comments);
+            console.log('  submissionData.form_data:', submissionData?.form_data);
+            console.log('  submissionData.form_data?.supervisor_comments:', submissionData?.form_data?.supervisor_comments);
+            
+            if (formData && formData.supervisor_comments) {
+              supervisorComments = formData.supervisor_comments;
+              console.log('📝 Found supervisor_comments in formData');
+            } else if (submissionData && submissionData.form_data && submissionData.form_data.supervisor_comments) {
+              supervisorComments = submissionData.form_data.supervisor_comments;
+              console.log('📝 Found supervisor_comments in submissionData.form_data');
+            } else if (submissionData && submissionData.supervisor_comments) {
+              supervisorComments = submissionData.supervisor_comments;
+              console.log('📝 Found supervisor_comments in submissionData');
+            }
+            
+            if (supervisorComments) {
               const commentsField = document.getElementById('supervisorComments');
               if (commentsField) {
-                commentsField.value = formData.supervisor_comments || '';
+                // Remove the "[Form updated by supervisor with new details]" suffix if present for display
+                const displayComments = supervisorComments.replace(/\n\n\[Form updated by supervisor with new details\]$/g, '');
+                commentsField.value = displayComments;
+                console.log('✅ Loaded supervisor comments into field:', displayComments.substring(0, 50));
+              } else {
+                console.error('❌ supervisorComments field not found in DOM');
               }
+            } else {
+              console.warn('⚠️ No supervisor comments found in any location');
+              console.warn('  Checked: formData.supervisor_comments, submissionData.form_data.supervisor_comments, submissionData.supervisor_comments');
             }
             
-            if (formData.supervisor_verified) {
-              if (verifiedBtn) {
-                isVerified = true;
-                verifiedBtn.classList.remove('btn-success');
-                verifiedBtn.classList.add('btn-outline-success');
-                verifiedBtn.innerHTML = '<span id="verifiedBtnIcon">✓</span> Verified';
-                if (verifiedStatus) {
-                  verifiedStatus.style.display = 'inline';
-                  verifiedStatus.textContent = '✓ Verified';
-                }
-              }
+            // Try multiple paths to find supervisor signature
+            let supervisorSig = null;
+            console.log('🔍 Looking for supervisor_signature...');
+            console.log('  formData.supervisor_signature:', formData?.supervisor_signature ? 'found' : 'not found');
+            console.log('  submissionData.form_data?.supervisor_signature:', submissionData?.form_data?.supervisor_signature ? 'found' : 'not found');
+            console.log('  submissionData.supervisor_signature:', submissionData?.supervisor_signature ? 'found' : 'not found');
+            
+            if (formData && formData.supervisor_signature) {
+              supervisorSig = formData.supervisor_signature;
+              console.log('📝 Found supervisor_signature in formData:', typeof supervisorSig);
+            } else if (submissionData && submissionData.form_data && submissionData.form_data.supervisor_signature) {
+              supervisorSig = submissionData.form_data.supervisor_signature;
+              console.log('📝 Found supervisor_signature in submissionData.form_data:', typeof supervisorSig);
+            } else if (submissionData && submissionData.supervisor_signature) {
+              supervisorSig = submissionData.supervisor_signature;
+              console.log('📝 Found supervisor_signature in submissionData:', typeof supervisorSig);
             }
             
-            if (formData.supervisor_signature) {
-              let supervisorSig = formData.supervisor_signature;
+            if (supervisorSig) {
+              // Handle object format with url property
               if (supervisorSig && typeof supervisorSig === 'object' && supervisorSig.url) {
                 supervisorSig = supervisorSig.url;
+                console.log('📝 Extracted supervisor signature URL from object');
               }
-              if (supervisorSig && typeof supervisorSig === 'string' && (supervisorSig.startsWith('data:image') || supervisorSig.startsWith('http'))) {
+              
+              if (supervisorSig && typeof supervisorSig === 'string' && (
+                supervisorSig.startsWith('data:image') || 
+                supervisorSig.startsWith('http://') || 
+                supervisorSig.startsWith('https://') || 
+                supervisorSig.startsWith('/')
+              )) {
+                console.log('✅ Valid supervisor signature URL found');
                 const supervisorCanvas = document.getElementById('supervisorSignaturePad');
-                if (supervisorCanvas && pads && pads.supervisorPad) {
-                  // Load signature into pad
-                  const img = new Image();
-                  img.crossOrigin = 'anonymous';
-                  img.onload = function() {
-                    const ctx = supervisorCanvas.getContext('2d');
-                    ctx.clearRect(0, 0, supervisorCanvas.width, supervisorCanvas.height);
-                    ctx.drawImage(img, 0, 0, supervisorCanvas.width, supervisorCanvas.height);
-                    pads.supervisorPad.fromDataURL(supervisorSig);
-                  };
-                  img.src = supervisorSig;
+                const supervisorSigInput = document.getElementById('supervisorSignatureData');
+                
+                if (supervisorCanvas && supervisorSigInput) {
+                  // Check if supervisor is editing their own form (can clear/re-sign)
+                  {% if submission_data and submission_data.workflow_status %}
+                  const workflowStatus = {{ submission_data.workflow_status|tojson|safe }};
+                  {% else %}
+                  const workflowStatus = null;
+                  {% endif %}
+                  // isOwnSubmission: allow editing for submitted/rejected/null status (draft/new forms)
+                  const isOwnSubmission = workflowStatus === 'submitted' || workflowStatus === 'rejected' || !workflowStatus;
                   
-                  const supervisorSigInput = document.getElementById('supervisorSignatureData');
-                  if (supervisorSigInput) supervisorSigInput.value = supervisorSig;
+                  // Check if image already exists to avoid duplicates
+                  const existingImg = supervisorCanvas.parentElement.querySelector('img[alt="Supervisor Signature"]');
+                  if (existingImg) {
+                    console.log('⚠️ Signature image already exists, removing duplicate');
+                    existingImg.remove();
+                  }
+                  
+                  // Store in hidden input
+                  supervisorSigInput.value = supervisorSig;
+                  
+                  if (isOwnSubmission) {
+                    // Supervisor editing their own form - load into canvas for editing (allow clear/re-sign)
+                    console.log('✅ Supervisor editing own form - loading signature into canvas for editing');
+                    // Ensure canvas is visible for editing
+                    supervisorCanvas.style.display = 'block';
+                    
+                    // Ensure clear button is visible and functional
+                    const clearSupervisorBtn = document.getElementById('clearSupervisor');
+                    if (clearSupervisorBtn) {
+                      clearSupervisorBtn.style.display = 'block';
+                      clearSupervisorBtn.style.visibility = 'visible';
+                      // Re-attach event listener to ensure it works after signature is loaded
+                      // Remove existing click listeners
+                      const newClearBtn = clearSupervisorBtn.cloneNode(true);
+                      clearSupervisorBtn.parentNode.replaceChild(newClearBtn, clearSupervisorBtn);
+                      
+                      newClearBtn.addEventListener('click', function() {
+                        if (pads && pads.supervisorPad) {
+                          pads.supervisorPad.clear();
+                          if (supervisorSigInput) supervisorSigInput.value = '';
+                          console.log('✅ Supervisor signature cleared');
+                        } else {
+                          console.warn('⚠️ Supervisor pad not available for clearing');
+                        }
+                      });
+                    }
+                    
+                    // Load signature into pad
+                    const loadSupervisorSig = () => {
+                      if (pads && pads.supervisorPad && supervisorCanvas) {
+                        try {
+                          const img = new Image();
+                          img.crossOrigin = 'anonymous';
+                          img.onload = function() {
+                            try {
+                              // Clear pad first, then load signature
+                              pads.supervisorPad.clear();
+                              pads.supervisorPad.fromDataURL(supervisorSig);
+                              console.log('✅ Loaded supervisor signature into pad for editing');
+                            } catch (e) {
+                              console.error('❌ Error loading signature into pad:', e);
+                            }
+                          };
+                          img.onerror = function() {
+                            console.error('❌ Failed to load supervisor signature image');
+                          };
+                          img.src = supervisorSig;
+                        } catch (e) {
+                          console.error('❌ Error setting up supervisor signature image load:', e);
+                        }
+                      } else {
+                        console.warn('⚠️ Supervisor signature pad not ready yet, will retry...');
+                        setTimeout(loadSupervisorSig, 200);
+                      }
+                    };
+                    loadSupervisorSig();
+                  } else {
+                    // Not their own form - show as read-only image
+                    console.log('✅ Showing supervisor signature as read-only image');
+                    supervisorCanvas.style.display = 'none';
+                    
+                    // Create image element to display the signature
+                    const sigImg = document.createElement('img');
+                    sigImg.src = supervisorSig;
+                    sigImg.alt = 'Supervisor Signature';
+                    sigImg.style.cssText = 'width: 100%; max-width: 500px; max-height: 160px; object-fit: contain; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: block;';
+                    supervisorCanvas.parentElement.insertBefore(sigImg, supervisorCanvas);
+                    
+                    // Hide clear button (look for button by ID)
+                    const clearBtn = document.getElementById('clearSupervisor');
+                    if (clearBtn) {
+                      clearBtn.style.display = 'none';
+                    }
+                    
+                    // Update label to show signature is already present
+                    const label = supervisorCanvas.parentElement.querySelector('.signature-label');
+                    if (label) {
+                      const existingHint = label.querySelector('.signature-hint');
+                      if (existingHint) {
+                        existingHint.innerHTML = '<span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                      }
+                    }
+                    
+                    sigImg.onload = function() {
+                      console.log('✅ Supervisor signature image displayed successfully');
+                    };
+                    
+                    sigImg.onerror = function() {
+                      console.error('❌ Failed to load supervisor signature image');
+                      supervisorCanvas.style.display = 'block';
+                      this.style.display = 'none';
+                    };
+                  }
+                } else {
+                  console.warn('⚠️ Supervisor signature canvas or input not found');
                 }
+              } else {
+                console.warn('⚠️ Invalid supervisor signature format:', typeof supervisorSig);
               }
+            } else {
+              console.warn('⚠️ No supervisor signature found');
+              console.warn('  formData keys:', Object.keys(formData));
+              console.warn('  submissionData.form_data keys:', Object.keys(submissionData.form_data || {}));
             }
             {% endif %}
             
@@ -3165,8 +3635,8 @@
             }
           }
           
-          // Start loading signatures after a short delay to ensure pads are initialized
-          setTimeout(loadSignatures, 500);
+          // Start loading signatures after a delay to ensure pads are initialized
+          setTimeout(loadSignatures, 800);
           
           // Store submission ID for update
           window.editSubmissionId = submissionData.submission_id;
@@ -3288,12 +3758,20 @@
           items.length = 0;
           
           window.preloadedItems.forEach((item, idx) => {
-            // Extract photo URLs
+            // Extract photo URLs - handle both photos (objects) and photo_urls (strings)
             let photoUrls = [];
-            if (item.photos && Array.isArray(item.photos)) {
+            
+            // Try photo_urls first (direct array of URLs)
+            if (item.photo_urls && Array.isArray(item.photo_urls)) {
+              photoUrls = item.photo_urls.filter(url => url && typeof url === 'string');
+            }
+            // Try photos array (array of objects with 'url' property) - THIS IS THE EXPECTED FORMAT
+            else if (item.photos && Array.isArray(item.photos)) {
               photoUrls = item.photos.map(photo => {
                 if (typeof photo === 'string') return photo;
-                if (photo && typeof photo === 'object') return photo.url || photo.cloud_url || null;
+                if (photo && typeof photo === 'object') {
+                  return photo.url || photo.cloud_url || null;
+                }
                 return null;
               }).filter(url => url !== null && typeof url === 'string');
             }

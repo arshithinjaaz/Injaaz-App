@@ -284,7 +284,7 @@
 </head>
 <body>
   <div class="container-custom">
-    <a href="/api/workflow/dashboard" class="back-button">
+    <a href="/dashboard" class="back-button">
       ← Back to Dashboard
     </a>
     
@@ -314,16 +314,16 @@
     // Get status display text and class
     function getStatusDisplay(status) {
       const statusMap = {
-        'submitted': { text: 'Submitted', class: 'status-pending' },
-        'operations_manager_review': { text: 'Ops Manager Review', class: 'status-reviewing' },
-        'operations_manager_approved': { text: 'Ops Manager Approved', class: 'status-approved' },
-        'bd_procurement_review': { text: 'BD & Procurement Review', class: 'status-reviewing' },
-        'general_manager_review': { text: 'General Manager Review', class: 'status-reviewing' },
-        'completed': { text: 'Completed', class: 'status-completed' },
-        'rejected': { text: 'Rejected', class: 'status-rejected' }
+        'submitted': { text: 'Sent to Operations Manager', class: 'status-pending', message: 'Your form has been submitted and is pending review by the Operations Manager.' },
+        'operations_manager_review': { text: 'Operations Manager Reviewing', class: 'status-reviewing', message: 'Operations Manager is currently reviewing your form.' },
+        'operations_manager_approved': { text: 'Operations Manager Signed', class: 'status-approved', message: 'Operations Manager has signed your form. It has been sent to Business Development, Procurement, and General Manager.' },
+        'bd_procurement_review': { text: 'BD & Procurement Reviewing', class: 'status-reviewing', message: 'Business Development and Procurement are reviewing your form.' },
+        'general_manager_review': { text: 'General Manager Reviewing', class: 'status-reviewing', message: 'General Manager is reviewing your form for final approval.' },
+        'completed': { text: 'Fully Approved ✓', class: 'status-completed', message: 'Your form has been fully approved by all reviewers.' },
+        'rejected': { text: 'Returned for Revision', class: 'status-rejected', message: 'Your form has been returned and requires changes.' }
       };
       
-      return statusMap[status] || { text: status, class: 'status-pending' };
+      return statusMap[status] || { text: status, class: 'status-pending', message: '' };
     }
     
     // Format date and time
@@ -347,7 +347,8 @@
     // Get module URL
     function getModuleUrl(module) {
       const moduleMap = {
-        'hvac': 'hvac',
+        'hvac': 'hvac-mep',
+        'hvac_mep': 'hvac-mep',
         'civil': 'civil',
         'cleaning': 'cleaning'
       };
@@ -404,6 +405,12 @@
                 </div>
                 <span class="submission-status ${statusInfo.class}">${statusInfo.text}</span>
               </div>
+              
+              ${statusInfo.message ? `
+                <div class="alert alert-info" style="margin-bottom: 1rem; font-size: 0.9rem; background: #e3f2fd; border: 1px solid #90caf9; color: #1565c0;">
+                  <strong>📋 Status:</strong> ${statusInfo.message}
+                </div>
+              ` : ''}
               
               <div class="submission-details">
                 <div class="submission-detail-item">

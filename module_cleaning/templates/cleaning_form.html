@@ -493,14 +493,16 @@
     #supervisorSignaturePad {
       border: 2px solid var(--border-light);
       border-radius: 6px;
-      width: 100%;
+      width: 100% !important;
       max-width: 500px;
-      height: 180px;
-      min-height: 180px;
+      height: 160px !important;
+      max-height: 160px !important;
+      min-height: 160px !important;
       background: #ffffff;
       cursor: crosshair;
       display: block;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      touch-action: none;
     }
     
     /* Ensure canvas doesn't stretch */
@@ -1178,7 +1180,7 @@
         if (supervisorCanvas) {
             supervisorSignaturePad = new SignaturePad(supervisorCanvas, { 
                 backgroundColor: 'rgb(255, 255, 255)',
-                penColor: '#125435',
+                penColor: 'rgb(0, 0, 0)',
                 minWidth: 1,
                 maxWidth: 3,
                 throttle: 16
@@ -2322,7 +2324,7 @@
                         <li>→ General Manager (final approval)</li>
                       </ul>
                       <hr class="mt-3 mb-2">
-                      <a href="/api/workflow/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
+                      <a href="/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
                     `;
                     clearDraft();
                 } else {

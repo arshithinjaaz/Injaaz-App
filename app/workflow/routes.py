@@ -108,9 +108,26 @@ def can_edit_submission(user, submission):
     designation = user.designation
     status = submission.workflow_status
     
-    # Supervisor can only edit their own rejected or draft submissions
+    # Supervisor can edit their own submissions if:
+    # - Status is submitted/rejected (initial state)
+    # - Status is operations_manager_review but not yet approved (allows updates before review)
     if designation == 'supervisor':
-        return submission.supervisor_id == user.id and status in ['submitted', 'rejected', None]
+        # Check if this is the supervisor's own submission
+        # Use supervisor_id if set, otherwise fall back to user_id (for older submissions)
+        is_own_submission = (
+            (hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id) or
+            (submission.user_id == user.id)
+        )
+        
+        if not is_own_submission:
+            return False
+        
+        # Allow editing if status is submitted/rejected, or if in operations_manager_review but not yet approved
+        if status in ['submitted', 'rejected', None]:
+            return True
+        if status == 'operations_manager_review' and not submission.operations_manager_approved_at:
+            return True
+        return False
     
     # Operations Manager can edit during their review stage
     if designation == 'operations_manager':
@@ -629,10 +646,11 @@ def get_my_submissions():
             # Add module information
             module_map = {
                 'hvac': 'HVAC & MEP',
+                'hvac_mep': 'HVAC & MEP',
                 'civil': 'Civil Works',
                 'cleaning': 'Cleaning Services'
             }
-            sub_dict['module_name'] = module_map.get(submission.module, submission.module)
+            sub_dict['module_name'] = module_map.get(submission.module_type, submission.module_type)
             submissions_list.append(sub_dict)
         
         return success_response({
@@ -714,21 +732,115 @@ def update_submission(submission_id):
             return error_response('You do not have permission to edit this submission', 
                                 status_code=403, error_code='UNAUTHORIZED')
         
-        # Update form_data
-        form_data_updates = data.get('form_data', {})
-        if form_data_updates:
+        # Check if supervisor is updating their own submission
+        is_supervisor_own_update = (
+            user.designation == 'supervisor' and 
+            hasattr(submission, 'supervisor_id') and 
+            submission.supervisor_id == user.id and
+            submission.workflow_status in ['submitted', 'rejected']
+        )
+        
+        # Update form_data - accept full form_data or updates
+        if 'form_data' in data:
+            # If full form_data is provided, use it directly (like admin endpoint)
+            form_data = data['form_data'].copy() if isinstance(data['form_data'], dict) else data['form_data']
+            
+            # Convert photo_urls to photos format for PDF generator (if items are present)
+            if isinstance(form_data, dict) and 'items' in form_data and isinstance(form_data['items'], list):
+                items = form_data['items']
+                for item in items:
+                    # Convert photo_urls array to photos format expected by generators
+                    # Frontend sends photo_urls (array of strings), we need photos (array of objects)
+                    if 'photo_urls' in item and isinstance(item['photo_urls'], list):
+                        photos_saved = []
+                        for url in item['photo_urls']:
+                            if url:  # Only add non-empty URLs
+                                photos_saved.append({
+                                    "saved": None,
+                                    "path": None,
+                                    "url": url,
+                                    "is_cloud": True
+                                })
+                        # Set photos from photo_urls (frontend sends complete list)
+                        item['photos'] = photos_saved
+                    # If photos already exist but no photo_urls, keep photos as-is
+                    # This handles cases where items already have photos in correct format
+                    elif 'photos' not in item or not item.get('photos'):
+                        # No photos at all - initialize empty array
+                        item['photos'] = []
+            
+            # If supervisor is updating their own submission, add update note to comments
+            if is_supervisor_own_update and isinstance(form_data, dict):
+                existing_comment = form_data.get('supervisor_comments', '')
+                if existing_comment and '[Form updated by supervisor with new details]' not in existing_comment:
+                    form_data['supervisor_comments'] = existing_comment + '\n\n[Form updated by supervisor with new details]'
+                elif not existing_comment:
+                    form_data['supervisor_comments'] = '[Form updated by supervisor with new details]'
+            
+            submission.form_data = form_data
+        elif 'form_data_updates' in data:
+            # Otherwise merge updates (backward compatibility)
+            form_data_updates = data.get('form_data_updates', {})
             form_data = submission.form_data if submission.form_data else {}
             form_data.update(form_data_updates)
             submission.form_data = form_data
         
+        # Update site_name and visit_date if provided
+        if 'site_name' in data:
+            submission.site_name = data['site_name']
+        if 'visit_date' in data:
+            try:
+                submission.visit_date = datetime.strptime(data['visit_date'], '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                pass  # Invalid date, skip
+        
+        # If supervisor is updating their own submission, move it to Operations Manager review
+        # This ensures updated forms are sent for review with new changes
+        if is_supervisor_own_update:
+            # Change status to operations_manager_review so it goes to Operations Manager
+            submission.workflow_status = 'operations_manager_review'
+        
         submission.updated_at = datetime.utcnow()
         db.session.commit()
+        
+        # Regenerate documents if this is an HVAC submission
+        job_id = None
+        if submission.module_type == 'hvac_mep':
+            from common.db_utils import create_job_db
+            from module_hvac_mep.routes import get_paths, process_job
+            from app.models import Job
+            
+            # Delete old jobs to force regeneration
+            old_jobs = Job.query.filter_by(submission_id=submission.id).all()
+            for old_job in old_jobs:
+                db.session.delete(old_job)
+            db.session.commit()
+            
+            # Create new job for regeneration
+            new_job = create_job_db(submission)
+            job_id = new_job.job_id
+            
+            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+            
+            if EXECUTOR:
+                EXECUTOR.submit(
+                    process_job,
+                    submission.submission_id,
+                    job_id,
+                    current_app.config,
+                    current_app._get_current_object()
+                )
+                current_app.logger.info(f"✅ Regeneration job {job_id} queued for submission {submission_id}")
+            else:
+                current_app.logger.error("ThreadPoolExecutor not available for document regeneration")
         
         log_audit(user_id, 'update_submission', 'submission', submission_id)
         
         return success_response({
             'submission': submission.to_dict(),
-            'message': 'Submission updated successfully'
+            'message': 'Submission updated successfully. Documents are being regenerated.' if job_id else 'Submission updated successfully',
+            'job_id': job_id,
+            'regenerating': bool(job_id)
         })
     except Exception as e:
         db.session.rollback()

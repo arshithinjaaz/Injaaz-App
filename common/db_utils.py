@@ -86,6 +86,18 @@ def create_submission_db(module_type, form_data, site_name=None, visit_date=None
             form_data=form_data
         )
         
+        # If the user creating the form is a supervisor, set supervisor_id
+        if user_id:
+            try:
+                from app.models import User
+            except ImportError:
+                pass
+            else:
+                user = User.query.get(user_id)
+                if user and user.designation == 'supervisor':
+                    submission.supervisor_id = user.id
+                    logger.info(f"✅ Set supervisor_id to {user.id} for submission {submission_id}")
+        
         db.session.add(submission)
         db.session.commit()
         

@@ -153,19 +153,36 @@ def index():
                                      module='HVAC & MEP',
                                      message='Submission not found.'), 404
             
-            # Allow editing if: admin, or supervisor/manager assigned to this submission
+            # Allow editing/reviewing based on role and workflow status
             can_edit = False
+            user_designation = user.designation if hasattr(user, 'designation') else None
+            workflow_status = submission.workflow_status if hasattr(submission, 'workflow_status') else None
+            
+            # Admin - always can edit
             if user.role == 'admin':
                 can_edit = True
-            elif hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id:
+            # Supervisor - can edit their own submissions
+            elif user_designation == 'supervisor' and hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id:
                 can_edit = True
-            elif hasattr(submission, 'manager_id') and submission.manager_id == user.id:
+            # Operations Manager - can review when status is operations_manager_review
+            elif user_designation == 'operations_manager' and workflow_status == 'operations_manager_review':
+                can_edit = True
+            # Business Development - can review when status is bd_procurement_review and not yet approved by them
+            elif user_designation == 'business_development' and workflow_status == 'bd_procurement_review':
+                if not hasattr(submission, 'business_dev_approved_at') or not submission.business_dev_approved_at:
+                    can_edit = True
+            # Procurement - can review when status is bd_procurement_review and not yet approved by them
+            elif user_designation == 'procurement' and workflow_status == 'bd_procurement_review':
+                if not hasattr(submission, 'procurement_approved_at') or not submission.procurement_approved_at:
+                    can_edit = True
+            # General Manager - can review when status is general_manager_review
+            elif user_designation == 'general_manager' and workflow_status == 'general_manager_review':
                 can_edit = True
             
             if not can_edit:
                 return render_template('access_denied.html',
                                      module='HVAC & MEP',
-                                     message='You do not have permission to edit this submission.'), 403
+                                     message=f'You do not have permission to review this submission. Current status: {workflow_status}, Your role: {user_designation}'), 403
             
             # Load submission data for editing
             submission_dict = submission.to_dict()
@@ -186,7 +203,8 @@ def index():
                 'site_name': site_name,
                 'visit_date': visit_date,
                 'form_data': form_data,
-                'is_edit_mode': True
+                'is_edit_mode': True,
+                'workflow_status': submission.workflow_status if hasattr(submission, 'workflow_status') else None
             }
             is_edit_mode = True
             
@@ -202,10 +220,11 @@ def index():
         # Pass user designation and role to template for signature field visibility
         user_designation = user.designation if hasattr(user, 'designation') else None
         
-        # Consider admins, supervisors, and managers as "supervisor edit" for review purposes
-        # This allows admins to see the same editable view as supervisors at any stage
+        # Consider admins, supervisors, managers, and all reviewer roles as "supervisor edit" for review purposes
+        # This allows reviewers to see the same editable view and add their comments/signatures
         review_param = request.args.get('review') == 'true'
-        is_supervisor_edit = is_edit_mode and (user_designation in ['supervisor', 'manager'] or user.role == 'admin' or review_param)
+        reviewer_designations = ['supervisor', 'manager', 'operations_manager', 'business_development', 'procurement', 'general_manager']
+        is_supervisor_edit = is_edit_mode and (user_designation in reviewer_designations or user.role == 'admin' or review_param)
         
         # Log for debugging
         if is_edit_mode:

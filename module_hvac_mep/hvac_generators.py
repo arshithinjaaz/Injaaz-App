@@ -190,11 +190,15 @@ def create_pdf_report(data, output_dir):
                 # Item header
                 add_item_heading(story, f"Item {idx}: {item.get('asset', 'N/A')}")
                 
-                # Item details table
+                # Item details table - All fields
                 item_details = [
                     ['Asset Name:', item.get('asset', 'N/A')],
                     ['System Type:', item.get('system', 'N/A')],
                     ['Description:', item.get('description', 'N/A')],
+                    ['Quantity:', str(item.get('quantity', 'N/A'))],
+                    ['Brand:', item.get('brand', 'N/A')],
+                    ['Specification:', item.get('specification', 'N/A')],
+                    ['Comments:', item.get('comments', 'N/A')],
                     ['Photos Attached:', str(len(item.get('photos', [])))]
                 ]
                 
@@ -220,28 +224,44 @@ def create_pdf_report(data, output_dir):
         # SIGNATURES PAGE - Professional format with all signatures
         signatures = {}
         
-        # Handle signatures - they can be dict with url, or string (data URI or URL)
-        tech_sig = data.get('tech_signature', '')
-        if tech_sig:
-            if isinstance(tech_sig, dict) and tech_sig.get('url'):
-                signatures['Supervisor'] = tech_sig
-            elif isinstance(tech_sig, str) and (tech_sig.startsWith('data:image') or tech_sig.startswith('http')):
-                signatures['Supervisor'] = tech_sig
+        # Check for supervisor signature (new workflow field)
+        supervisor_sig = data.get('supervisor_signature', '') or data.get('tech_signature', '')
+        supervisor_comments = data.get('supervisor_comments', '')
+        
+        if supervisor_sig:
+            if isinstance(supervisor_sig, dict) and supervisor_sig.get('url'):
+                signatures['Supervisor'] = supervisor_sig
+            elif isinstance(supervisor_sig, str) and (supervisor_sig.startswith('data:image') or supervisor_sig.startswith('http')):
+                signatures['Supervisor'] = supervisor_sig
         
         # Check for both 'opMan_signature' (with capital M) and 'opman_signature' (all lowercase)
         opman_sig = data.get('opMan_signature', '') or data.get('opman_signature', '')
         if opman_sig:
             if isinstance(opman_sig, dict) and opman_sig.get('url'):
-                signatures['Operation Manager'] = opman_sig
+                signatures['Operations Manager'] = opman_sig
             elif isinstance(opman_sig, str) and (opman_sig.startswith('data:image') or opman_sig.startswith('http')):
-                signatures['Operation Manager'] = opman_sig
+                signatures['Operations Manager'] = opman_sig
         
-        # Always add signature section (shows "Not signed" if no signatures)
+        # Add supervisor comments before signatures if available
+        if supervisor_comments:
+            add_section_heading(story, "Supervisor Comments")
+            add_paragraph(story, supervisor_comments)
+            story.append(Spacer(1, 0.1*inch))
+        
+        # Always add signature section (only show sections that have signatures or are expected)
+        # For initial supervisor submissions, only show supervisor signature
+        # For reviewed forms, show both supervisor and operations manager
         if not signatures:
-            signatures = {
-                'Supervisor': None,
-                'Operations Manager': None
-            }
+            # If no signatures at all, show supervisor as expected
+            signatures = {'Supervisor': None}
+        elif 'Supervisor' not in signatures:
+            # If we have some signatures but no supervisor, add supervisor slot
+            signatures['Supervisor'] = None
+        
+        # Only add "Operations Manager" slot if there's actually an operations manager signature
+        # This prevents showing "Operations Manager: Not signed" on initial supervisor submissions
+        if opman_sig and 'Operations Manager' not in signatures:
+            signatures['Operations Manager'] = None
         
         add_signatures_section(story, signatures)
         

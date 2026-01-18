@@ -459,7 +459,7 @@ def add_signatures_section(story, signatures_dict):
     """
     styles = get_professional_styles()
     
-    story.append(PageBreak())
+    # No page break - let signatures flow with content
     story.append(Paragraph("Signatures & Approval", styles['SectionHeading']))
     story.append(Spacer(1, 0.15*inch))  # Reduced spacing
     

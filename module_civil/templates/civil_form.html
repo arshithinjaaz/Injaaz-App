@@ -453,14 +453,16 @@
     #supervisorSignaturePad {
       border: 2px solid var(--border-light);
       border-radius: 6px;
-      width: 100%;
+      width: 100% !important;
       max-width: 500px;
-      height: 180px;
-      min-height: 180px;
+      height: 160px !important;
+      max-height: 160px !important;
+      min-height: 160px !important;
       background: #ffffff;
       cursor: crosshair;
       display: block;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      touch-action: none;
     }
     
     /* Ensure canvas doesn't stretch */
@@ -2966,7 +2968,7 @@
                   <li>→ General Manager (final approval)</li>
                 </ul>
                 <hr class="mt-3 mb-2">
-                <a href="/api/workflow/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
+                <a href="/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
               </div>
             `;
             clearDraft();

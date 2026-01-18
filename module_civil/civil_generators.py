@@ -162,7 +162,8 @@ def create_pdf_report(data, output_dir):
             description_of_work = form_data.get('description_of_work', 'N/A')
             location = form_data.get('location', 'N/A')
             visit_date = form_data.get('visit_date') or data.get('visit_date', 'N/A')
-            inspector_signature = form_data.get('inspector_signature', {})
+            inspector_signature = form_data.get('supervisor_signature', '') or form_data.get('inspector_signature', {})
+            supervisor_comments = form_data.get('supervisor_comments', '')
         else:
             # Direct form_data (from submit_with_urls)
             form_data = data
@@ -172,7 +173,8 @@ def create_pdf_report(data, output_dir):
             description_of_work = data.get('description_of_work', 'N/A')
             location = data.get('location', 'N/A')
             visit_date = data.get('visit_date', 'N/A')
-            inspector_signature = data.get('inspector_signature', {})
+            inspector_signature = data.get('supervisor_signature', '') or data.get('inspector_signature', {})
+            supervisor_comments = data.get('supervisor_comments', '')
         
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         pdf_filename = f"Civil_{project_name.replace(' ', '_')}_{timestamp}.pdf"
@@ -274,21 +276,27 @@ def create_pdf_report(data, output_dir):
             story.append(Spacer(1, 0.2*inch))
             add_paragraph(story, "No photos attached.")
         
-        # SIGNATURES SECTION - Only Inspector signature (Manager removed)
+        # SUPERVISOR COMMENTS - Show before signatures if available
+        if supervisor_comments:
+            add_section_heading(story, "Supervisor Comments")
+            add_paragraph(story, supervisor_comments)
+            story.append(Spacer(1, 0.1*inch))
+        
+        # SIGNATURES SECTION - Supervisor signature
         signatures = {}
         
-        # Handle inspector signature - can be dict with url or string
+        # Handle supervisor/inspector signature - can be dict with url or string
         if inspector_signature:
             if isinstance(inspector_signature, dict) and inspector_signature.get('url'):
-                signatures['Inspector'] = inspector_signature
-            elif isinstance(inspector_signature, str) and inspector_signature.startswith('data:image'):
-                signatures['Inspector'] = {'url': inspector_signature, 'is_cloud': False}
-            elif isinstance(inspector_signature, str):
-                signatures['Inspector'] = {'url': inspector_signature, 'is_cloud': True}
+                signatures['Supervisor'] = inspector_signature
+            elif isinstance(inspector_signature, str) and (inspector_signature.startswith('data:image') or inspector_signature.startswith('http')):
+                signatures['Supervisor'] = {'url': inspector_signature, 'is_cloud': False}
         
-        # Only show inspector signature section if signature exists
-        if signatures:
-            add_signatures_section(story, signatures)
+        # Always show supervisor signature section
+        if not signatures:
+            signatures = {'Supervisor': None}
+        
+        add_signatures_section(story, signatures)
         
         # Build professional PDF with logo and branding
         create_professional_pdf(

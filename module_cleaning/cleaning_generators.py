@@ -333,30 +333,28 @@ def create_pdf_report(data, output_dir):
             logger.warning("📸 PDF Generator: No photos found in data")
         
         # SIGNATURES - Professional format
-        tech_sig = data.get('tech_signature', {})
-        supervisor_sig = data.get('supervisor_signature', {})
+        # Prioritize supervisor_signature over tech_signature
+        supervisor_sig = data.get('supervisor_signature', '') or data.get('tech_signature', '')
+        supervisor_comments = data.get('supervisor_comments', '')
         
         signatures = {}
         
-        # Handle inspector signature - can be dict with url or string
-        if tech_sig:
-            if isinstance(tech_sig, dict) and tech_sig.get('url'):
-                signatures['Inspector'] = tech_sig
-            elif isinstance(tech_sig, str) and tech_sig.startswith('data:image'):
-                signatures['Inspector'] = {'url': tech_sig, 'is_cloud': False}
-        
-        # Handle supervisor signature (if present) - can be dict with url or string
+        # Handle supervisor signature - can be dict with url or string
         if supervisor_sig:
             if isinstance(supervisor_sig, dict) and supervisor_sig.get('url'):
                 signatures['Supervisor'] = supervisor_sig
-            elif isinstance(supervisor_sig, str) and supervisor_sig.startswith('data:image'):
+            elif isinstance(supervisor_sig, str) and (supervisor_sig.startswith('data:image') or supervisor_sig.startswith('http')):
                 signatures['Supervisor'] = {'url': supervisor_sig, 'is_cloud': False}
         
-        # Always show signature section
+        # Add supervisor comments before signatures if available
+        if supervisor_comments:
+            add_section_heading(story, "Supervisor Comments")
+            add_paragraph(story, supervisor_comments)
+            story.append(Spacer(1, 0.1*inch))
+        
+        # Always show supervisor signature section
         if not signatures:
-            signatures = {
-                'Inspector': None
-            }
+            signatures = {'Supervisor': None}
         
         add_signatures_section(story, signatures)
         
