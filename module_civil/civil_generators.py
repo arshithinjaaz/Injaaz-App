@@ -4,7 +4,32 @@ Civil report generators for Excel and PDF.
 import os
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
+
+# Dubai timezone offset (Gulf Standard Time, UTC+4)
+DUBAI_OFFSET = timedelta(hours=4)
+
+def get_dubai_time():
+    """Get current time in Dubai timezone (GST - Gulf Standard Time, UTC+4)"""
+    utc_now = datetime.utcnow()
+    return utc_now + DUBAI_OFFSET
+
+def format_dubai_datetime(dt=None, format_str='%Y-%m-%d %H:%M:%S'):
+    """Format datetime in Dubai timezone (GST, UTC+4)"""
+    if dt is None:
+        dt = get_dubai_time()
+    elif isinstance(dt, datetime):
+        # Assume UTC if naive, add Dubai offset
+        if dt.tzinfo is None:
+            dt = dt + DUBAI_OFFSET
+        else:
+            # Convert to UTC first, then add Dubai offset
+            from datetime import timezone as dt_timezone
+            utc_dt = dt.astimezone(dt_timezone.utc).replace(tzinfo=None)
+            dt = utc_dt + DUBAI_OFFSET
+    else:
+        dt = get_dubai_time()
+    return dt.strftime(format_str)
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from reportlab.lib.pagesizes import A4
@@ -68,7 +93,7 @@ def create_excel_report(data, output_dir):
             all_photos.extend(photos)
         logger.info(f"📸 Total photos collected: {len(all_photos)}")
         
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = get_dubai_time().strftime('%Y%m%d_%H%M%S')
         excel_filename = f"Civil_{project_name}_{timestamp}.xlsx"
         excel_path = os.path.join(output_dir, excel_filename)
         
@@ -92,7 +117,7 @@ def create_excel_report(data, output_dir):
             ('Visit Date', data.get('visit_date', 'N/A')),
             ('Location', data.get('location', 'N/A')),
             ('Inspector', data.get('inspector_name', 'N/A')),
-            ('Report Generated', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+            ('Report Generated', format_dubai_datetime() + ' (GST)'),
             ('Total Items', str(len(work_items)))
         ]
         
@@ -176,7 +201,7 @@ def create_pdf_report(data, output_dir):
             inspector_signature = data.get('supervisor_signature', '') or data.get('inspector_signature', {})
             supervisor_comments = data.get('supervisor_comments', '')
         
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = get_dubai_time().strftime('%Y%m%d_%H%M%S')
         pdf_filename = f"Civil_{project_name.replace(' ', '_')}_{timestamp}.pdf"
         pdf_path = os.path.join(output_dir, pdf_filename)
         
@@ -221,7 +246,7 @@ def create_pdf_report(data, output_dir):
             ['Visit Date:', data.get('visit_date', 'N/A')],
             ['Inspector:', data.get('inspector_name', 'N/A')],
             ['Description of Work:', data.get('description_of_work', 'N/A')],
-            ['Report Generated:', datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
+            ['Report Generated:', format_dubai_datetime() + ' (GST)'],
             ['Total Photos:', str(len(all_photos))]
         ]
         

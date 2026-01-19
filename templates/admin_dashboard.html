@@ -1266,13 +1266,13 @@
           supervisorLog = `<div style="font-size: 0.7rem; color: var(--success); margin-top: 0.25rem;">✓ Reviewed: ${reviewDate} (GST)</div>`;
         }
         
-        // Fix date formatting - use GST (Gulf Standard Time, UTC+4)
+        // Visit date formatting (date-only, no timezone indicator needed)
         const visitDate = doc.visit_date ? parseUTCDate(doc.visit_date + 'T00:00:00Z').toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'short',
           day: 'numeric',
           timeZone: 'Asia/Dubai'
-        }) + ' (GST)' : 'N/A';
+        }) : 'N/A';
         
         // Format created_at properly
         let createdDate = 'N/A';

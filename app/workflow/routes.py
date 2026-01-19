@@ -404,12 +404,17 @@ def approve_operations_manager(submission_id):
         submission.workflow_status = 'operations_manager_approved'
         
         # Update form_data if provided
+        form_data = submission.form_data if submission.form_data else {}
         if form_data_updates:
-            form_data = submission.form_data if submission.form_data else {}
             form_data.update(form_data_updates)
-            if signature:
-                form_data['operations_manager_signature'] = signature
-            submission.form_data = form_data
+        
+        # Always save Operations Manager comments and signature to form_data for next reviewers
+        if comments:
+            form_data['operations_manager_comments'] = comments
+        if signature:
+            form_data['operations_manager_signature'] = signature
+        
+        submission.form_data = form_data
         
         # Move to BD/Procurement review
         submission.workflow_status = 'bd_procurement_review'
@@ -495,6 +500,7 @@ def approve_business_development(submission_id):
         
         # Extract data
         comments = data.get('comments', '')
+        signature = data.get('signature', '')
         form_data_updates = data.get('form_data', {})
         
         # Update submission
@@ -503,10 +509,17 @@ def approve_business_development(submission_id):
         submission.business_dev_approved_at = datetime.utcnow()
         
         # Update form_data if provided
+        form_data = submission.form_data if submission.form_data else {}
         if form_data_updates:
-            form_data = submission.form_data if submission.form_data else {}
             form_data.update(form_data_updates)
-            submission.form_data = form_data
+        
+        # Always save BD comments and signature to form_data for next reviewers
+        if comments:
+            form_data['business_dev_comments'] = comments
+        if signature:
+            form_data['business_dev_signature'] = signature
+        
+        submission.form_data = form_data
         
         # Check if both BD and Procurement have approved
         if submission.procurement_approved_at:
@@ -518,11 +531,46 @@ def approve_business_development(submission_id):
         submission.updated_at = datetime.utcnow()
         db.session.commit()
         
+        # If this is an HVAC submission, regenerate documents so GM/History always
+        # see PDFs that include BD + previous reviewers' changes
+        job_id = None
+        if submission.module_type == 'hvac_mep':
+            try:
+                from common.db_utils import create_job_db
+                from module_hvac_mep.routes import get_paths, process_job
+                from app.models import Job
+
+                # Delete old jobs so we always generate a fresh set for this stage
+                old_jobs = Job.query.filter_by(submission_id=submission.id).all()
+                for old_job in old_jobs:
+                    db.session.delete(old_job)
+                db.session.commit()
+
+                new_job = create_job_db(submission)
+                job_id = new_job.job_id
+
+                GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+                if EXECUTOR:
+                    EXECUTOR.submit(
+                        process_job,
+                        submission.submission_id,
+                        job_id,
+                        current_app.config,
+                        current_app._get_current_object()
+                    )
+                    current_app.logger.info(f"✅ Regeneration job {job_id} queued for BD approval - submission {submission_id}")
+                else:
+                    current_app.logger.error("ThreadPoolExecutor not available for BD document regeneration")
+            except Exception as regen_err:
+                current_app.logger.error(f"Error queuing regeneration job after BD approval: {regen_err}", exc_info=True)
+        
         log_audit(user_id, 'business_dev_approved', 'submission', submission_id, {'comments': comments})
         
         return success_response({
             'submission': submission.to_dict(),
-            'message': message
+            'message': message,
+            'job_id': job_id,
+            'regenerating': bool(job_id)
         })
     except Exception as e:
         db.session.rollback()
@@ -560,6 +608,7 @@ def approve_procurement(submission_id):
         
         # Extract data
         comments = data.get('comments', '')
+        signature = data.get('signature', '')
         form_data_updates = data.get('form_data', {})
         
         # Update submission
@@ -568,10 +617,17 @@ def approve_procurement(submission_id):
         submission.procurement_approved_at = datetime.utcnow()
         
         # Update form_data if provided
+        form_data = submission.form_data if submission.form_data else {}
         if form_data_updates:
-            form_data = submission.form_data if submission.form_data else {}
             form_data.update(form_data_updates)
-            submission.form_data = form_data
+        
+        # Always save Procurement comments and signature to form_data for next reviewers
+        if comments:
+            form_data['procurement_comments'] = comments
+        if signature:
+            form_data['procurement_signature'] = signature
+        
+        submission.form_data = form_data
         
         # Check if both BD and Procurement have approved
         if submission.business_dev_approved_at:
@@ -583,11 +639,44 @@ def approve_procurement(submission_id):
         submission.updated_at = datetime.utcnow()
         db.session.commit()
         
+        # Regenerate documents for HVAC so GM/History PDFs include Procurement stage
+        job_id = None
+        if submission.module_type == 'hvac_mep':
+            try:
+                from common.db_utils import create_job_db
+                from module_hvac_mep.routes import get_paths, process_job
+                from app.models import Job
+
+                old_jobs = Job.query.filter_by(submission_id=submission.id).all()
+                for old_job in old_jobs:
+                    db.session.delete(old_job)
+                db.session.commit()
+
+                new_job = create_job_db(submission)
+                job_id = new_job.job_id
+
+                GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+                if EXECUTOR:
+                    EXECUTOR.submit(
+                        process_job,
+                        submission.submission_id,
+                        job_id,
+                        current_app.config,
+                        current_app._get_current_object()
+                    )
+                    current_app.logger.info(f"✅ Regeneration job {job_id} queued for Procurement approval - submission {submission_id}")
+                else:
+                    current_app.logger.error("ThreadPoolExecutor not available for Procurement document regeneration")
+            except Exception as regen_err:
+                current_app.logger.error(f"Error queuing regeneration job after Procurement approval: {regen_err}", exc_info=True)
+        
         log_audit(user_id, 'procurement_approved', 'submission', submission_id, {'comments': comments})
         
         return success_response({
             'submission': submission.to_dict(),
-            'message': message
+            'message': message,
+            'job_id': job_id,
+            'regenerating': bool(job_id)
         })
     except Exception as e:
         db.session.rollback()
@@ -632,15 +721,50 @@ def approve_general_manager(submission_id):
         submission.status = 'completed'
         
         # Update form_data if provided
+        form_data = submission.form_data if submission.form_data else {}
         if form_data_updates:
-            form_data = submission.form_data if submission.form_data else {}
             form_data.update(form_data_updates)
-            if signature:
-                form_data['general_manager_signature'] = signature
-            submission.form_data = form_data
         
+        # Always save General Manager comments and signature to form_data
+        if comments:
+            form_data['general_manager_comments'] = comments
+        if signature:
+            form_data['general_manager_signature'] = signature
+        
+        submission.form_data = form_data
         submission.updated_at = datetime.utcnow()
         db.session.commit()
+        
+        # Regenerate documents if this is an HVAC submission (to include all reviewer signatures)
+        job_id = None
+        if submission.module_type == 'hvac_mep':
+            from common.db_utils import create_job_db
+            from module_hvac_mep.routes import get_paths, process_job
+            from app.models import Job
+            
+            # Delete old jobs to force regeneration
+            old_jobs = Job.query.filter_by(submission_id=submission.id).all()
+            for old_job in old_jobs:
+                db.session.delete(old_job)
+            db.session.commit()
+            
+            # Create new job for regeneration
+            new_job = create_job_db(submission)
+            job_id = new_job.job_id
+            
+            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+            
+            if EXECUTOR:
+                EXECUTOR.submit(
+                    process_job,
+                    submission.submission_id,
+                    job_id,
+                    current_app.config,
+                    current_app._get_current_object()
+                )
+                current_app.logger.info(f"✅ Regeneration job {job_id} queued for General Manager approval - submission {submission_id}")
+            else:
+                current_app.logger.error("ThreadPoolExecutor not available for document regeneration")
         
         log_audit(user_id, 'general_manager_approved', 'submission', submission_id, {
             'comments': comments,
@@ -649,7 +773,9 @@ def approve_general_manager(submission_id):
         
         return success_response({
             'submission': submission.to_dict(),
-            'message': 'Final approval completed. Submission is now complete.'
+            'message': 'Final approval completed. Submission is now complete.' + (' Documents are being regenerated with all signatures.' if job_id else ''),
+            'job_id': job_id,
+            'regenerating': bool(job_id)
         })
     except Exception as e:
         db.session.rollback()
@@ -768,11 +894,15 @@ def update_submission(submission_id):
                                 status_code=403, error_code='UNAUTHORIZED')
         
         # Check if supervisor is updating their own submission
+        # Allow updates if status is submitted/rejected OR if in operations_manager_review but not yet approved
         is_supervisor_own_update = (
             user.designation == 'supervisor' and 
             hasattr(submission, 'supervisor_id') and 
             submission.supervisor_id == user.id and
-            submission.workflow_status in ['submitted', 'rejected']
+            (
+                submission.workflow_status in ['submitted', 'rejected'] or
+                (submission.workflow_status == 'operations_manager_review' and not submission.operations_manager_approved_at)
+            )
         )
         
         # Update form_data - accept full form_data or updates
@@ -804,13 +934,26 @@ def update_submission(submission_id):
                         # No photos at all - initialize empty array
                         item['photos'] = []
             
-            # If supervisor is updating their own submission, add update note to comments
+            # If supervisor is updating their own submission, ensure signature is saved
             if is_supervisor_own_update and isinstance(form_data, dict):
                 existing_comment = form_data.get('supervisor_comments', '')
                 if existing_comment and '[Form updated by supervisor with new details]' not in existing_comment:
                     form_data['supervisor_comments'] = existing_comment + '\n\n[Form updated by supervisor with new details]'
                 elif not existing_comment:
                     form_data['supervisor_comments'] = '[Form updated by supervisor with new details]'
+                
+                # Ensure supervisor_signature is in form_data if provided in payload
+                if 'supervisor_signature' in form_data and form_data['supervisor_signature']:
+                    # Signature is already in form_data, ensure it's preserved
+                    current_app.logger.info(f"✅ Supervisor signature preserved in form_data for submission {submission_id}")
+                elif 'supervisor_signature' not in form_data or not form_data.get('supervisor_signature'):
+                    # Check if signature exists in old form_data and preserve it
+                    old_form_data = submission.form_data if submission.form_data else {}
+                    if old_form_data.get('supervisor_signature'):
+                        form_data['supervisor_signature'] = old_form_data['supervisor_signature']
+                        current_app.logger.info(f"⚠️ Preserving existing supervisor signature for submission {submission_id}")
+                    else:
+                        current_app.logger.warning(f"⚠️ No supervisor signature found in form_data for submission {submission_id}")
             
             submission.form_data = form_data
         elif 'form_data_updates' in data:
@@ -838,9 +981,11 @@ def update_submission(submission_id):
         submission.updated_at = datetime.utcnow()
         db.session.commit()
         
-        # Regenerate documents if this is an HVAC submission
+        # Regenerate documents if this is an HVAC submission and it's a supervisor updating their own submission
+        # or if it's being updated by a reviewer
         job_id = None
-        if submission.module_type == 'hvac_mep':
+        should_regenerate = is_supervisor_own_update or user.designation in ['operations_manager', 'business_development', 'procurement', 'general_manager']
+        if submission.module_type == 'hvac_mep' and should_regenerate:
             from common.db_utils import create_job_db
             from module_hvac_mep.routes import get_paths, process_job
             from app.models import Job

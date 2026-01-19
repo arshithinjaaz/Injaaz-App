@@ -413,11 +413,27 @@
             return new Date(utcString);
           };
           
-          const visitDate = sub.visit_date ? parseUTCDate(sub.visit_date).toLocaleString('en-US', {
-            year: 'numeric', month: 'short', day: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-            timeZone: 'Asia/Dubai'
-          }) + ' (GST)' : 'N/A';
+          // Visit date is date-only, format it properly (no timezone indicator needed for dates)
+          let visitDate = 'N/A';
+          if (sub.visit_date) {
+            const dateStr = sub.visit_date;
+            if (dateStr.includes('T')) {
+              // Has time component, parse as UTC and convert to Dubai (but only show date)
+              const date = parseUTCDate(dateStr);
+              visitDate = date.toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                timeZone: 'Asia/Dubai'
+              });
+            } else {
+              // Date only, parse as date
+              const [year, month, day] = dateStr.split('-').map(Number);
+              const date = new Date(year, month - 1, day);
+              visitDate = date.toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                timeZone: 'Asia/Dubai'
+              });
+            }
+          }
           const createdAt = sub.created_at ? parseUTCDate(sub.created_at).toLocaleString('en-US', {
             year: 'numeric', month: 'short', day: 'numeric',
             hour: '2-digit', minute: '2-digit',

@@ -448,6 +448,14 @@
                     ✏️ Edit & Resubmit
                   </a>
                 ` : ''}
+                ${submission.latest_job_id ? `
+                  <a href="/${moduleUrl}/download/${submission.latest_job_id}/pdf" class="btn-custom btn-outline-custom" target="_blank">
+                    📥 PDF
+                  </a>
+                  <a href="/${moduleUrl}/download/${submission.latest_job_id}/excel" class="btn-custom btn-outline-custom" target="_blank">
+                    📊 Excel
+                  </a>
+                ` : ''}
               </div>
             </div>
           `;

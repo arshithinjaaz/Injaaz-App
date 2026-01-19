@@ -133,6 +133,9 @@ def index():
     
     try:
         user_id = get_jwt_identity()
+        if not user_id:
+            return redirect(url_for('login_page'))
+        
         user = User.query.get(user_id)
         
         if not user or not user.is_active:
@@ -224,7 +227,8 @@ def index():
                 'visit_date': visit_date,
                 'form_data': form_data,
                 'is_edit_mode': True,
-                'workflow_status': submission.workflow_status if hasattr(submission, 'workflow_status') else None
+                'workflow_status': submission.workflow_status if hasattr(submission, 'workflow_status') else None,
+                'supervisor_id': submission.supervisor_id if hasattr(submission, 'supervisor_id') else None
             }
             is_edit_mode = True
             
@@ -274,7 +278,8 @@ def index():
                              submission_data=submission_data, 
                              is_edit_mode=is_edit_mode,
                              user_designation=user_designation,
-                             is_supervisor_edit=is_supervisor_edit)
+                             is_supervisor_edit=is_supervisor_edit,
+                             current_user_id=user_id)
     except Exception as e:
         logger.error(f"Error checking module access: {str(e)}")
         logger.error(traceback.format_exc())

@@ -143,6 +143,20 @@ class Submission(db.Model):
     
     def to_dict(self):
         """Convert to dictionary"""
+        # Get the latest completed job for this submission (for downloads)
+        latest_job = None
+        try:
+            # Use the jobs relationship (defined via db.relationship)
+            if hasattr(self, 'jobs'):
+                # Access the relationship - it will query Job model at runtime
+                completed_jobs = [j for j in self.jobs if hasattr(j, 'status') and j.status == 'completed']
+                if completed_jobs:
+                    # Sort by completed_at descending to get latest
+                    latest_job = max(completed_jobs, key=lambda j: j.completed_at if (hasattr(j, 'completed_at') and j.completed_at) else datetime.min)
+        except Exception:
+            # If query fails, skip - downloads won't be available
+            pass
+        
         return {
             'id': self.id,
             'submission_id': self.submission_id,
@@ -171,7 +185,8 @@ class Submission(db.Model):
             'general_manager_approved_at': getattr(self, 'general_manager_approved_at', None).isoformat() if hasattr(self, 'general_manager_approved_at') and getattr(self, 'general_manager_approved_at', None) else None,
             'form_data': self.form_data,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'latest_job_id': latest_job.job_id if latest_job else None  # Latest completed job for downloads
         }
     
     def __repr__(self):

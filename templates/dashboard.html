@@ -2015,16 +2015,16 @@
             <form id="changePasswordForm" onsubmit="event.preventDefault(); submitChangePassword();">
               <div class="mb-3">
                 <label for="currentPassword" class="form-label">Current Password</label>
-                <input type="password" id="currentPassword" class="form-control" required placeholder="Enter current password">
+                <input type="password" id="currentPassword" class="form-control" required placeholder="Enter current password" autocomplete="off" data-1p-ignore="true" data-lpignore="true">
               </div>
               <div class="mb-3">
                 <label for="newPassword" class="form-label">New Password</label>
-                <input type="password" id="newPassword" class="form-control" required minlength="8" placeholder="Enter new password (min 8 chars)">
+                <input type="password" id="newPassword" class="form-control" required minlength="8" placeholder="Enter new password (min 8 chars)" autocomplete="off" data-1p-ignore="true" data-lpignore="true">
                 <p class="contact-modal-note" style="margin-top: 0.25rem;">Must be at least 8 characters long.</p>
               </div>
               <div class="mb-3">
                 <label for="confirmNewPassword" class="form-label">Confirm New Password</label>
-                <input type="password" id="confirmNewPassword" class="form-control" required minlength="8" placeholder="Confirm new password">
+                <input type="password" id="confirmNewPassword" class="form-control" required minlength="8" placeholder="Confirm new password" autocomplete="off" data-1p-ignore="true" data-lpignore="true">
               </div>
               <div id="changePasswordError" class="alert alert-danger" style="display: none; margin-bottom: 1rem; font-size: 0.9rem;"></div>
               <div id="changePasswordSuccess" class="alert alert-success" style="display: none; margin-bottom: 1rem; font-size: 0.9rem;"></div>

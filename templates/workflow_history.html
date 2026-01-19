@@ -374,11 +374,28 @@
           return new Date(utcString);
         };
         
-        const visitDate = sub.visit_date ? parseUTCDate(sub.visit_date).toLocaleString('en-US', {
-          year: 'numeric', month: 'short', day: 'numeric',
-          hour: '2-digit', minute: '2-digit',
-          timeZone: 'Asia/Dubai'
-        }) + ' (GST)' : 'N/A';
+        // Visit date is date-only, format it properly (no timezone indicator needed for dates)
+        let visitDate = 'N/A';
+        if (sub.visit_date) {
+          // visit_date is typically just a date (YYYY-MM-DD), parse and format
+          const dateStr = sub.visit_date;
+          if (dateStr.includes('T')) {
+            // Has time component, parse as UTC and convert to Dubai (but only show date)
+            const date = parseUTCDate(dateStr);
+            visitDate = date.toLocaleDateString('en-US', {
+              year: 'numeric', month: 'short', day: 'numeric',
+              timeZone: 'Asia/Dubai'
+            });
+          } else {
+            // Date only, parse as date
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const date = new Date(year, month - 1, day);
+            visitDate = date.toLocaleDateString('en-US', {
+              year: 'numeric', month: 'short', day: 'numeric',
+              timeZone: 'Asia/Dubai'
+            });
+          }
+        }
         
         const moduleUrl = sub.module_type === 'hvac_mep' ? 'hvac-mep' : sub.module_type;
 
@@ -397,9 +414,19 @@
             <td data-label="Visit Date">${visitDate}</td>
             <td data-label="Status"><span class="badge ${statusClass}">${statusDisplay}</span>${omApprovalTime}</td>
             <td data-label="Actions">
-              <a href="/${moduleUrl}/form?edit=${sub.submission_id}&review=true" class="action-btn">
-                ${sub.workflow_status === 'approved' ? '👁️ View' : '✏️ Review'}
-              </a>
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+                <a href="/${moduleUrl}/form?edit=${sub.submission_id}&review=true" class="action-btn">
+                  ${sub.workflow_status === 'approved' || sub.workflow_status === 'completed' ? '👁️ View' : '✏️ Review'}
+                </a>
+                ${sub.latest_job_id ? `
+                  <a href="/${moduleUrl}/download/${sub.latest_job_id}/pdf" class="action-btn" target="_blank" style="font-size: 0.85rem;">
+                    📥 PDF
+                  </a>
+                  <a href="/${moduleUrl}/download/${sub.latest_job_id}/excel" class="action-btn" target="_blank" style="font-size: 0.85rem;">
+                    📊 Excel
+                  </a>
+                ` : ''}
+              </div>
             </td>
           </tr>
         `;
