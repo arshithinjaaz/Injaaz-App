@@ -217,6 +217,106 @@ def index():
                 except:
                     form_data = {}
             
+            # Merge Operations Manager comments from model field into form_data if not already present
+            # This ensures BD and other reviewers can see OM comments even if not in form_data
+            if hasattr(submission, 'operations_manager_comments') and submission.operations_manager_comments:
+                if not form_data.get('operations_manager_comments'):
+                    form_data['operations_manager_comments'] = submission.operations_manager_comments
+                    logger.info(f"✅ Added Operations Manager comments from model field to form_data for display")
+            
+            # Log Operations Manager data for debugging
+            logger.info(f"🔍 Operations Manager data check for submission {edit_submission_id}:")
+            logger.info(f"  - form_data.operations_manager_comments: {bool(form_data.get('operations_manager_comments'))}")
+            logger.info(f"  - form_data.operations_manager_signature: {bool(form_data.get('operations_manager_signature'))}")
+            logger.info(f"  - form_data.opMan_signature: {bool(form_data.get('opMan_signature'))}")
+            logger.info(f"  - Model field operations_manager_comments: {bool(hasattr(submission, 'operations_manager_comments') and submission.operations_manager_comments)}")
+            
+            # Operations Manager signature is stored in form_data, but ensure it's there
+            # Check if it exists in form_data, if not, try to extract from nested structures
+            if not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
+                # Try to find signature in nested structures
+                if isinstance(submission.form_data, dict):
+                    nested_data = submission.form_data.get('data') if isinstance(submission.form_data.get('data'), dict) else {}
+                    if nested_data:
+                        if nested_data.get('operations_manager_signature'):
+                            form_data['operations_manager_signature'] = nested_data.get('operations_manager_signature')
+                            logger.info(f"✅ Found Operations Manager signature in nested form_data.data structure")
+                        elif nested_data.get('opMan_signature'):
+                            form_data['operations_manager_signature'] = nested_data.get('opMan_signature')
+                            logger.info(f"✅ Found Operations Manager signature (opMan_signature) in nested form_data.data structure")
+                
+                # If still not found, log warning
+                if not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
+                    logger.warning(f"⚠️ Operations Manager signature not found in form_data for submission {edit_submission_id}")
+                    logger.warning(f"  - Available form_data keys: {list(form_data.keys())[:30]}")
+                    # Check if OM has approved (might have signature but not in form_data yet)
+                    if hasattr(submission, 'operations_manager_approved_at') and submission.operations_manager_approved_at:
+                        logger.warning(f"  - ⚠️ OM has approved but signature not in form_data - this may indicate a data saving issue")
+            
+            # Merge Business Development comments from model field into form_data if not already present
+            # This ensures Procurement and other reviewers can see BD comments even if not in form_data
+            # CRITICAL: Only use actual BD comments, never fall back to supervisor comments
+            existing_bd_comments = form_data.get('business_dev_comments')
+            supervisor_comments = form_data.get('supervisor_comments')
+            
+            # Check if BD comments are incorrectly set to supervisor comments
+            if existing_bd_comments and supervisor_comments and existing_bd_comments == supervisor_comments:
+                logger.warning(f"⚠️ WARNING: BD comments appear to be incorrectly set to supervisor comments!")
+                logger.warning(f"  - BD comments value: {existing_bd_comments[:50] if existing_bd_comments else 'None'}...")
+                logger.warning(f"  - Supervisor comments value: {supervisor_comments[:50] if supervisor_comments else 'None'}...")
+                # Clear the incorrect BD comments - we'll set it properly below
+                form_data['business_dev_comments'] = None
+                existing_bd_comments = None
+            
+            if hasattr(submission, 'business_dev_comments') and submission.business_dev_comments:
+                # Only set if not already present OR if it was incorrectly set to supervisor comments
+                if not existing_bd_comments or existing_bd_comments == supervisor_comments:
+                    form_data['business_dev_comments'] = submission.business_dev_comments
+                    logger.info(f"✅ Added Business Development comments from model field to form_data for display")
+                    logger.info(f"  - BD comments value: {submission.business_dev_comments[:50] if submission.business_dev_comments else 'None'}...")
+            elif existing_bd_comments and existing_bd_comments != supervisor_comments:
+                # Keep existing BD comments if they're valid (not supervisor comments)
+                logger.info(f"✅ Using existing Business Development comments from form_data")
+                logger.info(f"  - BD comments value: {existing_bd_comments[:50] if existing_bd_comments else 'None'}...")
+            else:
+                # No BD comments found - ensure it's not set to supervisor comments
+                if form_data.get('business_dev_comments') == supervisor_comments:
+                    form_data['business_dev_comments'] = None
+                    logger.warning(f"⚠️ Cleared BD comments that were incorrectly set to supervisor comments")
+            
+            # Business Development signature is stored in form_data, but ensure it's there
+            # Check if it exists in form_data, if not, try to extract from nested structures
+            if not form_data.get('business_dev_signature'):
+                # Try to find signature in nested structures
+                if isinstance(submission.form_data, dict):
+                    nested_data = submission.form_data.get('data') if isinstance(submission.form_data.get('data'), dict) else {}
+                    if nested_data:
+                        if nested_data.get('business_dev_signature'):
+                            form_data['business_dev_signature'] = nested_data.get('business_dev_signature')
+                            logger.info(f"✅ Found Business Development signature in nested form_data.data structure")
+                
+                # If still not found, log warning
+                if not form_data.get('business_dev_signature'):
+                    logger.warning(f"⚠️ Business Development signature not found in form_data for submission {edit_submission_id}")
+                    # Check if BD has approved (might have signature but not in form_data yet)
+                    if hasattr(submission, 'business_dev_approved_at') and submission.business_dev_approved_at:
+                        logger.warning(f"  - ⚠️ BD has approved but signature not in form_data - this may indicate a data saving issue")
+            
+            # Log Business Development data for debugging
+            logger.info(f"🔍 Business Development data check for submission {edit_submission_id}:")
+            logger.info(f"  - form_data.business_dev_comments: {bool(form_data.get('business_dev_comments'))}")
+            if form_data.get('business_dev_comments'):
+                bd_comments_val = form_data.get('business_dev_comments')
+                logger.info(f"  - BD comments value (first 50 chars): {bd_comments_val[:50] if isinstance(bd_comments_val, str) else str(bd_comments_val)[:50]}...")
+            logger.info(f"  - form_data.business_dev_signature: {bool(form_data.get('business_dev_signature'))}")
+            logger.info(f"  - Model field business_dev_comments: {bool(hasattr(submission, 'business_dev_comments') and submission.business_dev_comments)}")
+            if hasattr(submission, 'business_dev_comments') and submission.business_dev_comments:
+                logger.info(f"  - Model BD comments value (first 50 chars): {submission.business_dev_comments[:50]}...")
+            logger.info(f"  - BD approved at: {submission.business_dev_approved_at if hasattr(submission, 'business_dev_approved_at') else 'N/A'}")
+            logger.info(f"  - Supervisor comments (for comparison): {bool(supervisor_comments)}")
+            if supervisor_comments:
+                logger.info(f"  - Supervisor comments value (first 50 chars): {supervisor_comments[:50]}...")
+            
             # Use values from form_data if available (what technician submitted), otherwise fall back to DB columns
             site_name = form_data.get('site_name') or submission.site_name or ''
             visit_date = form_data.get('visit_date') or (submission.visit_date.isoformat() if submission.visit_date else '')
@@ -859,7 +959,7 @@ def submit_with_urls():
         opman_sig_file = None
         supervisor_sig_file = None
         
-        # If editing, preserve existing signatures if no new signature provided
+        # If editing, preserve existing signatures and comments if no new ones provided
         if is_edit_mode:
             from common.db_utils import get_submission_db
             existing_submission = get_submission_db(edit_submission_id)
@@ -883,6 +983,13 @@ def submit_with_urls():
                     supervisor_sig_file = existing_form_data.get('supervisor_signature')
                     if supervisor_sig_file:
                         logger.info(f"✅ Preserving existing supervisor signature from submission")
+                
+                # Preserve supervisor comments if not provided (or if empty string provided but existing has value)
+                if not supervisor_comments or supervisor_comments.strip() == '':
+                    existing_comments = existing_form_data.get('supervisor_comments')
+                    if existing_comments and existing_comments.strip():
+                        supervisor_comments = existing_comments
+                        logger.info(f"✅ Preserving existing supervisor comments from submission")
         
         # Upload new signatures if provided
         if tech_sig_dataurl and not tech_sig_file:
@@ -896,9 +1003,16 @@ def submit_with_urls():
                 opman_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
         
         if supervisor_sig_dataurl and not supervisor_sig_file:
-            fname, fpath, url = save_signature_dataurl(supervisor_sig_dataurl, UPLOADS_DIR, prefix="supervisor_sig")
-            if url:
-                supervisor_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
+            # Only process if signature data is not empty
+            if supervisor_sig_dataurl.strip() and supervisor_sig_dataurl.strip() != '':
+                fname, fpath, url = save_signature_dataurl(supervisor_sig_dataurl, UPLOADS_DIR, prefix="supervisor_sig")
+                if url:
+                    supervisor_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
+                    logger.info(f"✅ Supervisor signature saved successfully (URL: {url[:80]}...)")
+                else:
+                    logger.warning(f"⚠️ Supervisor signature upload failed - no URL returned")
+            else:
+                logger.warning(f"⚠️ Supervisor signature data is empty, skipping upload")
         
         # Process items with photo URLs
         items_data = payload.get("items", [])
@@ -936,17 +1050,47 @@ def submit_with_urls():
             })
         
         # Create or update submission
+        # Only include supervisor_signature if it has a value (don't set to None)
         submission_data = {
             "site_name": site_name,
             "visit_date": visit_date,
             "tech_signature": tech_sig_file,
             "opMan_signature": opman_sig_file,
-            "supervisor_signature": supervisor_sig_file,
-            "supervisor_comments": supervisor_comments,
             "items": items,
             "timestamp": datetime.now().isoformat(),
             "base_url": request.host_url.rstrip('/')
         }
+        
+        # Always include supervisor fields in submission_data
+        # Include signature if we have one (new or preserved)
+        if supervisor_sig_file:
+            submission_data["supervisor_signature"] = supervisor_sig_file
+            logger.info(f"✅ Including supervisor signature in submission data (URL: {supervisor_sig_file.get('url', 'N/A')[:80] if isinstance(supervisor_sig_file, dict) else 'N/A'})")
+        elif is_edit_mode:
+            # When editing, check if we preserved an existing signature earlier
+            # (This should have been set in the preservation logic above)
+            if supervisor_sig_file is None:
+                # Double-check existing submission for signature
+                from common.db_utils import get_submission_db
+                existing_submission = get_submission_db(edit_submission_id)
+                if existing_submission and existing_submission.get('form_data'):
+                    existing_sig = existing_submission['form_data'].get('supervisor_signature')
+                    if existing_sig:
+                        submission_data["supervisor_signature"] = existing_sig
+                        logger.info(f"✅ Preserving existing supervisor signature in submission data from database")
+                    else:
+                        logger.warning(f"⚠️ No existing supervisor signature found in database for submission {edit_submission_id}")
+            else:
+                # supervisor_sig_file was set during preservation, include it
+                submission_data["supervisor_signature"] = supervisor_sig_file
+                logger.info(f"✅ Including preserved supervisor signature in submission data")
+        
+        # Always include supervisor_comments (even if empty, so field is preserved)
+        submission_data["supervisor_comments"] = supervisor_comments or ''
+        if supervisor_comments:
+            logger.info(f"✅ Supervisor comments: {len(supervisor_comments)} characters")
+        else:
+            logger.info(f"ℹ️ Supervisor comments: empty (field preserved)")
         
         # Get user_id from JWT token if available
         user_id = None

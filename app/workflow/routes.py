@@ -14,6 +14,59 @@ from datetime import datetime
 
 workflow_bp = Blueprint('workflow_bp', __name__, url_prefix='/api/workflow')
 
+
+def get_module_functions(module_type):
+    """
+    Get module-specific functions for signature handling and job processing.
+    Returns (save_signature_dataurl, get_paths, process_job) functions.
+    """
+    if module_type == 'hvac_mep':
+        from module_hvac_mep.routes import save_signature_dataurl, get_paths, process_job
+        return save_signature_dataurl, get_paths, process_job
+    elif module_type == 'civil':
+        from module_civil.routes import save_signature_dataurl, process_job
+        # Civil uses app_paths() instead of get_paths(), create a wrapper
+        def get_paths_civil():
+            from module_civil.routes import app_paths
+            return app_paths()
+        return save_signature_dataurl, get_paths_civil, process_job
+    elif module_type == 'cleaning':
+        # Cleaning doesn't have these functions yet, use common utilities
+        from common.utils import upload_base64_to_cloud
+        import os
+        from config import GENERATED_DIR, UPLOADS_DIR, JOBS_DIR
+        from concurrent.futures import ThreadPoolExecutor
+        
+        def save_signature_dataurl_cleaning(dataurl, uploads_dir, prefix="signature"):
+            """Save signature for cleaning module"""
+            if not dataurl:
+                return None, None, None
+            try:
+                url, is_cloud = upload_base64_to_cloud(dataurl, folder="signatures", prefix=prefix, uploads_dir=uploads_dir)
+                if url:
+                    if is_cloud:
+                        return None, None, url
+                    else:
+                        filename = url.split('/')[-1]
+                        file_path = os.path.join(GENERATED_DIR, "uploads", "signatures", filename)
+                        return filename, file_path, url
+                raise Exception("Upload succeeded but no URL returned")
+            except Exception as e:
+                current_app.logger.error(f"Signature upload failed: {e}")
+                raise
+        
+        def get_paths_cleaning():
+            """Get paths for cleaning module"""
+            executor = current_app.config.get('EXECUTOR') if current_app else None
+            if not executor:
+                executor = ThreadPoolExecutor(max_workers=2)
+            return GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, executor
+        
+        from module_cleaning.routes import process_job
+        return save_signature_dataurl_cleaning, get_paths_cleaning, process_job
+    else:
+        raise ValueError(f"Unknown module type: {module_type}")
+
 # Valid designations for workflow
 VALID_DESIGNATIONS = [
     'supervisor',
@@ -133,13 +186,15 @@ def can_edit_submission(user, submission):
     if designation == 'operations_manager':
         return status == 'operations_manager_review'
     
-    # Business Development can edit during BD/Procurement review stage (if not yet approved by them)
+    # Business Development can edit during BD/Procurement review stage
+    # Allow editing if status is bd_procurement_review (even after approval, to allow comment/signature updates)
     if designation == 'business_development':
-        return status == 'bd_procurement_review' and not submission.business_dev_approved_at
+        return status == 'bd_procurement_review'
     
-    # Procurement can edit during BD/Procurement review stage (if not yet approved by them)
+    # Procurement can edit during BD/Procurement review stage
+    # Allow editing if status is bd_procurement_review (even after approval, to allow comment/signature updates)
     if designation == 'procurement':
-        return status == 'bd_procurement_review' and not submission.procurement_approved_at
+        return status == 'bd_procurement_review'
     
     # General Manager can edit during their review stage
     if designation == 'general_manager':
@@ -397,22 +452,108 @@ def approve_operations_manager(submission_id):
         signature = data.get('signature', '')
         form_data_updates = data.get('form_data', {})
         
+        # Log incoming data for debugging
+        current_app.logger.info(f"🔍 Operations Manager approval request for submission {submission_id}:")
+        current_app.logger.info(f"  - Comments provided: {bool(comments and comments.strip())} (length: {len(comments) if comments else 0})")
+        current_app.logger.info(f"  - Signature provided: {bool(signature and signature.strip())} (type: {type(signature).__name__}, length: {len(str(signature)) if signature else 0})")
+        if signature and signature.strip():
+            current_app.logger.info(f"  - Signature preview: {str(signature)[:50]}...")
+        current_app.logger.info(f"  - form_data_updates keys: {list(form_data_updates.keys())[:20] if form_data_updates else 'none'}")
+        
+        # Check if signature is in form_data_updates (might be sent there instead of top-level)
+        if not signature or not signature.strip():
+            if form_data_updates.get('opMan_signature'):
+                signature = form_data_updates.get('opMan_signature')
+                current_app.logger.info(f"✅ Found Operations Manager signature in form_data_updates.opMan_signature")
+            elif form_data_updates.get('operations_manager_signature'):
+                signature = form_data_updates.get('operations_manager_signature')
+                current_app.logger.info(f"✅ Found Operations Manager signature in form_data_updates.operations_manager_signature")
+        
         # Update submission
         submission.operations_manager_id = user.id
         submission.operations_manager_comments = comments
         submission.operations_manager_approved_at = datetime.utcnow()
         submission.workflow_status = 'operations_manager_approved'
         
-        # Update form_data if provided
+        # Update form_data if provided - but preserve existing Operations Manager data
         form_data = submission.form_data if submission.form_data else {}
-        if form_data_updates:
-            form_data.update(form_data_updates)
+        if isinstance(form_data, str):
+            try:
+                import json
+                form_data = json.loads(form_data)
+            except:
+                form_data = {}
         
-        # Always save Operations Manager comments and signature to form_data for next reviewers
-        if comments:
+        # Preserve existing Operations Manager data before updating (in case form_data_updates overwrites it)
+        existing_om_comments = form_data.get('operations_manager_comments')
+        existing_om_signature = form_data.get('operations_manager_signature') or form_data.get('opMan_signature')
+        
+        if form_data_updates:
+            # Merge form_data_updates, but don't overwrite Operations Manager data if it already exists
+            # (unless new data is being provided)
+            form_data.update(form_data_updates)
+            current_app.logger.info(f"✅ Updated form_data with form_data_updates for submission {submission_id}")
+        
+        # Always save Operations Manager comments to form_data for next reviewers
+        # Use new comments if provided, otherwise preserve existing
+        if comments and comments.strip():
             form_data['operations_manager_comments'] = comments
-        if signature:
-            form_data['operations_manager_signature'] = signature
+            current_app.logger.info(f"✅ Saved Operations Manager comments to form_data for submission {submission_id}")
+        elif existing_om_comments:
+            # Preserve existing comments if no new ones provided
+            form_data['operations_manager_comments'] = existing_om_comments
+            current_app.logger.info(f"✅ Preserved existing Operations Manager comments in form_data")
+        
+        # Process and upload Operations Manager signature if provided
+        if signature and signature.strip() and signature.startswith('data:image'):
+            # Signature is a data URL - need to upload it to cloud storage
+            try:
+                save_sig_fn, get_paths_fn, _ = get_module_functions(submission.module_type)
+                GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths_fn()
+                
+                fname, fpath, url = save_sig_fn(signature, UPLOADS_DIR, prefix="opman_sig")
+                if url:
+                    # Save as object format for consistency with other signatures
+                    form_data['operations_manager_signature'] = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
+                    current_app.logger.info(f"✅ Operations Manager signature uploaded and saved to form_data (URL: {url[:80]}...)")
+                else:
+                    # Upload failed, save as data URL string as fallback
+                    form_data['operations_manager_signature'] = signature
+                    current_app.logger.warning(f"⚠️ Operations Manager signature upload failed, saving as data URL for submission {submission_id}")
+            except Exception as e:
+                current_app.logger.error(f"❌ Error uploading Operations Manager signature: {e}")
+                import traceback
+                current_app.logger.error(traceback.format_exc())
+                # Fallback: save as data URL string
+                form_data['operations_manager_signature'] = signature
+                current_app.logger.warning(f"⚠️ Saving Operations Manager signature as data URL due to upload error")
+        elif signature and signature.strip():
+            # Signature is already a URL or object format
+            # Handle both string URLs and object formats
+            if isinstance(signature, dict):
+                form_data['operations_manager_signature'] = signature
+            elif isinstance(signature, str):
+                form_data['operations_manager_signature'] = signature
+            current_app.logger.info(f"✅ Saved Operations Manager signature to form_data (already processed format)")
+        elif existing_om_signature:
+            # Preserve existing signature if no new one provided
+            form_data['operations_manager_signature'] = existing_om_signature
+            current_app.logger.info(f"✅ Preserved existing Operations Manager signature in form_data")
+        else:
+            current_app.logger.warning(f"⚠️ No Operations Manager signature provided for submission {submission_id}")
+            current_app.logger.warning(f"  - signature value: {repr(signature) if signature else 'None'}")
+            current_app.logger.warning(f"  - existing_om_signature: {repr(existing_om_signature) if existing_om_signature else 'None'}")
+        
+        # Log final form_data keys for debugging
+        current_app.logger.info(f"🔍 Final form_data keys after Operations Manager approval: {list(form_data.keys())[:30]}")
+        current_app.logger.info(f"  - operations_manager_comments in form_data: {bool(form_data.get('operations_manager_comments'))}")
+        current_app.logger.info(f"  - operations_manager_signature in form_data: {bool(form_data.get('operations_manager_signature'))}")
+        if form_data.get('operations_manager_signature'):
+            sig_val = form_data.get('operations_manager_signature')
+            if isinstance(sig_val, dict):
+                current_app.logger.info(f"  - operations_manager_signature type: dict, url: {sig_val.get('url', 'N/A')[:80] if sig_val.get('url') else 'N/A'}")
+            else:
+                current_app.logger.info(f"  - operations_manager_signature type: {type(sig_val).__name__}, preview: {str(sig_val)[:80] if sig_val else 'N/A'}")
         
         submission.form_data = form_data
         
@@ -422,12 +563,12 @@ def approve_operations_manager(submission_id):
         
         db.session.commit()
         
-        # Regenerate documents if this is an HVAC submission (to include Operations Manager comments/signature)
+        # Regenerate documents for all modules (to include Operations Manager comments/signature)
         job_id = None
-        if submission.module_type == 'hvac_mep':
+        try:
             from common.db_utils import create_job_db
-            from module_hvac_mep.routes import get_paths, process_job
             from app.models import Job
+            _, get_paths_fn, process_job_fn = get_module_functions(submission.module_type)
             
             # Delete old jobs to force regeneration
             old_jobs = Job.query.filter_by(submission_id=submission.id).all()
@@ -439,19 +580,21 @@ def approve_operations_manager(submission_id):
             new_job = create_job_db(submission)
             job_id = new_job.job_id
             
-            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths_fn()
             
             if EXECUTOR:
                 EXECUTOR.submit(
-                    process_job,
+                    process_job_fn,
                     submission.submission_id,
                     job_id,
                     current_app.config,
                     current_app._get_current_object()
                 )
-                current_app.logger.info(f"✅ Regeneration job {job_id} queued for Operations Manager approval - submission {submission_id}")
+                current_app.logger.info(f"✅ Regeneration job {job_id} queued for Operations Manager approval - submission {submission_id} ({submission.module_type})")
             else:
                 current_app.logger.error("ThreadPoolExecutor not available for document regeneration")
+        except Exception as regen_err:
+            current_app.logger.error(f"Error queuing regeneration job after OM approval: {regen_err}", exc_info=True)
         
         log_audit(user_id, 'operations_manager_approved', 'submission', submission_id, {
             'comments': comments,
@@ -508,16 +651,76 @@ def approve_business_development(submission_id):
         submission.business_dev_comments = comments
         submission.business_dev_approved_at = datetime.utcnow()
         
-        # Update form_data if provided
+        # Update form_data if provided - but preserve Operations Manager and other reviewer data
         form_data = submission.form_data if submission.form_data else {}
+        if isinstance(form_data, str):
+            try:
+                import json
+                form_data = json.loads(form_data)
+            except:
+                form_data = {}
+        
+        # CRITICAL: Preserve Operations Manager data before updating (BD's form_data_updates might not include it)
+        existing_om_comments = form_data.get('operations_manager_comments')
+        existing_om_signature = form_data.get('operations_manager_signature') or form_data.get('opMan_signature')
+        current_app.logger.info(f"🔍 BD Approval: Preserving Operations Manager data before update:")
+        current_app.logger.info(f"  - Existing OM comments: {bool(existing_om_comments)}")
+        current_app.logger.info(f"  - Existing OM signature: {bool(existing_om_signature)}")
+        
+        # Also preserve other reviewer data
+        existing_supervisor_comments = form_data.get('supervisor_comments')
+        existing_supervisor_signature = form_data.get('supervisor_signature')
+        
         if form_data_updates:
+            # Merge form_data_updates, but preserve critical reviewer data
             form_data.update(form_data_updates)
+            current_app.logger.info(f"✅ Updated form_data with BD's form_data_updates for submission {submission_id}")
+        
+        # Restore Operations Manager data if it was lost during update
+        if existing_om_comments and not form_data.get('operations_manager_comments'):
+            form_data['operations_manager_comments'] = existing_om_comments
+            current_app.logger.info(f"✅ Restored Operations Manager comments after BD update")
+        if existing_om_signature and not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
+            form_data['operations_manager_signature'] = existing_om_signature
+            current_app.logger.info(f"✅ Restored Operations Manager signature after BD update")
+        
+        # Restore supervisor data if it was lost (shouldn't happen, but be safe)
+        if existing_supervisor_comments and not form_data.get('supervisor_comments'):
+            form_data['supervisor_comments'] = existing_supervisor_comments
+        if existing_supervisor_signature and not form_data.get('supervisor_signature'):
+            form_data['supervisor_signature'] = existing_supervisor_signature
         
         # Always save BD comments and signature to form_data for next reviewers
         if comments:
             form_data['business_dev_comments'] = comments
+            current_app.logger.info(f"✅ Saved BD comments to form_data")
         if signature:
-            form_data['business_dev_signature'] = signature
+            # Process and upload BD signature if it's a data URL
+            if signature and signature.strip() and signature.startswith('data:image'):
+                try:
+                    save_sig_fn, get_paths_fn, _ = get_module_functions(submission.module_type)
+                    GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths_fn()
+                    
+                    fname, fpath, url = save_sig_fn(signature, UPLOADS_DIR, prefix="bd_sig")
+                    if url:
+                        form_data['business_dev_signature'] = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
+                        current_app.logger.info(f"✅ BD signature uploaded and saved to form_data (URL: {url[:80]}...)")
+                    else:
+                        form_data['business_dev_signature'] = signature
+                        current_app.logger.warning(f"⚠️ BD signature upload failed, saving as data URL")
+                except Exception as e:
+                    current_app.logger.error(f"❌ Error uploading BD signature: {e}")
+                    form_data['business_dev_signature'] = signature
+            else:
+                form_data['business_dev_signature'] = signature
+                current_app.logger.info(f"✅ Saved BD signature to form_data")
+        
+        # Log final state to verify Operations Manager data is preserved
+        current_app.logger.info(f"🔍 BD Approval: Final form_data state:")
+        current_app.logger.info(f"  - operations_manager_comments: {bool(form_data.get('operations_manager_comments'))}")
+        current_app.logger.info(f"  - operations_manager_signature: {bool(form_data.get('operations_manager_signature'))}")
+        current_app.logger.info(f"  - business_dev_comments: {bool(form_data.get('business_dev_comments'))}")
+        current_app.logger.info(f"  - business_dev_signature: {bool(form_data.get('business_dev_signature'))}")
         
         submission.form_data = form_data
         
@@ -531,38 +734,37 @@ def approve_business_development(submission_id):
         submission.updated_at = datetime.utcnow()
         db.session.commit()
         
-        # If this is an HVAC submission, regenerate documents so GM/History always
+        # Regenerate documents for all modules so GM/History always
         # see PDFs that include BD + previous reviewers' changes
         job_id = None
-        if submission.module_type == 'hvac_mep':
-            try:
-                from common.db_utils import create_job_db
-                from module_hvac_mep.routes import get_paths, process_job
-                from app.models import Job
+        try:
+            from common.db_utils import create_job_db
+            from app.models import Job
+            _, get_paths_fn, process_job_fn = get_module_functions(submission.module_type)
 
-                # Delete old jobs so we always generate a fresh set for this stage
-                old_jobs = Job.query.filter_by(submission_id=submission.id).all()
-                for old_job in old_jobs:
-                    db.session.delete(old_job)
-                db.session.commit()
+            # Delete old jobs so we always generate a fresh set for this stage
+            old_jobs = Job.query.filter_by(submission_id=submission.id).all()
+            for old_job in old_jobs:
+                db.session.delete(old_job)
+            db.session.commit()
 
-                new_job = create_job_db(submission)
-                job_id = new_job.job_id
+            new_job = create_job_db(submission)
+            job_id = new_job.job_id
 
-                GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
-                if EXECUTOR:
-                    EXECUTOR.submit(
-                        process_job,
-                        submission.submission_id,
-                        job_id,
-                        current_app.config,
-                        current_app._get_current_object()
-                    )
-                    current_app.logger.info(f"✅ Regeneration job {job_id} queued for BD approval - submission {submission_id}")
-                else:
-                    current_app.logger.error("ThreadPoolExecutor not available for BD document regeneration")
-            except Exception as regen_err:
-                current_app.logger.error(f"Error queuing regeneration job after BD approval: {regen_err}", exc_info=True)
+            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths_fn()
+            if EXECUTOR:
+                EXECUTOR.submit(
+                    process_job_fn,
+                    submission.submission_id,
+                    job_id,
+                    current_app.config,
+                    current_app._get_current_object()
+                )
+                current_app.logger.info(f"✅ Regeneration job {job_id} queued for BD approval - submission {submission_id} ({submission.module_type})")
+            else:
+                current_app.logger.error("ThreadPoolExecutor not available for BD document regeneration")
+        except Exception as regen_err:
+            current_app.logger.error(f"Error queuing regeneration job after BD approval: {regen_err}", exc_info=True)
         
         log_audit(user_id, 'business_dev_approved', 'submission', submission_id, {'comments': comments})
         
@@ -616,16 +818,79 @@ def approve_procurement(submission_id):
         submission.procurement_comments = comments
         submission.procurement_approved_at = datetime.utcnow()
         
-        # Update form_data if provided
+        # Update form_data if provided - but preserve Operations Manager and Business Development data
         form_data = submission.form_data if submission.form_data else {}
+        if isinstance(form_data, str):
+            try:
+                import json
+                form_data = json.loads(form_data)
+            except:
+                form_data = {}
+        
+        # CRITICAL: Preserve Operations Manager and Business Development data before updating
+        existing_om_comments = form_data.get('operations_manager_comments')
+        existing_om_signature = form_data.get('operations_manager_signature') or form_data.get('opMan_signature')
+        existing_bd_comments = form_data.get('business_dev_comments')
+        existing_bd_signature = form_data.get('business_dev_signature')
+        current_app.logger.info(f"🔍 Procurement Approval: Preserving reviewer data before update:")
+        current_app.logger.info(f"  - Existing OM comments: {bool(existing_om_comments)}")
+        current_app.logger.info(f"  - Existing OM signature: {bool(existing_om_signature)}")
+        current_app.logger.info(f"  - Existing BD comments: {bool(existing_bd_comments)}")
+        current_app.logger.info(f"  - Existing BD signature: {bool(existing_bd_signature)}")
+        
         if form_data_updates:
             form_data.update(form_data_updates)
+            current_app.logger.info(f"✅ Updated form_data with Procurement's form_data_updates for submission {submission_id}")
+        
+        # Restore Operations Manager data if it was lost during update
+        if existing_om_comments and not form_data.get('operations_manager_comments'):
+            form_data['operations_manager_comments'] = existing_om_comments
+            current_app.logger.info(f"✅ Restored Operations Manager comments after Procurement update")
+        if existing_om_signature and not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
+            form_data['operations_manager_signature'] = existing_om_signature
+            current_app.logger.info(f"✅ Restored Operations Manager signature after Procurement update")
+        
+        # Restore Business Development data if it was lost during update
+        if existing_bd_comments and not form_data.get('business_dev_comments'):
+            form_data['business_dev_comments'] = existing_bd_comments
+            current_app.logger.info(f"✅ Restored Business Development comments after Procurement update")
+        if existing_bd_signature and not form_data.get('business_dev_signature'):
+            form_data['business_dev_signature'] = existing_bd_signature
+            current_app.logger.info(f"✅ Restored Business Development signature after Procurement update")
         
         # Always save Procurement comments and signature to form_data for next reviewers
         if comments:
             form_data['procurement_comments'] = comments
+            current_app.logger.info(f"✅ Saved Procurement comments to form_data")
         if signature:
-            form_data['procurement_signature'] = signature
+            # Process and upload Procurement signature if it's a data URL
+            if signature and signature.strip() and signature.startswith('data:image'):
+                try:
+                    save_sig_fn, get_paths_fn, _ = get_module_functions(submission.module_type)
+                    GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths_fn()
+                    
+                    fname, fpath, url = save_sig_fn(signature, UPLOADS_DIR, prefix="procurement_sig")
+                    if url:
+                        form_data['procurement_signature'] = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
+                        current_app.logger.info(f"✅ Procurement signature uploaded and saved to form_data (URL: {url[:80]}...)")
+                    else:
+                        form_data['procurement_signature'] = signature
+                        current_app.logger.warning(f"⚠️ Procurement signature upload failed, saving as data URL")
+                except Exception as e:
+                    current_app.logger.error(f"❌ Error uploading Procurement signature: {e}")
+                    form_data['procurement_signature'] = signature
+            else:
+                form_data['procurement_signature'] = signature
+                current_app.logger.info(f"✅ Saved Procurement signature to form_data")
+        
+        # Log final state to verify BD data is preserved
+        current_app.logger.info(f"🔍 Procurement Approval: Final form_data state:")
+        current_app.logger.info(f"  - operations_manager_comments: {bool(form_data.get('operations_manager_comments'))}")
+        current_app.logger.info(f"  - operations_manager_signature: {bool(form_data.get('operations_manager_signature'))}")
+        current_app.logger.info(f"  - business_dev_comments: {bool(form_data.get('business_dev_comments'))}")
+        current_app.logger.info(f"  - business_dev_signature: {bool(form_data.get('business_dev_signature'))}")
+        current_app.logger.info(f"  - procurement_comments: {bool(form_data.get('procurement_comments'))}")
+        current_app.logger.info(f"  - procurement_signature: {bool(form_data.get('procurement_signature'))}")
         
         submission.form_data = form_data
         
@@ -639,36 +904,35 @@ def approve_procurement(submission_id):
         submission.updated_at = datetime.utcnow()
         db.session.commit()
         
-        # Regenerate documents for HVAC so GM/History PDFs include Procurement stage
+        # Regenerate documents for all modules so GM/History PDFs include Procurement stage
         job_id = None
-        if submission.module_type == 'hvac_mep':
-            try:
-                from common.db_utils import create_job_db
-                from module_hvac_mep.routes import get_paths, process_job
-                from app.models import Job
+        try:
+            from common.db_utils import create_job_db
+            from app.models import Job
+            _, get_paths_fn, process_job_fn = get_module_functions(submission.module_type)
 
-                old_jobs = Job.query.filter_by(submission_id=submission.id).all()
-                for old_job in old_jobs:
-                    db.session.delete(old_job)
-                db.session.commit()
+            old_jobs = Job.query.filter_by(submission_id=submission.id).all()
+            for old_job in old_jobs:
+                db.session.delete(old_job)
+            db.session.commit()
 
-                new_job = create_job_db(submission)
-                job_id = new_job.job_id
+            new_job = create_job_db(submission)
+            job_id = new_job.job_id
 
-                GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
-                if EXECUTOR:
-                    EXECUTOR.submit(
-                        process_job,
-                        submission.submission_id,
-                        job_id,
-                        current_app.config,
-                        current_app._get_current_object()
-                    )
-                    current_app.logger.info(f"✅ Regeneration job {job_id} queued for Procurement approval - submission {submission_id}")
-                else:
-                    current_app.logger.error("ThreadPoolExecutor not available for Procurement document regeneration")
-            except Exception as regen_err:
-                current_app.logger.error(f"Error queuing regeneration job after Procurement approval: {regen_err}", exc_info=True)
+            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths_fn()
+            if EXECUTOR:
+                EXECUTOR.submit(
+                    process_job_fn,
+                    submission.submission_id,
+                    job_id,
+                    current_app.config,
+                    current_app._get_current_object()
+                )
+                current_app.logger.info(f"✅ Regeneration job {job_id} queued for Procurement approval - submission {submission_id} ({submission.module_type})")
+            else:
+                current_app.logger.error("ThreadPoolExecutor not available for Procurement document regeneration")
+        except Exception as regen_err:
+            current_app.logger.error(f"Error queuing regeneration job after Procurement approval: {regen_err}", exc_info=True)
         
         log_audit(user_id, 'procurement_approved', 'submission', submission_id, {'comments': comments})
         
@@ -720,16 +984,94 @@ def approve_general_manager(submission_id):
         submission.workflow_status = 'completed'
         submission.status = 'completed'
         
-        # Update form_data if provided
+        # Update form_data if provided - but preserve Operations Manager and other reviewer data
         form_data = submission.form_data if submission.form_data else {}
+        if isinstance(form_data, str):
+            try:
+                import json
+                form_data = json.loads(form_data)
+            except:
+                form_data = {}
+        
+        # CRITICAL: Preserve all reviewer data before updating (OM, BD, Procurement)
+        existing_om_comments = form_data.get('operations_manager_comments')
+        existing_om_signature = form_data.get('operations_manager_signature') or form_data.get('opMan_signature')
+        existing_bd_comments = form_data.get('business_dev_comments')
+        existing_bd_signature = form_data.get('business_dev_signature')
+        existing_procurement_comments = form_data.get('procurement_comments')
+        existing_procurement_signature = form_data.get('procurement_signature')
+        
+        current_app.logger.info(f"🔍 General Manager Approval: Preserving reviewer data before update:")
+        current_app.logger.info(f"  - Existing OM comments: {bool(existing_om_comments)}")
+        current_app.logger.info(f"  - Existing OM signature: {bool(existing_om_signature)}")
+        current_app.logger.info(f"  - Existing BD comments: {bool(existing_bd_comments)}")
+        current_app.logger.info(f"  - Existing BD signature: {bool(existing_bd_signature)}")
+        current_app.logger.info(f"  - Existing Procurement comments: {bool(existing_procurement_comments)}")
+        current_app.logger.info(f"  - Existing Procurement signature: {bool(existing_procurement_signature)}")
+        
         if form_data_updates:
             form_data.update(form_data_updates)
+            current_app.logger.info(f"✅ Updated form_data with General Manager's form_data_updates for submission {submission_id}")
+        
+        # Restore Operations Manager data if it was lost during update
+        if existing_om_comments and not form_data.get('operations_manager_comments'):
+            form_data['operations_manager_comments'] = existing_om_comments
+            current_app.logger.info(f"✅ Restored Operations Manager comments after General Manager update")
+        if existing_om_signature and not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
+            form_data['operations_manager_signature'] = existing_om_signature
+            current_app.logger.info(f"✅ Restored Operations Manager signature after General Manager update")
+        
+        # Restore Business Development data if it was lost during update
+        if existing_bd_comments and not form_data.get('business_dev_comments'):
+            form_data['business_dev_comments'] = existing_bd_comments
+            current_app.logger.info(f"✅ Restored Business Development comments after General Manager update")
+        if existing_bd_signature and not form_data.get('business_dev_signature'):
+            form_data['business_dev_signature'] = existing_bd_signature
+            current_app.logger.info(f"✅ Restored Business Development signature after General Manager update")
+        
+        # Restore Procurement data if it was lost during update
+        if existing_procurement_comments and not form_data.get('procurement_comments'):
+            form_data['procurement_comments'] = existing_procurement_comments
+            current_app.logger.info(f"✅ Restored Procurement comments after General Manager update")
+        if existing_procurement_signature and not form_data.get('procurement_signature'):
+            form_data['procurement_signature'] = existing_procurement_signature
+            current_app.logger.info(f"✅ Restored Procurement signature after General Manager update")
         
         # Always save General Manager comments and signature to form_data
         if comments:
             form_data['general_manager_comments'] = comments
+            current_app.logger.info(f"✅ Saved General Manager comments to form_data")
         if signature:
-            form_data['general_manager_signature'] = signature
+            # Process and upload General Manager signature if it's a data URL
+            if signature and signature.strip() and signature.startswith('data:image'):
+                try:
+                    save_sig_fn, get_paths_fn, _ = get_module_functions(submission.module_type)
+                    GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths_fn()
+                    
+                    fname, fpath, url = save_sig_fn(signature, UPLOADS_DIR, prefix="gm_sig")
+                    if url:
+                        form_data['general_manager_signature'] = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
+                        current_app.logger.info(f"✅ General Manager signature uploaded and saved to form_data (URL: {url[:80]}...)")
+                    else:
+                        form_data['general_manager_signature'] = signature
+                        current_app.logger.warning(f"⚠️ General Manager signature upload failed, saving as data URL")
+                except Exception as e:
+                    current_app.logger.error(f"❌ Error uploading General Manager signature: {e}")
+                    form_data['general_manager_signature'] = signature
+            else:
+                form_data['general_manager_signature'] = signature
+                current_app.logger.info(f"✅ Saved General Manager signature to form_data")
+        
+        # Log final state
+        current_app.logger.info(f"🔍 General Manager Approval: Final form_data state:")
+        current_app.logger.info(f"  - operations_manager_comments: {bool(form_data.get('operations_manager_comments'))}")
+        current_app.logger.info(f"  - operations_manager_signature: {bool(form_data.get('operations_manager_signature'))}")
+        current_app.logger.info(f"  - business_dev_comments: {bool(form_data.get('business_dev_comments'))}")
+        current_app.logger.info(f"  - business_dev_signature: {bool(form_data.get('business_dev_signature'))}")
+        current_app.logger.info(f"  - procurement_comments: {bool(form_data.get('procurement_comments'))}")
+        current_app.logger.info(f"  - procurement_signature: {bool(form_data.get('procurement_signature'))}")
+        current_app.logger.info(f"  - general_manager_comments: {bool(form_data.get('general_manager_comments'))}")
+        current_app.logger.info(f"  - general_manager_signature: {bool(form_data.get('general_manager_signature'))}")
         
         submission.form_data = form_data
         submission.updated_at = datetime.utcnow()
@@ -739,7 +1081,7 @@ def approve_general_manager(submission_id):
         job_id = None
         if submission.module_type == 'hvac_mep':
             from common.db_utils import create_job_db
-            from module_hvac_mep.routes import get_paths, process_job
+            _, get_paths_fn, process_job_fn = get_module_functions(submission.module_type)
             from app.models import Job
             
             # Delete old jobs to force regeneration
@@ -752,19 +1094,21 @@ def approve_general_manager(submission_id):
             new_job = create_job_db(submission)
             job_id = new_job.job_id
             
-            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
+            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths_fn()
             
             if EXECUTOR:
                 EXECUTOR.submit(
-                    process_job,
+                    process_job_fn,
                     submission.submission_id,
                     job_id,
                     current_app.config,
                     current_app._get_current_object()
                 )
-                current_app.logger.info(f"✅ Regeneration job {job_id} queued for General Manager approval - submission {submission_id}")
+                current_app.logger.info(f"✅ Regeneration job {job_id} queued for General Manager approval - submission {submission_id} ({submission.module_type})")
             else:
                 current_app.logger.error("ThreadPoolExecutor not available for document regeneration")
+        except Exception as regen_err:
+            current_app.logger.error(f"Error queuing regeneration job after GM approval: {regen_err}", exc_info=True)
         
         log_audit(user_id, 'general_manager_approved', 'submission', submission_id, {
             'comments': comments,
@@ -907,8 +1251,62 @@ def update_submission(submission_id):
         
         # Update form_data - accept full form_data or updates
         if 'form_data' in data:
+            # Get existing form_data to preserve Operations Manager and other reviewer data
+            existing_form_data = submission.form_data if submission.form_data else {}
+            if isinstance(existing_form_data, str):
+                try:
+                    import json
+                    existing_form_data = json.loads(existing_form_data)
+                except:
+                    existing_form_data = {}
+            
+            # CRITICAL: Preserve all reviewer data before update (OM, BD, Procurement, Supervisor)
+            existing_om_comments = existing_form_data.get('operations_manager_comments')
+            existing_om_signature = existing_form_data.get('operations_manager_signature') or existing_form_data.get('opMan_signature')
+            existing_bd_comments = existing_form_data.get('business_dev_comments')
+            existing_bd_signature = existing_form_data.get('business_dev_signature')
+            existing_procurement_comments = existing_form_data.get('procurement_comments')
+            existing_procurement_signature = existing_form_data.get('procurement_signature')
+            existing_supervisor_comments = existing_form_data.get('supervisor_comments')
+            existing_supervisor_signature = existing_form_data.get('supervisor_signature')
+            
             # If full form_data is provided, use it directly (like admin endpoint)
             form_data = data['form_data'].copy() if isinstance(data['form_data'], dict) else data['form_data']
+            
+            # Ensure all reviewer data is preserved if not in new form_data
+            if isinstance(form_data, dict):
+                # Preserve Operations Manager data
+                if existing_om_comments and not form_data.get('operations_manager_comments'):
+                    form_data['operations_manager_comments'] = existing_om_comments
+                    current_app.logger.info(f"✅ Preserved Operations Manager comments in update_submission for {submission_id}")
+                if existing_om_signature and not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
+                    form_data['operations_manager_signature'] = existing_om_signature
+                    current_app.logger.info(f"✅ Preserved Operations Manager signature in update_submission for {submission_id}")
+                
+                # Preserve Business Development data
+                if existing_bd_comments and not form_data.get('business_dev_comments'):
+                    form_data['business_dev_comments'] = existing_bd_comments
+                    current_app.logger.info(f"✅ Preserved Business Development comments in update_submission for {submission_id}")
+                if existing_bd_signature and not form_data.get('business_dev_signature'):
+                    form_data['business_dev_signature'] = existing_bd_signature
+                    current_app.logger.info(f"✅ Preserved Business Development signature in update_submission for {submission_id}")
+                
+                # Preserve Procurement data (unless Procurement is the one updating)
+                if user.designation != 'procurement':
+                    if existing_procurement_comments and not form_data.get('procurement_comments'):
+                        form_data['procurement_comments'] = existing_procurement_comments
+                        current_app.logger.info(f"✅ Preserved Procurement comments in update_submission for {submission_id}")
+                    if existing_procurement_signature and not form_data.get('procurement_signature'):
+                        form_data['procurement_signature'] = existing_procurement_signature
+                        current_app.logger.info(f"✅ Preserved Procurement signature in update_submission for {submission_id}")
+                
+                # Preserve Supervisor data
+                if existing_supervisor_comments and not form_data.get('supervisor_comments'):
+                    form_data['supervisor_comments'] = existing_supervisor_comments
+                    current_app.logger.info(f"✅ Preserved Supervisor comments in update_submission for {submission_id}")
+                if existing_supervisor_signature and not form_data.get('supervisor_signature'):
+                    form_data['supervisor_signature'] = existing_supervisor_signature
+                    current_app.logger.info(f"✅ Preserved Supervisor signature in update_submission for {submission_id}")
             
             # Convert photo_urls to photos format for PDF generator (if items are present)
             if isinstance(form_data, dict) and 'items' in form_data and isinstance(form_data['items'], list):
@@ -942,25 +1340,68 @@ def update_submission(submission_id):
                 elif not existing_comment:
                     form_data['supervisor_comments'] = '[Form updated by supervisor with new details]'
                 
-                # Ensure supervisor_signature is in form_data if provided in payload
-                if 'supervisor_signature' in form_data and form_data['supervisor_signature']:
-                    # Signature is already in form_data, ensure it's preserved
+                # Process supervisor signature - upload if it's a new data URL
+                supervisor_sig_data = form_data.get('supervisor_signature', '')
+                if supervisor_sig_data and isinstance(supervisor_sig_data, str) and supervisor_sig_data.startswith('data:image'):
+                    # New signature provided as data URL - need to upload it
+                    try:
+                        save_sig_fn, get_paths_fn, _ = get_module_functions(submission.module_type)
+                        GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths_fn()
+                        
+                        fname, fpath, url = save_sig_fn(supervisor_sig_data, UPLOADS_DIR, prefix="supervisor_sig")
+                        if url:
+                            form_data['supervisor_signature'] = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
+                            current_app.logger.info(f"✅ Supervisor signature uploaded and saved for submission {submission_id}")
+                        else:
+                            current_app.logger.warning(f"⚠️ Supervisor signature upload failed for submission {submission_id}")
+                            # Preserve old signature if upload fails
+                            old_form_data = submission.form_data if submission.form_data else {}
+                            if old_form_data.get('supervisor_signature'):
+                                form_data['supervisor_signature'] = old_form_data['supervisor_signature']
+                    except Exception as e:
+                        current_app.logger.error(f"❌ Error uploading supervisor signature: {e}")
+                        # Preserve old signature if upload fails
+                        old_form_data = submission.form_data if submission.form_data else {}
+                        if old_form_data.get('supervisor_signature'):
+                            form_data['supervisor_signature'] = old_form_data['supervisor_signature']
+                elif 'supervisor_signature' in form_data and form_data['supervisor_signature']:
+                    # Signature is already in form_data (object format), ensure it's preserved
                     current_app.logger.info(f"✅ Supervisor signature preserved in form_data for submission {submission_id}")
-                elif 'supervisor_signature' not in form_data or not form_data.get('supervisor_signature'):
-                    # Check if signature exists in old form_data and preserve it
+                else:
+                    # No new signature provided - preserve existing one
                     old_form_data = submission.form_data if submission.form_data else {}
                     if old_form_data.get('supervisor_signature'):
                         form_data['supervisor_signature'] = old_form_data['supervisor_signature']
-                        current_app.logger.info(f"⚠️ Preserving existing supervisor signature for submission {submission_id}")
+                        current_app.logger.info(f"✅ Preserving existing supervisor signature for submission {submission_id}")
                     else:
-                        current_app.logger.warning(f"⚠️ No supervisor signature found in form_data for submission {submission_id}")
+                        current_app.logger.warning(f"⚠️ No supervisor signature found for submission {submission_id}")
             
             submission.form_data = form_data
         elif 'form_data_updates' in data:
             # Otherwise merge updates (backward compatibility)
             form_data_updates = data.get('form_data_updates', {})
             form_data = submission.form_data if submission.form_data else {}
+            if isinstance(form_data, str):
+                try:
+                    import json
+                    form_data = json.loads(form_data)
+                except:
+                    form_data = {}
+            
+            # CRITICAL: Preserve Operations Manager data before merging updates
+            existing_om_comments = form_data.get('operations_manager_comments')
+            existing_om_signature = form_data.get('operations_manager_signature') or form_data.get('opMan_signature')
+            
             form_data.update(form_data_updates)
+            
+            # Restore Operations Manager data if it was lost during update
+            if existing_om_comments and not form_data.get('operations_manager_comments'):
+                form_data['operations_manager_comments'] = existing_om_comments
+                current_app.logger.info(f"✅ Restored Operations Manager comments after form_data_updates merge for {submission_id}")
+            if existing_om_signature and not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
+                form_data['operations_manager_signature'] = existing_om_signature
+                current_app.logger.info(f"✅ Restored Operations Manager signature after form_data_updates merge for {submission_id}")
+            
             submission.form_data = form_data
         
         # Update site_name and visit_date if provided
@@ -985,34 +1426,37 @@ def update_submission(submission_id):
         # or if it's being updated by a reviewer
         job_id = None
         should_regenerate = is_supervisor_own_update or user.designation in ['operations_manager', 'business_development', 'procurement', 'general_manager']
-        if submission.module_type == 'hvac_mep' and should_regenerate:
-            from common.db_utils import create_job_db
-            from module_hvac_mep.routes import get_paths, process_job
-            from app.models import Job
-            
-            # Delete old jobs to force regeneration
-            old_jobs = Job.query.filter_by(submission_id=submission.id).all()
-            for old_job in old_jobs:
-                db.session.delete(old_job)
-            db.session.commit()
-            
-            # Create new job for regeneration
-            new_job = create_job_db(submission)
-            job_id = new_job.job_id
-            
-            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths()
-            
-            if EXECUTOR:
-                EXECUTOR.submit(
-                    process_job,
-                    submission.submission_id,
-                    job_id,
-                    current_app.config,
-                    current_app._get_current_object()
-                )
-                current_app.logger.info(f"✅ Regeneration job {job_id} queued for submission {submission_id}")
-            else:
-                current_app.logger.error("ThreadPoolExecutor not available for document regeneration")
+        if should_regenerate:
+            try:
+                from common.db_utils import create_job_db
+                from app.models import Job
+                _, get_paths_fn, process_job_fn = get_module_functions(submission.module_type)
+                
+                # Delete old jobs to force regeneration
+                old_jobs = Job.query.filter_by(submission_id=submission.id).all()
+                for old_job in old_jobs:
+                    db.session.delete(old_job)
+                db.session.commit()
+                
+                # Create new job for regeneration
+                new_job = create_job_db(submission)
+                job_id = new_job.job_id
+                
+                GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths_fn()
+                
+                if EXECUTOR:
+                    EXECUTOR.submit(
+                        process_job_fn,
+                        submission.submission_id,
+                        job_id,
+                        current_app.config,
+                        current_app._get_current_object()
+                    )
+                    current_app.logger.info(f"✅ Regeneration job {job_id} queued for submission {submission_id} ({submission.module_type})")
+                else:
+                    current_app.logger.error("ThreadPoolExecutor not available for document regeneration")
+            except Exception as regen_err:
+                current_app.logger.error(f"Error queuing regeneration job after update_submission: {regen_err}", exc_info=True)
         
         log_audit(user_id, 'update_submission', 'submission', submission_id)
         

@@ -370,8 +370,18 @@ def update_submission_db(submission_id, form_data=None, site_name=None, visit_da
                         if sig_field in existing_form_data and existing_form_data[sig_field]:
                             form_data[sig_field] = existing_form_data[sig_field]
                             logger.info(f"✅ Preserved existing {sig_field} from database")
+                
+                # Also preserve supervisor_comments if not provided
+                if 'supervisor_comments' not in form_data or not form_data.get('supervisor_comments'):
+                    if 'supervisor_comments' in existing_form_data and existing_form_data.get('supervisor_comments'):
+                        form_data['supervisor_comments'] = existing_form_data['supervisor_comments']
+                        logger.info(f"✅ Preserved existing supervisor_comments from database")
             
-            submission.form_data = form_data
+            # Merge form_data to preserve any fields not in the update
+            # This ensures all existing data is preserved, not just signatures
+            merged_form_data = existing_form_data.copy()
+            merged_form_data.update(form_data)
+            submission.form_data = merged_form_data
         
         submission.updated_at = datetime.utcnow()
         

@@ -113,12 +113,66 @@ def index():
                 except:
                     form_data = {}
             
+            # Merge Operations Manager comments from model field into form_data if not already present
+            # This ensures BD and other reviewers can see OM comments even if not in form_data
+            if hasattr(submission, 'operations_manager_comments') and submission.operations_manager_comments:
+                if not form_data.get('operations_manager_comments'):
+                    form_data['operations_manager_comments'] = submission.operations_manager_comments
+                    logger.info(f"✅ Added Operations Manager comments from model field to form_data for display")
+            
+            # Operations Manager signature is stored in form_data, but ensure it's there
+            if not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
+                if isinstance(submission.form_data, dict):
+                    nested_data = submission.form_data.get('data') if isinstance(submission.form_data.get('data'), dict) else {}
+                    if nested_data:
+                        if nested_data.get('operations_manager_signature'):
+                            form_data['operations_manager_signature'] = nested_data.get('operations_manager_signature')
+                            logger.info(f"✅ Found Operations Manager signature in nested form_data.data structure")
+                        elif nested_data.get('opMan_signature'):
+                            form_data['operations_manager_signature'] = nested_data.get('opMan_signature')
+                            logger.info(f"✅ Found Operations Manager signature (opMan_signature) in nested form_data.data structure")
+            
+            # Merge Business Development comments from model field into form_data if not already present
+            if hasattr(submission, 'business_dev_comments') and submission.business_dev_comments:
+                if not form_data.get('business_dev_comments'):
+                    form_data['business_dev_comments'] = submission.business_dev_comments
+                    logger.info(f"✅ Added Business Development comments from model field to form_data for display")
+            
+            # Business Development signature is stored in form_data, but ensure it's there
+            if not form_data.get('business_dev_signature'):
+                if isinstance(submission.form_data, dict):
+                    nested_data = submission.form_data.get('data') if isinstance(submission.form_data.get('data'), dict) else {}
+                    if nested_data:
+                        if nested_data.get('business_dev_signature'):
+                            form_data['business_dev_signature'] = nested_data.get('business_dev_signature')
+                            logger.info(f"✅ Found Business Development signature in nested form_data.data structure")
+            
+            # Merge Procurement comments from model field into form_data if not already present
+            if hasattr(submission, 'procurement_comments') and submission.procurement_comments:
+                if not form_data.get('procurement_comments'):
+                    form_data['procurement_comments'] = submission.procurement_comments
+                    logger.info(f"✅ Added Procurement comments from model field to form_data for display")
+            
+            # Procurement signature is stored in form_data, but ensure it's there
+            if not form_data.get('procurement_signature'):
+                if isinstance(submission.form_data, dict):
+                    nested_data = submission.form_data.get('data') if isinstance(submission.form_data.get('data'), dict) else {}
+                    if nested_data:
+                        if nested_data.get('procurement_signature'):
+                            form_data['procurement_signature'] = nested_data.get('procurement_signature')
+                            logger.info(f"✅ Found Procurement signature in nested form_data.data structure")
+            
             submission_data = {
                 'submission_id': submission.submission_id,
                 'site_name': submission.site_name or '',
                 'visit_date': submission.visit_date.isoformat() if submission.visit_date else '',
                 'form_data': form_data,
-                'is_edit_mode': True
+                'is_edit_mode': True,
+                'workflow_status': submission.workflow_status if hasattr(submission, 'workflow_status') else None,
+                'supervisor_id': submission.supervisor_id if hasattr(submission, 'supervisor_id') else None,
+                'operations_manager_approved_at': submission.operations_manager_approved_at.isoformat() if hasattr(submission, 'operations_manager_approved_at') and submission.operations_manager_approved_at else None,
+                'business_dev_approved_at': submission.business_dev_approved_at.isoformat() if hasattr(submission, 'business_dev_approved_at') and submission.business_dev_approved_at else None,
+                'procurement_approved_at': submission.procurement_approved_at.isoformat() if hasattr(submission, 'procurement_approved_at') and submission.procurement_approved_at else None
             }
             is_edit_mode = True
         else:

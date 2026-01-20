@@ -450,7 +450,10 @@
     canvas.signature-pad,
     #techSignaturePad,
     #opManSignaturePad,
-    #supervisorSignaturePad {
+    #supervisorSignaturePad,
+    #businessDevSignaturePad,
+    #procurementSignaturePad,
+    #generalManagerSignaturePad {
       border: 2px solid var(--border-light);
       border-radius: 6px;
       width: 100% !important;
@@ -469,7 +472,10 @@
     canvas.signature-pad,
     #techSignaturePad,
     #opManSignaturePad,
-    #supervisorSignaturePad {
+    #supervisorSignaturePad,
+    #businessDevSignaturePad,
+    #procurementSignaturePad,
+    #generalManagerSignaturePad {
       image-rendering: -webkit-optimize-contrast;
       image-rendering: crisp-edges;
     }
@@ -1289,6 +1295,260 @@
         </div>
         {% endif %}
 
+        {% if user_designation == 'operations_manager' and is_edit_mode %}
+        <!-- Previous Reviewers: Supervisor (Read-only for OM) -->
+        <div class="col-12 mb-4" id="previousForOMSection" style="display: none;">
+          <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
+            <strong>Previous Reviews</strong>
+          </div>
+          
+          <!-- Supervisor -->
+          <div id="supervisorReadOnlyOM" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Supervisor Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
+                <div id="supervisorCommentsReadOnlyOM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature</label>
+                <div id="supervisorSignatureReadOnlyOM" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Operations Manager Review Section -->
+        <div class="col-12 mb-4">
+          <div class="row">
+            <div class="col-lg-7 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
+              <textarea id="operationsManagerComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            </div>
+            
+            <div class="col-lg-5 mb-3">
+              <div class="signature-container h-100 d-flex flex-column">
+                <div class="signature-label">
+                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operations Manager Signature</label>
+                  <span class="signature-hint text-danger small">Required for approval</span>
+                </div>
+                <canvas id="opManSignaturePad" class="signature-pad"></canvas>
+                <input type="hidden" id="opManSignatureData" name="opMan_signature">
+                <button type="button" id="clearOp" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if user_designation == 'business_development' and is_edit_mode %}
+        <!-- Previous Reviewers: Operations Manager + Procurement (Read-only for BD) -->
+        <div class="col-12 mb-4" id="previousForBDSection" style="display: none;">
+          <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
+            <strong>Previous Reviews</strong>
+          </div>
+          
+          <!-- Operations Manager -->
+          <div id="opsManagerReadOnlySection" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Operations Manager Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
+                <div id="opsManagerCommentsReadOnly" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Signature</label>
+                <div id="opsManagerSignatureReadOnly" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Procurement (so BD can see if PO has signed) -->
+          <div id="procurementReadOnlyBD" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Procurement Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
+                <div id="procurementCommentsReadOnlyBD" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature</label>
+                <div id="procurementSignatureReadOnlyBD" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Business Development Review Section -->
+        <div class="col-12 mb-4">
+          <div class="row">
+            <div class="col-lg-7 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
+              <textarea id="businessDevComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            </div>
+            
+            <div class="col-lg-5 mb-3">
+              <div class="signature-container h-100 d-flex flex-column">
+                <div class="signature-label">
+                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Business Development Signature</label>
+                  <span class="signature-hint text-danger small">Required for approval</span>
+                </div>
+                <canvas id="businessDevSignaturePad" class="signature-pad"></canvas>
+                <input type="hidden" id="businessDevSignatureData" name="business_dev_signature">
+                <button type="button" id="clearBusinessDev" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if user_designation == 'procurement' and is_edit_mode %}
+        <!-- Previous Reviewers: Operations Manager + Business Development (Read-only for Procurement) -->
+        <div class="col-12 mb-4" id="previousForProcurementSection" style="display: none;">
+          <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
+            <strong>Previous Reviews</strong>
+          </div>
+          
+          <!-- Operations Manager -->
+          <div id="opsManagerReadOnlyProc" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Operations Manager Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
+                <div id="opsManagerCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
+                <div id="opsManagerSignatureReadOnlyProc" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Business Development -->
+          <div id="bdReadOnlyProc" style="display: none;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Business Development Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
+                <div id="bdCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
+                <div id="bdSignatureReadOnlyProc" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Procurement Review Section -->
+        <div class="col-12 mb-4">
+          <div class="row">
+            <div class="col-lg-7 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
+              <textarea id="procurementComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            </div>
+            
+            <div class="col-lg-5 mb-3">
+              <div class="signature-container h-100 d-flex flex-column">
+                <div class="signature-label">
+                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Procurement Signature</label>
+                  <span class="signature-hint text-danger small">Required for approval</span>
+                </div>
+                <canvas id="procurementSignaturePad" class="signature-pad"></canvas>
+                <input type="hidden" id="procurementSignatureData" name="procurement_signature">
+                <button type="button" id="clearProcurement" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if user_designation == 'general_manager' and is_edit_mode %}
+        <!-- Previous Reviewers: Operations Manager, BD, Procurement (Read-only for GM) -->
+        <div class="col-12 mb-4" id="previousReviewersReadOnlySection" style="display: none;">
+          <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
+            <strong>Previous Reviews</strong>
+          </div>
+          
+          <!-- Operations Manager -->
+          <div id="opsManagerReadOnlyGM" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Operations Manager Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
+                <div id="opsManagerCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
+                <div id="opsManagerSignatureReadOnlyGM" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px;"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Business Development -->
+          <div id="bdReadOnlyGM" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Business Development Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
+                <div id="bdCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
+                <div id="bdSignatureReadOnlyGM" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px;"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Procurement -->
+          <div id="procurementReadOnlyGM" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Procurement Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
+                <div id="procurementCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
+                <div id="procurementSignatureReadOnlyGM" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- General Manager Review Section -->
+        <div class="col-12 mb-4">
+          <div class="row">
+            <div class="col-lg-7 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Comments</label>
+              <textarea id="generalManagerComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            </div>
+            
+            <div class="col-lg-5 mb-3">
+              <div class="signature-container h-100 d-flex flex-column">
+                <div class="signature-label">
+                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">General Manager Signature</label>
+                  <span class="signature-hint text-danger small">Required for approval</span>
+                </div>
+                <canvas id="generalManagerSignaturePad" class="signature-pad"></canvas>
+                <input type="hidden" id="generalManagerSignatureData" name="general_manager_signature">
+                <button type="button" id="clearGeneralManager" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
         {% if user_designation == 'manager' or (is_edit_mode and user_designation == 'manager') %}
         <div class="col-md-6 mb-3" id="managerSignatureContainer">
           <div class="signature-container">
@@ -1518,6 +1778,12 @@
       const techPad = setupSignaturePad(techPadEl, 'tech');
       const opPad = setupSignaturePad(opPadEl, 'op');
       const supervisorPad = setupSignaturePad(supervisorPadEl, 'supervisor');
+      const businessDevPadEl = document.getElementById('businessDevSignaturePad');
+      const procurementPadEl = document.getElementById('procurementSignaturePad');
+      const generalManagerPadEl = document.getElementById('generalManagerSignaturePad');
+      const businessDevPad = setupSignaturePad(businessDevPadEl, 'businessDev');
+      const procurementPad = setupSignaturePad(procurementPadEl, 'procurement');
+      const generalManagerPad = setupSignaturePad(generalManagerPadEl, 'generalManager');
       
       if (techPad) {
         const clearTechBtn = document.getElementById('clearTech');
@@ -1549,8 +1815,38 @@
           });
         }
       }
+      if (businessDevPad) {
+        const clearBusinessDevBtn = document.getElementById('clearBusinessDev');
+        if (clearBusinessDevBtn) {
+          clearBusinessDevBtn.addEventListener('click', () => {
+            businessDevPad.clear();
+            const businessDevSigInput = document.getElementById('businessDevSignatureData');
+            if (businessDevSigInput) businessDevSigInput.value = '';
+          });
+        }
+      }
+      if (procurementPad) {
+        const clearProcurementBtn = document.getElementById('clearProcurement');
+        if (clearProcurementBtn) {
+          clearProcurementBtn.addEventListener('click', () => {
+            procurementPad.clear();
+            const procurementSigInput = document.getElementById('procurementSignatureData');
+            if (procurementSigInput) procurementSigInput.value = '';
+          });
+        }
+      }
+      if (generalManagerPad) {
+        const clearGeneralManagerBtn = document.getElementById('clearGeneralManager');
+        if (clearGeneralManagerBtn) {
+          clearGeneralManagerBtn.addEventListener('click', () => {
+            generalManagerPad.clear();
+            const generalManagerSigInput = document.getElementById('generalManagerSignatureData');
+            if (generalManagerSigInput) generalManagerSigInput.value = '';
+          });
+        }
+      }
 
-      return { techPad, opPad, supervisorPad, tech: techPad, op: opPad };
+      return { techPad, opPad, supervisorPad, businessDevPad, procurementPad, generalManagerPad, tech: techPad, op: opPad };
     }
     
     // Define checkBrowserSupport function

@@ -48,6 +48,14 @@ from common.utils import get_image_for_pdf
 
 logger = logging.getLogger(__name__)
 
+# Try importing PIL for better image handling
+try:
+    from PIL import Image as PILImage
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+    logger.warning("PIL/Pillow not available - signature aspect ratio may not be perfectly preserved")
+
 # Try importing professional PDF service, fall back if unavailable
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -357,31 +365,342 @@ def create_pdf_report(data, output_dir):
         else:
             logger.warning("📸 PDF Generator: No photos found in data")
         
-        # SIGNATURES - Professional format
-        # Prioritize supervisor_signature over tech_signature
-        supervisor_sig = data.get('supervisor_signature', '') or data.get('tech_signature', '')
-        supervisor_comments = data.get('supervisor_comments', '')
-        
+        # SIGNATURES PAGE - Professional format with all reviewer signatures
+        # Extract all reviewer data similar to HVAC module
         signatures = {}
         
-        # Handle supervisor signature - can be dict with url or string
+        # Get nested data dict if it exists
+        nested_data = data.get('data') if isinstance(data.get('data'), dict) else {}
+        
+        # Extract supervisor signature - try multiple paths
+        supervisor_sig = data.get('supervisor_signature', '') or data.get('tech_signature', '')
+        if not supervisor_sig:
+            supervisor_sig_raw = data.get('supervisor_signature')
+            if supervisor_sig_raw is not None and supervisor_sig_raw != '' and supervisor_sig_raw != 'None':
+                supervisor_sig = supervisor_sig_raw
+            elif nested_data and nested_data.get('supervisor_signature'):
+                supervisor_sig = nested_data.get('supervisor_signature')
+            elif isinstance(data.get('form_data'), dict):
+                form_data_dict = data.get('form_data', {})
+                if form_data_dict.get('supervisor_signature'):
+                    supervisor_sig = form_data_dict.get('supervisor_signature')
+        
+        # Extract supervisor comments
+        supervisor_comments = data.get('supervisor_comments', '')
+        if not supervisor_comments:
+            supervisor_comments_raw = data.get('supervisor_comments')
+            if supervisor_comments_raw is not None and supervisor_comments_raw != 'None':
+                supervisor_comments = supervisor_comments_raw
+            elif nested_data and nested_data.get('supervisor_comments'):
+                supervisor_comments = nested_data.get('supervisor_comments')
+            elif isinstance(data.get('form_data'), dict):
+                form_data_dict = data.get('form_data', {})
+                if form_data_dict.get('supervisor_comments'):
+                    supervisor_comments = form_data_dict.get('supervisor_comments')
+        
+        if supervisor_comments is None:
+            supervisor_comments = ''
+        
+        # Handle supervisor signature format
         if supervisor_sig:
             if isinstance(supervisor_sig, dict) and supervisor_sig.get('url'):
                 signatures['Supervisor'] = supervisor_sig
-            elif isinstance(supervisor_sig, str) and (supervisor_sig.startswith('data:image') or supervisor_sig.startswith('http')):
-                signatures['Supervisor'] = {'url': supervisor_sig, 'is_cloud': False}
+            elif isinstance(supervisor_sig, str) and (supervisor_sig.startswith('data:image') or supervisor_sig.startswith('http') or supervisor_sig.startswith('/')):
+                signatures['Supervisor'] = supervisor_sig
         
-        # Add supervisor comments before signatures if available
-        if supervisor_comments:
-            add_section_heading(story, "Supervisor Comments")
-            add_paragraph(story, supervisor_comments)
-            story.append(Spacer(1, 0.1*inch))
+        # Extract Operations Manager data
+        operations_manager_comments = None
+        operations_manager_comments_raw = data.get('operations_manager_comments')
+        if operations_manager_comments_raw is not None and operations_manager_comments_raw != 'None' and operations_manager_comments_raw != '':
+            operations_manager_comments = operations_manager_comments_raw
+        elif nested_data and nested_data.get('operations_manager_comments'):
+            operations_manager_comments = nested_data.get('operations_manager_comments')
+        elif isinstance(data.get('form_data'), dict):
+            form_data_dict = data.get('form_data', {})
+            if form_data_dict.get('operations_manager_comments'):
+                operations_manager_comments = form_data_dict.get('operations_manager_comments')
         
-        # Always show supervisor signature section
-        if not signatures:
-            signatures = {'Supervisor': None}
+        if operations_manager_comments is None:
+            operations_manager_comments = ''
         
-        add_signatures_section(story, signatures)
+        # Extract Operations Manager signature
+        opman_sig = None
+        opman_sig_raw = data.get('operations_manager_signature') or data.get('opMan_signature')
+        if opman_sig_raw is not None and opman_sig_raw != '' and opman_sig_raw != 'None':
+            opman_sig = opman_sig_raw
+        elif nested_data:
+            opman_sig_raw = nested_data.get('operations_manager_signature') or nested_data.get('opMan_signature')
+            if opman_sig_raw is not None and opman_sig_raw != '' and opman_sig_raw != 'None':
+                opman_sig = opman_sig_raw
+        elif isinstance(data.get('form_data'), dict):
+            form_data_dict = data.get('form_data', {})
+            opman_sig_raw = form_data_dict.get('operations_manager_signature') or form_data_dict.get('opMan_signature')
+            if opman_sig_raw is not None and opman_sig_raw != '' and opman_sig_raw != 'None':
+                opman_sig = opman_sig_raw
+        
+        if opman_sig:
+            if isinstance(opman_sig, dict) and opman_sig.get('url'):
+                signatures['Operations Manager'] = opman_sig
+            elif isinstance(opman_sig, str) and (opman_sig.startswith('data:image') or opman_sig.startswith('http') or opman_sig.startswith('/')):
+                signatures['Operations Manager'] = opman_sig
+        
+        # Extract Business Development data
+        business_dev_comments = None
+        supervisor_comments_for_validation = supervisor_comments
+        business_dev_comments_raw = data.get('business_dev_comments') or data.get('business_development_comments')
+        if business_dev_comments_raw is not None and business_dev_comments_raw != 'None' and business_dev_comments_raw != '':
+            if business_dev_comments_raw != supervisor_comments_for_validation:
+                business_dev_comments = business_dev_comments_raw
+        elif nested_data:
+            business_dev_comments_raw = nested_data.get('business_dev_comments') or nested_data.get('business_development_comments')
+            if business_dev_comments_raw is not None and business_dev_comments_raw != 'None' and business_dev_comments_raw != '':
+                if business_dev_comments_raw != supervisor_comments_for_validation:
+                    business_dev_comments = business_dev_comments_raw
+        elif isinstance(data.get('form_data'), dict):
+            form_data_dict = data.get('form_data', {})
+            business_dev_comments_raw = form_data_dict.get('business_dev_comments') or form_data_dict.get('business_development_comments')
+            if business_dev_comments_raw is not None and business_dev_comments_raw != 'None' and business_dev_comments_raw != '':
+                if business_dev_comments_raw != supervisor_comments_for_validation:
+                    business_dev_comments = business_dev_comments_raw
+        
+        if business_dev_comments is None:
+            business_dev_comments = ''
+        
+        # Extract Business Development signature
+        business_dev_sig = None
+        business_dev_sig_raw = data.get('business_dev_signature') or data.get('businessDevSignature')
+        if business_dev_sig_raw is not None and business_dev_sig_raw != 'None' and business_dev_sig_raw != '':
+            business_dev_sig = business_dev_sig_raw
+        elif nested_data:
+            business_dev_sig_raw = nested_data.get('business_dev_signature') or nested_data.get('businessDevSignature')
+            if business_dev_sig_raw is not None and business_dev_sig_raw != 'None' and business_dev_sig_raw != '':
+                business_dev_sig = business_dev_sig_raw
+        elif isinstance(data.get('form_data'), dict):
+            form_data_dict = data.get('form_data', {})
+            business_dev_sig_raw = form_data_dict.get('business_dev_signature') or form_data_dict.get('businessDevSignature')
+            if business_dev_sig_raw is not None and business_dev_sig_raw != 'None' and business_dev_sig_raw != '':
+                business_dev_sig = business_dev_sig_raw
+        
+        if business_dev_sig:
+            if isinstance(business_dev_sig, dict) and business_dev_sig.get('url'):
+                signatures['Business Development'] = business_dev_sig
+            elif isinstance(business_dev_sig, str) and (business_dev_sig.startswith('data:image') or business_dev_sig.startswith('http') or business_dev_sig.startswith('/')):
+                signatures['Business Development'] = business_dev_sig
+        
+        # Extract Procurement data
+        procurement_comments = None
+        procurement_comments_raw = data.get('procurement_comments')
+        if procurement_comments_raw is not None and procurement_comments_raw != 'None' and procurement_comments_raw != '':
+            procurement_comments = procurement_comments_raw
+        elif nested_data:
+            procurement_comments_raw = nested_data.get('procurement_comments')
+            if procurement_comments_raw is not None and procurement_comments_raw != 'None' and procurement_comments_raw != '':
+                procurement_comments = procurement_comments_raw
+        elif isinstance(data.get('form_data'), dict):
+            form_data_dict = data.get('form_data', {})
+            procurement_comments_raw = form_data_dict.get('procurement_comments')
+            if procurement_comments_raw is not None and procurement_comments_raw != 'None' and procurement_comments_raw != '':
+                procurement_comments = procurement_comments_raw
+        
+        if procurement_comments is None:
+            procurement_comments = ''
+        
+        # Extract Procurement signature
+        procurement_sig = None
+        procurement_sig_raw = data.get('procurement_signature') or data.get('procurementSignature')
+        if procurement_sig_raw is not None and procurement_sig_raw != 'None' and procurement_sig_raw != '':
+            procurement_sig = procurement_sig_raw
+        elif nested_data:
+            procurement_sig_raw = nested_data.get('procurement_signature') or nested_data.get('procurementSignature')
+            if procurement_sig_raw is not None and procurement_sig_raw != 'None' and procurement_sig_raw != '':
+                procurement_sig = procurement_sig_raw
+        elif isinstance(data.get('form_data'), dict):
+            form_data_dict = data.get('form_data', {})
+            procurement_sig_raw = form_data_dict.get('procurement_signature') or form_data_dict.get('procurementSignature')
+            if procurement_sig_raw is not None and procurement_sig_raw != 'None' and procurement_sig_raw != '':
+                procurement_sig = procurement_sig_raw
+        
+        if procurement_sig:
+            if isinstance(procurement_sig, dict) and procurement_sig.get('url'):
+                signatures['Procurement'] = procurement_sig
+            elif isinstance(procurement_sig, str) and (procurement_sig.startswith('data:image') or procurement_sig.startswith('http') or procurement_sig.startswith('/')):
+                signatures['Procurement'] = procurement_sig
+        
+        # Extract General Manager data
+        general_manager_comments = data.get('general_manager_comments', '') or (nested_data.get('general_manager_comments') if nested_data else '') or ''
+        general_manager_sig = data.get('general_manager_signature', '') or data.get('generalManagerSignature', '')
+        if general_manager_sig:
+            if isinstance(general_manager_sig, dict) and general_manager_sig.get('url'):
+                signatures['General Manager'] = general_manager_sig
+            elif isinstance(general_manager_sig, str) and (general_manager_sig.startswith('data:image') or general_manager_sig.startswith('http')):
+                signatures['General Manager'] = general_manager_sig
+        
+        # Helper function to add comment and signature together for a reviewer (same as HVAC)
+        def add_reviewer_section(role_name, comments, signature_data, always_show_signature=False):
+            """Add comments and signature together for a reviewer with aspect-ratio-preserved signatures"""
+            has_content = False
+            
+            if comments and comments.strip():
+                add_section_heading(story, f"{role_name} Comments")
+                add_paragraph(story, comments)
+                story.append(Spacer(1, 0.1*inch))
+                has_content = True
+            
+            if signature_data or always_show_signature:
+                styles = get_professional_styles()
+                sig_rows = []
+                
+                if signature_data:
+                    try:
+                        from common.utils import get_image_for_pdf
+                        from PIL import Image as PILImage
+                        
+                        img_data, is_url = get_image_for_pdf(signature_data)
+                        if img_data:
+                            max_width = 2.5 * inch
+                            max_height = 1.2 * inch
+                            
+                            try:
+                                if is_url:
+                                    img_data.seek(0)
+                                    pil_img = PILImage.open(img_data)
+                                else:
+                                    pil_img = PILImage.open(img_data)
+                                
+                                orig_width, orig_height = pil_img.size
+                                
+                                width_ratio = max_width / orig_width
+                                height_ratio = max_height / orig_height
+                                scale_ratio = min(width_ratio, height_ratio)
+                                
+                                final_width = orig_width * scale_ratio
+                                final_height = orig_height * scale_ratio
+                                
+                                original_ratio = orig_width / orig_height if orig_height > 0 else 1
+                                final_ratio = final_width / final_height if final_height > 0 else 1
+                                
+                                if is_url:
+                                    img_data.seek(0)
+                                    sig_img = Image(img_data, width=final_width, height=final_height)
+                                else:
+                                    sig_img = Image(img_data, width=final_width, height=final_height)
+                                
+                                logger.info(f"✅ {role_name} signature aspect ratio: Original={orig_width}x{orig_height} (ratio={original_ratio:.3f}), Final={final_width:.2f}x{final_height:.2f} (ratio={final_ratio:.3f}), Scale={scale_ratio:.3f}")
+                                
+                                if abs(original_ratio - final_ratio) > 0.01:
+                                    logger.warning(f"⚠️ {role_name} signature aspect ratio mismatch! Original={original_ratio:.3f}, Final={final_ratio:.3f}")
+                            except Exception as pil_error:
+                                logger.warning(f"PIL image processing failed for {role_name}, using fallback: {pil_error}")
+                                if is_url:
+                                    img_data.seek(0)
+                                    sig_img = Image(img_data)
+                                else:
+                                    sig_img = Image(img_data)
+                                
+                                if hasattr(sig_img, 'imageWidth') and hasattr(sig_img, 'imageHeight'):
+                                    orig_width = sig_img.imageWidth
+                                    orig_height = sig_img.imageHeight
+                                    if orig_width > 0 and orig_height > 0:
+                                        width_ratio = max_width / orig_width
+                                        height_ratio = max_height / orig_height
+                                        scale_ratio = min(width_ratio, height_ratio)
+                                        final_width = orig_width * scale_ratio
+                                        final_height = orig_height * scale_ratio
+                                        sig_img.drawWidth = final_width
+                                        sig_img.drawHeight = final_height
+                                    else:
+                                        sig_img.drawWidth = max_width
+                                else:
+                                    sig_img.drawWidth = max_width
+                            
+                            sig_rows.append([
+                                Paragraph(f"<b>{role_name} Signature:</b>", styles['Normal']),
+                                sig_img
+                            ])
+                        else:
+                            sig_rows.append([
+                                Paragraph(f"<b>{role_name} Signature:</b>", styles['Normal']),
+                                Paragraph("Signature not available", styles['Small'])
+                            ])
+                    except Exception as e:
+                        logger.error(f"Error processing {role_name} signature: {str(e)}")
+                        sig_rows.append([
+                            Paragraph(f"<b>{role_name} Signature:</b>", styles['Normal']),
+                            Paragraph("Error loading signature", styles['Small'])
+                        ])
+                else:
+                    sig_rows.append([
+                        Paragraph(f"<b>{role_name} Signature:</b>", styles['Normal']),
+                        Paragraph("<i>Not signed</i>", styles['Small'])
+                    ])
+                
+                if sig_rows:
+                    sig_table = Table(sig_rows, colWidths=[2*inch, 3.5*inch])
+                    sig_table.setStyle(TableStyle([
+                        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                        ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ('GRID', (0, 0), (-1, -1), 0.75, colors.HexColor('#125435')),
+                        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E8F5E9')),
+                        ('TOPPADDING', (0, 0), (-1, -1), 8),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                    ]))
+                    story.append(sig_table)
+                    story.append(Spacer(1, 0.15*inch))
+                    has_content = True
+            
+            return has_content
+        
+        # Check if Operations Manager has approved
+        om_has_approved = False
+        if data.get('operations_manager_approved_at') or data.get('operations_manager_id'):
+            om_has_approved = True
+        if data.get('workflow_status'):
+            workflow_status = str(data.get('workflow_status'))
+            if 'operations_manager_approved' in workflow_status or 'bd_procurement' in workflow_status:
+                om_has_approved = True
+        
+        # Check if BD has approved
+        bd_has_approved = False
+        if data.get('business_dev_approved_at') or data.get('business_dev_id'):
+            bd_has_approved = True
+        if data.get('workflow_status'):
+            workflow_status = str(data.get('workflow_status'))
+            if 'bd_procurement' in workflow_status or 'general_manager' in workflow_status:
+                bd_has_approved = True
+        
+        # Check if Procurement has approved
+        procurement_has_approved = False
+        if data.get('procurement_approved_at') or data.get('procurement_id'):
+            procurement_has_approved = True
+        if data.get('workflow_status'):
+            workflow_status = str(data.get('workflow_status'))
+            if 'bd_procurement' in workflow_status or 'general_manager' in workflow_status:
+                procurement_has_approved = True
+        
+        # Add reviewer sections in workflow order
+        # 1. Supervisor - ALWAYS show
+        supervisor_comments_display = supervisor_comments if supervisor_comments and supervisor_comments.strip() else None
+        supervisor_sig_display = signatures.get('Supervisor')
+        add_reviewer_section("Supervisor", supervisor_comments_display, supervisor_sig_display, always_show_signature=True)
+        
+        # 2. Operations Manager - show if approved or has data
+        if operations_manager_comments or signatures.get('Operations Manager') or om_has_approved:
+            add_reviewer_section("Operations Manager", operations_manager_comments, signatures.get('Operations Manager'), always_show_signature=True)
+        
+        # 3. Business Development - show if approved or has data
+        if business_dev_comments or signatures.get('Business Development') or bd_has_approved:
+            add_reviewer_section("Business Development", business_dev_comments, signatures.get('Business Development'), always_show_signature=True)
+        
+        # 4. Procurement - show if approved or has data
+        if procurement_comments or signatures.get('Procurement') or procurement_has_approved:
+            add_reviewer_section("Procurement", procurement_comments, signatures.get('Procurement'), always_show_signature=True)
+        
+        # 5. General Manager - show if has data
+        if general_manager_comments or signatures.get('General Manager'):
+            add_reviewer_section("General Manager", general_manager_comments, signatures.get('General Manager'), always_show_signature=True)
         
         # Build professional PDF with logo and branding
         create_professional_pdf(

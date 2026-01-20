@@ -1332,23 +1332,45 @@
         {% endif %}
 
         {% if user_designation == 'business_development' and is_edit_mode %}
-        <!-- Previous Reviewer: Operations Manager (Read-only for BD) -->
-        <div class="col-12 mb-4" id="opsManagerReadOnlySection" style="display: none;">
+        <!-- Previous Reviewers: Operations Manager + Procurement (Read-only for BD) -->
+        <div class="col-12 mb-4" id="previousForBDSection" style="display: none;">
           <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
-            <strong>Operations Manager Review</strong>
+            <strong>Previous Reviews</strong>
           </div>
-          <div class="row">
-            <div class="col-lg-7 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
-              <div id="opsManagerCommentsReadOnly" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 100px; white-space: pre-wrap;" readonly></div>
-            </div>
-            <div class="col-lg-5 mb-3">
-              <div class="signature-container h-100 d-flex flex-column">
-                <div class="signature-label">
-                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operations Manager Signature</label>
-                  <span class="signature-hint text-success small">✓ Signed</span>
+          
+          <!-- Operations Manager -->
+          <div id="opsManagerReadOnlySection" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Operations Manager Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
+                <div id="opsManagerCommentsReadOnly" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 100px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <div class="signature-container h-100 d-flex flex-column">
+                  <div class="signature-label">
+                    <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operations Manager Signature</label>
+                    <span class="signature-hint text-success small">✓ Signed</span>
+                  </div>
+                  <div id="opsManagerSignatureReadOnly" style="min-height: 160px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
+                    <span style="color: #9ca3af;">Loading signature...</span>
+                  </div>
                 </div>
-                <div id="opsManagerSignatureReadOnly" style="min-height: 160px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
+              </div>
+            </div>
+          </div>
+          
+          <!-- Procurement (so BD can see if PO has signed) -->
+          <div id="procurementReadOnlyBD" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Procurement Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
+                <div id="procurementCommentsReadOnlyBD" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature</label>
+                <div id="procurementSignatureReadOnlyBD" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -2872,9 +2894,18 @@
         };
 
         // Only attach supervisor data when supervisor is actually editing/submitting
-        {% if is_supervisor_edit %}
-        payload.supervisor_signature = supervisorData || '';
+        // Include supervisor data if supervisor is editing OR if user is a supervisor
+        {% if is_supervisor_edit or user_designation == 'supervisor' %}
+        // Only include signature if it has a value (don't send empty string which might become null)
+        if (supervisorData && supervisorData.trim() !== '') {
+          payload.supervisor_signature = supervisorData;
+          console.log('✅ Adding supervisor signature to payload (length:', supervisorData.length, ')');
+        } else {
+          console.warn('⚠️ Supervisor signature is empty, not including in payload');
+        }
+        // Always include comments (even if empty, so it's preserved)
         payload.supervisor_comments = supervisorComments || '';
+        console.log('✅ Adding supervisor comments to payload:', supervisorComments ? 'has value' : 'empty');
         {% endif %}
 
         // Only attach Operations Manager data when OM is submitting
@@ -3263,14 +3294,33 @@
           }
           
           // Step 2: Approve to trigger document generation and move to next stage
+          // Ensure signature is in both places for compatibility
+          const approvalPayload = {
+            comments: operationsManagerComments || '',
+            signature: opData || '',
+            form_data: payload
+          };
+          
+          // Also ensure signature is in form_data for consistency
+          if (opData && opData.trim()) {
+            approvalPayload.form_data.operations_manager_signature = opData;
+            approvalPayload.form_data.opMan_signature = opData;
+            console.log('✅ Operations Manager signature included in approval payload (both top-level and form_data)');
+          } else {
+            console.warn('⚠️ Operations Manager signature is empty - opData:', opData ? 'exists but empty' : 'undefined');
+          }
+          
+          console.log('📤 Operations Manager approval payload:', {
+            commentsLength: (operationsManagerComments || '').length,
+            signatureLength: (opData || '').length,
+            signaturePreview: opData ? opData.substring(0, 50) + '...' : 'none',
+            formDataKeys: Object.keys(approvalPayload.form_data || {})
+          });
+          
           const approveRes = await fetch(`/api/workflow/submissions/${submissionId}/approve-ops-manager`, {
             method: 'POST',
             headers: headers,
-            body: JSON.stringify({
-              comments: operationsManagerComments || '',
-              signature: opData || '',
-              form_data: payload
-            }),
+            body: JSON.stringify(approvalPayload),
             credentials: 'include'
           });
           
@@ -3956,16 +4006,43 @@
             // Signature is stored as an object: {saved: ..., path: ..., url: "...", is_cloud: true}
             let techSig = null;
             
-            // Try multiple paths to find the signature
-            if (formData.tech_signature) {
-              techSig = formData.tech_signature;
-              console.log('📝 Found tech_signature in formData:', typeof techSig, techSig);
-            } else if (formData.techSignatureData) {
-              techSig = formData.techSignatureData;
-              console.log('📝 Found techSignatureData in formData:', typeof techSig);
-            } else if (submissionData.form_data && submissionData.form_data.tech_signature) {
-              techSig = submissionData.form_data.tech_signature;
-              console.log('📝 Found tech_signature in submissionData.form_data:', typeof techSig, techSig);
+            // Try multiple paths to find the signature - check ALL possible locations
+            if (formData) {
+              if (formData.tech_signature) {
+                techSig = formData.tech_signature;
+                console.log('📝 Found tech_signature in formData:', typeof techSig, techSig);
+              } else if (formData.techSignatureData) {
+                techSig = formData.techSignatureData;
+                console.log('📝 Found techSignatureData in formData:', typeof techSig);
+              } else if (formData.data && typeof formData.data === 'object' && formData.data.tech_signature) {
+                techSig = formData.data.tech_signature;
+                console.log('📝 Found tech_signature in formData.data');
+              }
+            }
+            
+            if (!techSig && submissionData) {
+              if (submissionData.tech_signature) {
+                techSig = submissionData.tech_signature;
+                console.log('📝 Found tech_signature in submissionData (top level)');
+              } else if (submissionData.form_data) {
+                let checkFormData = submissionData.form_data;
+                if (typeof checkFormData === 'string') {
+                  try {
+                    checkFormData = JSON.parse(checkFormData);
+                  } catch (e) {
+                    console.error('❌ Error parsing submissionData.form_data for tech signature:', e);
+                  }
+                }
+                if (checkFormData) {
+                  if (checkFormData.tech_signature) {
+                    techSig = checkFormData.tech_signature;
+                    console.log('📝 Found tech_signature in submissionData.form_data:', typeof techSig, techSig);
+                  } else if (checkFormData.data && typeof checkFormData.data === 'object' && checkFormData.data.tech_signature) {
+                    techSig = checkFormData.data.tech_signature;
+                    console.log('📝 Found tech_signature in submissionData.form_data.data');
+                  }
+                }
+              }
             }
             
             if (techSig) {
@@ -4070,21 +4147,30 @@
             // Load supervisor comments and signature if supervisor is editing
             // Always check for supervisor data if user is supervisor or in supervisor edit mode
             {% if is_supervisor_edit or user_designation == 'supervisor' %}
-            // Try multiple paths to find supervisor comments
+            // Try multiple paths to find supervisor comments - check ALL possible locations
             let supervisorComments = null;
             console.log('🔍 Looking for supervisor_comments...');
             console.log('  formData:', formData);
             console.log('  formData.supervisor_comments:', formData?.supervisor_comments);
             console.log('  submissionData.form_data:', submissionData?.form_data);
             console.log('  submissionData.form_data?.supervisor_comments:', submissionData?.form_data?.supervisor_comments);
+            console.log('  submissionData.supervisor_comments:', submissionData?.supervisor_comments);
             
-            // Check formData first (already parsed)
-            if (formData && (formData.supervisor_comments || formData.supervisor_comments === '')) {
-              supervisorComments = formData.supervisor_comments;
-              console.log('📝 Found supervisor_comments in formData:', supervisorComments ? 'has value' : 'empty string');
-            } 
+            // Check formData first (already parsed) - including nested data
+            if (formData) {
+              if (formData.supervisor_comments !== undefined && formData.supervisor_comments !== null) {
+                supervisorComments = formData.supervisor_comments;
+                console.log('📝 Found supervisor_comments in formData:', supervisorComments ? 'has value' : 'empty string');
+              }
+              // Also check nested formData.data
+              else if (formData.data && typeof formData.data === 'object' && formData.data.supervisor_comments !== undefined) {
+                supervisorComments = formData.data.supervisor_comments;
+                console.log('📝 Found supervisor_comments in formData.data');
+              }
+            }
+            
             // Check submissionData.form_data (might be string or object)
-            else if (submissionData && submissionData.form_data) {
+            if (supervisorComments === null && submissionData && submissionData.form_data) {
               let checkFormData = submissionData.form_data;
               if (typeof checkFormData === 'string') {
                 try {
@@ -4093,15 +4179,23 @@
                   console.error('❌ Error parsing submissionData.form_data:', e);
                 }
               }
-              if (checkFormData && (checkFormData.supervisor_comments || checkFormData.supervisor_comments === '')) {
-                supervisorComments = checkFormData.supervisor_comments;
-                console.log('📝 Found supervisor_comments in submissionData.form_data (parsed)');
+              if (checkFormData) {
+                if (checkFormData.supervisor_comments !== undefined && checkFormData.supervisor_comments !== null) {
+                  supervisorComments = checkFormData.supervisor_comments;
+                  console.log('📝 Found supervisor_comments in submissionData.form_data (parsed)');
+                }
+                // Also check nested form_data.data
+                else if (checkFormData.data && typeof checkFormData.data === 'object' && checkFormData.data.supervisor_comments !== undefined) {
+                  supervisorComments = checkFormData.data.supervisor_comments;
+                  console.log('📝 Found supervisor_comments in submissionData.form_data.data');
+                }
               }
             }
+            
             // Check top-level submissionData
-            else if (submissionData && (submissionData.supervisor_comments || submissionData.supervisor_comments === '')) {
+            if (supervisorComments === null && submissionData && submissionData.supervisor_comments !== undefined && submissionData.supervisor_comments !== null) {
               supervisorComments = submissionData.supervisor_comments;
-              console.log('📝 Found supervisor_comments in submissionData');
+              console.log('📝 Found supervisor_comments in submissionData (top level)');
             }
             
             // Only set if not null/undefined (empty string is OK)
@@ -4120,20 +4214,35 @@
               console.warn('  Checked: formData.supervisor_comments, submissionData.form_data.supervisor_comments, submissionData.supervisor_comments');
             }
             
-            // Try multiple paths to find supervisor signature
+            // Try multiple paths to find supervisor signature - check ALL possible locations
             let supervisorSig = null;
             console.log('🔍 Looking for supervisor_signature...');
-            console.log('  formData.supervisor_signature:', formData?.supervisor_signature ? 'found' : 'not found');
-            console.log('  submissionData.form_data?.supervisor_signature:', submissionData?.form_data?.supervisor_signature ? 'found' : 'not found');
-            console.log('  submissionData.supervisor_signature:', submissionData?.supervisor_signature ? 'found' : 'not found');
+            console.log('  formData.supervisor_signature:', formData?.supervisor_signature !== undefined ? 
+                       `exists (value: ${formData?.supervisor_signature}, type: ${typeof formData?.supervisor_signature})` : 'not found');
+            console.log('  submissionData.form_data?.supervisor_signature:', submissionData?.form_data?.supervisor_signature !== undefined ? 
+                       `exists (value: ${submissionData?.form_data?.supervisor_signature}, type: ${typeof submissionData?.form_data?.supervisor_signature})` : 'not found');
+            console.log('  submissionData.supervisor_signature:', submissionData?.supervisor_signature !== undefined ? 
+                       `exists (value: ${submissionData?.supervisor_signature}, type: ${typeof submissionData?.supervisor_signature})` : 'not found');
             
-            // Check formData first (already parsed)
-            if (formData && formData.supervisor_signature) {
-              supervisorSig = formData.supervisor_signature;
-              console.log('📝 Found supervisor_signature in formData:', typeof supervisorSig);
-            } 
+            // Check formData first (already parsed) - including nested data
+            // IMPORTANT: Check for null/undefined explicitly, not just truthy values
+            if (formData) {
+              if (formData.supervisor_signature !== null && formData.supervisor_signature !== undefined && formData.supervisor_signature !== '') {
+                supervisorSig = formData.supervisor_signature;
+                console.log('📝 Found supervisor_signature in formData:', typeof supervisorSig, supervisorSig ? 'has value' : 'empty');
+              }
+              // Also check nested formData.data
+              else if (formData.data && typeof formData.data === 'object' && 
+                       formData.data.supervisor_signature !== null && 
+                       formData.data.supervisor_signature !== undefined && 
+                       formData.data.supervisor_signature !== '') {
+                supervisorSig = formData.data.supervisor_signature;
+                console.log('📝 Found supervisor_signature in formData.data');
+              }
+            }
+            
             // Check submissionData.form_data (might be string or object)
-            else if (submissionData && submissionData.form_data) {
+            if (!supervisorSig && submissionData && submissionData.form_data) {
               let checkFormData = submissionData.form_data;
               if (typeof checkFormData === 'string') {
                 try {
@@ -4142,25 +4251,53 @@
                   console.error('❌ Error parsing submissionData.form_data for signature:', e);
                 }
               }
-              if (checkFormData && checkFormData.supervisor_signature) {
-                supervisorSig = checkFormData.supervisor_signature;
-                console.log('📝 Found supervisor_signature in submissionData.form_data (parsed)');
+              if (checkFormData) {
+                if (checkFormData.supervisor_signature !== null && 
+                    checkFormData.supervisor_signature !== undefined && 
+                    checkFormData.supervisor_signature !== '') {
+                  supervisorSig = checkFormData.supervisor_signature;
+                  console.log('📝 Found supervisor_signature in submissionData.form_data (parsed)');
+                }
+                // Also check nested form_data.data
+                else if (checkFormData.data && typeof checkFormData.data === 'object' && 
+                         checkFormData.data.supervisor_signature !== null && 
+                         checkFormData.data.supervisor_signature !== undefined && 
+                         checkFormData.data.supervisor_signature !== '') {
+                  supervisorSig = checkFormData.data.supervisor_signature;
+                  console.log('📝 Found supervisor_signature in submissionData.form_data.data');
+                }
               }
             }
+            
             // Check top-level submissionData
-            else if (submissionData && submissionData.supervisor_signature) {
+            if (!supervisorSig && submissionData && 
+                submissionData.supervisor_signature !== null && 
+                submissionData.supervisor_signature !== undefined && 
+                submissionData.supervisor_signature !== '') {
               supervisorSig = submissionData.supervisor_signature;
-              console.log('📝 Found supervisor_signature in submissionData');
+              console.log('📝 Found supervisor_signature in submissionData (top level)');
+            }
+            
+            // Log the actual value for debugging
+            if (formData && formData.hasOwnProperty('supervisor_signature')) {
+              console.log('  formData.supervisor_signature value:', formData.supervisor_signature, 'type:', typeof formData.supervisor_signature);
             }
             
             if (supervisorSig) {
+              console.log('📝 Processing supervisor signature:', typeof supervisorSig, supervisorSig);
+              
               // Handle object format with url property
-              if (supervisorSig && typeof supervisorSig === 'object' && supervisorSig.url) {
-                supervisorSig = supervisorSig.url;
-                console.log('📝 Extracted supervisor signature URL from object');
+              if (supervisorSig && typeof supervisorSig === 'object' && supervisorSig !== null) {
+                if (supervisorSig.url) {
+                  supervisorSig = supervisorSig.url;
+                  console.log('📝 Extracted supervisor signature URL from object:', supervisorSig.substring(0, 80));
+                } else {
+                  console.warn('⚠️ Supervisor signature is object but has no url property:', Object.keys(supervisorSig));
+                  supervisorSig = null;
+                }
               }
               
-              if (supervisorSig && typeof supervisorSig === 'string' && (
+              if (supervisorSig && typeof supervisorSig === 'string' && supervisorSig.trim() !== '' && (
                 supervisorSig.startsWith('data:image') || 
                 supervisorSig.startsWith('http://') || 
                 supervisorSig.startsWith('https://') || 
@@ -4329,95 +4466,249 @@
             }
             {% endif %}
             
-            // Load Operations Manager comments and signature for BD (read-only)
+            // Load Operations Manager comments and signature for BD (read-only) - check ALL possible locations
             {% if user_designation == 'business_development' %}
-            let opsManagerCommentsBD = formData.operations_manager_comments || 
-                                      (submissionData?.form_data?.operations_manager_comments) ||
-                                      (submissionData?.operations_manager_comments);
-            // Check multiple paths for Operations Manager signature
-            let opsManagerSigBD = formData.operations_manager_signature || 
-                                 formData.opMan_signature ||
-                                 (submissionData?.form_data?.operations_manager_signature) ||
-                                 (submissionData?.form_data?.opMan_signature) ||
-                                 submissionData?.opMan_signature;
+            let opsManagerCommentsBD = null;
+            let opsManagerSigBD = null;
             
-            console.log('🔍 BD: Checking Operations Manager data:', {
-              comments: opsManagerCommentsBD ? 'found' : 'not found',
-              signature: opsManagerSigBD ? 'found' : 'not found',
-              sigType: typeof opsManagerSigBD,
-              sigPreview: opsManagerSigBD ? String(opsManagerSigBD).substring(0, 50) + '...' : 'none'
-            });
+            // Check formData first (this is the parsed form_data from submission)
+            if (formData) {
+              // IMPORTANT: Only get operations_manager_comments, NOT supervisor_comments
+              if (formData.operations_manager_comments !== null && formData.operations_manager_comments !== undefined && formData.operations_manager_comments !== '') {
+                opsManagerCommentsBD = formData.operations_manager_comments;
+              }
+              
+              if (formData.operations_manager_signature !== null && formData.operations_manager_signature !== undefined && formData.operations_manager_signature !== '') {
+                opsManagerSigBD = formData.operations_manager_signature;
+              } else if (formData.opMan_signature !== null && formData.opMan_signature !== undefined && formData.opMan_signature !== '') {
+                opsManagerSigBD = formData.opMan_signature;
+              }
+            }
             
-            if (opsManagerCommentsBD || opsManagerSigBD) {
+            // Check submissionData.form_data (might be a different reference)
+            if ((!opsManagerCommentsBD || !opsManagerSigBD) && submissionData && submissionData.form_data) {
+              let checkFormData = submissionData.form_data;
+              if (typeof checkFormData === 'string') {
+                try {
+                  checkFormData = JSON.parse(checkFormData);
+                } catch (e) {
+                  console.error('❌ BD: Error parsing submissionData.form_data:', e);
+                }
+              }
+              if (checkFormData && typeof checkFormData === 'object') {
+                if (!opsManagerCommentsBD && checkFormData.operations_manager_comments !== null && checkFormData.operations_manager_comments !== undefined && checkFormData.operations_manager_comments !== '') {
+                  opsManagerCommentsBD = checkFormData.operations_manager_comments;
+                }
+                if (!opsManagerSigBD) {
+                  if (checkFormData.operations_manager_signature !== null && checkFormData.operations_manager_signature !== undefined && checkFormData.operations_manager_signature !== '') {
+                    opsManagerSigBD = checkFormData.operations_manager_signature;
+                  } else if (checkFormData.opMan_signature !== null && checkFormData.opMan_signature !== undefined && checkFormData.opMan_signature !== '') {
+                    opsManagerSigBD = checkFormData.opMan_signature;
+                  }
+                }
+              }
+            }
+            
+            // Check top-level submissionData (for model fields that might be exposed)
+            if (!opsManagerCommentsBD && submissionData && submissionData.operations_manager_comments !== null && submissionData.operations_manager_comments !== undefined) {
+              opsManagerCommentsBD = submissionData.operations_manager_comments;
+            }
+            if (!opsManagerSigBD && submissionData) {
+              if (submissionData.operations_manager_signature !== null && submissionData.operations_manager_signature !== undefined && submissionData.operations_manager_signature !== '') {
+                opsManagerSigBD = submissionData.operations_manager_signature;
+              } else if (submissionData.opMan_signature !== null && submissionData.opMan_signature !== undefined && submissionData.opMan_signature !== '') {
+                opsManagerSigBD = submissionData.opMan_signature;
+              }
+            }
+            
+            // Always show OM section if we have any data OR if OM has approved (check model field)
+            // Check if OM has approved by looking at submission data
+            let omHasApproved = false;
+            if (submissionData) {
+              // Check if operations_manager_approved_at exists (means OM has approved)
+              if (submissionData.operations_manager_approved_at || 
+                  (submissionData.workflow_status && 
+                   (submissionData.workflow_status.includes('operations_manager_approved') || 
+                    submissionData.workflow_status.includes('bd_procurement')))) {
+                omHasApproved = true;
+              }
+            }
+            
+            if (opsManagerCommentsBD || opsManagerSigBD || omHasApproved) {
               const section = document.getElementById('opsManagerReadOnlySection');
               if (section) {
                 section.style.display = 'block';
-                console.log('✅ BD: Showing Operations Manager read-only section');
+                // Also show the parent section container
+                const parentSection = document.getElementById('previousForBDSection');
+                if (parentSection) {
+                  parentSection.style.display = 'block';
+                }
                 
-                if (opsManagerCommentsBD) {
-                  const commentsDiv = document.getElementById('opsManagerCommentsReadOnly');
-                  if (commentsDiv) {
+                const commentsDiv = document.getElementById('opsManagerCommentsReadOnly');
+                if (commentsDiv) {
+                  if (opsManagerCommentsBD) {
                     commentsDiv.textContent = opsManagerCommentsBD;
-                    console.log('✅ BD: Loaded Operations Manager comments');
-                  }
-                } else {
-                  // Show placeholder if no comments
-                  const commentsDiv = document.getElementById('opsManagerCommentsReadOnly');
-                  if (commentsDiv) {
+                  } else {
                     commentsDiv.textContent = 'No comments provided';
                     commentsDiv.style.fontStyle = 'italic';
                     commentsDiv.style.color = '#9ca3af';
                   }
                 }
                 
-                if (opsManagerSigBD) {
-                  const sigDiv = document.getElementById('opsManagerSignatureReadOnly');
-                  if (sigDiv) {
+                const sigDiv = document.getElementById('opsManagerSignatureReadOnly');
+                if (sigDiv) {
+                  // Clear loading message first
+                  sigDiv.innerHTML = '';
+                  
+                  if (opsManagerSigBD) {
                     // Handle object format
                     let sigUrl = opsManagerSigBD;
                     if (typeof sigUrl === 'object' && sigUrl.url) {
                       sigUrl = sigUrl.url;
                     }
                     
-                    console.log('🔍 BD: Processing Operations Manager signature, URL type:', typeof sigUrl, 'starts with:', sigUrl ? String(sigUrl).substring(0, 30) : 'none');
-                    
                     if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
                       const img = document.createElement('img');
                       img.src = sigUrl;
                       img.style.cssText = 'width: 100%; max-height: 140px; object-fit: contain;';
                       img.alt = 'Operations Manager Signature';
-                      img.onload = () => console.log('✅ BD: Operations Manager signature image loaded successfully');
                       img.onerror = () => {
-                        console.error('❌ BD: Failed to load Operations Manager signature image');
                         sigDiv.innerHTML = '<span style="color: #dc3545;">Failed to load signature</span>';
                       };
-                      sigDiv.innerHTML = '';
                       sigDiv.appendChild(img);
-                      console.log('✅ BD: Added Operations Manager signature image to read-only section');
                     } else {
-                      console.warn('⚠️ BD: Operations Manager signature format not recognized:', typeof sigUrl, sigUrl ? String(sigUrl).substring(0, 50) : 'empty');
                       sigDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
                     }
-                  }
-                } else {
-                  console.warn('⚠️ BD: Operations Manager signature not found');
-                  const sigDiv = document.getElementById('opsManagerSignatureReadOnly');
-                  if (sigDiv) {
+                  } else {
                     sigDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
                   }
                 }
-              } else {
-                console.error('❌ BD: opsManagerReadOnlySection element not found');
               }
-            } else {
-              console.warn('⚠️ BD: No Operations Manager comments or signature found');
+            }
+            
+            // Load Procurement data for BD (so BD can see if PO has signed)
+            let procurementCommentsBD = null;
+            let procurementSigBD = null;
+            
+            if (formData) {
+              if (formData.procurement_comments) procurementCommentsBD = formData.procurement_comments;
+              if (formData.procurement_signature) procurementSigBD = formData.procurement_signature;
+            }
+            
+            if ((!procurementCommentsBD || !procurementSigBD) && submissionData && submissionData.form_data) {
+              let checkFormData = submissionData.form_data;
+              if (typeof checkFormData === 'string') {
+                try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+              }
+              if (checkFormData) {
+                if (!procurementCommentsBD && checkFormData.procurement_comments) procurementCommentsBD = checkFormData.procurement_comments;
+                if (!procurementSigBD && checkFormData.procurement_signature) procurementSigBD = checkFormData.procurement_signature;
+              }
+            }
+            
+            if (procurementCommentsBD || procurementSigBD) {
+              const section = document.getElementById('procurementReadOnlyBD');
+              if (section) {
+                section.style.display = 'block';
+                document.getElementById('previousForBDSection').style.display = 'block';
+                
+                const commentsDiv = document.getElementById('procurementCommentsReadOnlyBD');
+                if (commentsDiv) {
+                  if (procurementCommentsBD) commentsDiv.textContent = procurementCommentsBD;
+                  else {
+                    commentsDiv.textContent = 'No comments provided';
+                    commentsDiv.style.fontStyle = 'italic';
+                    commentsDiv.style.color = '#9ca3af';
+                  }
+                }
+                
+                const sigDiv = document.getElementById('procurementSignatureReadOnlyBD');
+                if (sigDiv) {
+                  sigDiv.innerHTML = '';
+                  if (procurementSigBD) {
+                    let sigUrl = procurementSigBD;
+                    if (typeof sigUrl === 'object' && sigUrl.url) sigUrl = sigUrl.url;
+                    
+                    if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
+                      const img = document.createElement('img');
+                      img.src = sigUrl;
+                      img.style.cssText = 'width: 100%; max-height: 140px; object-fit: contain;';
+                      img.alt = 'Procurement Signature';
+                      sigDiv.appendChild(img);
+                    } else {
+                      sigDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
+                    }
+                  } else {
+                    sigDiv.innerHTML = '<span style="color: #9ca3af;">Not signed yet</span>';
+                  }
+                }
+              }
             }
             {% endif %}
             
-            // Load Operations Manager signature (for Operations Manager editing)
-            if (formData.opMan_signature || formData.opManSignatureData || (submissionData && submissionData.form_data && (submissionData.form_data.opMan_signature || submissionData.form_data.operations_manager_signature))) {
-              let opSig = formData.opMan_signature || formData.opManSignatureData || 
-                         (submissionData && submissionData.form_data && (submissionData.form_data.opMan_signature || submissionData.form_data.operations_manager_signature));
+            // Load Operations Manager signature (for Operations Manager editing) - check ALL possible locations
+            let opSig = null;
+            
+            // Check formData first
+            if (formData) {
+              if (formData.opMan_signature) {
+                opSig = formData.opMan_signature;
+                console.log('📝 Found opMan_signature in formData');
+              } else if (formData.opManSignatureData) {
+                opSig = formData.opManSignatureData;
+                console.log('📝 Found opManSignatureData in formData');
+              } else if (formData.operations_manager_signature) {
+                opSig = formData.operations_manager_signature;
+                console.log('📝 Found operations_manager_signature in formData');
+              } else if (formData.data && typeof formData.data === 'object') {
+                if (formData.data.opMan_signature) {
+                  opSig = formData.data.opMan_signature;
+                  console.log('📝 Found opMan_signature in formData.data');
+                } else if (formData.data.operations_manager_signature) {
+                  opSig = formData.data.operations_manager_signature;
+                  console.log('📝 Found operations_manager_signature in formData.data');
+                }
+              }
+            }
+            
+            // Check submissionData
+            if (!opSig && submissionData) {
+              if (submissionData.opMan_signature) {
+                opSig = submissionData.opMan_signature;
+                console.log('📝 Found opMan_signature in submissionData (top level)');
+              } else if (submissionData.operations_manager_signature) {
+                opSig = submissionData.operations_manager_signature;
+                console.log('📝 Found operations_manager_signature in submissionData (top level)');
+              } else if (submissionData.form_data) {
+                let checkFormData = submissionData.form_data;
+                if (typeof checkFormData === 'string') {
+                  try {
+                    checkFormData = JSON.parse(checkFormData);
+                  } catch (e) {
+                    console.error('❌ Error parsing submissionData.form_data for opman signature:', e);
+                  }
+                }
+                if (checkFormData) {
+                  if (checkFormData.opMan_signature) {
+                    opSig = checkFormData.opMan_signature;
+                    console.log('📝 Found opMan_signature in submissionData.form_data');
+                  } else if (checkFormData.operations_manager_signature) {
+                    opSig = checkFormData.operations_manager_signature;
+                    console.log('📝 Found operations_manager_signature in submissionData.form_data');
+                  } else if (checkFormData.data && typeof checkFormData.data === 'object') {
+                    if (checkFormData.data.opMan_signature) {
+                      opSig = checkFormData.data.opMan_signature;
+                      console.log('📝 Found opMan_signature in submissionData.form_data.data');
+                    } else if (checkFormData.data.operations_manager_signature) {
+                      opSig = checkFormData.data.operations_manager_signature;
+                      console.log('📝 Found operations_manager_signature in submissionData.form_data.data');
+                    }
+                  }
+                }
+              }
+            }
+            
+            if (opSig) {
               
               // Handle object format with url property (from Cloudinary)
               if (opSig && typeof opSig === 'object' && opSig.url) {
@@ -4610,60 +4901,180 @@
           const prevForProc = document.getElementById('previousForProcurementSection');
           let hasPrevForProc = false;
 
-          // OM for Procurement
-          let opsManagerCommentsProc = formData.operations_manager_comments || 
-                                      (submissionData?.form_data?.operations_manager_comments);
-          let opsManagerSigProc = formData.operations_manager_signature || 
-                                 (submissionData?.form_data?.operations_manager_signature);
+          // OM for Procurement - comprehensive data loading
+          let opsManagerCommentsProc = null;
+          let opsManagerSigProc = null;
+          
+          // Check formData first
+          if (formData) {
+            if (formData.operations_manager_comments) opsManagerCommentsProc = formData.operations_manager_comments;
+            if (formData.operations_manager_signature) opsManagerSigProc = formData.operations_manager_signature;
+            else if (formData.opMan_signature) opsManagerSigProc = formData.opMan_signature;
+          }
+          
+          // Check submissionData.form_data
+          if ((!opsManagerCommentsProc || !opsManagerSigProc) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData && typeof checkFormData === 'object') {
+              if (!opsManagerCommentsProc && checkFormData.operations_manager_comments) opsManagerCommentsProc = checkFormData.operations_manager_comments;
+              if (!opsManagerSigProc) {
+                if (checkFormData.operations_manager_signature) opsManagerSigProc = checkFormData.operations_manager_signature;
+                else if (checkFormData.opMan_signature) opsManagerSigProc = checkFormData.opMan_signature;
+              }
+            }
+          }
+          
+          // Check top-level submissionData
+          if (!opsManagerCommentsProc && submissionData && submissionData.operations_manager_comments) {
+            opsManagerCommentsProc = submissionData.operations_manager_comments;
+          }
+          if (!opsManagerSigProc && submissionData) {
+            if (submissionData.operations_manager_signature) opsManagerSigProc = submissionData.operations_manager_signature;
+            else if (submissionData.opMan_signature) opsManagerSigProc = submissionData.opMan_signature;
+          }
 
           if (opsManagerCommentsProc || opsManagerSigProc) {
             hasPrevForProc = true;
             const sec = document.getElementById('opsManagerReadOnlyProc');
-            if (sec) sec.style.display = 'block';
+            if (sec) {
+              sec.style.display = 'block';
+              document.getElementById('previousForProcurementSection').style.display = 'block';
+            }
 
             const cDiv = document.getElementById('opsManagerCommentsReadOnlyProc');
-            if (cDiv && opsManagerCommentsProc) cDiv.textContent = opsManagerCommentsProc;
+            if (cDiv) {
+              if (opsManagerCommentsProc) {
+                cDiv.textContent = opsManagerCommentsProc;
+              } else {
+                cDiv.textContent = 'No comments provided';
+                cDiv.style.fontStyle = 'italic';
+                cDiv.style.color = '#9ca3af';
+              }
+            }
 
             const sDiv = document.getElementById('opsManagerSignatureReadOnlyProc');
-            if (sDiv && opsManagerSigProc) {
-              let sigUrl = opsManagerSigProc;
-              if (typeof sigUrl === 'object' && sigUrl.url) sigUrl = sigUrl.url;
-              if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
-                const img = document.createElement('img');
-                img.src = sigUrl;
-                img.style.cssText = 'width: 100%; max-height: 140px; object-fit: contain;';
-                img.alt = 'Operations Manager Signature';
-                sDiv.innerHTML = '';
-                sDiv.appendChild(img);
+            if (sDiv) {
+              // Clear loading message first
+              sDiv.innerHTML = '';
+              
+              if (opsManagerSigProc) {
+                let sigUrl = opsManagerSigProc;
+                if (typeof sigUrl === 'object' && sigUrl.url) {
+                  sigUrl = sigUrl.url;
+                }
+                
+                if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
+                  const img = document.createElement('img');
+                  img.src = sigUrl;
+                  img.style.cssText = 'width: 100%; max-height: 140px; object-fit: contain;';
+                  img.alt = 'Operations Manager Signature';
+                  img.onerror = () => {
+                    sDiv.innerHTML = '<span style="color: #dc3545;">Failed to load signature</span>';
+                  };
+                  sDiv.appendChild(img);
+                } else {
+                  sDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
+                }
+              } else {
+                sDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
               }
             }
           }
 
-          // BD for Procurement
-          let bdCommentsProc = formData.business_dev_comments || 
-                              (submissionData?.form_data?.business_dev_comments);
-          let bdSigProc = formData.business_dev_signature || 
-                         (submissionData?.form_data?.business_dev_signature);
+          // BD for Procurement - comprehensive data loading
+          // CRITICAL: Only use actual BD comments, never fall back to supervisor comments
+          let bdCommentsProc = null;
+          let bdSigProc = null;
+          const supervisorComments = formData?.supervisor_comments || (submissionData?.form_data?.supervisor_comments);
+          
+          // Check formData first
+          if (formData) {
+            // Only use BD comments if they exist AND are different from supervisor comments
+            if (formData.business_dev_comments) {
+              if (formData.business_dev_comments !== supervisorComments) {
+                bdCommentsProc = formData.business_dev_comments;
+              } else {
+                console.warn('⚠️ Procurement: BD comments appear to be supervisor comments, ignoring');
+              }
+            }
+            if (formData.business_dev_signature) bdSigProc = formData.business_dev_signature;
+          }
+          
+          // Check submissionData.form_data
+          if ((!bdCommentsProc || !bdSigProc) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              // Only use BD comments if they exist AND are different from supervisor comments
+              if (!bdCommentsProc && checkFormData.business_dev_comments) {
+                if (checkFormData.business_dev_comments !== supervisorComments) {
+                  bdCommentsProc = checkFormData.business_dev_comments;
+                } else {
+                  console.warn('⚠️ Procurement: BD comments in form_data appear to be supervisor comments, ignoring');
+                }
+              }
+              if (!bdSigProc && checkFormData.business_dev_signature) bdSigProc = checkFormData.business_dev_signature;
+            }
+          }
+          
+          // Check if BD has approved (even if data is missing, we should show the section)
+          let bdHasApproved = false;
+          if (submissionData) {
+            if (submissionData.business_dev_approved_at || 
+                (submissionData.workflow_status && 
+                 (submissionData.workflow_status.includes('bd_procurement') || 
+                  submissionData.workflow_status.includes('general_manager')))) {
+              bdHasApproved = true;
+            }
+          }
 
-          if (bdCommentsProc || bdSigProc) {
+          if (bdCommentsProc || bdSigProc || bdHasApproved) {
             hasPrevForProc = true;
             const sec = document.getElementById('bdReadOnlyProc');
-            if (sec) sec.style.display = 'block';
+            if (sec) {
+              sec.style.display = 'block';
+              document.getElementById('previousForProcurementSection').style.display = 'block';
+            }
 
             const cDiv = document.getElementById('bdCommentsReadOnlyProc');
-            if (cDiv && bdCommentsProc) cDiv.textContent = bdCommentsProc;
+            if (cDiv) {
+              if (bdCommentsProc) {
+                cDiv.textContent = bdCommentsProc;
+              } else {
+                cDiv.textContent = 'No comments provided';
+                cDiv.style.fontStyle = 'italic';
+                cDiv.style.color = '#9ca3af';
+              }
+            }
 
             const sDiv = document.getElementById('bdSignatureReadOnlyProc');
-            if (sDiv && bdSigProc) {
-              let sigUrl = bdSigProc;
-              if (typeof sigUrl === 'object' && sigUrl.url) sigUrl = sigUrl.url;
-              if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
-                const img = document.createElement('img');
-                img.src = sigUrl;
-                img.style.cssText = 'width: 100%; max-height: 140px; object-fit: contain;';
-                img.alt = 'Business Development Signature';
-                sDiv.innerHTML = '';
-                sDiv.appendChild(img);
+            if (sDiv) {
+              // Clear loading message first
+              sDiv.innerHTML = '';
+              
+              if (bdSigProc) {
+                let sigUrl = bdSigProc;
+                if (typeof sigUrl === 'object' && sigUrl.url) sigUrl = sigUrl.url;
+                
+                if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
+                  const img = document.createElement('img');
+                  img.src = sigUrl;
+                  img.style.cssText = 'width: 100%; max-height: 140px; object-fit: contain;';
+                  img.alt = 'Business Development Signature';
+                  img.onerror = () => {
+                    sDiv.innerHTML = '<span style="color: #dc3545;">Failed to load signature</span>';
+                  };
+                  sDiv.appendChild(img);
+                } else {
+                  sDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
+                }
+              } else {
+                sDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
               }
             }
           }
@@ -4673,16 +5084,113 @@
           }
           {% endif %}
           
+          // Load General Manager signature if it exists
+          {% if user_designation == 'general_manager' %}
+          let gmSignature = null;
+          if (formData) {
+            if (formData.general_manager_signature) {
+              gmSignature = formData.general_manager_signature;
+            }
+          }
+          
+          if (!gmSignature && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData && checkFormData.general_manager_signature) {
+              gmSignature = checkFormData.general_manager_signature;
+            }
+          }
+          
+          if (gmSignature) {
+            // Handle object format with url property
+            let sigUrl = gmSignature;
+            if (typeof sigUrl === 'object' && sigUrl !== null && sigUrl.url) {
+              sigUrl = sigUrl.url;
+            }
+            
+            // Load signature into canvas or display as image
+            if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
+              const gmCanvas = document.getElementById('generalManagerSignaturePad');
+              const gmSigInput = document.getElementById('generalManagerSignatureData');
+              
+              if (gmCanvas && pads && pads.generalManagerPad) {
+                try {
+                  // For data URLs, try to load into pad
+                  if (sigUrl.startsWith('data:image')) {
+                    pads.generalManagerPad.fromDataURL(sigUrl);
+                    console.log('✅ Loaded GM signature into canvas');
+                  } else {
+                    // For URL signatures, display as image instead
+                    gmCanvas.style.display = 'none';
+                    const sigImg = document.createElement('img');
+                    sigImg.src = sigUrl;
+                    sigImg.alt = 'General Manager Signature';
+                    sigImg.style.cssText = 'width: 100%; max-height: 180px; object-fit: contain; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px;';
+                    gmCanvas.parentElement.insertBefore(sigImg, gmCanvas);
+                    
+                    // Hide clear button
+                    const clearBtn = document.getElementById('clearGeneralManager');
+                    if (clearBtn) clearBtn.style.display = 'none';
+                    
+                    // Update label
+                    const gmLabel = gmCanvas.parentElement.querySelector('label');
+                    if (gmLabel) {
+                      gmLabel.innerHTML = 'GENERAL MANAGER SIGNATURE <span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                    }
+                    
+                    // Hide hint
+                    const hintSpan = gmCanvas.parentElement.querySelector('.signature-hint');
+                    if (hintSpan) hintSpan.style.display = 'none';
+                    
+                    console.log('✅ Loaded GM signature as image');
+                  }
+                  
+                  // Store in hidden input
+                  if (gmSigInput) {
+                    gmSigInput.value = sigUrl;
+                  }
+                } catch (e) {
+                  console.error('❌ Error loading GM signature:', e);
+                }
+              } else if (gmSigInput) {
+                // Fallback: just store in hidden input
+                gmSigInput.value = sigUrl;
+                console.log('✅ Stored GM signature in hidden input');
+              }
+            }
+          }
+          {% endif %}
+          
           // Load all previous reviewers' data for General Manager (read-only)
           {% if user_designation == 'general_manager' %}
           const prevSection = document.getElementById('previousReviewersReadOnlySection');
           let hasAnyData = false;
           
-          // Operations Manager
-          let opsManagerCommentsGM = formData.operations_manager_comments || 
-                                    (submissionData?.form_data?.operations_manager_comments);
-          let opsManagerSigGM = formData.operations_manager_signature || 
-                               (submissionData?.form_data?.operations_manager_signature);
+          // Operations Manager - comprehensive data loading
+          let opsManagerCommentsGM = null;
+          let opsManagerSigGM = null;
+          
+          if (formData) {
+            if (formData.operations_manager_comments) opsManagerCommentsGM = formData.operations_manager_comments;
+            if (formData.operations_manager_signature) opsManagerSigGM = formData.operations_manager_signature;
+            else if (formData.opMan_signature) opsManagerSigGM = formData.opMan_signature;
+          }
+          
+          if ((!opsManagerCommentsGM || !opsManagerSigGM) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              if (!opsManagerCommentsGM && checkFormData.operations_manager_comments) opsManagerCommentsGM = checkFormData.operations_manager_comments;
+              if (!opsManagerSigGM) {
+                if (checkFormData.operations_manager_signature) opsManagerSigGM = checkFormData.operations_manager_signature;
+                else if (checkFormData.opMan_signature) opsManagerSigGM = checkFormData.opMan_signature;
+              }
+            }
+          }
           
           if (opsManagerCommentsGM || opsManagerSigGM) {
             hasAnyData = true;
@@ -4690,32 +5198,60 @@
             if (section) {
               section.style.display = 'block';
               
-              if (opsManagerCommentsGM) {
-                const commentsDiv = document.getElementById('opsManagerCommentsReadOnlyGM');
-                if (commentsDiv) commentsDiv.textContent = opsManagerCommentsGM;
+              const commentsDiv = document.getElementById('opsManagerCommentsReadOnlyGM');
+              if (commentsDiv) {
+                if (opsManagerCommentsGM) commentsDiv.textContent = opsManagerCommentsGM;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
               }
               
-              if (opsManagerSigGM) {
-                let sigUrl = opsManagerSigGM;
-                if (typeof sigUrl === 'object' && sigUrl.url) sigUrl = sigUrl.url;
+              const sigDiv = document.getElementById('opsManagerSignatureReadOnlyGM');
+              if (sigDiv) {
+                // Clear any existing content first to prevent double signatures
+                sigDiv.innerHTML = '';
                 
-                const sigDiv = document.getElementById('opsManagerSignatureReadOnlyGM');
-                if (sigDiv && typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
-                  const img = document.createElement('img');
-                  img.src = sigUrl;
-                  img.style.cssText = 'width: 100%; max-height: 100px; object-fit: contain;';
-                  img.alt = 'Operations Manager Signature';
-                  sigDiv.appendChild(img);
+                if (opsManagerSigGM) {
+                  let sigUrl = opsManagerSigGM;
+                  if (typeof sigUrl === 'object' && sigUrl.url) sigUrl = sigUrl.url;
+                  
+                  if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
+                    const img = document.createElement('img');
+                    img.src = sigUrl;
+                    img.style.cssText = 'width: 100%; max-height: 140px; object-fit: contain;';
+                    img.alt = 'Operations Manager Signature';
+                    sigDiv.appendChild(img);
+                  } else {
+                    sigDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
+                  }
+                } else {
+                  sigDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
                 }
               }
             }
           }
           
-          // Business Development
-          let bdCommentsGM = formData.business_dev_comments || 
-                            (submissionData?.form_data?.business_dev_comments);
-          let bdSigGM = formData.business_dev_signature || 
-                       (submissionData?.form_data?.business_dev_signature);
+          // Business Development - comprehensive data loading
+          let bdCommentsGM = null;
+          let bdSigGM = null;
+          
+          if (formData) {
+            if (formData.business_dev_comments) bdCommentsGM = formData.business_dev_comments;
+            if (formData.business_dev_signature) bdSigGM = formData.business_dev_signature;
+          }
+          
+          if ((!bdCommentsGM || !bdSigGM) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              if (!bdCommentsGM && checkFormData.business_dev_comments) bdCommentsGM = checkFormData.business_dev_comments;
+              if (!bdSigGM && checkFormData.business_dev_signature) bdSigGM = checkFormData.business_dev_signature;
+            }
+          }
           
           if (bdCommentsGM || bdSigGM) {
             hasAnyData = true;
@@ -4723,32 +5259,60 @@
             if (section) {
               section.style.display = 'block';
               
-              if (bdCommentsGM) {
-                const commentsDiv = document.getElementById('bdCommentsReadOnlyGM');
-                if (commentsDiv) commentsDiv.textContent = bdCommentsGM;
+              const commentsDiv = document.getElementById('bdCommentsReadOnlyGM');
+              if (commentsDiv) {
+                if (bdCommentsGM) commentsDiv.textContent = bdCommentsGM;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
               }
               
-              if (bdSigGM) {
-                let sigUrl = bdSigGM;
-                if (typeof sigUrl === 'object' && sigUrl.url) sigUrl = sigUrl.url;
+              const sigDiv = document.getElementById('bdSignatureReadOnlyGM');
+              if (sigDiv) {
+                // Clear any existing content first to prevent double signatures
+                sigDiv.innerHTML = '';
                 
-                const sigDiv = document.getElementById('bdSignatureReadOnlyGM');
-                if (sigDiv && typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
-                  const img = document.createElement('img');
-                  img.src = sigUrl;
-                  img.style.cssText = 'width: 100%; max-height: 100px; object-fit: contain;';
-                  img.alt = 'Business Development Signature';
-                  sigDiv.appendChild(img);
+                if (bdSigGM) {
+                  let sigUrl = bdSigGM;
+                  if (typeof sigUrl === 'object' && sigUrl.url) sigUrl = sigUrl.url;
+                  
+                  if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
+                    const img = document.createElement('img');
+                    img.src = sigUrl;
+                    img.style.cssText = 'width: 100%; max-height: 140px; object-fit: contain;';
+                    img.alt = 'Business Development Signature';
+                    sigDiv.appendChild(img);
+                  } else {
+                    sigDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
+                  }
+                } else {
+                  sigDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
                 }
               }
             }
           }
           
-          // Procurement
-          let procurementCommentsGM = formData.procurement_comments || 
-                                     (submissionData?.form_data?.procurement_comments);
-          let procurementSigGM = formData.procurement_signature || 
-                                (submissionData?.form_data?.procurement_signature);
+          // Procurement - comprehensive data loading
+          let procurementCommentsGM = null;
+          let procurementSigGM = null;
+          
+          if (formData) {
+            if (formData.procurement_comments) procurementCommentsGM = formData.procurement_comments;
+            if (formData.procurement_signature) procurementSigGM = formData.procurement_signature;
+          }
+          
+          if ((!procurementCommentsGM || !procurementSigGM) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              if (!procurementCommentsGM && checkFormData.procurement_comments) procurementCommentsGM = checkFormData.procurement_comments;
+              if (!procurementSigGM && checkFormData.procurement_signature) procurementSigGM = checkFormData.procurement_signature;
+            }
+          }
           
           if (procurementCommentsGM || procurementSigGM) {
             hasAnyData = true;
@@ -4756,22 +5320,36 @@
             if (section) {
               section.style.display = 'block';
               
-              if (procurementCommentsGM) {
-                const commentsDiv = document.getElementById('procurementCommentsReadOnlyGM');
-                if (commentsDiv) commentsDiv.textContent = procurementCommentsGM;
+              const commentsDiv = document.getElementById('procurementCommentsReadOnlyGM');
+              if (commentsDiv) {
+                if (procurementCommentsGM) commentsDiv.textContent = procurementCommentsGM;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
               }
               
-              if (procurementSigGM) {
-                let sigUrl = procurementSigGM;
-                if (typeof sigUrl === 'object' && sigUrl.url) sigUrl = sigUrl.url;
+              const sigDiv = document.getElementById('procurementSignatureReadOnlyGM');
+              if (sigDiv) {
+                // Clear any existing content first to prevent double signatures
+                sigDiv.innerHTML = '';
                 
-                const sigDiv = document.getElementById('procurementSignatureReadOnlyGM');
-                if (sigDiv && typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
-                  const img = document.createElement('img');
-                  img.src = sigUrl;
-                  img.style.cssText = 'width: 100%; max-height: 100px; object-fit: contain;';
-                  img.alt = 'Procurement Signature';
-                  sigDiv.appendChild(img);
+                if (procurementSigGM) {
+                  let sigUrl = procurementSigGM;
+                  if (typeof sigUrl === 'object' && sigUrl.url) sigUrl = sigUrl.url;
+                  
+                  if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
+                    const img = document.createElement('img');
+                    img.src = sigUrl;
+                    img.style.cssText = 'width: 100%; max-height: 140px; object-fit: contain;';
+                    img.alt = 'Procurement Signature';
+                    sigDiv.appendChild(img);
+                  } else {
+                    sigDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
+                  }
+                } else {
+                  sigDiv.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
                 }
               }
             }
