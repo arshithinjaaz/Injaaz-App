@@ -129,16 +129,28 @@ def create_app():
     @jwt.unauthorized_loader
     def unauthorized_callback(callback):
         """Handle missing or invalid JWT token"""
-        if request.path.startswith('/api/'):
+        # Check if this is a page render route (returns HTML) vs API route (returns JSON)
+        # Page render routes: /api/workflow/history, /api/workflow/pending-reviews, etc.
+        page_render_routes = ['/api/workflow/history', '/api/workflow/pending-reviews']
+        if request.path in page_render_routes:
+            # For page render routes, redirect to login
+            from flask import redirect, url_for
+            return redirect(url_for('login_page')), 302
+        elif request.path.startswith('/api/'):
             return jsonify({"success": False, "error": "Authentication required"}), 401
-        # For HTML pages, redirect to login
+        # For other HTML pages, redirect to login
         from flask import redirect, url_for
         return redirect(url_for('login_page')), 302
     
     @jwt.invalid_token_loader
     def invalid_token_callback(callback):
         """Handle invalid JWT token"""
-        if request.path.startswith('/api/'):
+        # Check if this is a page render route
+        page_render_routes = ['/api/workflow/history', '/api/workflow/pending-reviews']
+        if request.path in page_render_routes:
+            from flask import redirect, url_for
+            return redirect(url_for('login_page')), 302
+        elif request.path.startswith('/api/'):
             return jsonify({"success": False, "error": "Invalid token"}), 401
         from flask import redirect, url_for
         return redirect(url_for('login_page')), 302
@@ -146,7 +158,12 @@ def create_app():
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
         """Handle expired JWT token"""
-        if request.path.startswith('/api/'):
+        # Check if this is a page render route
+        page_render_routes = ['/api/workflow/history', '/api/workflow/pending-reviews']
+        if request.path in page_render_routes:
+            from flask import redirect, url_for
+            return redirect(url_for('login_page')), 302
+        elif request.path.startswith('/api/'):
             return jsonify({"success": False, "error": "Token has expired"}), 401
         from flask import redirect, url_for
         return redirect(url_for('login_page')), 302

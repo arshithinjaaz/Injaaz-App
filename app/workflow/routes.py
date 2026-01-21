@@ -356,6 +356,85 @@ def get_history_submissions():
             sub_user = User.query.get(submission.user_id) if submission.user_id else None
             sub_dict = submission.to_dict()
             sub_dict['user'] = sub_user.to_dict() if sub_user else None
+            
+            # For admin, include all reviewer comments in the history
+            if user.role == 'admin':
+                form_data = submission.form_data
+                if isinstance(form_data, str):
+                    try:
+                        import json
+                        form_data = json.loads(form_data)
+                    except:
+                        form_data = {}
+                
+                reviewers = []
+                
+                # Operations Manager
+                om_has_approved = bool(submission.operations_manager_approved_at or submission.operations_manager_id)
+                om_comments = submission.operations_manager_comments
+                om_sig = form_data.get('operations_manager_signature') or form_data.get('opMan_signature') if isinstance(form_data, dict) else None
+                om_sig_url = None
+                if om_sig:
+                    om_sig_url = om_sig.get('url') if isinstance(om_sig, dict) and om_sig.get('url') else (om_sig if isinstance(om_sig, str) and (om_sig.startswith('http') or om_sig.startswith('/') or om_sig.startswith('data:')) else None)
+                
+                if om_has_approved or om_comments or om_sig_url:
+                    reviewers.append({
+                        'role': 'Operations Manager',
+                        'comments': om_comments,
+                        'signature_url': om_sig_url,
+                        'approved_at': submission.operations_manager_approved_at.isoformat() if submission.operations_manager_approved_at else None
+                    })
+                
+                # Business Development
+                bd_has_approved = bool(submission.business_dev_approved_at or submission.business_dev_id)
+                bd_comments = submission.business_dev_comments
+                bd_sig = form_data.get('business_dev_signature') if isinstance(form_data, dict) else None
+                bd_sig_url = None
+                if bd_sig:
+                    bd_sig_url = bd_sig.get('url') if isinstance(bd_sig, dict) and bd_sig.get('url') else (bd_sig if isinstance(bd_sig, str) and (bd_sig.startswith('http') or bd_sig.startswith('/') or bd_sig.startswith('data:')) else None)
+                
+                if bd_has_approved or bd_comments or bd_sig_url:
+                    reviewers.append({
+                        'role': 'Business Development',
+                        'comments': bd_comments,
+                        'signature_url': bd_sig_url,
+                        'approved_at': submission.business_dev_approved_at.isoformat() if submission.business_dev_approved_at else None
+                    })
+                
+                # Procurement
+                po_has_approved = bool(submission.procurement_approved_at or submission.procurement_id)
+                po_comments = submission.procurement_comments
+                po_sig = form_data.get('procurement_signature') if isinstance(form_data, dict) else None
+                po_sig_url = None
+                if po_sig:
+                    po_sig_url = po_sig.get('url') if isinstance(po_sig, dict) and po_sig.get('url') else (po_sig if isinstance(po_sig, str) and (po_sig.startswith('http') or po_sig.startswith('/') or po_sig.startswith('data:')) else None)
+                
+                if po_has_approved or po_comments or po_sig_url:
+                    reviewers.append({
+                        'role': 'Procurement',
+                        'comments': po_comments,
+                        'signature_url': po_sig_url,
+                        'approved_at': submission.procurement_approved_at.isoformat() if submission.procurement_approved_at else None
+                    })
+                
+                # General Manager
+                gm_has_approved = bool(submission.general_manager_approved_at or submission.general_manager_id)
+                gm_comments = submission.general_manager_comments
+                gm_sig = form_data.get('general_manager_signature') if isinstance(form_data, dict) else None
+                gm_sig_url = None
+                if gm_sig:
+                    gm_sig_url = gm_sig.get('url') if isinstance(gm_sig, dict) and gm_sig.get('url') else (gm_sig if isinstance(gm_sig, str) and (gm_sig.startswith('http') or gm_sig.startswith('/') or gm_sig.startswith('data:')) else None)
+                
+                if gm_has_approved or gm_comments or gm_sig_url:
+                    reviewers.append({
+                        'role': 'General Manager',
+                        'comments': gm_comments,
+                        'signature_url': gm_sig_url,
+                        'approved_at': submission.general_manager_approved_at.isoformat() if submission.general_manager_approved_at else None
+                    })
+                
+                sub_dict['reviewers'] = reviewers
+            
             result.append(sub_dict)
         
         return success_response({
@@ -365,6 +444,152 @@ def get_history_submissions():
     except Exception as e:
         current_app.logger.error(f"Error getting history submissions: {str(e)}", exc_info=True)
         return error_response('Failed to get submission history', status_code=500, error_code='DATABASE_ERROR')
+
+
+@workflow_bp.route('/submissions/my-submissions', methods=['GET'])
+@jwt_required()
+def get_my_submissions():
+    """Get all submissions created by the current supervisor"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if not user:
+            return error_response('User not found', status_code=404, error_code='NOT_FOUND')
+        
+        if user.designation != 'supervisor' and user.role != 'admin':
+            return error_response('Only supervisors can view submitted forms', 
+                                status_code=403, error_code='INVALID_DESIGNATION')
+        
+        # Get all submissions by this supervisor
+        submissions = Submission.query.filter_by(supervisor_id=user.id).order_by(Submission.created_at.desc()).all()
+        
+        submissions_list = []
+        for submission in submissions:
+            sub_dict = submission.to_dict()
+            # Add module information
+            module_map = {
+                'hvac': 'HVAC & MEP',
+                'hvac_mep': 'HVAC & MEP',
+                'civil': 'Civil Works',
+                'cleaning': 'Cleaning Services'
+            }
+            sub_dict['module_name'] = module_map.get(submission.module_type, submission.module_type)
+            
+            # Extract reviewer comments and signatures from form_data for display
+            form_data = submission.form_data if submission.form_data else {}
+            if isinstance(form_data, str):
+                try:
+                    import json
+                    form_data = json.loads(form_data)
+                except:
+                    form_data = {}
+            
+            # Add reviewer information
+            reviewers = []
+            
+            # Operations Manager
+            # Only show if OM has actually approved (has approved_at) or has signature/comments
+            # STRICT: Only use model field - never fallback to form_data to avoid mixing supervisor comments
+            om_has_approved = bool(submission.operations_manager_approved_at or submission.operations_manager_id)
+            # Only use the database field - do NOT fallback to form_data to prevent supervisor comments from appearing
+            om_comments = submission.operations_manager_comments if submission.operations_manager_comments else None
+            
+            om_sig = form_data.get('operations_manager_signature') or form_data.get('opMan_signature') if isinstance(form_data, dict) else None
+            om_sig_url = None
+            if om_sig:
+                om_sig_url = om_sig.get('url') if isinstance(om_sig, dict) and om_sig.get('url') else (om_sig if isinstance(om_sig, str) and (om_sig.startswith('http') or om_sig.startswith('/') or om_sig.startswith('data:')) else None)
+            
+            if om_has_approved or om_comments or om_sig_url:
+                reviewers.append({
+                    'role': 'Operations Manager',
+                    'comments': om_comments,  # Use extracted comments (model field prioritized)
+                    'signature_url': om_sig_url,
+                    'approved_at': submission.operations_manager_approved_at.isoformat() if submission.operations_manager_approved_at else None
+                })
+            
+            # Business Development
+            # Prioritize model field over form_data
+            bd_has_approved = bool(submission.business_dev_approved_at or submission.business_dev_id)
+            bd_comments = submission.business_dev_comments
+            if not bd_comments and isinstance(form_data, dict):
+                form_bd_comments = form_data.get('business_dev_comments')
+                # Verify it's not supervisor comments
+                supervisor_comments = form_data.get('supervisor_comments', '')
+                if form_bd_comments and form_bd_comments != supervisor_comments:
+                    bd_comments = form_bd_comments
+            
+            bd_sig = form_data.get('business_dev_signature') if isinstance(form_data, dict) else None
+            bd_sig_url = None
+            if bd_sig:
+                bd_sig_url = bd_sig.get('url') if isinstance(bd_sig, dict) and bd_sig.get('url') else (bd_sig if isinstance(bd_sig, str) and (bd_sig.startswith('http') or bd_sig.startswith('/') or bd_sig.startswith('data:')) else None)
+            
+            if bd_has_approved or bd_comments or bd_sig_url:
+                reviewers.append({
+                    'role': 'Business Development',
+                    'comments': bd_comments,
+                    'signature_url': bd_sig_url,
+                    'approved_at': submission.business_dev_approved_at.isoformat() if submission.business_dev_approved_at else None
+                })
+            
+            # Procurement
+            # Prioritize model field over form_data
+            po_has_approved = bool(submission.procurement_approved_at or submission.procurement_id)
+            po_comments = submission.procurement_comments
+            if not po_comments and isinstance(form_data, dict):
+                form_po_comments = form_data.get('procurement_comments')
+                # Verify it's not supervisor comments
+                supervisor_comments = form_data.get('supervisor_comments', '')
+                if form_po_comments and form_po_comments != supervisor_comments:
+                    po_comments = form_po_comments
+            
+            po_sig = form_data.get('procurement_signature') if isinstance(form_data, dict) else None
+            po_sig_url = None
+            if po_sig:
+                po_sig_url = po_sig.get('url') if isinstance(po_sig, dict) and po_sig.get('url') else (po_sig if isinstance(po_sig, str) and (po_sig.startswith('http') or po_sig.startswith('/') or po_sig.startswith('data:')) else None)
+            
+            if po_has_approved or po_comments or po_sig_url:
+                reviewers.append({
+                    'role': 'Procurement',
+                    'comments': po_comments,
+                    'signature_url': po_sig_url,
+                    'approved_at': submission.procurement_approved_at.isoformat() if submission.procurement_approved_at else None
+                })
+            
+            # General Manager
+            # Prioritize model field over form_data
+            gm_has_approved = bool(submission.general_manager_approved_at or submission.general_manager_id)
+            gm_comments = submission.general_manager_comments
+            if not gm_comments and isinstance(form_data, dict):
+                form_gm_comments = form_data.get('general_manager_comments')
+                # Verify it's not supervisor comments
+                supervisor_comments = form_data.get('supervisor_comments', '')
+                if form_gm_comments and form_gm_comments != supervisor_comments:
+                    gm_comments = form_gm_comments
+            
+            gm_sig = form_data.get('general_manager_signature') if isinstance(form_data, dict) else None
+            gm_sig_url = None
+            if gm_sig:
+                gm_sig_url = gm_sig.get('url') if isinstance(gm_sig, dict) and gm_sig.get('url') else (gm_sig if isinstance(gm_sig, str) and (gm_sig.startswith('http') or gm_sig.startswith('/') or gm_sig.startswith('data:')) else None)
+            
+            if gm_has_approved or gm_comments or gm_sig_url:
+                reviewers.append({
+                    'role': 'General Manager',
+                    'comments': gm_comments,
+                    'signature_url': gm_sig_url,
+                    'approved_at': submission.general_manager_approved_at.isoformat() if submission.general_manager_approved_at else None
+                })
+            
+            sub_dict['reviewers'] = reviewers
+            submissions_list.append(sub_dict)
+        
+        return success_response({
+            'submissions': submissions_list,
+            'count': len(submissions_list)
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error getting my submissions: {str(e)}", exc_info=True)
+        return error_response('Failed to get submissions', status_code=500, error_code='DATABASE_ERROR')
 
 
 @workflow_bp.route('/submissions/<submission_id>', methods=['GET'])
@@ -564,6 +789,7 @@ def approve_operations_manager(submission_id):
         db.session.commit()
         
         # Regenerate documents for all modules (to include Operations Manager comments/signature)
+        # This ensures Supervisor and all subsequent reviewers see the updated form with OM's changes
         job_id = None
         try:
             from common.db_utils import create_job_db
@@ -638,7 +864,7 @@ def approve_business_development(submission_id):
                                 status_code=400, error_code='INVALID_STATUS')
         
         if submission.business_dev_approved_at:
-            return error_response('Already approved by Business Development', 
+            return error_response('Already approved', 
                                 status_code=400, error_code='ALREADY_APPROVED')
         
         # Extract data
@@ -734,20 +960,21 @@ def approve_business_development(submission_id):
         submission.updated_at = datetime.utcnow()
         db.session.commit()
         
-        # Regenerate documents for all modules so GM/History always
-        # see PDFs that include BD + previous reviewers' changes
+        # Regenerate documents for all modules (to include BD comments/signature)
+        # This ensures Supervisor, OM, and all subsequent reviewers see the updated form with BD's changes
         job_id = None
         try:
             from common.db_utils import create_job_db
             from app.models import Job
             _, get_paths_fn, process_job_fn = get_module_functions(submission.module_type)
 
-            # Delete old jobs so we always generate a fresh set for this stage
+            # Delete old jobs to force regeneration
             old_jobs = Job.query.filter_by(submission_id=submission.id).all()
             for old_job in old_jobs:
                 db.session.delete(old_job)
             db.session.commit()
 
+            # Create new job for regeneration
             new_job = create_job_db(submission)
             job_id = new_job.job_id
 
@@ -805,7 +1032,7 @@ def approve_procurement(submission_id):
                                 status_code=400, error_code='INVALID_STATUS')
         
         if submission.procurement_approved_at:
-            return error_response('Already approved by Procurement', 
+            return error_response('Already approved', 
                                 status_code=400, error_code='ALREADY_APPROVED')
         
         # Extract data
@@ -904,18 +1131,21 @@ def approve_procurement(submission_id):
         submission.updated_at = datetime.utcnow()
         db.session.commit()
         
-        # Regenerate documents for all modules so GM/History PDFs include Procurement stage
+        # Regenerate documents for all modules (to include Procurement comments/signature)
+        # This ensures Supervisor, OM, BD, and all subsequent reviewers see the updated form with Procurement's changes
         job_id = None
         try:
             from common.db_utils import create_job_db
             from app.models import Job
             _, get_paths_fn, process_job_fn = get_module_functions(submission.module_type)
 
+            # Delete old jobs to force regeneration
             old_jobs = Job.query.filter_by(submission_id=submission.id).all()
             for old_job in old_jobs:
                 db.session.delete(old_job)
             db.session.commit()
 
+            # Create new job for regeneration
             new_job = create_job_db(submission)
             job_id = new_job.job_id
 
@@ -1077,12 +1307,13 @@ def approve_general_manager(submission_id):
         submission.updated_at = datetime.utcnow()
         db.session.commit()
         
-        # Regenerate documents if this is an HVAC submission (to include all reviewer signatures)
+        # Regenerate documents for all modules (to include General Manager comments/signature and all previous reviewers)
+        # This ensures all users (Supervisor, OM, BD, Procurement) see the final version with all signatures
         job_id = None
-        if submission.module_type == 'hvac_mep':
+        try:
             from common.db_utils import create_job_db
-            _, get_paths_fn, process_job_fn = get_module_functions(submission.module_type)
             from app.models import Job
+            _, get_paths_fn, process_job_fn = get_module_functions(submission.module_type)
             
             # Delete old jobs to force regeneration
             old_jobs = Job.query.filter_by(submission_id=submission.id).all()
@@ -1125,46 +1356,6 @@ def approve_general_manager(submission_id):
         db.session.rollback()
         current_app.logger.error(f"Error in GM approval: {str(e)}", exc_info=True)
         return error_response('Failed to approve submission', status_code=500, error_code='DATABASE_ERROR')
-
-
-@workflow_bp.route('/submissions/my-submissions', methods=['GET'])
-@jwt_required()
-def get_my_submissions():
-    """Get all submissions created by the current supervisor"""
-    try:
-        user_id = get_jwt_identity()
-        user = User.query.get(user_id)
-        
-        if not user:
-            return error_response('User not found', status_code=404, error_code='NOT_FOUND')
-        
-        if user.designation != 'supervisor' and user.role != 'admin':
-            return error_response('Only supervisors can view submitted forms', 
-                                status_code=403, error_code='INVALID_DESIGNATION')
-        
-        # Get all submissions by this supervisor
-        submissions = Submission.query.filter_by(supervisor_id=user.id).order_by(Submission.created_at.desc()).all()
-        
-        submissions_list = []
-        for submission in submissions:
-            sub_dict = submission.to_dict()
-            # Add module information
-            module_map = {
-                'hvac': 'HVAC & MEP',
-                'hvac_mep': 'HVAC & MEP',
-                'civil': 'Civil Works',
-                'cleaning': 'Cleaning Services'
-            }
-            sub_dict['module_name'] = module_map.get(submission.module_type, submission.module_type)
-            submissions_list.append(sub_dict)
-        
-        return success_response({
-            'submissions': submissions_list,
-            'count': len(submissions_list)
-        })
-    except Exception as e:
-        current_app.logger.error(f"Error getting my submissions: {str(e)}", exc_info=True)
-        return error_response('Failed to get submissions', status_code=500, error_code='DATABASE_ERROR')
 
 
 @workflow_bp.route('/submissions/<submission_id>/reject', methods=['POST'])

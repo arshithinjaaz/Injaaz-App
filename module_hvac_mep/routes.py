@@ -21,6 +21,7 @@ from common.utils import (
     save_uploaded_file_cloud,
     upload_base64_to_cloud,
 )
+from common.error_responses import error_response, success_response
 from common.db_utils import (
     create_submission_db,
     create_job_db,
@@ -379,7 +380,8 @@ def index():
                              is_edit_mode=is_edit_mode,
                              user_designation=user_designation,
                              is_supervisor_edit=is_supervisor_edit,
-                             current_user_id=user_id)
+                             current_user_id=user_id,
+                             user=user)
     except Exception as e:
         logger.error(f"Error checking module access: {str(e)}")
         logger.error(traceback.format_exc())
@@ -766,7 +768,39 @@ def download_file(job_id, file_type):
             return error_response(f"{file_type.upper()} file URL not found", status_code=404, error_code='NOT_FOUND')
         
         # Check if it's a Cloudinary URL or local URL
-        if file_url.startswith('http://') or file_url.startswith('https://'):
+        # If it's a localhost URL, treat it as a local file path instead
+        if file_url.startswith('http://127.0.0.1') or file_url.startswith('http://localhost') or file_url.startswith('http://0.0.0.0'):
+            # Local development URL - extract filename and serve from local storage
+            # URL might contain # which breaks URL parsing, so we need to handle it carefully
+            from urllib.parse import urlparse, unquote
+            # Reconstruct the full path including fragment (everything after #)
+            # Split by # to get path and fragment separately
+            if '#' in file_url:
+                url_parts = file_url.split('#', 1)
+                base_url = url_parts[0]
+                fragment = url_parts[1] if len(url_parts) > 1 else ''
+                parsed = urlparse(base_url)
+                # Reconstruct full filename: path + fragment
+                full_path = parsed.path
+                if fragment:
+                    # If fragment exists, it's part of the filename (not a URL fragment)
+                    full_path = full_path + '#' + fragment
+            else:
+                parsed = urlparse(file_url)
+                full_path = parsed.path
+            
+            # Extract filename from path
+            local_filename = unquote(full_path.lstrip('/').replace('generated/', ''))
+            local_path = os.path.join(GENERATED_DIR, local_filename)
+            
+            logger.debug(f"Local URL detected, serving from filesystem: {local_path}")
+            
+            if not os.path.exists(local_path):
+                logger.error(f"File not found at local path: {local_path}")
+                return error_response("File not found locally", status_code=404, error_code='NOT_FOUND')
+            
+            return send_file(local_path, as_attachment=True, download_name=filename)
+        elif file_url.startswith('http://') or file_url.startswith('https://'):
             # Cloudinary URL - fetch and serve
             try:
                 logger.debug(f"Fetching {file_type.upper()} file from Cloudinary: {file_url}")

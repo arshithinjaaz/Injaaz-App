@@ -1056,7 +1056,9 @@ def create_pdf_report(data, output_dir):
                 logger.warning(f"  - Available keys in form_data: {list(data.get('form_data').keys())[:30]}")
         
         # 3. Business Development
-        # Check if BD has approved (even if data is missing, we should show the section)
+        # Only show BD section if they have actually signed (don't show "Not signed" placeholder)
+        # Check if BD has signed (has signature data)
+        bd_has_signed = bool(signatures.get('Business Development'))
         bd_has_approved = False
         if data.get('business_dev_approved_at') or data.get('business_dev_id'):
             bd_has_approved = True
@@ -1066,13 +1068,17 @@ def create_pdf_report(data, output_dir):
             if 'bd_procurement' in workflow_status or 'general_manager' in workflow_status:
                 bd_has_approved = True
         
-        # Always show BD section if BD has approved OR if we have comments/signature
-        if business_dev_comments or signatures.get('Business Development') or bd_has_approved:
-            logger.info(f"✅ Adding Business Development section to PDF (comments: {bool(business_dev_comments)}, signature: {bool(signatures.get('Business Development'))}, approved: {bd_has_approved})")
-            add_reviewer_section("Business Development", business_dev_comments, signatures.get('Business Development'), always_show_signature=True)
+        # Only show BD section if BD has actually signed (has signature) OR has comments
+        # Don't show "Not signed" placeholder - only show when they've signed
+        if bd_has_signed or (business_dev_comments and business_dev_comments.strip()):
+            logger.info(f"✅ Adding Business Development section to PDF (comments: {bool(business_dev_comments)}, signature: {bool(bd_has_signed)}, approved: {bd_has_approved})")
+            # Use always_show_signature=False so "Not signed" is not shown if signature is missing
+            add_reviewer_section("Business Development", business_dev_comments, signatures.get('Business Development'), always_show_signature=False)
         
         # 4. Procurement
-        # Check if Procurement has approved (even if data is missing, we should show the section)
+        # Only show Procurement section if they have actually signed (don't show "Not signed" placeholder)
+        # Check if Procurement has signed (has signature data)
+        procurement_has_signed = bool(signatures.get('Procurement'))
         procurement_has_approved = False
         if data.get('procurement_approved_at') or data.get('procurement_id'):
             procurement_has_approved = True
@@ -1082,10 +1088,12 @@ def create_pdf_report(data, output_dir):
             if 'bd_procurement' in workflow_status or 'general_manager' in workflow_status:
                 procurement_has_approved = True
         
-        # Always show Procurement section if Procurement has approved OR if we have comments/signature
-        if procurement_comments or signatures.get('Procurement') or procurement_has_approved:
-            logger.info(f"✅ Adding Procurement section to PDF (comments: {bool(procurement_comments)}, signature: {bool(signatures.get('Procurement'))}, approved: {procurement_has_approved})")
-            add_reviewer_section("Procurement", procurement_comments, signatures.get('Procurement'), always_show_signature=True)
+        # Only show Procurement section if Procurement has actually signed (has signature) OR has comments
+        # Don't show "Not signed" placeholder - only show when they've signed
+        if procurement_has_signed or (procurement_comments and procurement_comments.strip()):
+            logger.info(f"✅ Adding Procurement section to PDF (comments: {bool(procurement_comments)}, signature: {bool(procurement_has_signed)}, approved: {procurement_has_approved})")
+            # Use always_show_signature=False so "Not signed" is not shown if signature is missing
+            add_reviewer_section("Procurement", procurement_comments, signatures.get('Procurement'), always_show_signature=False)
         
         # 5. General Manager
         if general_manager_comments or signatures.get('General Manager'):

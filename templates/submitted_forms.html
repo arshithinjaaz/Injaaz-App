@@ -361,6 +361,18 @@
       return moduleMap[module] || module;
     }
     
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Store last update timestamp for polling
+    let lastUpdateTime = null;
+    let pollingInterval = null;
+    
     // Load submissions
     async function loadSubmissions() {
       const loadingSpinner = document.getElementById('loadingSpinner');
@@ -387,6 +399,11 @@
         const data = await response.json();
         const submissions = data.submissions || [];
         
+        // Update last update time for polling
+        const currentUpdateTime = submissions.length > 0 ? submissions[0].updated_at : null;
+        const hasUpdates = lastUpdateTime && currentUpdateTime && currentUpdateTime !== lastUpdateTime;
+        lastUpdateTime = currentUpdateTime;
+        
         loadingSpinner.style.display = 'none';
         
         if (submissions.length === 0) {
@@ -395,6 +412,32 @@
         }
         
         submissionsList.style.display = 'block';
+        
+        // Show notification if there are updates
+        if (hasUpdates && document.visibilityState === 'visible') {
+          // Show a subtle notification that the page has been updated
+          const notification = document.createElement('div');
+          notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10000; font-size: 0.9rem;';
+          notification.innerHTML = '🔄 Form updated!';
+          document.body.appendChild(notification);
+          setTimeout(() => {
+            notification.style.transition = 'opacity 0.3s';
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 300);
+          }, 3000);
+        }
+        
+        // Check if current user is admin (for showing Reviewer Comments)
+        const userStr = localStorage.getItem('user');
+        let isAdmin = false;
+        try {
+          if (userStr) {
+            const user = JSON.parse(userStr);
+            isAdmin = user.role === 'admin';
+          }
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
         
         // Render submissions
         submissionsList.innerHTML = submissions.map(submission => {
@@ -439,6 +482,32 @@
                 </div>
               ` : ''}
               
+              ${isAdmin && submission.reviewers && submission.reviewers.length > 0 ? `
+                <div class="reviewers-section" style="margin-top: 1rem; margin-bottom: 1rem; padding: 1rem; background: #f8faf9; border-radius: 8px; border: 1px solid #e5e7eb;">
+                  <h6 style="color: var(--primary); font-weight: 600; margin-bottom: 0.75rem; font-size: 0.95rem;">📋 Reviewer Comments</h6>
+                  ${submission.reviewers.map((reviewer, index) => {
+                    const isLast = index === submission.reviewers.length - 1;
+                    return `
+                    <div class="reviewer-item" style="margin-bottom: ${isLast ? '0' : '1rem'}; padding-bottom: ${isLast ? '0' : '1rem'}; ${isLast ? '' : 'border-bottom: 1px solid #e5e7eb;'}">
+                      <div>
+                        <strong style="color: var(--primary); font-size: 0.9rem;">${reviewer.role}:</strong>
+                        ${reviewer.comments ? `
+                          <div style="margin-top: 0.5rem; padding: 0.75rem; background: white; border-radius: 4px; border-left: 3px solid var(--primary); font-size: 0.875rem; color: #374151;">
+                            ${escapeHtml(reviewer.comments)}
+                          </div>
+                        ` : '<div style="margin-top: 0.25rem; font-size: 0.85rem; color: #6b7280; font-style: italic;">No comments provided</div>'}
+                        ${reviewer.approved_at ? `
+                          <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #6b7280;">
+                            ✓ Approved on ${formatDateTime(reviewer.approved_at)}
+                          </div>
+                        ` : ''}
+                      </div>
+                    </div>
+                  `;
+                  }).join('')}
+                </div>
+              ` : ''}
+              
               <div class="submission-actions">
                 <a href="/${moduleUrl}/form?edit=${submission.submission_id}" class="btn-custom btn-primary-custom">
                   👁️ View Form
@@ -476,8 +545,49 @@
       }
     }
     
-    // Load submissions on page load
-    document.addEventListener('DOMContentLoaded', loadSubmissions);
+    // Start polling for updates every 30 seconds
+    function startPolling() {
+      // Clear any existing interval
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+      
+      // Poll every 30 seconds
+      pollingInterval = setInterval(() => {
+        // Only poll if page is visible
+        if (document.visibilityState === 'visible') {
+          loadSubmissions();
+        }
+      }, 30000); // 30 seconds
+    }
+    
+    // Stop polling when page is hidden, resume when visible
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        // Reload immediately when page becomes visible
+        loadSubmissions();
+        startPolling();
+      } else {
+        // Stop polling when page is hidden
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+          pollingInterval = null;
+        }
+      }
+    });
+    
+    // Load submissions on page load and start polling
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSubmissions();
+      startPolling();
+    });
+    
+    // Clean up polling on page unload
+    window.addEventListener('beforeunload', () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    });
   </script>
 </body>
 </html>

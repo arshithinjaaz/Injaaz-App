@@ -1366,7 +1366,7 @@
       <!-- Main Dashboard - Clean (no pending reviews shown here) -->
       <section class="modules-section" id="modules">
         <div class="modules-grid" id="modulesGrid">
-          <!-- Pending Review Module Card (for reviewers only) -->
+          <!-- Pending Review Module Card (for reviewers only, NOT for admin) -->
           <a href="/workflow/pending-reviews" class="module-card" id="module-pending-review" style="display: none;">
             <span class="module-number">Workflow</span>
             <div class="module-icon" style="position: relative;">
@@ -1378,6 +1378,17 @@
               Review and approve submissions awaiting your signature and approval in the workflow process.
             </p>
             <span class="module-arrow">View Pending Reviews →</span>
+          </a>
+
+          <!-- Review History Module Card (for admin only) -->
+          <a href="/api/workflow/history" class="module-card" id="module-review-history" style="display: none;">
+            <span class="module-number">Workflow</span>
+            <div class="module-icon">📜</div>
+            <h2 class="module-title">Review History</h2>
+            <p class="module-description">
+              View complete review history of all submissions with all reviewer comments and approval statuses.
+            </p>
+            <span class="module-arrow">View Review History →</span>
           </a>
 
           <a href="/hvac-mep/form" class="module-card" id="module-hvac" style="display: none;">
@@ -2217,13 +2228,117 @@
       }
       
       // Load pending count and show pending review module card
-      async function loadPendingCount(user) {
-        // Only reviewers (not supervisors - they create forms, don't review)
-        const reviewerDesignations = ['operations_manager', 'business_development', 'procurement', 'general_manager'];
-        const isReviewer = user && (user.role === 'admin' || (user.designation && reviewerDesignations.includes(user.designation)));
+      // Helper function to refresh access token using refresh token
+      async function refreshAccessToken() {
+        try {
+          const refreshToken = localStorage.getItem('refresh_token');
+          if (!refreshToken) {
+            return null;
+          }
+          
+          // The refresh endpoint uses @jwt_required(refresh=True) which reads from cookies or Authorization header
+          // Since we're storing tokens in localStorage, we need to send it in the Authorization header
+          const response = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${refreshToken}`
+            },
+            credentials: 'include' // Include cookies in case they're also set
+          });
+          
+          if (!response.ok) {
+            // If refresh fails, clear tokens and redirect to login
+            if (response.status === 401 || response.status === 422) {
+              localStorage.removeItem('access_token');
+              localStorage.removeItem('refresh_token');
+              localStorage.removeItem('user');
+            }
+            return null;
+          }
+          
+          const data = await response.json();
+          if (data.access_token) {
+            localStorage.setItem('access_token', data.access_token);
+            return data.access_token;
+          }
+          return null;
+        } catch (error) {
+          console.error('Token refresh failed:', error);
+          return null;
+        }
+      }
+      
+      // Helper function to make authenticated fetch with automatic token refresh
+      async function authenticatedFetch(url, options = {}) {
+        let token = localStorage.getItem('access_token');
+        if (!token) {
+          return { ok: false, status: 401 };
+        }
         
+        // Make initial request
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...options.headers,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        // If 401, try to refresh token and retry once
+        if (response.status === 401) {
+          const newToken = await refreshAccessToken();
+          if (newToken) {
+            // Retry with new token
+            return fetch(url, {
+              ...options,
+              headers: {
+                ...options.headers,
+                'Authorization': `Bearer ${newToken}`
+              }
+            });
+          } else {
+            // Refresh failed, redirect to login
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+            return { ok: false, status: 401 };
+          }
+        }
+        
+        return response;
+      }
+      
+      async function loadPendingCount(user) {
         const pendingModule = document.getElementById('module-pending-review');
+        const reviewHistoryModule = document.getElementById('module-review-history');
         const moduleBadge = document.getElementById('modulePendingBadge');
+        
+        // Admin should see Review History, not Pending Review
+        if (user && user.role === 'admin') {
+          // Hide pending review module for admin
+          if (pendingModule) {
+            pendingModule.style.display = 'none';
+            pendingModule.style.visibility = 'hidden';
+          }
+          // Show review history module for admin
+          if (reviewHistoryModule) {
+            reviewHistoryModule.style.display = 'block';
+            reviewHistoryModule.style.visibility = 'visible';
+          }
+          return;
+        }
+        
+        // For other reviewers (not supervisors - they create forms, don't review)
+        const reviewerDesignations = ['operations_manager', 'business_development', 'procurement', 'general_manager'];
+        const isReviewer = user && (user.designation && reviewerDesignations.includes(user.designation));
+        
+        // Hide review history module for non-admin
+        if (reviewHistoryModule) {
+          reviewHistoryModule.style.display = 'none';
+          reviewHistoryModule.style.visibility = 'hidden';
+        }
         
         if (!isReviewer) {
           // Hide pending review module for non-reviewers
@@ -2235,16 +2350,13 @@
         }
         
         try {
-          const token = localStorage.getItem('access_token');
-          if (!token) return;
+          const response = await authenticatedFetch('/api/workflow/submissions/pending');
           
-          const response = await fetch('/api/workflow/submissions/pending', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (!response.ok) return;
+          if (!response || !response.ok) {
+            // Silently fail - token refresh will handle redirect if needed
+            // Note: A 401 error may appear in console briefly before token refresh - this is expected
+            return;
+          }
           
           const data = await response.json();
           const submissions = data.submissions || [];

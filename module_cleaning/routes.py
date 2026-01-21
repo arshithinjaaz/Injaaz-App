@@ -307,7 +307,8 @@ def form():
             submission_data=submission_data,
             is_edit_mode=is_edit_mode,
             user_designation=user_designation,
-            is_supervisor_edit=is_supervisor_edit
+            is_supervisor_edit=is_supervisor_edit,
+            user=user
         )
     except Exception as e:
         logger.error(f"Error checking module access: {str(e)}")

@@ -1264,7 +1264,7 @@
           </div>
         </div>
 
-        {% if is_supervisor_edit or user_designation == 'supervisor' %}
+        {% if (is_supervisor_edit or user_designation == 'supervisor') and not (user and user.role == 'admin') %}
         <!-- Supervisor Review Section -->
         <div class="col-12 mb-3" style="border-top: 2px solid var(--primary); padding-top: 1.5rem; margin-top: 1rem;">
           <h5 style="color: var(--primary); margin-bottom: 1rem;">Supervisor Review</h5>
@@ -1312,7 +1312,7 @@
               </div>
               <div class="col-lg-5 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature</label>
-                <div id="supervisorSignatureReadOnlyOM" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
+                <div id="supervisorSignatureReadOnlyOM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1490,7 +1490,9 @@
               </div>
               <div class="col-lg-5 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
-                <div id="opsManagerSignatureReadOnlyGM" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px;"></div>
+                <div id="opsManagerSignatureReadOnlyGM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1505,7 +1507,9 @@
               </div>
               <div class="col-lg-5 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
-                <div id="bdSignatureReadOnlyGM" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px;"></div>
+                <div id="bdSignatureReadOnlyGM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1520,7 +1524,9 @@
               </div>
               <div class="col-lg-5 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
-                <div id="procurementSignatureReadOnlyGM" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px;"></div>
+                <div id="procurementSignatureReadOnlyGM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1543,6 +1549,100 @@
                 <canvas id="generalManagerSignaturePad" class="signature-pad"></canvas>
                 <input type="hidden" id="generalManagerSignatureData" name="general_manager_signature">
                 <button type="button" id="clearGeneralManager" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if user and user.role == 'admin' and is_edit_mode %}
+        <!-- Admin View: All Previous Reviews (Read-only for Admin) -->
+        <div class="col-12 mb-4" id="previousForAdminSection" style="display: none;">
+          <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
+            <strong>📋 Complete Review History - All Reviewers</strong>
+          </div>
+          
+          <!-- Supervisor Review -->
+          <div id="supervisorReadOnlyAdmin" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Supervisor Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
+                <div id="supervisorCommentsReadOnlyAdmin" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; max-height: 200px; padding: 0.75rem; white-space: pre-wrap; overflow-y: auto; word-wrap: break-word; line-height: 1.5;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature</label>
+                <div id="supervisorSignatureReadOnlyAdmin" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Operations Manager -->
+          <div id="opsManagerReadOnlyAdmin" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Operations Manager Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
+                <div id="opsManagerCommentsReadOnlyAdmin" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; max-height: 200px; padding: 0.75rem; white-space: pre-wrap; overflow-y: auto; word-wrap: break-word; line-height: 1.5;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Signature</label>
+                <div id="opsManagerSignatureReadOnlyAdmin" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Business Development -->
+          <div id="bdReadOnlyAdmin" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Business Development Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
+                <div id="bdCommentsReadOnlyAdmin" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; max-height: 200px; padding: 0.75rem; white-space: pre-wrap; overflow-y: auto; word-wrap: break-word; line-height: 1.5;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Signature</label>
+                <div id="bdSignatureReadOnlyAdmin" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Procurement -->
+          <div id="procurementReadOnlyAdmin" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Procurement Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
+                <div id="procurementCommentsReadOnlyAdmin" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; max-height: 200px; padding: 0.75rem; white-space: pre-wrap; overflow-y: auto; word-wrap: break-word; line-height: 1.5;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature</label>
+                <div id="procurementSignatureReadOnlyAdmin" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- General Manager -->
+          <div id="gmReadOnlyAdmin" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">General Manager Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Comments</label>
+                <div id="gmCommentsReadOnlyAdmin" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; max-height: 200px; padding: 0.75rem; white-space: pre-wrap; overflow-y: auto; word-wrap: break-word; line-height: 1.5;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Signature</label>
+                <div id="gmSignatureReadOnlyAdmin" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1980,6 +2080,45 @@
         }, 100);
       }
 
+      // Standard function to display signatures in read-only containers
+      // This ensures all signatures are displayed consistently with proper aspect ratio
+      function displaySignatureInContainer(containerId, signatureData, altText) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        // Clear container
+        container.innerHTML = '';
+        container.style.display = 'flex';
+        container.style.alignItems = 'center';
+        container.style.justifyContent = 'center';
+        
+        if (!signatureData) {
+          container.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
+          return;
+        }
+        
+        // Extract signature URL
+        let sigUrl = signatureData;
+        if (typeof sigUrl === 'object' && sigUrl !== null && sigUrl.url) {
+          sigUrl = sigUrl.url;
+        }
+        
+        // Validate signature URL
+        if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
+          const img = document.createElement('img');
+          img.src = sigUrl;
+          img.alt = altText || 'Signature';
+          // Standard signature display style - maintains aspect ratio, centered, contained
+          img.style.cssText = 'max-width: 100%; max-height: 140px; width: auto; height: auto; object-fit: contain; object-position: center; display: block; margin: 0 auto;';
+          img.onerror = () => {
+            container.innerHTML = '<span style="color: #dc3545;">Failed to load signature</span>';
+          };
+          container.appendChild(img);
+        } else {
+          container.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
+        }
+      }
+
       // Load submission data if in edit mode
       function loadSubmissionData() {
         {% if is_edit_mode and submission_data %}
@@ -2240,6 +2379,241 @@
           setTimeout(loadSignatures, 300);
           window.editSubmissionId = submissionData.submission_id;
           console.log('✅ Submission data loaded for editing');
+          
+          // Load all previous reviewers' data for Admin (read-only) - shows ALL reviewers
+          {% if user and user.role == 'admin' %}
+          const prevSectionAdmin = document.getElementById('previousForAdminSection');
+          let hasAnyDataAdmin = false;
+          
+          // Supervisor - comprehensive data loading
+          let supervisorCommentsAdmin = null;
+          let supervisorSigAdmin = null;
+          
+          if (formData) {
+            if (formData.supervisor_comments) supervisorCommentsAdmin = formData.supervisor_comments;
+            if (formData.supervisor_signature) supervisorSigAdmin = formData.supervisor_signature;
+          }
+          
+          if ((!supervisorCommentsAdmin || !supervisorSigAdmin) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              if (!supervisorCommentsAdmin && checkFormData.supervisor_comments) supervisorCommentsAdmin = checkFormData.supervisor_comments;
+              if (!supervisorSigAdmin && checkFormData.supervisor_signature) supervisorSigAdmin = checkFormData.supervisor_signature;
+            }
+          }
+          
+          if (supervisorCommentsAdmin || supervisorSigAdmin) {
+            hasAnyDataAdmin = true;
+            const section = document.getElementById('supervisorReadOnlyAdmin');
+            if (section) {
+              section.style.display = 'block';
+              
+              const commentsDiv = document.getElementById('supervisorCommentsReadOnlyAdmin');
+              if (commentsDiv) {
+                if (supervisorCommentsAdmin) commentsDiv.textContent = supervisorCommentsAdmin;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
+              }
+              
+              displaySignatureInContainer('supervisorSignatureReadOnlyAdmin', supervisorSigAdmin, 'Supervisor Signature');
+            }
+          }
+          
+          // Operations Manager - comprehensive data loading
+          let opsManagerCommentsAdmin = null;
+          let opsManagerSigAdmin = null;
+          
+          if (formData) {
+            if (formData.operations_manager_comments) opsManagerCommentsAdmin = formData.operations_manager_comments;
+            if (formData.operations_manager_signature) opsManagerSigAdmin = formData.operations_manager_signature;
+            else if (formData.opMan_signature) opsManagerSigAdmin = formData.opMan_signature;
+          }
+          
+          if ((!opsManagerCommentsAdmin || !opsManagerSigAdmin) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              if (!opsManagerCommentsAdmin && checkFormData.operations_manager_comments) opsManagerCommentsAdmin = checkFormData.operations_manager_comments;
+              if (!opsManagerSigAdmin) {
+                if (checkFormData.operations_manager_signature) opsManagerSigAdmin = checkFormData.operations_manager_signature;
+                else if (checkFormData.opMan_signature) opsManagerSigAdmin = checkFormData.opMan_signature;
+              }
+            }
+          }
+          
+          // Also check submission model fields
+          if (!opsManagerCommentsAdmin && submissionData && submissionData.operations_manager_comments) {
+            opsManagerCommentsAdmin = submissionData.operations_manager_comments;
+          }
+          
+          if (opsManagerCommentsAdmin || opsManagerSigAdmin) {
+            hasAnyDataAdmin = true;
+            const section = document.getElementById('opsManagerReadOnlyAdmin');
+            if (section) {
+              section.style.display = 'block';
+              
+              const commentsDiv = document.getElementById('opsManagerCommentsReadOnlyAdmin');
+              if (commentsDiv) {
+                if (opsManagerCommentsAdmin) commentsDiv.textContent = opsManagerCommentsAdmin;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
+              }
+              
+              displaySignatureInContainer('opsManagerSignatureReadOnlyAdmin', opsManagerSigAdmin, 'Operations Manager Signature');
+            }
+          }
+          
+          // Business Development - comprehensive data loading
+          let bdCommentsAdmin = null;
+          let bdSigAdmin = null;
+          
+          if (formData) {
+            if (formData.business_dev_comments) bdCommentsAdmin = formData.business_dev_comments;
+            if (formData.business_dev_signature) bdSigAdmin = formData.business_dev_signature;
+          }
+          
+          if ((!bdCommentsAdmin || !bdSigAdmin) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              if (!bdCommentsAdmin && checkFormData.business_dev_comments) bdCommentsAdmin = checkFormData.business_dev_comments;
+              if (!bdSigAdmin && checkFormData.business_dev_signature) bdSigAdmin = checkFormData.business_dev_signature;
+            }
+          }
+          
+          // Also check submission model fields
+          if (!bdCommentsAdmin && submissionData && submissionData.business_dev_comments) {
+            bdCommentsAdmin = submissionData.business_dev_comments;
+          }
+          
+          if (bdCommentsAdmin || bdSigAdmin) {
+            hasAnyDataAdmin = true;
+            const section = document.getElementById('bdReadOnlyAdmin');
+            if (section) {
+              section.style.display = 'block';
+              
+              const commentsDiv = document.getElementById('bdCommentsReadOnlyAdmin');
+              if (commentsDiv) {
+                if (bdCommentsAdmin) commentsDiv.textContent = bdCommentsAdmin;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
+              }
+              
+              displaySignatureInContainer('bdSignatureReadOnlyAdmin', bdSigAdmin, 'Business Development Signature');
+            }
+          }
+          
+          // Procurement - comprehensive data loading
+          let procurementCommentsAdmin = null;
+          let procurementSigAdmin = null;
+          
+          if (formData) {
+            if (formData.procurement_comments) procurementCommentsAdmin = formData.procurement_comments;
+            if (formData.procurement_signature) procurementSigAdmin = formData.procurement_signature;
+          }
+          
+          if ((!procurementCommentsAdmin || !procurementSigAdmin) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              if (!procurementCommentsAdmin && checkFormData.procurement_comments) procurementCommentsAdmin = checkFormData.procurement_comments;
+              if (!procurementSigAdmin && checkFormData.procurement_signature) procurementSigAdmin = checkFormData.procurement_signature;
+            }
+          }
+          
+          // Also check submission model fields
+          if (!procurementCommentsAdmin && submissionData && submissionData.procurement_comments) {
+            procurementCommentsAdmin = submissionData.procurement_comments;
+          }
+          
+          if (procurementCommentsAdmin || procurementSigAdmin) {
+            hasAnyDataAdmin = true;
+            const section = document.getElementById('procurementReadOnlyAdmin');
+            if (section) {
+              section.style.display = 'block';
+              
+              const commentsDiv = document.getElementById('procurementCommentsReadOnlyAdmin');
+              if (commentsDiv) {
+                if (procurementCommentsAdmin) commentsDiv.textContent = procurementCommentsAdmin;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
+              }
+              
+              displaySignatureInContainer('procurementSignatureReadOnlyAdmin', procurementSigAdmin, 'Procurement Signature');
+            }
+          }
+          
+          // General Manager - comprehensive data loading
+          let gmCommentsAdmin = null;
+          let gmSigAdmin = null;
+          
+          if (formData) {
+            if (formData.general_manager_comments) gmCommentsAdmin = formData.general_manager_comments;
+            if (formData.general_manager_signature) gmSigAdmin = formData.general_manager_signature;
+          }
+          
+          if ((!gmCommentsAdmin || !gmSigAdmin) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              if (!gmCommentsAdmin && checkFormData.general_manager_comments) gmCommentsAdmin = checkFormData.general_manager_comments;
+              if (!gmSigAdmin && checkFormData.general_manager_signature) gmSigAdmin = checkFormData.general_manager_signature;
+            }
+          }
+          
+          // Also check submission model fields
+          if (!gmCommentsAdmin && submissionData && submissionData.general_manager_comments) {
+            gmCommentsAdmin = submissionData.general_manager_comments;
+          }
+          
+          if (gmCommentsAdmin || gmSigAdmin) {
+            hasAnyDataAdmin = true;
+            const section = document.getElementById('gmReadOnlyAdmin');
+            if (section) {
+              section.style.display = 'block';
+              
+              const commentsDiv = document.getElementById('gmCommentsReadOnlyAdmin');
+              if (commentsDiv) {
+                if (gmCommentsAdmin) commentsDiv.textContent = gmCommentsAdmin;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
+              }
+              
+              displaySignatureInContainer('gmSignatureReadOnlyAdmin', gmSigAdmin, 'General Manager Signature');
+            }
+          }
+          
+          // Show admin section if any data exists
+          if (prevSectionAdmin && hasAnyDataAdmin) {
+            prevSectionAdmin.style.display = 'block';
+          }
+          {% endif %}
         } catch (err) {
           console.error('Failed to load submission data:', err);
         }
