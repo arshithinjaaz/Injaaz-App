@@ -581,6 +581,56 @@ def get_my_submissions():
                 })
             
             sub_dict['reviewers'] = reviewers
+            
+            # Extract photos and signatures from form_data for display
+            photos = []
+            supervisor_signature = None
+            
+            if isinstance(form_data, dict):
+                # Extract photos - handle different module formats
+                if submission.module_type in ['civil', 'cleaning']:
+                    # Civil and Cleaning: photos might be in work_items or directly in form_data
+                    if 'work_items' in form_data and isinstance(form_data['work_items'], list):
+                        for item in form_data['work_items']:
+                            if isinstance(item, dict) and 'photos' in item:
+                                item_photos = item.get('photos', [])
+                                if isinstance(item_photos, list):
+                                    photos.extend(item_photos)
+                    elif 'photo_urls' in form_data and isinstance(form_data['photo_urls'], list):
+                        photos = form_data['photo_urls']
+                    elif 'photos' in form_data and isinstance(form_data['photos'], list):
+                        photos = form_data['photos']
+                elif submission.module_type in ['hvac', 'hvac_mep']:
+                    # HVAC: photos are in items array
+                    if 'items' in form_data and isinstance(form_data['items'], list):
+                        for item in form_data['items']:
+                            if isinstance(item, dict) and 'photos' in item:
+                                item_photos = item.get('photos', [])
+                                if isinstance(item_photos, list):
+                                    photos.extend(item_photos)
+                
+                # Extract supervisor signature
+                supervisor_sig = form_data.get('supervisor_signature') or form_data.get('supervisorSignature')
+                if supervisor_sig:
+                    if isinstance(supervisor_sig, dict):
+                        supervisor_signature = supervisor_sig.get('url') or supervisor_sig.get('path')
+                    elif isinstance(supervisor_sig, str) and (supervisor_sig.startswith('http') or supervisor_sig.startswith('/') or supervisor_sig.startswith('data:')):
+                        supervisor_signature = supervisor_sig
+            
+            # Normalize photo URLs - extract URLs from photo objects
+            photo_urls = []
+            for photo in photos[:10]:  # Limit to first 10 for preview
+                if isinstance(photo, dict):
+                    url = photo.get('url') or photo.get('path')
+                    if url:
+                        photo_urls.append(url)
+                elif isinstance(photo, str) and (photo.startswith('http') or photo.startswith('/') or photo.startswith('data:')):
+                    photo_urls.append(photo)
+            
+            sub_dict['photos'] = photo_urls
+            sub_dict['photo_count'] = len(photos)  # Total count
+            sub_dict['supervisor_signature'] = supervisor_signature
+            
             submissions_list.append(sub_dict)
         
         return success_response({
@@ -646,6 +696,183 @@ def get_submission_detail(submission_id):
     except Exception as e:
         current_app.logger.error(f"Error getting submission detail: {str(e)}", exc_info=True)
         return error_response('Failed to get submission', status_code=500, error_code='DATABASE_ERROR')
+
+
+@workflow_bp.route('/submissions/<submission_id>/approve-supervisor', methods=['POST'])
+@jwt_required()
+def approve_supervisor_resubmission(submission_id):
+    """Supervisor resubmits/approves their own submission (allows editing and regeneration)"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        data = request.get_json() or {}
+        
+        if not user:
+            return error_response('User not found', status_code=404, error_code='NOT_FOUND')
+        
+        if user.designation != 'supervisor' and user.role != 'admin':
+            return error_response('Only supervisors can resubmit their own forms', 
+                                status_code=403, error_code='INVALID_DESIGNATION')
+        
+        submission = Submission.query.filter_by(submission_id=submission_id).first()
+        if not submission:
+            return error_response('Submission not found', status_code=404, error_code='NOT_FOUND')
+        
+        # Verify this is the supervisor's own submission
+        is_own_submission = (
+            (hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id) or
+            (submission.user_id == user.id)
+        )
+        
+        if not is_own_submission and user.role != 'admin':
+            return error_response('You can only resubmit your own submissions', 
+                                status_code=403, error_code='UNAUTHORIZED')
+        
+        # Allow resubmission if status is submitted/rejected OR operations_manager_review (but not yet approved by OM)
+        if submission.workflow_status not in ['submitted', 'rejected', None] and not (
+            submission.workflow_status == 'operations_manager_review' and not submission.operations_manager_approved_at
+        ):
+            return error_response('Submission cannot be resubmitted at this stage', 
+                                status_code=400, error_code='INVALID_STATUS')
+        
+        # Extract data
+        comments = data.get('comments', '') or data.get('supervisor_comments', '')
+        signature = data.get('signature', '') or data.get('supervisor_signature', '')
+        verified = data.get('verified', False)
+        form_data_updates = data.get('form_data', {})
+        
+        # Update form_data
+        form_data = submission.form_data if submission.form_data else {}
+        if isinstance(form_data, str):
+            try:
+                import json
+                form_data = json.loads(form_data)
+            except:
+                form_data = {}
+        
+        # Preserve existing reviewer data (OM, BD, PO, GM) before updating
+        existing_om_comments = form_data.get('operations_manager_comments')
+        existing_om_signature = form_data.get('operations_manager_signature') or form_data.get('opMan_signature')
+        existing_bd_comments = form_data.get('business_dev_comments')
+        existing_bd_signature = form_data.get('business_dev_signature')
+        existing_procurement_comments = form_data.get('procurement_comments')
+        existing_procurement_signature = form_data.get('procurement_signature')
+        existing_gm_comments = form_data.get('general_manager_comments')
+        existing_gm_signature = form_data.get('general_manager_signature')
+        
+        # Update with new form_data
+        if form_data_updates:
+            form_data.update(form_data_updates)
+        
+        # Update supervisor data
+        if comments:
+            form_data['supervisor_comments'] = comments
+            submission.supervisor_comments = comments
+        
+        if signature:
+            # Process and save supervisor signature
+            save_signature_dataurl, get_paths_fn, _ = get_module_functions(submission.module_type)
+            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths_fn()
+            
+            sig_filename, sig_path, sig_url = save_signature_dataurl(
+                signature, 
+                UPLOADS_DIR, 
+                prefix="supervisor_sig"
+            )
+            
+            if sig_url:
+                form_data['supervisor_signature'] = {
+                    'url': sig_url,
+                    'path': sig_path,
+                    'saved': sig_filename,
+                    'is_cloud': sig_url.startswith('http') and 'cloudinary' in sig_url
+                }
+                current_app.logger.info(f"✅ Saved supervisor signature for resubmission {submission_id}")
+        
+        if verified:
+            form_data['supervisor_verified'] = True
+        
+        # Restore reviewer data if it was lost
+        if existing_om_comments and not form_data.get('operations_manager_comments'):
+            form_data['operations_manager_comments'] = existing_om_comments
+        if existing_om_signature and not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
+            form_data['operations_manager_signature'] = existing_om_signature
+        if existing_bd_comments and not form_data.get('business_dev_comments'):
+            form_data['business_dev_comments'] = existing_bd_comments
+        if existing_bd_signature and not form_data.get('business_dev_signature'):
+            form_data['business_dev_signature'] = existing_bd_signature
+        if existing_procurement_comments and not form_data.get('procurement_comments'):
+            form_data['procurement_comments'] = existing_procurement_comments
+        if existing_procurement_signature and not form_data.get('procurement_signature'):
+            form_data['procurement_signature'] = existing_procurement_signature
+        if existing_gm_comments and not form_data.get('general_manager_comments'):
+            form_data['general_manager_comments'] = existing_gm_comments
+        if existing_gm_signature and not form_data.get('general_manager_signature'):
+            form_data['general_manager_signature'] = existing_gm_signature
+        
+        submission.form_data = form_data
+        submission.supervisor_id = user.id
+        
+        # Reset workflow status to submitted (or operations_manager_review if OM was already reviewing)
+        if submission.workflow_status == 'operations_manager_review' and not submission.operations_manager_approved_at:
+            # Keep at operations_manager_review if OM hasn't approved yet
+            submission.workflow_status = 'operations_manager_review'
+        else:
+            # Reset to submitted for fresh review
+            submission.workflow_status = 'submitted'
+        
+        submission.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        # Regenerate PDF and Excel documents with updated data
+        job_id = None
+        try:
+            from common.db_utils import create_job_db
+            from app.models import Job
+            _, get_paths_fn, process_job_fn = get_module_functions(submission.module_type)
+            
+            # Delete old jobs to force regeneration
+            old_jobs = Job.query.filter_by(submission_id=submission.id).all()
+            for old_job in old_jobs:
+                db.session.delete(old_job)
+            db.session.commit()
+            
+            # Create new job for regeneration
+            new_job = create_job_db(submission)
+            job_id = new_job.job_id
+            
+            GENERATED_DIR, UPLOADS_DIR, JOBS_DIR, EXECUTOR = get_paths_fn()
+            
+            if EXECUTOR:
+                EXECUTOR.submit(
+                    process_job_fn,
+                    submission.submission_id,
+                    job_id,
+                    current_app.config,
+                    current_app._get_current_object()
+                )
+                current_app.logger.info(f"✅ Regeneration job {job_id} queued for supervisor resubmission - submission {submission_id} ({submission.module_type})")
+            else:
+                current_app.logger.error("ThreadPoolExecutor not available for document regeneration")
+        except Exception as regen_err:
+            current_app.logger.error(f"Error queuing regeneration job after supervisor resubmission: {regen_err}", exc_info=True)
+        
+        log_audit(user_id, 'supervisor_resubmitted', 'submission', submission_id, {
+            'comments': comments,
+            'has_signature': bool(signature),
+            'verified': verified
+        })
+        
+        return success_response({
+            'submission': submission.to_dict(),
+            'message': 'Form resubmitted successfully. PDF and Excel reports are being regenerated with your updates.' + (' Documents are being regenerated.' if job_id else ''),
+            'job_id': job_id,
+            'regenerating': bool(job_id)
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in supervisor resubmission: {str(e)}", exc_info=True)
+        return error_response('Failed to resubmit submission', status_code=500, error_code='DATABASE_ERROR')
 
 
 @workflow_bp.route('/submissions/<submission_id>/approve-ops-manager', methods=['POST'])
@@ -1735,6 +1962,20 @@ def legacy_approve_submission(submission_id):
         submission = Submission.query.filter_by(submission_id=submission_id).first()
         if not submission:
             return error_response('Submission not found', status_code=404, error_code='NOT_FOUND')
+        
+        # Check if supervisor is resubmitting their own form
+        is_supervisor_own = (
+            user.designation == 'supervisor' and 
+            hasattr(submission, 'supervisor_id') and 
+            submission.supervisor_id == user.id
+        )
+        
+        # Allow supervisor to resubmit if status is submitted/rejected OR operations_manager_review (but not yet approved by OM)
+        if is_supervisor_own and (
+            submission.workflow_status in ['submitted', 'rejected', None] or
+            (submission.workflow_status == 'operations_manager_review' and not submission.operations_manager_approved_at)
+        ):
+            return approve_supervisor_resubmission(submission_id)
         
         # Route to appropriate endpoint based on current workflow status
         if submission.workflow_status == 'operations_manager_review':

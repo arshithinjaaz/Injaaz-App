@@ -89,19 +89,57 @@ def index():
                                      module='Civil Works',
                                      message='Submission not found.'), 404
             
-            # Allow editing if: admin, or supervisor/manager assigned to this submission
+            # Allow editing/reviewing based on role and workflow status
             can_edit = False
+            can_view = False
+            user_designation = user.designation if hasattr(user, 'designation') else None
+            workflow_status = submission.workflow_status if hasattr(submission, 'workflow_status') else None
+            
+            # Admin - always can edit/view
             if user.role == 'admin':
                 can_edit = True
-            elif hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id:
+                can_view = True
+            # Supervisor - can edit/view their own submissions
+            elif user_designation == 'supervisor' and hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id:
                 can_edit = True
-            elif hasattr(submission, 'manager_id') and submission.manager_id == user.id:
-                can_edit = True
+                can_view = True
+            # Operations Manager - can review when status is operations_manager_review, can view if they've reviewed it
+            elif user_designation == 'operations_manager':
+                if workflow_status == 'operations_manager_review':
+                    can_edit = True
+                    can_view = True
+                elif hasattr(submission, 'operations_manager_id') and submission.operations_manager_id == user.id:
+                    # Can view forms they've already reviewed (for history/document access)
+                    can_view = True
+            # Business Development - can review when status is bd_procurement_review and not yet approved by them
+            elif user_designation == 'business_development':
+                if workflow_status == 'bd_procurement_review':
+                    if not hasattr(submission, 'business_dev_approved_at') or not submission.business_dev_approved_at:
+                        can_edit = True
+                    can_view = True
+                elif hasattr(submission, 'business_dev_id') and submission.business_dev_id == user.id:
+                    can_view = True
+            # Procurement - can review when status is bd_procurement_review and not yet approved by them
+            elif user_designation == 'procurement':
+                if workflow_status == 'bd_procurement_review':
+                    if not hasattr(submission, 'procurement_approved_at') or not submission.procurement_approved_at:
+                        can_edit = True
+                    can_view = True
+                elif hasattr(submission, 'procurement_id') and submission.procurement_id == user.id:
+                    can_view = True
+            # General Manager - can review when status is general_manager_review
+            elif user_designation == 'general_manager':
+                if workflow_status == 'general_manager_review':
+                    if not hasattr(submission, 'general_manager_approved_at') or not submission.general_manager_approved_at:
+                        can_edit = True
+                    can_view = True
+                elif hasattr(submission, 'general_manager_id') and submission.general_manager_id == user.id:
+                    can_view = True
             
-            if not can_edit:
+            if not can_view:
                 return render_template('access_denied.html',
                                      module='Civil Works',
-                                     message='You do not have permission to edit this submission.'), 403
+                                     message=f'You do not have permission to review this submission. Current status: {workflow_status}, Your role: {user_designation}'), 403
             
             # Load submission data for editing
             submission_dict = submission.to_dict()
@@ -426,12 +464,50 @@ def download_file(job_id, file_type):
         if not file_url:
             return error_response(f"{file_type.upper()} file URL not found", status_code=404, error_code='NOT_FOUND')
         
-        # Check if it's a Cloudinary URL
-        if 'cloudinary.com' in file_url:
+        # Check if it's a localhost/local development URL
+        if file_url.startswith('http://127.0.0.1') or file_url.startswith('http://localhost') or file_url.startswith('http://0.0.0.0'):
+            # Local development URL - extract filename and serve from local storage
+            # URL might contain # which breaks URL parsing, so we need to handle it carefully
+            from urllib.parse import urlparse, unquote
+            # Reconstruct the full path including fragment (everything after #)
+            # Split by # to get path and fragment separately
+            if '#' in file_url:
+                url_parts = file_url.split('#', 1)
+                base_url = url_parts[0]
+                fragment = url_parts[1] if len(url_parts) > 1 else ''
+                parsed = urlparse(base_url)
+                # Reconstruct full filename: path + fragment
+                full_path = parsed.path
+                if fragment:
+                    # If fragment exists, it's part of the filename (not a URL fragment)
+                    full_path = full_path + '#' + fragment
+            else:
+                parsed = urlparse(file_url)
+                full_path = parsed.path
+            
+            # Extract filename from path
+            local_filename = unquote(full_path.lstrip('/').replace('generated/', ''))
+            local_path = os.path.join(GENERATED_DIR, local_filename)
+            
+            logger.debug(f"Local URL detected, serving from filesystem: {local_path}")
+            
+            if not os.path.exists(local_path):
+                logger.error(f"File not found at local path: {local_path}")
+                return error_response("File not found locally", status_code=404, error_code='NOT_FOUND')
+            
+            from flask import send_file
+            return send_file(local_path, as_attachment=True, download_name=filename)
+        elif file_url.startswith('http://') or file_url.startswith('https://'):
+            # Cloudinary URL or other HTTP URL - fetch and serve
             try:
+                logger.debug(f"Fetching {file_type.upper()} file from URL: {file_url}")
+                # Remove ?attachment=true if present
                 clean_url = file_url.split('?')[0]
+                logger.debug(f"Clean URL (removed query params): {clean_url}")
+                
                 response = requests.get(clean_url, timeout=60, stream=True)
                 response.raise_for_status()
+                logger.debug(f"Successfully fetched {file_type.upper()} file, status: {response.status_code}, content-length: {response.headers.get('Content-Length', 'unknown')}")
                 
                 file_content = response.content
                 file_data = BytesIO(file_content)
@@ -440,7 +516,7 @@ def download_file(job_id, file_type):
                 mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if file_type == 'excel' else 'application/pdf'
                 
                 if len(file_content) == 0:
-                    logger.error(f"Empty file content received from Cloudinary")
+                    logger.error(f"Empty file content received")
                     return error_response("File content is empty", status_code=500, error_code='STORAGE_ERROR')
                 
                 from flask import send_file
@@ -451,9 +527,9 @@ def download_file(job_id, file_type):
                     download_name=filename
                 )
             except Exception as e:
-                logger.error(f"Error fetching from Cloudinary: {str(e)}")
+                logger.error(f"Error fetching file: {str(e)}")
                 logger.error(traceback.format_exc())
-                return error_response("Failed to fetch file from Cloudinary", status_code=500, error_code='STORAGE_ERROR')
+                return error_response("Failed to fetch file", status_code=500, error_code='STORAGE_ERROR')
         else:
             # Local URL
             local_filename = file_url.lstrip('/').replace('generated/', '')
@@ -669,11 +745,27 @@ def submit_with_urls():
             "created_at": datetime.utcnow().isoformat()
         }
         
+        # Get user_id from JWT token if available
+        user_id = None
+        try:
+            from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+            try:
+                verify_jwt_in_request(optional=True)
+                user_id = get_jwt_identity()
+                if user_id:
+                    logger.info(f"✅ Submission will be associated with user_id: {user_id}")
+            except Exception as jwt_error:
+                logger.debug(f"JWT token not available or invalid: {jwt_error}")
+        except Exception as e:
+            logger.debug(f"JWT verification error: {e}")
+            pass  # JWT not available
+        
         submission = create_submission_db(
             module_type='civil',
             form_data=submission_data,
             site_name=project_name,
-            visit_date=visit_date
+            visit_date=visit_date,
+            user_id=user_id
         )
         sub_id = submission.submission_id
         

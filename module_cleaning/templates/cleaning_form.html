@@ -1014,8 +1014,8 @@
                                     </div>
                                 </div>
 
-                            {% if (is_supervisor_edit or user_designation == 'supervisor') and not (user and user.role == 'admin') %}
-                            <!-- Supervisor Review Section -->
+                            <!-- Supervisor Review Section - Only visible to supervisors and admins -->
+                            {% if user_designation == 'supervisor' or (user and user.role == 'admin') %}
                             <div class="col-12 mb-3" style="border-top: 2px solid var(--primary); padding-top: 1.5rem; margin-top: 1rem;">
                                 <h5 style="color: var(--primary); margin-bottom: 1rem;">Supervisor Review</h5>
                                 
@@ -1934,6 +1934,634 @@
                 setTimeout(loadSignatures, 300);
                 window.editSubmissionId = submissionData.submission_id;
                 console.log('✅ Submission data loaded for editing');
+                
+                // Load Operations Manager comments
+                {% if user_designation == 'operations_manager' %}
+                let operationsManagerComments = null;
+                if (formData && formData.operations_manager_comments) {
+                  operationsManagerComments = formData.operations_manager_comments;
+                } else if (submissionData && submissionData.form_data && submissionData.form_data.operations_manager_comments) {
+                  operationsManagerComments = submissionData.form_data.operations_manager_comments;
+                } else if (submissionData && submissionData.operations_manager_comments) {
+                  operationsManagerComments = submissionData.operations_manager_comments;
+                }
+                
+                if (operationsManagerComments) {
+                  const commentsField = document.getElementById('operationsManagerComments');
+                  if (commentsField) {
+                    commentsField.value = operationsManagerComments;
+                    console.log('✅ Loaded Operations Manager comments into field');
+                  }
+                }
+                
+                // Load Supervisor review for Operations Manager (read-only)
+                const prevForOM = document.getElementById('previousForOMSection');
+                let hasPrevForOM = false;
+                
+                let supervisorCommentsOM = null;
+                let supervisorSigOM = null;
+                
+                if (formData) {
+                  if (formData.supervisor_comments) supervisorCommentsOM = formData.supervisor_comments;
+                  if (formData.supervisor_signature) supervisorSigOM = formData.supervisor_signature;
+                }
+                
+                if ((!supervisorCommentsOM || !supervisorSigOM) && submissionData && submissionData.form_data) {
+                  let checkFormData = submissionData.form_data;
+                  if (typeof checkFormData === 'string') {
+                    try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                  }
+                  if (checkFormData) {
+                    if (!supervisorCommentsOM && checkFormData.supervisor_comments) supervisorCommentsOM = checkFormData.supervisor_comments;
+                    if (!supervisorSigOM && checkFormData.supervisor_signature) supervisorSigOM = checkFormData.supervisor_signature;
+                  }
+                }
+                
+                if (!supervisorCommentsOM && submissionData && submissionData.supervisor_comments) {
+                  supervisorCommentsOM = submissionData.supervisor_comments;
+                }
+                
+                if (supervisorCommentsOM || supervisorSigOM) {
+                  hasPrevForOM = true;
+                  const section = document.getElementById('supervisorReadOnlyOM');
+                  if (section) {
+                    section.style.display = 'block';
+                    if (prevForOM) prevForOM.style.display = 'block';
+                    
+                    const commentsDiv = document.getElementById('supervisorCommentsReadOnlyOM');
+                    if (commentsDiv) {
+                      if (supervisorCommentsOM) commentsDiv.textContent = supervisorCommentsOM;
+                      else {
+                        commentsDiv.textContent = 'No comments provided';
+                        commentsDiv.style.fontStyle = 'italic';
+                        commentsDiv.style.color = '#9ca3af';
+                      }
+                    }
+                    
+                    displaySignatureInContainer('supervisorSignatureReadOnlyOM', supervisorSigOM, 'Supervisor Signature');
+                  }
+                }
+                
+                // Load Operations Manager signature (for Operations Manager editing)
+                let opSig = null;
+                if (formData) {
+                  if (formData.opMan_signature) opSig = formData.opMan_signature;
+                  else if (formData.operations_manager_signature) opSig = formData.operations_manager_signature;
+                }
+                
+                if (!opSig && submissionData && submissionData.form_data) {
+                  let checkFormData = submissionData.form_data;
+                  if (typeof checkFormData === 'string') {
+                    try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                  }
+                  if (checkFormData) {
+                    if (checkFormData.opMan_signature) opSig = checkFormData.opMan_signature;
+                    else if (checkFormData.operations_manager_signature) opSig = checkFormData.operations_manager_signature;
+                  }
+                }
+                
+                if (opSig) {
+                  if (opSig && typeof opSig === 'object' && opSig.url) {
+                    opSig = opSig.url;
+                  }
+                  
+                  if (opSig && typeof opSig === 'string' && (opSig.startsWith('data:image') || opSig.startsWith('http'))) {
+                    const opCanvas = document.getElementById('opManSignaturePad');
+                    if (opCanvas && pads && pads.opPad) {
+                      const img = new Image();
+                      img.crossOrigin = 'anonymous';
+                      img.onload = function() {
+                        pads.opPad.clear();
+                        pads.opPad.fromDataURL(opSig);
+                        console.log('✅ Loaded Operations Manager signature into pad');
+                      };
+                      img.src = opSig;
+                      
+                      const opSigInput = document.getElementById('opManSignatureData');
+                      if (opSigInput) opSigInput.value = opSig;
+                    }
+                  }
+                }
+                {% endif %}
+                
+                // Load Operations Manager comments and signature for BD (read-only)
+                {% if user_designation == 'business_development' %}
+                let opsManagerCommentsBD = null;
+                let opsManagerSigBD = null;
+                
+                if (formData) {
+                  if (formData.operations_manager_comments) opsManagerCommentsBD = formData.operations_manager_comments;
+                  if (formData.operations_manager_signature) opsManagerSigBD = formData.operations_manager_signature;
+                  else if (formData.opMan_signature) opsManagerSigBD = formData.opMan_signature;
+                }
+                
+                if ((!opsManagerCommentsBD || !opsManagerSigBD) && submissionData && submissionData.form_data) {
+                  let checkFormData = submissionData.form_data;
+                  if (typeof checkFormData === 'string') {
+                    try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                  }
+                  if (checkFormData) {
+                    if (!opsManagerCommentsBD && checkFormData.operations_manager_comments) opsManagerCommentsBD = checkFormData.operations_manager_comments;
+                    if (!opsManagerSigBD) {
+                      if (checkFormData.operations_manager_signature) opsManagerSigBD = checkFormData.operations_manager_signature;
+                      else if (checkFormData.opMan_signature) opsManagerSigBD = checkFormData.opMan_signature;
+                    }
+                  }
+                }
+                
+                if (!opsManagerCommentsBD && submissionData && submissionData.operations_manager_comments) {
+                  opsManagerCommentsBD = submissionData.operations_manager_comments;
+                }
+                
+                let omHasApproved = false;
+                if (submissionData) {
+                  if (submissionData.operations_manager_approved_at || 
+                      (submissionData.workflow_status && 
+                       (submissionData.workflow_status.includes('operations_manager_approved') || 
+                        submissionData.workflow_status.includes('bd_procurement')))) {
+                    omHasApproved = true;
+                  }
+                }
+                
+                if (opsManagerCommentsBD || opsManagerSigBD || omHasApproved) {
+                  const section = document.getElementById('opsManagerReadOnlySection');
+                  if (section) {
+                    section.style.display = 'block';
+                    document.getElementById('previousForBDSection').style.display = 'block';
+                    
+                    const commentsDiv = document.getElementById('opsManagerCommentsReadOnly');
+                    if (commentsDiv) {
+                      if (opsManagerCommentsBD) commentsDiv.textContent = opsManagerCommentsBD;
+                      else {
+                        commentsDiv.textContent = 'No comments provided';
+                        commentsDiv.style.fontStyle = 'italic';
+                        commentsDiv.style.color = '#9ca3af';
+                      }
+                    }
+                    
+                    displaySignatureInContainer('opsManagerSignatureReadOnly', opsManagerSigBD, 'Operations Manager Signature');
+                  }
+                }
+                
+                // Load Procurement data for BD (so BD can see if PO has signed)
+                let procurementCommentsBD = null;
+                let procurementSigBD = null;
+                
+                if (formData) {
+                  if (formData.procurement_comments) procurementCommentsBD = formData.procurement_comments;
+                  if (formData.procurement_signature) procurementSigBD = formData.procurement_signature;
+                }
+                
+                if ((!procurementCommentsBD || !procurementSigBD) && submissionData && submissionData.form_data) {
+                  let checkFormData = submissionData.form_data;
+                  if (typeof checkFormData === 'string') {
+                    try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                  }
+                  if (checkFormData) {
+                    if (!procurementCommentsBD && checkFormData.procurement_comments) procurementCommentsBD = checkFormData.procurement_comments;
+                    if (!procurementSigBD && checkFormData.procurement_signature) procurementSigBD = checkFormData.procurement_signature;
+                  }
+                }
+                
+                if (procurementCommentsBD || procurementSigBD) {
+                  const section = document.getElementById('procurementReadOnlyBD');
+                  if (section) {
+                    section.style.display = 'block';
+                    document.getElementById('previousForBDSection').style.display = 'block';
+                    
+                    const commentsDiv = document.getElementById('procurementCommentsReadOnlyBD');
+                    if (commentsDiv) {
+                      if (procurementCommentsBD) commentsDiv.textContent = procurementCommentsBD;
+                      else {
+                        commentsDiv.textContent = 'No comments provided';
+                        commentsDiv.style.fontStyle = 'italic';
+                        commentsDiv.style.color = '#9ca3af';
+                      }
+                    }
+                    
+                    displaySignatureInContainer('procurementSignatureReadOnlyBD', procurementSigBD, 'Procurement Signature');
+                  }
+                }
+                
+                // Load Business Development comments and signature
+                let businessDevComments = formData?.business_dev_comments || (submissionData?.form_data?.business_dev_comments);
+                let businessDevSig = formData?.business_dev_signature || (submissionData?.form_data?.business_dev_signature);
+                
+                if (businessDevComments) {
+                  const commentsField = document.getElementById('businessDevComments');
+                  if (commentsField) {
+                    commentsField.value = businessDevComments;
+                    console.log('✅ Loaded BD comments');
+                  }
+                }
+                
+                if (businessDevSig) {
+                  let sigUrl = businessDevSig;
+                  if (typeof sigUrl === 'object' && sigUrl.url) {
+                    sigUrl = sigUrl.url;
+                  }
+                  
+                  if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
+                    const sigInput = document.getElementById('businessDevSignatureData');
+                    if (sigInput) sigInput.value = sigUrl;
+                    
+                    if (pads && pads.businessDevPad) {
+                      const img = new Image();
+                      img.crossOrigin = 'anonymous';
+                      img.onload = function() {
+                        pads.businessDevPad.clear();
+                        pads.businessDevPad.fromDataURL(sigUrl);
+                        console.log('✅ Loaded BD signature into pad');
+                      };
+                      img.src = sigUrl;
+                    }
+                  }
+                }
+                {% endif %}
+                
+                // Load Procurement comments and signature
+                {% if user_designation == 'procurement' %}
+                let procurementComments = formData?.procurement_comments || (submissionData?.form_data?.procurement_comments);
+                let procurementSig = formData?.procurement_signature || (submissionData?.form_data?.procurement_signature);
+                
+                if (procurementComments) {
+                  const commentsField = document.getElementById('procurementComments');
+                  if (commentsField) {
+                    commentsField.value = procurementComments;
+                    console.log('✅ Loaded Procurement comments');
+                  }
+                }
+                
+                if (procurementSig) {
+                  let sigUrl = procurementSig;
+                  if (typeof sigUrl === 'object' && sigUrl.url) {
+                    sigUrl = sigUrl.url;
+                  }
+                  
+                  if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
+                    const sigInput = document.getElementById('procurementSignatureData');
+                    if (sigInput) sigInput.value = sigUrl;
+                    
+                    if (pads && pads.procurementPad) {
+                      const img = new Image();
+                      img.crossOrigin = 'anonymous';
+                      img.onload = function() {
+                        pads.procurementPad.clear();
+                        pads.procurementPad.fromDataURL(sigUrl);
+                        console.log('✅ Loaded Procurement signature into pad');
+                      };
+                      img.src = sigUrl;
+                    }
+                  }
+                }
+                
+                // Load previous reviewers (OM + BD) in read-only blocks for Procurement
+                const prevForProc = document.getElementById('previousForProcurementSection');
+                let hasPrevForProc = false;
+                
+                // OM for Procurement
+                let opsManagerCommentsProc = null;
+                let opsManagerSigProc = null;
+                
+                if (formData) {
+                  if (formData.operations_manager_comments) opsManagerCommentsProc = formData.operations_manager_comments;
+                  if (formData.operations_manager_signature) opsManagerSigProc = formData.operations_manager_signature;
+                  else if (formData.opMan_signature) opsManagerSigProc = formData.opMan_signature;
+                }
+                
+                if ((!opsManagerCommentsProc || !opsManagerSigProc) && submissionData && submissionData.form_data) {
+                  let checkFormData = submissionData.form_data;
+                  if (typeof checkFormData === 'string') {
+                    try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                  }
+                  if (checkFormData && typeof checkFormData === 'object') {
+                    if (!opsManagerCommentsProc && checkFormData.operations_manager_comments) opsManagerCommentsProc = checkFormData.operations_manager_comments;
+                    if (!opsManagerSigProc) {
+                      if (checkFormData.operations_manager_signature) opsManagerSigProc = checkFormData.operations_manager_signature;
+                      else if (checkFormData.opMan_signature) opsManagerSigProc = checkFormData.opMan_signature;
+                    }
+                  }
+                }
+                
+                if (!opsManagerCommentsProc && submissionData && submissionData.operations_manager_comments) {
+                  opsManagerCommentsProc = submissionData.operations_manager_comments;
+                }
+                
+                if (opsManagerCommentsProc || opsManagerSigProc) {
+                  hasPrevForProc = true;
+                  const sec = document.getElementById('opsManagerReadOnlyProc');
+                  if (sec) {
+                    sec.style.display = 'block';
+                    document.getElementById('previousForProcurementSection').style.display = 'block';
+                  }
+                  
+                  const cDiv = document.getElementById('opsManagerCommentsReadOnlyProc');
+                  if (cDiv) {
+                    if (opsManagerCommentsProc) {
+                      cDiv.textContent = opsManagerCommentsProc;
+                    } else {
+                      cDiv.textContent = 'No comments provided';
+                      cDiv.style.fontStyle = 'italic';
+                      cDiv.style.color = '#9ca3af';
+                    }
+                  }
+                  
+                  displaySignatureInContainer('opsManagerSignatureReadOnlyProc', opsManagerSigProc, 'Operations Manager Signature');
+                }
+                
+                // BD for Procurement
+                let bdCommentsProc = null;
+                let bdSigProc = null;
+                const supervisorComments = formData?.supervisor_comments || (submissionData?.form_data?.supervisor_comments);
+                
+                if (formData) {
+                  if (formData.business_dev_comments && formData.business_dev_comments !== supervisorComments) {
+                    bdCommentsProc = formData.business_dev_comments;
+                  }
+                  if (formData.business_dev_signature) bdSigProc = formData.business_dev_signature;
+                }
+                
+                if ((!bdCommentsProc || !bdSigProc) && submissionData && submissionData.form_data) {
+                  let checkFormData = submissionData.form_data;
+                  if (typeof checkFormData === 'string') {
+                    try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                  }
+                  if (checkFormData) {
+                    if (!bdCommentsProc && checkFormData.business_dev_comments && checkFormData.business_dev_comments !== supervisorComments) {
+                      bdCommentsProc = checkFormData.business_dev_comments;
+                    }
+                    if (!bdSigProc && checkFormData.business_dev_signature) bdSigProc = checkFormData.business_dev_signature;
+                  }
+                }
+                
+                let bdHasApproved = false;
+                if (submissionData) {
+                  if (submissionData.business_dev_approved_at || 
+                      (submissionData.workflow_status && 
+                       (submissionData.workflow_status.includes('bd_procurement') || 
+                        submissionData.workflow_status.includes('general_manager')))) {
+                    bdHasApproved = true;
+                  }
+                }
+                
+                if (bdCommentsProc || bdSigProc || bdHasApproved) {
+                  hasPrevForProc = true;
+                  const sec = document.getElementById('bdReadOnlyProc');
+                  if (sec) {
+                    sec.style.display = 'block';
+                    document.getElementById('previousForProcurementSection').style.display = 'block';
+                  }
+                  
+                  const cDiv = document.getElementById('bdCommentsReadOnlyProc');
+                  if (cDiv) {
+                    if (bdCommentsProc) {
+                      cDiv.textContent = bdCommentsProc;
+                    } else {
+                      cDiv.textContent = 'No comments provided';
+                      cDiv.style.fontStyle = 'italic';
+                      cDiv.style.color = '#9ca3af';
+                    }
+                  }
+                  
+                  displaySignatureInContainer('bdSignatureReadOnlyProc', bdSigProc, 'Business Development Signature');
+                }
+                
+                if (prevForProc && hasPrevForProc) {
+                  prevForProc.style.display = 'block';
+                }
+                {% endif %}
+                
+                // Load General Manager signature if it exists
+                {% if user_designation == 'general_manager' %}
+                let gmSignature = null;
+                if (formData) {
+                  if (formData.general_manager_signature) {
+                    gmSignature = formData.general_manager_signature;
+                  }
+                }
+                
+                if (!gmSignature && submissionData && submissionData.form_data) {
+                  let checkFormData = submissionData.form_data;
+                  if (typeof checkFormData === 'string') {
+                    try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                  }
+                  if (checkFormData && checkFormData.general_manager_signature) {
+                    gmSignature = checkFormData.general_manager_signature;
+                  }
+                }
+                
+                if (gmSignature) {
+                  let sigUrl = gmSignature;
+                  if (typeof sigUrl === 'object' && sigUrl !== null && sigUrl.url) {
+                    sigUrl = sigUrl.url;
+                  }
+                  
+                  if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
+                    const gmCanvas = document.getElementById('generalManagerSignaturePad');
+                    const gmSigInput = document.getElementById('generalManagerSignatureData');
+                    
+                    if (gmCanvas && pads && pads.generalManagerPad) {
+                      try {
+                        if (sigUrl.startsWith('data:image')) {
+                          pads.generalManagerPad.fromDataURL(sigUrl);
+                          console.log('✅ Loaded GM signature into canvas');
+                        } else {
+                          gmCanvas.style.display = 'none';
+                          const sigImg = document.createElement('img');
+                          sigImg.src = sigUrl;
+                          sigImg.alt = 'General Manager Signature';
+                          sigImg.style.cssText = 'max-width: 100%; max-height: 180px; width: auto; height: auto; object-fit: contain; object-position: center; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px; display: block; margin: 0 auto;';
+                          gmCanvas.parentElement.insertBefore(sigImg, gmCanvas);
+                          
+                          const clearBtn = document.getElementById('clearGeneralManager');
+                          if (clearBtn) clearBtn.style.display = 'none';
+                          
+                          const gmLabel = gmCanvas.parentElement.querySelector('label');
+                          if (gmLabel) {
+                            gmLabel.innerHTML = 'GENERAL MANAGER SIGNATURE <span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                          }
+                          
+                          const hintSpan = gmCanvas.parentElement.querySelector('.signature-hint');
+                          if (hintSpan) hintSpan.style.display = 'none';
+                          
+                          console.log('✅ Loaded GM signature as image');
+                        }
+                        
+                        if (gmSigInput) {
+                          gmSigInput.value = sigUrl;
+                        }
+                      } catch (e) {
+                        console.error('❌ Error loading GM signature:', e);
+                      }
+                    } else if (gmSigInput) {
+                      gmSigInput.value = sigUrl;
+                      console.log('✅ Stored GM signature in hidden input');
+                    }
+                  }
+                }
+                
+                // Load all previous reviewers' data for General Manager (read-only)
+                const prevSection = document.getElementById('previousReviewersReadOnlySection');
+                let hasAnyData = false;
+                
+                // Operations Manager
+                let opsManagerCommentsGM = null;
+                let opsManagerSigGM = null;
+                
+                if (formData) {
+                  if (formData.operations_manager_comments) opsManagerCommentsGM = formData.operations_manager_comments;
+                  if (formData.operations_manager_signature) opsManagerSigGM = formData.operations_manager_signature;
+                  else if (formData.opMan_signature) opsManagerSigGM = formData.opMan_signature;
+                }
+                
+                if ((!opsManagerCommentsGM || !opsManagerSigGM) && submissionData && submissionData.form_data) {
+                  let checkFormData = submissionData.form_data;
+                  if (typeof checkFormData === 'string') {
+                    try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                  }
+                  if (checkFormData) {
+                    if (!opsManagerCommentsGM && checkFormData.operations_manager_comments) opsManagerCommentsGM = checkFormData.operations_manager_comments;
+                    if (!opsManagerSigGM) {
+                      if (checkFormData.operations_manager_signature) opsManagerSigGM = checkFormData.operations_manager_signature;
+                      else if (checkFormData.opMan_signature) opsManagerSigGM = checkFormData.opMan_signature;
+                    }
+                  }
+                }
+                
+                if (!opsManagerCommentsGM && submissionData && submissionData.operations_manager_comments) {
+                  opsManagerCommentsGM = submissionData.operations_manager_comments;
+                }
+                
+                if (opsManagerCommentsGM || opsManagerSigGM) {
+                  hasAnyData = true;
+                  const section = document.getElementById('opsManagerReadOnlyGM');
+                  if (section) {
+                    section.style.display = 'block';
+                    
+                    const commentsDiv = document.getElementById('opsManagerCommentsReadOnlyGM');
+                    if (commentsDiv) {
+                      if (opsManagerCommentsGM) commentsDiv.textContent = opsManagerCommentsGM;
+                      else {
+                        commentsDiv.textContent = 'No comments provided';
+                        commentsDiv.style.fontStyle = 'italic';
+                        commentsDiv.style.color = '#9ca3af';
+                      }
+                    }
+                    
+                    displaySignatureInContainer('opsManagerSignatureReadOnlyGM', opsManagerSigGM, 'Operations Manager Signature');
+                  }
+                }
+                
+                // Business Development
+                let bdCommentsGM = null;
+                let bdSigGM = null;
+                
+                if (formData) {
+                  if (formData.business_dev_comments) bdCommentsGM = formData.business_dev_comments;
+                  if (formData.business_dev_signature) bdSigGM = formData.business_dev_signature;
+                }
+                
+                if ((!bdCommentsGM || !bdSigGM) && submissionData && submissionData.form_data) {
+                  let checkFormData = submissionData.form_data;
+                  if (typeof checkFormData === 'string') {
+                    try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                  }
+                  if (checkFormData) {
+                    if (!bdCommentsGM && checkFormData.business_dev_comments) bdCommentsGM = checkFormData.business_dev_comments;
+                    if (!bdSigGM && checkFormData.business_dev_signature) bdSigGM = checkFormData.business_dev_signature;
+                  }
+                }
+                
+                if (!bdCommentsGM && submissionData && submissionData.business_dev_comments) {
+                  bdCommentsGM = submissionData.business_dev_comments;
+                }
+                
+                if (bdCommentsGM || bdSigGM) {
+                  hasAnyData = true;
+                  const section = document.getElementById('bdReadOnlyGM');
+                  if (section) {
+                    section.style.display = 'block';
+                    
+                    const commentsDiv = document.getElementById('bdCommentsReadOnlyGM');
+                    if (commentsDiv) {
+                      if (bdCommentsGM) commentsDiv.textContent = bdCommentsGM;
+                      else {
+                        commentsDiv.textContent = 'No comments provided';
+                        commentsDiv.style.fontStyle = 'italic';
+                        commentsDiv.style.color = '#9ca3af';
+                      }
+                    }
+                    
+                    displaySignatureInContainer('bdSignatureReadOnlyGM', bdSigGM, 'Business Development Signature');
+                  }
+                }
+                
+                // Procurement
+                let procurementCommentsGM = null;
+                let procurementSigGM = null;
+                
+                if (formData) {
+                  if (formData.procurement_comments) procurementCommentsGM = formData.procurement_comments;
+                  if (formData.procurement_signature) procurementSigGM = formData.procurement_signature;
+                }
+                
+                if ((!procurementCommentsGM || !procurementSigGM) && submissionData && submissionData.form_data) {
+                  let checkFormData = submissionData.form_data;
+                  if (typeof checkFormData === 'string') {
+                    try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                  }
+                  if (checkFormData) {
+                    if (!procurementCommentsGM && checkFormData.procurement_comments) procurementCommentsGM = checkFormData.procurement_comments;
+                    if (!procurementSigGM && checkFormData.procurement_signature) procurementSigGM = checkFormData.procurement_signature;
+                  }
+                }
+                
+                if (!procurementCommentsGM && submissionData && submissionData.procurement_comments) {
+                  procurementCommentsGM = submissionData.procurement_comments;
+                }
+                
+                if (procurementCommentsGM || procurementSigGM) {
+                  hasAnyData = true;
+                  const section = document.getElementById('procurementReadOnlyGM');
+                  if (section) {
+                    section.style.display = 'block';
+                    
+                    const commentsDiv = document.getElementById('procurementCommentsReadOnlyGM');
+                    if (commentsDiv) {
+                      if (procurementCommentsGM) commentsDiv.textContent = procurementCommentsGM;
+                      else {
+                        commentsDiv.textContent = 'No comments provided';
+                        commentsDiv.style.fontStyle = 'italic';
+                        commentsDiv.style.color = '#9ca3af';
+                      }
+                    }
+                    
+                    displaySignatureInContainer('procurementSignatureReadOnlyGM', procurementSigGM, 'Procurement Signature');
+                  }
+                }
+                
+                if (prevSection && hasAnyData) {
+                  prevSection.style.display = 'block';
+                }
+                
+                // Load General Manager comments
+                let generalManagerComments = null;
+                if (formData && formData.general_manager_comments) {
+                  generalManagerComments = formData.general_manager_comments;
+                } else if (submissionData && submissionData.form_data && submissionData.form_data.general_manager_comments) {
+                  generalManagerComments = submissionData.form_data.general_manager_comments;
+                } else if (submissionData && submissionData.general_manager_comments) {
+                  generalManagerComments = submissionData.general_manager_comments;
+                }
+                
+                if (generalManagerComments) {
+                  const commentsField = document.getElementById('generalManagerComments');
+                  if (commentsField) {
+                    commentsField.value = generalManagerComments;
+                    console.log('✅ Loaded General Manager comments into field');
+                  }
+                }
+                {% endif %}
                 
                 // Load all previous reviewers' data for Admin (read-only) - shows ALL reviewers
                 {% if user and user.role == 'admin' %}
@@ -3099,6 +3727,26 @@
                 const results = jobData.results || jobData.result_data || {};
                 
                 if (isDone) {
+                    // Show workflow progression message for supervisor submissions
+                    {% if user_designation == 'supervisor' %}
+                    loadingOverlay.style.display = 'none';
+                    statusDiv.className = 'alert alert-success';
+                    statusDiv.innerHTML = `
+                      <h5 class="alert-heading">✅ Form Signed Successfully!</h5>
+                      <hr>
+                      <p class="mb-2"><strong>This form will now be sent to:</strong></p>
+                      <ul class="mb-0" style="list-style-position: inside;">
+                        <li>→ Operations Manager</li>
+                        <li>→ Business Development & Procurement (parallel review)</li>
+                        <li>→ General Manager (final approval)</li>
+                      </ul>
+                      <hr class="mt-3 mb-2">
+                      <a href="/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
+                    `;
+                    statusDiv.classList.remove('d-none');
+                    clearDraft();
+                    {% else %}
+                    // For non-supervisors, show download links
                     const excelUrl = results.excel || results.excel_url || '';
                     const pdfUrl = results.pdf || results.pdf_url || '';
                     const excelFilename = results.excel_filename || 'cleaning_report.xlsx';
@@ -3130,6 +3778,7 @@
                     
                     // Clear status div since message is now in download container
                     statusDiv.classList.add('d-none');
+                    {% endif %}
                 } else if (isFailed) {
                     statusDiv.className = 'alert alert-danger';
                     statusDiv.textContent = "❌ Failed: " + (results.error || jobData.error_message || 'Unknown');
