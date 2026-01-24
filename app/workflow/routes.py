@@ -8,11 +8,69 @@ Stage 4: General Manager (final approval)
 from flask import Blueprint, request, jsonify, current_app, render_template
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import or_, and_
+from sqlalchemy.orm.attributes import flag_modified
 from app.models import db, User, Submission, AuditLog
 from common.error_responses import error_response, success_response
 from datetime import datetime
+import copy
 
 workflow_bp = Blueprint('workflow_bp', __name__, url_prefix='/api/workflow')
+
+
+def _ensure_items_photos(form_data):
+    """Convert photo_urls to photos for items/work_items (HVAC/Civil). Mutates form_data in place."""
+    if not isinstance(form_data, dict):
+        return
+    for key in ('items', 'work_items'):
+        items = form_data.get(key)
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if 'photo_urls' in item and isinstance(item['photo_urls'], list):
+                item['photos'] = [{"saved": None, "path": None, "url": u, "is_cloud": True} for u in item['photo_urls'] if u]
+            elif 'photos' not in item or not item.get('photos'):
+                item['photos'] = []
+
+
+def _merge_items_with_photos(existing_list, payload_list, key='work_items'):
+    """
+    Merge existing items with payload items: combine photo_urls, prefer payload for other fields.
+    Preserves previously submitted form data (old images, etc.) and adds updates.
+    """
+    if not isinstance(existing_list, list):
+        existing_list = []
+    if not isinstance(payload_list, list):
+        payload_list = []
+    existing_list = [dict(x) for x in existing_list]
+    payload_list = [dict(x) for x in payload_list]
+    n = max(len(existing_list), len(payload_list))
+    merged = []
+    for i in range(n):
+        base = existing_list[i] if i < len(existing_list) else {}
+        upd = payload_list[i] if i < len(payload_list) else {}
+        item = dict(base)
+        item.update(upd)
+        # Combine photo_urls from both (existing + new), dedupe
+        existing_urls = []
+        if base.get('photo_urls') and isinstance(base['photo_urls'], list):
+            existing_urls = [u for u in base['photo_urls'] if u]
+        if base.get('photos') and isinstance(base['photos'], list):
+            for p in base['photos']:
+                u = p.get('url') if isinstance(p, dict) else (p if isinstance(p, str) else None)
+                if u and u not in existing_urls:
+                    existing_urls.append(u)
+        new_urls = []
+        if upd.get('photo_urls') and isinstance(upd['photo_urls'], list):
+            new_urls = [u for u in upd['photo_urls'] if u]
+        if upd.get('photos') and isinstance(upd['photos'], list):
+            for p in upd['photos']:
+                u = p.get('url') if isinstance(p, dict) else (p if isinstance(p, str) else None)
+                if u and u not in new_urls:
+                    new_urls.append(u)
+        all_urls = list(dict.fromkeys(existing_urls + new_urls))
+        item['photo_urls'] = all_urls
+        merged.append(item)
+    return merged
 
 
 def get_module_functions(module_type):
@@ -183,22 +241,58 @@ def can_edit_submission(user, submission):
         return False
     
     # Operations Manager can edit during their review stage
+    # Allow if status is operations_manager_review, OR if OM is assigned but hasn't approved yet
+    # Also allow OM to re-edit after approval (like supervisor resubmissions)
     if designation == 'operations_manager':
-        return status == 'operations_manager_review'
+        # Primary case: Status is at OM review stage
+        if status == 'operations_manager_review':
+            current_app.logger.info(f"✅ OM {user.id} can edit submission {submission.submission_id} - status is operations_manager_review")
+            return True
+        
+        # Secondary case: OM is assigned to this submission and hasn't approved yet
+        if hasattr(submission, 'operations_manager_id') and submission.operations_manager_id == user.id:
+            if not submission.operations_manager_approved_at:
+                current_app.logger.info(f"✅ OM {user.id} can edit submission {submission.submission_id} - assigned and not yet approved")
+                return True
+            # Allow OM to re-edit their own reviewed submissions (even after approval)
+            # This allows OM to update comments/signature like supervisors can resubmit
+            current_app.logger.info(f"✅ OM {user.id} can edit submission {submission.submission_id} - assigned OM can re-edit")
+            return True
+        
+        # Tertiary case: Status is at later stages but OM wants to review/edit from history
+        # Allow OM to access any submission that has passed through OM review stage
+        if status in ['bd_procurement_review', 'general_manager_review', 'completed']:
+            current_app.logger.info(f"✅ OM {user.id} can edit submission {submission.submission_id} - OM can review completed submissions")
+            return True
+        
+        current_app.logger.warning(f"❌ OM {user.id} cannot edit submission {submission.submission_id} - status: {status}, assigned: {getattr(submission, 'operations_manager_id', None)}, approved: {getattr(submission, 'operations_manager_approved_at', None)}")
+        return False
     
     # Business Development can edit during BD/Procurement review stage
-    # Allow editing if status is bd_procurement_review (even after approval, to allow comment/signature updates)
+    # Also allow BD to re-edit after approval or in later stages
     if designation == 'business_development':
-        return status == 'bd_procurement_review'
+        if status == 'bd_procurement_review':
+            return True
+        # Allow BD to edit at later stages (GM review, completed)
+        if status in ['general_manager_review', 'completed']:
+            return True
+        return False
     
     # Procurement can edit during BD/Procurement review stage
-    # Allow editing if status is bd_procurement_review (even after approval, to allow comment/signature updates)
+    # Also allow Procurement to re-edit after approval or in later stages
     if designation == 'procurement':
-        return status == 'bd_procurement_review'
+        if status == 'bd_procurement_review':
+            return True
+        # Allow Procurement to edit at later stages (GM review, completed)
+        if status in ['general_manager_review', 'completed']:
+            return True
+        return False
     
-    # General Manager can edit during their review stage
+    # General Manager can edit during their review stage and after completion
     if designation == 'general_manager':
-        return status == 'general_manager_review'
+        if status in ['general_manager_review', 'completed']:
+            return True
+        return False
     
     return False
 
@@ -373,17 +467,30 @@ def get_history_submissions():
                 om_has_approved = bool(submission.operations_manager_approved_at or submission.operations_manager_id)
                 om_comments = submission.operations_manager_comments
                 om_sig = form_data.get('operations_manager_signature') or form_data.get('opMan_signature') if isinstance(form_data, dict) else None
+                
+                # Log for debugging
+                current_app.logger.info(f"📋 Review history - OM data for submission {submission.submission_id}:")
+                current_app.logger.info(f"  - om_has_approved: {om_has_approved}")
+                current_app.logger.info(f"  - om_comments from model: {bool(om_comments)} ({len(str(om_comments)) if om_comments else 0} chars)")
+                current_app.logger.info(f"  - om_sig from form_data: {bool(om_sig)} (type: {type(om_sig).__name__ if om_sig else 'None'})")
+                current_app.logger.info(f"  - form_data type: {type(form_data)}")
+                if isinstance(form_data, dict):
+                    current_app.logger.info(f"  - form_data keys: {list(form_data.keys())[:15]}")
+                
                 om_sig_url = None
                 if om_sig:
                     om_sig_url = om_sig.get('url') if isinstance(om_sig, dict) and om_sig.get('url') else (om_sig if isinstance(om_sig, str) and (om_sig.startswith('http') or om_sig.startswith('/') or om_sig.startswith('data:')) else None)
                 
                 if om_has_approved or om_comments or om_sig_url:
+                    current_app.logger.info(f"  ✅ Adding OM to reviewers list")
                     reviewers.append({
                         'role': 'Operations Manager',
                         'comments': om_comments,
                         'signature_url': om_sig_url,
                         'approved_at': submission.operations_manager_approved_at.isoformat() if submission.operations_manager_approved_at else None
                     })
+                else:
+                    current_app.logger.warning(f"  ⚠️ OM data not sufficient to add to reviewers list")
                 
                 # Business Development
                 bd_has_approved = bool(submission.business_dev_approved_at or submission.business_dev_id)
@@ -741,16 +848,18 @@ def approve_supervisor_resubmission(submission_id):
         verified = data.get('verified', False)
         form_data_updates = data.get('form_data', {})
         
-        # Update form_data
-        form_data = submission.form_data if submission.form_data else {}
-        if isinstance(form_data, str):
+        # Update form_data - use a copy to avoid mutating ORM-held dict (SQLAlchemy JSON)
+        _raw = submission.form_data if submission.form_data else {}
+        if isinstance(_raw, str):
             try:
                 import json
-                form_data = json.loads(form_data)
-            except:
+                form_data = json.loads(_raw)
+            except Exception:
                 form_data = {}
+        else:
+            form_data = copy.deepcopy(_raw) if isinstance(_raw, dict) else {}
         
-        # Preserve existing reviewer data (OM, BD, PO, GM) before updating
+        # Preserve existing reviewer data (OM, BD, PO, GM) and work_items/items before updating
         existing_om_comments = form_data.get('operations_manager_comments')
         existing_om_signature = form_data.get('operations_manager_signature') or form_data.get('opMan_signature')
         existing_bd_comments = form_data.get('business_dev_comments')
@@ -759,10 +868,33 @@ def approve_supervisor_resubmission(submission_id):
         existing_procurement_signature = form_data.get('procurement_signature')
         existing_gm_comments = form_data.get('general_manager_comments')
         existing_gm_signature = form_data.get('general_manager_signature')
+        existing_work_items = form_data.get('work_items')
+        existing_items = form_data.get('items')
         
         # Update with new form_data
         if form_data_updates:
             form_data.update(form_data_updates)
+        
+        # Merge work_items / items: keep previously submitted form + updates (old images + new)
+        if existing_work_items is not None or form_data.get('work_items'):
+            merged_wi = _merge_items_with_photos(
+                existing_work_items or [],
+                form_data.get('work_items') or [],
+                'work_items'
+            )
+            form_data['work_items'] = merged_wi
+            current_app.logger.info(f"✅ Merged work_items for supervisor resubmission: {len(merged_wi)} items")
+        if existing_items is not None or form_data.get('items'):
+            merged_items = _merge_items_with_photos(
+                existing_items or [],
+                form_data.get('items') or [],
+                'items'
+            )
+            form_data['items'] = merged_items
+            current_app.logger.info(f"✅ Merged items (HVAC) for supervisor resubmission: {len(merged_items)} items")
+        
+        # Ensure photo_urls → photos for generators
+        _ensure_items_photos(form_data)
         
         # Update supervisor data
         if comments:
@@ -822,6 +954,7 @@ def approve_supervisor_resubmission(submission_id):
             submission.workflow_status = 'submitted'
         
         submission.updated_at = datetime.utcnow()
+        flag_modified(submission, 'form_data')
         db.session.commit()
         
         # Regenerate PDF and Excel documents with updated data
@@ -912,39 +1045,79 @@ def approve_operations_manager(submission_id):
             current_app.logger.info(f"  - Signature preview: {str(signature)[:50]}...")
         current_app.logger.info(f"  - form_data_updates keys: {list(form_data_updates.keys())[:20] if form_data_updates else 'none'}")
         
+        # Log form_data_updates for OM signature debugging
+        if form_data_updates:
+            if form_data_updates.get('operations_manager_signature'):
+                current_app.logger.info(f"✅ Found operations_manager_signature in form_data_updates (type: {type(form_data_updates.get('operations_manager_signature')).__name__})")
+            if form_data_updates.get('opMan_signature'):
+                current_app.logger.info(f"✅ Found opMan_signature in form_data_updates (type: {type(form_data_updates.get('opMan_signature')).__name__})")
+        
         # Check if signature is in form_data_updates (might be sent there instead of top-level)
         if not signature or not signature.strip():
             if form_data_updates.get('opMan_signature'):
                 signature = form_data_updates.get('opMan_signature')
-                current_app.logger.info(f"✅ Found Operations Manager signature in form_data_updates.opMan_signature")
+                current_app.logger.info(f"✅ Using Operations Manager signature from form_data_updates.opMan_signature")
             elif form_data_updates.get('operations_manager_signature'):
                 signature = form_data_updates.get('operations_manager_signature')
-                current_app.logger.info(f"✅ Found Operations Manager signature in form_data_updates.operations_manager_signature")
+                current_app.logger.info(f"✅ Using Operations Manager signature from form_data_updates.operations_manager_signature")
         
-        # Update submission
+        # Update submission model fields
         submission.operations_manager_id = user.id
         submission.operations_manager_comments = comments
         submission.operations_manager_approved_at = datetime.utcnow()
+        
+        # Log what we're saving to model fields
+        current_app.logger.info(f"💾 Saving OM data to model fields:")
+        current_app.logger.info(f"  - operations_manager_id: {user.id}")
+        current_app.logger.info(f"  - operations_manager_comments: {comments[:80] if comments else 'None'}")
+        current_app.logger.info(f"  - operations_manager_approved_at: {datetime.utcnow()}")
+        
         submission.workflow_status = 'operations_manager_approved'
         
-        # Update form_data if provided - but preserve existing Operations Manager data
-        form_data = submission.form_data if submission.form_data else {}
-        if isinstance(form_data, str):
+        # Update form_data if provided - use a copy to avoid mutating ORM-held dict (SQLAlchemy JSON)
+        _raw = submission.form_data if submission.form_data else {}
+        if isinstance(_raw, str):
             try:
                 import json
-                form_data = json.loads(form_data)
-            except:
+                form_data = json.loads(_raw)
+            except Exception:
                 form_data = {}
+        else:
+            form_data = copy.deepcopy(_raw) if isinstance(_raw, dict) else {}
         
         # Preserve existing Operations Manager data before updating (in case form_data_updates overwrites it)
         existing_om_comments = form_data.get('operations_manager_comments')
         existing_om_signature = form_data.get('operations_manager_signature') or form_data.get('opMan_signature')
         
+        # Check if OM data is in form_data_updates (from payload)
+        om_comments_in_payload = form_data_updates.get('operations_manager_comments') if form_data_updates else None
+        om_sig_in_payload = form_data_updates.get('operations_manager_signature') or form_data_updates.get('opMan_signature') if form_data_updates else None
+        
         if form_data_updates:
-            # Merge form_data_updates, but don't overwrite Operations Manager data if it already exists
-            # (unless new data is being provided)
+            # Merge form_data_updates
             form_data.update(form_data_updates)
             current_app.logger.info(f"✅ Updated form_data with form_data_updates for submission {submission_id}")
+            if om_comments_in_payload:
+                current_app.logger.info(f"✅ Operations Manager comments found in payload: {len(str(om_comments_in_payload))} chars")
+            if om_sig_in_payload:
+                current_app.logger.info(f"✅ Operations Manager signature found in payload: {type(om_sig_in_payload).__name__}")
+        
+        # CRITICAL: Ensure OM data from payload is saved (if OM is submitting)
+        # This handles the case where OM data is in form_data_updates but might be lost
+        if om_comments_in_payload:
+            form_data['operations_manager_comments'] = om_comments_in_payload
+            current_app.logger.info(f"✅ Saved Operations Manager comments from payload to form_data")
+        elif existing_om_comments:
+            form_data['operations_manager_comments'] = existing_om_comments
+        
+        if om_sig_in_payload:
+            form_data['operations_manager_signature'] = om_sig_in_payload
+            form_data['opMan_signature'] = om_sig_in_payload
+            current_app.logger.info(f"✅ Saved Operations Manager signature from payload to form_data")
+        elif existing_om_signature:
+            form_data['operations_manager_signature'] = existing_om_signature
+            if 'opMan_signature' not in form_data:
+                form_data['opMan_signature'] = existing_om_signature
         
         # Always save Operations Manager comments to form_data for next reviewers
         # Use new comments if provided, otherwise preserve existing
@@ -966,40 +1139,56 @@ def approve_operations_manager(submission_id):
                 fname, fpath, url = save_sig_fn(signature, UPLOADS_DIR, prefix="opman_sig")
                 if url:
                     # Save as object format for consistency with other signatures
-                    form_data['operations_manager_signature'] = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
+                    sig_obj = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
+                    form_data['operations_manager_signature'] = sig_obj
+                    form_data['opMan_signature'] = sig_obj  # Also save with alternate key
                     current_app.logger.info(f"✅ Operations Manager signature uploaded and saved to form_data (URL: {url[:80]}...)")
+                    current_app.logger.info(f"✅ Set both operations_manager_signature and opMan_signature keys")
                 else:
                     # Upload failed, save as data URL string as fallback
                     form_data['operations_manager_signature'] = signature
+                    form_data['opMan_signature'] = signature
                     current_app.logger.warning(f"⚠️ Operations Manager signature upload failed, saving as data URL for submission {submission_id}")
+                    current_app.logger.warning(f"Set both keys with data URL fallback")
             except Exception as e:
                 current_app.logger.error(f"❌ Error uploading Operations Manager signature: {e}")
                 import traceback
                 current_app.logger.error(traceback.format_exc())
                 # Fallback: save as data URL string
                 form_data['operations_manager_signature'] = signature
+                form_data['opMan_signature'] = signature
                 current_app.logger.warning(f"⚠️ Saving Operations Manager signature as data URL due to upload error")
+                current_app.logger.warning(f"Set both keys due to error")
         elif signature and signature.strip():
             # Signature is already a URL or object format
             # Handle both string URLs and object formats
             if isinstance(signature, dict):
                 form_data['operations_manager_signature'] = signature
+                form_data['opMan_signature'] = signature
             elif isinstance(signature, str):
                 form_data['operations_manager_signature'] = signature
+                form_data['opMan_signature'] = signature
             current_app.logger.info(f"✅ Saved Operations Manager signature to form_data (already processed format)")
+            current_app.logger.info(f"✅ Set both operations_manager_signature and opMan_signature keys")
         elif existing_om_signature:
             # Preserve existing signature if no new one provided
             form_data['operations_manager_signature'] = existing_om_signature
+            form_data['opMan_signature'] = existing_om_signature  # Also set alternate key
             current_app.logger.info(f"✅ Preserved existing Operations Manager signature in form_data")
+            current_app.logger.info(f"✅ Set both operations_manager_signature and opMan_signature keys")
         else:
             current_app.logger.warning(f"⚠️ No Operations Manager signature provided for submission {submission_id}")
             current_app.logger.warning(f"  - signature value: {repr(signature) if signature else 'None'}")
             current_app.logger.warning(f"  - existing_om_signature: {repr(existing_om_signature) if existing_om_signature else 'None'}")
         
+        # Ensure work_items/items have photos for Civil/HVAC generators (payload sends photo_urls)
+        _ensure_items_photos(form_data)
+        
         # Log final form_data keys for debugging
         current_app.logger.info(f"🔍 Final form_data keys after Operations Manager approval: {list(form_data.keys())[:30]}")
-        current_app.logger.info(f"  - operations_manager_comments in form_data: {bool(form_data.get('operations_manager_comments'))}")
+        current_app.logger.info(f"  - operations_manager_comments in form_data: {bool(form_data.get('operations_manager_comments'))} (value: {repr(form_data.get('operations_manager_comments'))[:50] if form_data.get('operations_manager_comments') else 'None'})")
         current_app.logger.info(f"  - operations_manager_signature in form_data: {bool(form_data.get('operations_manager_signature'))}")
+        current_app.logger.info(f"  - opMan_signature in form_data: {bool(form_data.get('opMan_signature'))}")
         if form_data.get('operations_manager_signature'):
             sig_val = form_data.get('operations_manager_signature')
             if isinstance(sig_val, dict):
@@ -1007,13 +1196,40 @@ def approve_operations_manager(submission_id):
             else:
                 current_app.logger.info(f"  - operations_manager_signature type: {type(sig_val).__name__}, preview: {str(sig_val)[:80] if sig_val else 'N/A'}")
         
+        # CRITICAL: Verify comments and signature are actually set before committing
+        if not form_data.get('operations_manager_comments'):
+            current_app.logger.error(f"❌ CRITICAL: operations_manager_comments is NOT in form_data before commit!")
+            current_app.logger.error(f"  - comments variable: {repr(comments)[:100]}")
+            current_app.logger.error(f"  - existing_om_comments: {repr(existing_om_comments)[:100] if existing_om_comments else 'None'}")
+        if not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
+            current_app.logger.error(f"❌ CRITICAL: No OM signature keys in form_data before commit!")
+            current_app.logger.error(f"  - signature variable: {repr(signature)[:100]}")
+            current_app.logger.error(f"  - existing_om_signature: {repr(existing_om_signature)[:100] if existing_om_signature else 'None'}")
+        
         submission.form_data = form_data
+        flag_modified(submission, 'form_data')
         
         # Move to BD/Procurement review
         submission.workflow_status = 'bd_procurement_review'
         submission.updated_at = datetime.utcnow()
         
+        # Log final state before commit
+        current_app.logger.info(f"💾 About to commit to database:")
+        current_app.logger.info(f"  - Model operations_manager_comments: {bool(submission.operations_manager_comments)} ({len(submission.operations_manager_comments) if submission.operations_manager_comments else 0} chars)")
+        current_app.logger.info(f"  - form_data operations_manager_comments: {bool(form_data.get('operations_manager_comments'))}")
+        current_app.logger.info(f"  - form_data operations_manager_signature: {bool(form_data.get('operations_manager_signature'))}")
+        current_app.logger.info(f"  - flag_modified called: True")
+        
         db.session.commit()
+        
+        # Verify after commit
+        db.session.refresh(submission)
+        current_app.logger.info(f"✅ Committed to database. Verifying:")
+        current_app.logger.info(f"  - Model operations_manager_comments after commit: {bool(submission.operations_manager_comments)}")
+        current_app.logger.info(f"  - form_data type after commit: {type(submission.form_data)}")
+        if isinstance(submission.form_data, dict):
+            current_app.logger.info(f"  - form_data operations_manager_comments after commit: {bool(submission.form_data.get('operations_manager_comments'))}")
+            current_app.logger.info(f"  - form_data operations_manager_signature after commit: {bool(submission.form_data.get('operations_manager_signature'))}")
         
         # Regenerate documents for all modules (to include Operations Manager comments/signature)
         # This ensures Supervisor and all subsequent reviewers see the updated form with OM's changes
@@ -1094,26 +1310,46 @@ def approve_business_development(submission_id):
             return error_response('Already approved', 
                                 status_code=400, error_code='ALREADY_APPROVED')
         
-        # Extract data
         comments = data.get('comments', '')
         signature = data.get('signature', '')
         form_data_updates = data.get('form_data', {})
+        
+        # Log incoming data for debugging
+        current_app.logger.info(f"🔍 Business Development approval request for submission {submission_id}:")
+        current_app.logger.info(f"  - Comments provided: {bool(comments and comments.strip())} (length: {len(comments) if comments else 0})")
+        current_app.logger.info(f"  - Signature provided: {bool(signature and signature.strip())} (type: {type(signature).__name__}, length: {len(str(signature)) if signature else 0})")
+        current_app.logger.info(f"  - form_data_updates keys: {list(form_data_updates.keys())[:20] if form_data_updates else 'none'}")
+        
+        # Check if signature or comments are in form_data_updates
+        if not signature or not str(signature).strip():
+            signature = form_data_updates.get('business_dev_signature') or form_data_updates.get('businessDevSignature') or ''
+            if signature:
+                current_app.logger.info(f"✅ Using BD signature from form_data_updates")
+        if not comments or not str(comments).strip():
+            comments = form_data_updates.get('business_dev_comments') or form_data_updates.get('businessDevComments') or ''
+            if comments:
+                current_app.logger.info(f"✅ Using BD comments from form_data_updates")
+        
+        if not signature:
+            signature = ''
+        if not comments:
+            comments = ''
         
         # Update submission
         submission.business_dev_id = user.id
         submission.business_dev_comments = comments
         submission.business_dev_approved_at = datetime.utcnow()
         
-        # Update form_data if provided - but preserve Operations Manager and other reviewer data
-        form_data = submission.form_data if submission.form_data else {}
-        if isinstance(form_data, str):
+        _raw = submission.form_data if submission.form_data else {}
+        if isinstance(_raw, str):
             try:
                 import json
-                form_data = json.loads(form_data)
-            except:
+                form_data = json.loads(_raw)
+            except Exception:
                 form_data = {}
+        else:
+            form_data = copy.deepcopy(_raw) if isinstance(_raw, dict) else {}
         
-        # CRITICAL: Preserve Operations Manager data before updating (BD's form_data_updates might not include it)
         existing_om_comments = form_data.get('operations_manager_comments')
         existing_om_signature = form_data.get('operations_manager_signature') or form_data.get('opMan_signature')
         current_app.logger.info(f"🔍 BD Approval: Preserving Operations Manager data before update:")
@@ -1176,6 +1412,7 @@ def approve_business_development(submission_id):
         current_app.logger.info(f"  - business_dev_signature: {bool(form_data.get('business_dev_signature'))}")
         
         submission.form_data = form_data
+        flag_modified(submission, 'form_data')
         
         # Check if both BD and Procurement have approved
         if submission.procurement_approved_at:
@@ -1262,26 +1499,29 @@ def approve_procurement(submission_id):
             return error_response('Already approved', 
                                 status_code=400, error_code='ALREADY_APPROVED')
         
-        # Extract data
         comments = data.get('comments', '')
         signature = data.get('signature', '')
         form_data_updates = data.get('form_data', {})
+        if not signature or not str(signature).strip():
+            signature = form_data_updates.get('procurement_signature') or form_data_updates.get('procurementSignature') or ''
+        if not signature:
+            signature = ''
         
         # Update submission
         submission.procurement_id = user.id
         submission.procurement_comments = comments
         submission.procurement_approved_at = datetime.utcnow()
         
-        # Update form_data if provided - but preserve Operations Manager and Business Development data
-        form_data = submission.form_data if submission.form_data else {}
-        if isinstance(form_data, str):
+        _raw = submission.form_data if submission.form_data else {}
+        if isinstance(_raw, str):
             try:
                 import json
-                form_data = json.loads(form_data)
-            except:
+                form_data = json.loads(_raw)
+            except Exception:
                 form_data = {}
+        else:
+            form_data = copy.deepcopy(_raw) if isinstance(_raw, dict) else {}
         
-        # CRITICAL: Preserve Operations Manager and Business Development data before updating
         existing_om_comments = form_data.get('operations_manager_comments')
         existing_om_signature = form_data.get('operations_manager_signature') or form_data.get('opMan_signature')
         existing_bd_comments = form_data.get('business_dev_comments')
@@ -1347,6 +1587,7 @@ def approve_procurement(submission_id):
         current_app.logger.info(f"  - procurement_signature: {bool(form_data.get('procurement_signature'))}")
         
         submission.form_data = form_data
+        flag_modified(submission, 'form_data')
         
         # Check if both BD and Procurement have approved
         if submission.business_dev_approved_at:
@@ -1429,10 +1670,13 @@ def approve_general_manager(submission_id):
             return error_response('Submission is not at General Manager review stage', 
                                 status_code=400, error_code='INVALID_STATUS')
         
-        # Extract data
         comments = data.get('comments', '')
         signature = data.get('signature', '')
         form_data_updates = data.get('form_data', {})
+        if not signature or not str(signature).strip():
+            signature = form_data_updates.get('general_manager_signature') or form_data_updates.get('generalManagerSignature') or ''
+        if not signature:
+            signature = ''
         
         # Update submission
         submission.general_manager_id = user.id
@@ -1441,16 +1685,16 @@ def approve_general_manager(submission_id):
         submission.workflow_status = 'completed'
         submission.status = 'completed'
         
-        # Update form_data if provided - but preserve Operations Manager and other reviewer data
-        form_data = submission.form_data if submission.form_data else {}
-        if isinstance(form_data, str):
+        _raw = submission.form_data if submission.form_data else {}
+        if isinstance(_raw, str):
             try:
                 import json
-                form_data = json.loads(form_data)
-            except:
+                form_data = json.loads(_raw)
+            except Exception:
                 form_data = {}
+        else:
+            form_data = copy.deepcopy(_raw) if isinstance(_raw, dict) else {}
         
-        # CRITICAL: Preserve all reviewer data before updating (OM, BD, Procurement)
         existing_om_comments = form_data.get('operations_manager_comments')
         existing_om_signature = form_data.get('operations_manager_signature') or form_data.get('opMan_signature')
         existing_bd_comments = form_data.get('business_dev_comments')
@@ -1531,6 +1775,7 @@ def approve_general_manager(submission_id):
         current_app.logger.info(f"  - general_manager_signature: {bool(form_data.get('general_manager_signature'))}")
         
         submission.form_data = form_data
+        flag_modified(submission, 'form_data')
         submission.updated_at = datetime.utcnow()
         db.session.commit()
         
@@ -1651,9 +1896,21 @@ def update_submission(submission_id):
         if not submission:
             return error_response('Submission not found', status_code=404, error_code='NOT_FOUND')
         
+        # Log permission check details for debugging
+        current_app.logger.info(f"🔍 UPDATE permission check for submission {submission_id}:")
+        current_app.logger.info(f"  - User: {user.id} ({user.username})")
+        current_app.logger.info(f"  - User designation: {user.designation}")
+        current_app.logger.info(f"  - User role: {user.role}")
+        current_app.logger.info(f"  - Submission status: {submission.workflow_status}")
+        current_app.logger.info(f"  - Assigned OM: {getattr(submission, 'operations_manager_id', None)}")
+        current_app.logger.info(f"  - OM approved at: {getattr(submission, 'operations_manager_approved_at', None)}")
+        
         if not can_edit_submission(user, submission):
+            current_app.logger.error(f"❌ Permission denied for user {user.id} ({user.designation}) to edit submission {submission_id}")
             return error_response('You do not have permission to edit this submission', 
                                 status_code=403, error_code='UNAUTHORIZED')
+        
+        current_app.logger.info(f"✅ Permission granted for user {user.id} ({user.designation}) to edit submission {submission_id}")
         
         # Check if supervisor is updating their own submission
         # Allow updates if status is submitted/rejected OR if in operations_manager_review but not yet approved
@@ -1670,13 +1927,15 @@ def update_submission(submission_id):
         # Update form_data - accept full form_data or updates
         if 'form_data' in data:
             # Get existing form_data to preserve Operations Manager and other reviewer data
-            existing_form_data = submission.form_data if submission.form_data else {}
-            if isinstance(existing_form_data, str):
+            _raw_existing = submission.form_data if submission.form_data else {}
+            if isinstance(_raw_existing, str):
                 try:
                     import json
-                    existing_form_data = json.loads(existing_form_data)
-                except:
+                    existing_form_data = json.loads(_raw_existing)
+                except Exception:
                     existing_form_data = {}
+            else:
+                existing_form_data = copy.deepcopy(_raw_existing) if isinstance(_raw_existing, dict) else {}
             
             # CRITICAL: Preserve all reviewer data before update (OM, BD, Procurement, Supervisor)
             existing_om_comments = existing_form_data.get('operations_manager_comments')
@@ -1687,19 +1946,66 @@ def update_submission(submission_id):
             existing_procurement_signature = existing_form_data.get('procurement_signature')
             existing_supervisor_comments = existing_form_data.get('supervisor_comments')
             existing_supervisor_signature = existing_form_data.get('supervisor_signature')
+            existing_work_items = existing_form_data.get('work_items')
+            existing_items = existing_form_data.get('items')
             
             # If full form_data is provided, use it directly (like admin endpoint)
-            form_data = data['form_data'].copy() if isinstance(data['form_data'], dict) else data['form_data']
+            # Use deepcopy to avoid mutating the request data
+            incoming_form_data = data['form_data']
+            if isinstance(incoming_form_data, dict):
+                form_data = copy.deepcopy(incoming_form_data)
+            elif isinstance(incoming_form_data, str):
+                try:
+                    form_data = json.loads(incoming_form_data)
+                except Exception:
+                    form_data = {}
+            else:
+                form_data = {}
+            
+            # Supervisor own update: merge work_items/items so we keep previously submitted form + updates
+            if is_supervisor_own_update:
+                if existing_work_items is not None or form_data.get('work_items'):
+                    merged_wi = _merge_items_with_photos(
+                        existing_work_items or [],
+                        form_data.get('work_items') or [],
+                        'work_items'
+                    )
+                    form_data['work_items'] = merged_wi
+                    current_app.logger.info(f"✅ Merged work_items in update_submission for {submission_id}: {len(merged_wi)} items")
+                if existing_items is not None or form_data.get('items'):
+                    merged_items = _merge_items_with_photos(
+                        existing_items or [],
+                        form_data.get('items') or [],
+                        'items'
+                    )
+                    form_data['items'] = merged_items
+                    current_app.logger.info(f"✅ Merged items (HVAC) in update_submission for {submission_id}: {len(merged_items)} items")
             
             # Ensure all reviewer data is preserved if not in new form_data
+            # Also ensure current reviewer's data from payload is saved (for OM/BD/PO/GM submitting)
             if isinstance(form_data, dict):
-                # Preserve Operations Manager data
-                if existing_om_comments and not form_data.get('operations_manager_comments'):
-                    form_data['operations_manager_comments'] = existing_om_comments
-                    current_app.logger.info(f"✅ Preserved Operations Manager comments in update_submission for {submission_id}")
-                if existing_om_signature and not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
-                    form_data['operations_manager_signature'] = existing_om_signature
-                    current_app.logger.info(f"✅ Preserved Operations Manager signature in update_submission for {submission_id}")
+                # Operations Manager data: preserve existing OR use payload data (if OM is submitting)
+                if user.designation == 'operations_manager':
+                    # OM is submitting - ensure their data from payload is saved
+                    if form_data.get('operations_manager_comments'):
+                        current_app.logger.info(f"✅ Saving Operations Manager comments from payload in update_submission for {submission_id}")
+                    elif existing_om_comments:
+                        form_data['operations_manager_comments'] = existing_om_comments
+                        current_app.logger.info(f"✅ Preserved existing Operations Manager comments in update_submission for {submission_id}")
+                    
+                    if form_data.get('operations_manager_signature') or form_data.get('opMan_signature'):
+                        current_app.logger.info(f"✅ Saving Operations Manager signature from payload in update_submission for {submission_id}")
+                    elif existing_om_signature:
+                        form_data['operations_manager_signature'] = existing_om_signature
+                        current_app.logger.info(f"✅ Preserved existing Operations Manager signature in update_submission for {submission_id}")
+                else:
+                    # Not OM - preserve existing OM data if not in payload
+                    if existing_om_comments and not form_data.get('operations_manager_comments'):
+                        form_data['operations_manager_comments'] = existing_om_comments
+                        current_app.logger.info(f"✅ Preserved Operations Manager comments in update_submission for {submission_id}")
+                    if existing_om_signature and not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
+                        form_data['operations_manager_signature'] = existing_om_signature
+                        current_app.logger.info(f"✅ Preserved Operations Manager signature in update_submission for {submission_id}")
                 
                 # Preserve Business Development data
                 if existing_bd_comments and not form_data.get('business_dev_comments'):
@@ -1726,29 +2032,7 @@ def update_submission(submission_id):
                     form_data['supervisor_signature'] = existing_supervisor_signature
                     current_app.logger.info(f"✅ Preserved Supervisor signature in update_submission for {submission_id}")
             
-            # Convert photo_urls to photos format for PDF generator (if items are present)
-            if isinstance(form_data, dict) and 'items' in form_data and isinstance(form_data['items'], list):
-                items = form_data['items']
-                for item in items:
-                    # Convert photo_urls array to photos format expected by generators
-                    # Frontend sends photo_urls (array of strings), we need photos (array of objects)
-                    if 'photo_urls' in item and isinstance(item['photo_urls'], list):
-                        photos_saved = []
-                        for url in item['photo_urls']:
-                            if url:  # Only add non-empty URLs
-                                photos_saved.append({
-                                    "saved": None,
-                                    "path": None,
-                                    "url": url,
-                                    "is_cloud": True
-                                })
-                        # Set photos from photo_urls (frontend sends complete list)
-                        item['photos'] = photos_saved
-                    # If photos already exist but no photo_urls, keep photos as-is
-                    # This handles cases where items already have photos in correct format
-                    elif 'photos' not in item or not item.get('photos'):
-                        # No photos at all - initialize empty array
-                        item['photos'] = []
+            _ensure_items_photos(form_data)
             
             # If supervisor is updating their own submission, ensure signature is saved
             if is_supervisor_own_update and isinstance(form_data, dict):
@@ -1795,6 +2079,7 @@ def update_submission(submission_id):
                         current_app.logger.warning(f"⚠️ No supervisor signature found for submission {submission_id}")
             
             submission.form_data = form_data
+            flag_modified(submission, 'form_data')
         elif 'form_data_updates' in data:
             # Otherwise merge updates (backward compatibility)
             form_data_updates = data.get('form_data_updates', {})
@@ -1821,6 +2106,7 @@ def update_submission(submission_id):
                 current_app.logger.info(f"✅ Restored Operations Manager signature after form_data_updates merge for {submission_id}")
             
             submission.form_data = form_data
+            flag_modified(submission, 'form_data')
         
         # Update site_name and visit_date if provided
         if 'site_name' in data:

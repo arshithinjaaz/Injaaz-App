@@ -1273,8 +1273,27 @@
           </div>
         </div>
         
-        <!-- Operations Manager Review Section -->
-        <div class="col-12 mb-4">
+        <!-- OM's Own Previous Review (Read-only if already approved) -->
+        <div class="col-12 mb-4" id="omOwnReviewReadOnly" style="display: none;">
+          <div class="alert alert-success mb-3" style="background: #f0fdf4; border-color: #10b981;">
+            <strong>✓ Your Previous Review</strong>
+          </div>
+          <div class="row">
+            <div class="col-lg-7 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Your Comments</label>
+              <div id="omOwnCommentsReadOnly" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+            </div>
+            <div class="col-lg-5 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Your Signature</label>
+              <div id="omOwnSignatureReadOnly" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <span style="color: #9ca3af;">Loading signature...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Operations Manager Review Section (for new/pending approvals) -->
+        <div class="col-12 mb-4" id="omEditableSection">
           <div class="row">
             <div class="col-lg-7 mb-3">
               <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
@@ -1285,7 +1304,7 @@
               <div class="signature-container h-100 d-flex flex-column">
                 <div class="signature-label">
                   <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operations Manager Signature</label>
-                  <span class="signature-hint text-danger small">Required for approval</span>
+                  <span id="opManSignatureHint" class="signature-hint text-danger small">Required for approval</span>
                 </div>
                 <canvas id="opManSignaturePad" class="signature-pad"></canvas>
                 <input type="hidden" id="opManSignatureData" name="opMan_signature">
@@ -1297,10 +1316,27 @@
         {% endif %}
 
         {% if user_designation == 'business_development' and is_edit_mode %}
-        <!-- Previous Reviewers: Operations Manager + Procurement (Read-only for BD) -->
+        <!-- Previous Reviewers: Supervisor + Operations Manager + Procurement (Read-only for BD) -->
         <div class="col-12 mb-4" id="previousForBDSection" style="display: none;">
           <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
             <strong>Previous Reviews</strong>
+          </div>
+          
+          <!-- Supervisor -->
+          <div id="supervisorReadOnlyBD" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Supervisor Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
+                <div id="supervisorCommentsReadOnlyBD" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature</label>
+                <div id="supervisorSignatureReadOnlyBD" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
           </div>
           
           <!-- Operations Manager -->
@@ -1350,7 +1386,7 @@
               <div class="signature-container h-100 d-flex flex-column">
                 <div class="signature-label">
                   <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Business Development Signature</label>
-                  <span class="signature-hint text-danger small">Required for approval</span>
+                  <span id="bdSignatureHint" class="signature-hint text-danger small">Required for approval</span>
                 </div>
                 <canvas id="businessDevSignaturePad" class="signature-pad"></canvas>
                 <input type="hidden" id="businessDevSignatureData" name="business_dev_signature">
@@ -1362,10 +1398,27 @@
         {% endif %}
 
         {% if user_designation == 'procurement' and is_edit_mode %}
-        <!-- Previous Reviewers: Operations Manager + Business Development (Read-only for Procurement) -->
+        <!-- Previous Reviewers: Supervisor + Operations Manager + Business Development (Read-only for Procurement) -->
         <div class="col-12 mb-4" id="previousForProcurementSection" style="display: none;">
           <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
             <strong>Previous Reviews</strong>
+          </div>
+          
+          <!-- Supervisor -->
+          <div id="supervisorReadOnlyProc" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Supervisor Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
+                <div id="supervisorCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
+                <div id="supervisorSignatureReadOnlyProc" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
           </div>
           
           <!-- Operations Manager -->
@@ -1415,7 +1468,7 @@
               <div class="signature-container h-100 d-flex flex-column">
                 <div class="signature-label">
                   <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Procurement Signature</label>
-                  <span class="signature-hint text-danger small">Required for approval</span>
+                  <span id="procurementSignatureHint" class="signature-hint text-danger small">Required for approval</span>
                 </div>
                 <canvas id="procurementSignaturePad" class="signature-pad"></canvas>
                 <input type="hidden" id="procurementSignatureData" name="procurement_signature">
@@ -1427,10 +1480,27 @@
         {% endif %}
 
         {% if user_designation == 'general_manager' and is_edit_mode %}
-        <!-- Previous Reviewers: Operations Manager, BD, Procurement (Read-only for GM) -->
+        <!-- Previous Reviewers: Supervisor, Operations Manager, BD, Procurement (Read-only for GM) -->
         <div class="col-12 mb-4" id="previousReviewersReadOnlySection" style="display: none;">
           <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
             <strong>Previous Reviews</strong>
+          </div>
+          
+          <!-- Supervisor -->
+          <div id="supervisorReadOnlyGM" style="display: none; margin-bottom: 2rem;">
+            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Supervisor Review</h6>
+            <div class="row">
+              <div class="col-lg-7 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
+                <div id="supervisorCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-lg-5 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
+                <div id="supervisorSignatureReadOnlyGM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
           </div>
           
           <!-- Operations Manager -->
@@ -1497,7 +1567,7 @@
               <div class="signature-container h-100 d-flex flex-column">
                 <div class="signature-label">
                   <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">General Manager Signature</label>
-                  <span class="signature-hint text-danger small">Required for approval</span>
+                  <span id="gmSignatureHint" class="signature-hint text-danger small">Required for approval</span>
                 </div>
                 <canvas id="generalManagerSignaturePad" class="signature-pad"></canvas>
                 <input type="hidden" id="generalManagerSignatureData" name="general_manager_signature">
@@ -1695,6 +1765,7 @@
   </script>
 
   <script>
+    console.log('🔄🔄🔄 CIVIL FORM JAVASCRIPT LOADED - VERSION 2026-01-24 11:58 🔄🔄🔄');
     const modulePrefix = "{{ url_for('civil_bp.index') }}".replace('/form','');
     const MAX_PHOTOS = 100;
     const MAX_IMAGE_DIMENSION = 1280;
@@ -1820,6 +1891,14 @@
             businessDevPad.clear();
             const businessDevSigInput = document.getElementById('businessDevSignatureData');
             if (businessDevSigInput) businessDevSigInput.value = '';
+            
+            // Reset signature hint
+            const bdHint = document.getElementById('bdSignatureHint');
+            if (bdHint) {
+              bdHint.textContent = 'Required for approval';
+              bdHint.classList.remove('text-success');
+              bdHint.classList.add('text-danger');
+            }
           });
         }
       }
@@ -1830,6 +1909,14 @@
             procurementPad.clear();
             const procurementSigInput = document.getElementById('procurementSignatureData');
             if (procurementSigInput) procurementSigInput.value = '';
+            
+            // Reset signature hint
+            const procurementHint = document.getElementById('procurementSignatureHint');
+            if (procurementHint) {
+              procurementHint.textContent = 'Required for approval';
+              procurementHint.classList.remove('text-success');
+              procurementHint.classList.add('text-danger');
+            }
           });
         }
       }
@@ -1840,6 +1927,14 @@
             opPad.clear();
             const opSigInput = document.getElementById('opManSignatureData');
             if (opSigInput) opSigInput.value = '';
+            
+            // Reset signature hint back to "Required for approval"
+            const opManHint = document.getElementById('opManSignatureHint');
+            if (opManHint) {
+              opManHint.textContent = 'Required for approval';
+              opManHint.classList.remove('text-success');
+              opManHint.classList.add('text-danger');
+            }
           });
         }
       }
@@ -1850,6 +1945,14 @@
             generalManagerPad.clear();
             const generalManagerSigInput = document.getElementById('generalManagerSignatureData');
             if (generalManagerSigInput) generalManagerSigInput.value = '';
+            
+            // Reset signature hint
+            const gmHint = document.getElementById('gmSignatureHint');
+            if (gmHint) {
+              gmHint.textContent = 'Required for approval';
+              gmHint.classList.remove('text-success');
+              gmHint.classList.add('text-danger');
+            }
           });
         }
       }
@@ -2003,6 +2106,25 @@
         }, 100);
       }
 
+      // Helper function to format timestamp
+      function formatSigningTime(timestamp) {
+        if (!timestamp) return '';
+        try {
+          const date = new Date(timestamp);
+          const options = {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'Asia/Dubai'
+          };
+          return date.toLocaleString('en-US', options) + ' (GST)';
+        } catch (e) {
+          return '';
+        }
+      }
+      
       // Standard function to display signatures in read-only containers
       // This ensures all signatures are displayed consistently with proper aspect ratio
       function displaySignatureInContainer(containerId, signatureData, altText) {
@@ -2421,40 +2543,31 @@
                       console.log('📝 Image loaded, dimensions:', img.width, 'x', img.height);
                       console.log('📝 Canvas dimensions:', supervisorCanvas.width, 'x', supervisorCanvas.height);
                       
-                      // Create a temporary canvas to convert the image to data URL
-                      const tempCanvas = document.createElement('canvas');
-                      tempCanvas.width = supervisorCanvas.width;
-                      tempCanvas.height = supervisorCanvas.height;
-                      const tempCtx = tempCanvas.getContext('2d');
-                      
-                      // Draw image to fit canvas while maintaining aspect ratio
-                      const canvasWidth = supervisorCanvas.width;
-                      const canvasHeight = supervisorCanvas.height;
+                      // Use display size (getBoundingClientRect) so fit matches what user sees
+                      const rect = supervisorCanvas.getBoundingClientRect();
+                      const cw = rect.width || supervisorCanvas.width;
+                      const ch = rect.height || supervisorCanvas.height;
                       const imgAspect = img.width / img.height;
-                      const canvasAspect = canvasWidth / canvasHeight;
-                      
-                      let drawWidth, drawHeight, drawX, drawY;
-                      
-                      if (imgAspect > canvasAspect) {
-                        // Image is wider - fit to width
-                        drawWidth = canvasWidth;
-                        drawHeight = canvasWidth / imgAspect;
+                      const padAspect = cw / ch;
+                      let drawW, drawH, drawX, drawY;
+                      if (imgAspect > padAspect) {
+                        drawW = cw;
+                        drawH = cw / imgAspect;
                         drawX = 0;
-                        drawY = (canvasHeight - drawHeight) / 2;
+                        drawY = (ch - drawH) / 2;
                       } else {
-                        // Image is taller - fit to height
-                        drawHeight = canvasHeight;
-                        drawWidth = canvasHeight * imgAspect;
-                        drawX = (canvasWidth - drawWidth) / 2;
+                        drawH = ch;
+                        drawW = ch * imgAspect;
+                        drawX = (cw - drawW) / 2;
                         drawY = 0;
                       }
-                      
-                      // Draw to temporary canvas
-                      tempCtx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-                      
-                      // Convert to data URL
+                      const tempCanvas = document.createElement('canvas');
+                      tempCanvas.width = Math.round(cw);
+                      tempCanvas.height = Math.round(ch);
+                      const tempCtx = tempCanvas.getContext('2d');
+                      tempCtx.drawImage(img, drawX, drawY, drawW, drawH);
                       const dataUrl = tempCanvas.toDataURL('image/png');
-                      console.log('📝 Converted image to data URL, length:', dataUrl.length);
+                      console.log('📝 Fitted signature (aspect preserved), data URL length:', dataUrl.length);
                       
                       // Update the signature status label to "Form signed" if signature exists
                       const signatureStatusLabel = document.getElementById('supervisorSignatureStatus');
@@ -2510,21 +2623,26 @@
                         
                         console.log('✅ Form already submitted - signature shown as read-only');
                       } else {
-                        // Form not yet submitted - load signature into pad for editing
-                        // Clear the pad first
+                        // Form not yet submitted - draw directly onto pad canvas (avoids fromDataURL stretch)
                         pads.supervisorPad.clear();
-                        
-                        // Load the data URL into the signature pad (this draws it once)
-                        pads.supervisorPad.fromDataURL(dataUrl);
-                        
-                        // Store in hidden input for form submission
+                        const ctx = supervisorCanvas.getContext('2d');
+                        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                        const padW = supervisorCanvas.width;
+                        const padH = supervisorCanvas.height;
+                        const scaleX = padW / cw;
+                        const scaleY = padH / ch;
+                        ctx.save();
+                        ctx.setTransform(1, 0, 0, 1, 0, 0);
+                        ctx.drawImage(img, 0, 0, img.width, img.height,
+                          Math.round(drawX * scaleX), Math.round(drawY * scaleY),
+                          Math.round(drawW * scaleX), Math.round(drawH * scaleY));
+                        ctx.restore();
                         const supervisorSigInput = document.getElementById('supervisorSignatureData');
                         if (supervisorSigInput) {
                           supervisorSigInput.value = dataUrl;
                           console.log('✅ Supervisor signature stored in hidden input');
                         }
-                        
-                        console.log('✅ Supervisor signature loaded into pad (editable)');
+                        console.log('✅ Supervisor signature drawn to pad (correct aspect, no stretch)');
                       }
                     } catch (err) {
                       console.error('❌ Error loading signature:', err);
@@ -2629,20 +2747,32 @@
           
           // Load Operations Manager comments
           {% if user_designation == 'operations_manager' %}
+          console.log('🔍 Looking for operations_manager_comments...');
+          console.log('  formData:', formData);
+          console.log('  formData.operations_manager_comments:', formData?.operations_manager_comments);
+          console.log('  submissionData.form_data:', submissionData?.form_data);
+          console.log('  submissionData.form_data?.operations_manager_comments:', submissionData?.form_data?.operations_manager_comments);
+          console.log('  submissionData.operations_manager_comments:', submissionData?.operations_manager_comments);
+          
           let operationsManagerComments = null;
           if (formData && formData.operations_manager_comments) {
             operationsManagerComments = formData.operations_manager_comments;
+            console.log('📝 Found OM comments in formData:', operationsManagerComments.substring(0, 50));
           } else if (submissionData && submissionData.form_data && submissionData.form_data.operations_manager_comments) {
             operationsManagerComments = submissionData.form_data.operations_manager_comments;
+            console.log('📝 Found OM comments in submissionData.form_data:', operationsManagerComments.substring(0, 50));
           } else if (submissionData && submissionData.operations_manager_comments) {
             operationsManagerComments = submissionData.operations_manager_comments;
+            console.log('📝 Found OM comments in submissionData:', operationsManagerComments.substring(0, 50));
+          } else {
+            console.warn('⚠️ No Operations Manager comments found in any location');
           }
           
           if (operationsManagerComments) {
             const commentsField = document.getElementById('operationsManagerComments');
             if (commentsField) {
               commentsField.value = operationsManagerComments;
-              console.log('✅ Loaded Operations Manager comments into field');
+              console.log('✅ Loaded Operations Manager comments into field:', operationsManagerComments.substring(0, 50));
             }
           }
           
@@ -2680,6 +2810,15 @@
               section.style.display = 'block';
               if (prevForOM) prevForOM.style.display = 'block';
               
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.created_at) {
+                const timestamp = formatSigningTime(submissionData.created_at);
+                if (timestamp) {
+                  header.innerHTML = `Supervisor Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
+              
               const commentsDiv = document.getElementById('supervisorCommentsReadOnlyOM');
               if (commentsDiv) {
                 if (supervisorCommentsOM) commentsDiv.textContent = supervisorCommentsOM;
@@ -2695,10 +2834,21 @@
           }
           
           // Load Operations Manager signature (for Operations Manager editing)
+          console.log('🔍 Looking for operations_manager_signature...');
+          console.log('  formData keys:', formData ? Object.keys(formData) : 'no formData');
+          console.log('  formData.opMan_signature:', formData?.opMan_signature ? 'exists' : 'not found');
+          console.log('  formData.operations_manager_signature:', formData?.operations_manager_signature ? 'exists' : 'not found');
+          console.log('  submissionData.form_data keys:', submissionData?.form_data ? (typeof submissionData.form_data === 'string' ? 'string (needs parse)' : Object.keys(submissionData.form_data)) : 'no form_data');
+          
           let opSig = null;
           if (formData) {
-            if (formData.opMan_signature) opSig = formData.opMan_signature;
-            else if (formData.operations_manager_signature) opSig = formData.operations_manager_signature;
+            if (formData.opMan_signature) {
+              opSig = formData.opMan_signature;
+              console.log('📝 Found OM signature in formData.opMan_signature');
+            } else if (formData.operations_manager_signature) {
+              opSig = formData.operations_manager_signature;
+              console.log('📝 Found OM signature in formData.operations_manager_signature');
+            }
           }
           
           if (!opSig && submissionData && submissionData.form_data) {
@@ -2707,13 +2857,26 @@
               try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
             }
             if (checkFormData) {
-              if (checkFormData.opMan_signature) opSig = checkFormData.opMan_signature;
-              else if (checkFormData.operations_manager_signature) opSig = checkFormData.operations_manager_signature;
+              if (checkFormData.opMan_signature) {
+                opSig = checkFormData.opMan_signature;
+                console.log('📝 Found OM signature in submissionData.form_data.opMan_signature');
+              } else if (checkFormData.operations_manager_signature) {
+                opSig = checkFormData.operations_manager_signature;
+                console.log('📝 Found OM signature in submissionData.form_data.operations_manager_signature');
+              }
             }
+          }
+          if (!opSig && submissionData && submissionData.operations_manager_signature) {
+            opSig = submissionData.operations_manager_signature;
+            console.log('📝 Found OM signature in submissionData.operations_manager_signature');
+          }
+          
+          if (!opSig) {
+            console.warn('⚠️ No Operations Manager signature found in any location');
           }
           
           if (opSig) {
-            console.log('📝 Found Operations Manager signature:', opSig);
+            console.log('📝 Found Operations Manager signature:', typeof opSig, opSig);
             console.log('📝 Signature type:', typeof opSig);
             
             // Handle object format with url property
@@ -2744,58 +2907,51 @@
                 
                 img.onload = function() {
                   try {
-                    console.log('📝 Image loaded, dimensions:', img.width, 'x', img.height);
-                    console.log('📝 Canvas dimensions:', opCanvas.width, 'x', opCanvas.height);
-                    
-                    // Create a temporary canvas to convert the image to data URL
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = opCanvas.width;
-                    tempCanvas.height = opCanvas.height;
-                    const tempCtx = tempCanvas.getContext('2d');
-                    
-                    // Draw image to fit canvas while maintaining aspect ratio
-                    const canvasWidth = opCanvas.width;
-                    const canvasHeight = opCanvas.height;
+                    const rect = opCanvas.getBoundingClientRect();
+                    const cw = rect.width || opCanvas.width;
+                    const ch = rect.height || opCanvas.height;
                     const imgAspect = img.width / img.height;
-                    const canvasAspect = canvasWidth / canvasHeight;
-                    
-                    let drawWidth, drawHeight, drawX, drawY;
-                    if (imgAspect > canvasAspect) {
-                      // Image is wider
-                      drawWidth = canvasWidth;
-                      drawHeight = canvasWidth / imgAspect;
+                    const padAspect = cw / ch;
+                    let drawW, drawH, drawX, drawY;
+                    if (imgAspect > padAspect) {
+                      drawW = cw;
+                      drawH = cw / imgAspect;
                       drawX = 0;
-                      drawY = (canvasHeight - drawHeight) / 2;
+                      drawY = (ch - drawH) / 2;
                     } else {
-                      // Image is taller
-                      drawHeight = canvasHeight;
-                      drawWidth = canvasHeight * imgAspect;
-                      drawX = (canvasWidth - drawWidth) / 2;
+                      drawH = ch;
+                      drawW = ch * imgAspect;
+                      drawX = (cw - drawW) / 2;
                       drawY = 0;
                     }
-                    
-                    tempCtx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = Math.round(cw);
+                    tempCanvas.height = Math.round(ch);
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.drawImage(img, drawX, drawY, drawW, drawH);
                     const dataUrl = tempCanvas.toDataURL('image/png');
+                    // Load the signature into SignaturePad using fromDataURL with the fitted image
+                    // The tempCanvas already has the image fitted with correct aspect ratio
+                    pads.opPad.fromDataURL(dataUrl, {
+                      ratio: 1,
+                      width: Math.round(cw),
+                      height: Math.round(ch)
+                    });
                     
-                    // Clear the pad first
-                    pads.opPad.clear();
-                    
-                    // Load the data URL into the signature pad
-                    pads.opPad.fromDataURL(dataUrl);
-                    
-                    // Also draw directly to canvas to ensure visibility
-                    const ctx = opCanvas.getContext('2d');
-                    ctx.clearRect(0, 0, opCanvas.width, opCanvas.height);
-                    ctx.drawImage(tempCanvas, 0, 0);
-                    
-                    // Store in hidden input
                     const opSigInput = document.getElementById('opManSignatureData');
                     if (opSigInput) {
                       opSigInput.value = dataUrl;
-                      console.log('✅ Operations Manager signature stored in hidden input');
                     }
+                    console.log('✅ Operations Manager signature loaded into pad via fromDataURL (fitted)');
                     
-                    console.log('✅ Operations Manager signature loaded into pad');
+                    // Update signature hint to show "Form signed" instead of "Required for approval"
+                    const opManHint = document.getElementById('opManSignatureHint');
+                    if (opManHint) {
+                      opManHint.textContent = '✓ Form signed';
+                      opManHint.classList.remove('text-danger');
+                      opManHint.classList.add('text-success');
+                      console.log('✅ Updated OM signature hint to "Form signed"');
+                    }
                   } catch (err) {
                     console.error('❌ Error loading Operations Manager signature:', err);
                   }
@@ -2816,10 +2972,91 @@
           } else {
             console.log('ℹ️ No Operations Manager signature found in submission data');
           }
+          
+          // Check if OM has already approved - if so, show read-only version of their own data
+          if (submissionData && submissionData.operations_manager_approved_at) {
+            console.log('✅ OM has already approved this form - showing read-only version');
+            
+            // Hide editable section, show read-only section
+            const editableSection = document.getElementById('omEditableSection');
+            const readOnlySection = document.getElementById('omOwnReviewReadOnly');
+            
+            if (editableSection) editableSection.style.display = 'none';
+            if (readOnlySection) readOnlySection.style.display = 'block';
+            
+            // Load OM comments into read-only section
+            const omCommentsReadOnly = document.getElementById('omOwnCommentsReadOnly');
+            if (omCommentsReadOnly) {
+              const omComments = formData?.operations_manager_comments || submissionData.operations_manager_comments;
+              if (omComments) {
+                omCommentsReadOnly.textContent = omComments;
+              } else {
+                omCommentsReadOnly.textContent = 'No comments provided';
+                omCommentsReadOnly.style.fontStyle = 'italic';
+                omCommentsReadOnly.style.color = '#9ca3af';
+              }
+            }
+            
+            // Add timestamp to read-only section header
+            const omReadOnlyHeader = readOnlySection?.querySelector('h6') || readOnlySection?.querySelector('.alert');
+            if (omReadOnlyHeader && submissionData.operations_manager_approved_at) {
+              const timestamp = formatSigningTime(submissionData.operations_manager_approved_at);
+              if (timestamp) {
+                omReadOnlyHeader.innerHTML = `<strong>✓ Your Previous Review</strong> <span style="color: #10b981; font-size: 0.75rem; font-weight: normal; margin-left: 0.5rem;">Signed: ${timestamp}</span>`;
+              }
+            }
+            
+            // Load OM signature into read-only section
+            const omSigReadOnly = document.getElementById('omOwnSignatureReadOnly');
+            if (omSigReadOnly && opSig) {
+              displaySignatureInContainer('omOwnSignatureReadOnly', opSig, 'Your Signature');
+              console.log('✅ Loaded OM signature into read-only section');
+            }
+          } else {
+            console.log('ℹ️ OM has not yet approved - showing editable section');
+          }
           {% endif %}
           
-          // Load Operations Manager comments and signature for BD (read-only)
+          // Load Supervisor comments and signature for BD (read-only)
           {% if user_designation == 'business_development' %}
+          let supervisorCommentsBD = null;
+          let supervisorSigBD = null;
+          
+          if (formData) {
+            if (formData.supervisor_comments) supervisorCommentsBD = formData.supervisor_comments;
+            if (formData.supervisor_signature) supervisorSigBD = formData.supervisor_signature;
+          }
+          
+          if (supervisorCommentsBD || supervisorSigBD) {
+            const section = document.getElementById('supervisorReadOnlyBD');
+            if (section) {
+              section.style.display = 'block';
+              document.getElementById('previousForBDSection').style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.created_at) {
+                const timestamp = formatSigningTime(submissionData.created_at);
+                if (timestamp) {
+                  header.innerHTML = `Supervisor Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
+              
+              const commentsDiv = document.getElementById('supervisorCommentsReadOnlyBD');
+              if (commentsDiv) {
+                if (supervisorCommentsBD) commentsDiv.textContent = supervisorCommentsBD;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
+              }
+              
+              displaySignatureInContainer('supervisorSignatureReadOnlyBD', supervisorSigBD, 'Supervisor Signature');
+            }
+          }
+          
+          // Load Operations Manager comments and signature for BD (read-only)
           let opsManagerCommentsBD = null;
           let opsManagerSigBD = null;
           
@@ -2846,6 +3083,9 @@
           if (!opsManagerCommentsBD && submissionData && submissionData.operations_manager_comments) {
             opsManagerCommentsBD = submissionData.operations_manager_comments;
           }
+          if (!opsManagerSigBD && submissionData && submissionData.operations_manager_signature) {
+            opsManagerSigBD = submissionData.operations_manager_signature;
+          }
           
           let omHasApproved = false;
           if (submissionData) {
@@ -2862,6 +3102,15 @@
             if (section) {
               section.style.display = 'block';
               document.getElementById('previousForBDSection').style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.operations_manager_approved_at) {
+                const timestamp = formatSigningTime(submissionData.operations_manager_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `Operations Manager Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
               
               const commentsDiv = document.getElementById('opsManagerCommentsReadOnly');
               if (commentsDiv) {
@@ -2896,12 +3145,27 @@
               if (!procurementSigBD && checkFormData.procurement_signature) procurementSigBD = checkFormData.procurement_signature;
             }
           }
+          if (!procurementCommentsBD && submissionData && submissionData.procurement_comments) {
+            procurementCommentsBD = submissionData.procurement_comments;
+          }
+          if (!procurementSigBD && submissionData && submissionData.procurement_signature) {
+            procurementSigBD = submissionData.procurement_signature;
+          }
           
           if (procurementCommentsBD || procurementSigBD) {
             const section = document.getElementById('procurementReadOnlyBD');
             if (section) {
               section.style.display = 'block';
               document.getElementById('previousForBDSection').style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.procurement_approved_at) {
+                const timestamp = formatSigningTime(submissionData.procurement_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `Procurement Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
               
               const commentsDiv = document.getElementById('procurementCommentsReadOnlyBD');
               if (commentsDiv) {
@@ -2918,8 +3182,8 @@
           }
           
           // Load Business Development comments and signature
-          let businessDevComments = formData?.business_dev_comments || (submissionData?.form_data?.business_dev_comments);
-          let businessDevSig = formData?.business_dev_signature || (submissionData?.form_data?.business_dev_signature);
+          let businessDevComments = formData?.business_dev_comments || (submissionData?.form_data?.business_dev_comments) || (submissionData?.business_dev_comments);
+          let businessDevSig = formData?.business_dev_signature || formData?.businessDevSignature || (submissionData?.form_data?.business_dev_signature) || (submissionData?.form_data?.businessDevSignature) || submissionData?.business_dev_signature;
           
           if (businessDevComments) {
             const commentsField = document.getElementById('businessDevComments');
@@ -2955,8 +3219,8 @@
           
           // Load Procurement comments and signature
           {% if user_designation == 'procurement' %}
-          let procurementComments = formData?.procurement_comments || (submissionData?.form_data?.procurement_comments);
-          let procurementSig = formData?.procurement_signature || (submissionData?.form_data?.procurement_signature);
+          let procurementComments = formData?.procurement_comments || (submissionData?.form_data?.procurement_comments) || (submissionData?.procurement_comments);
+          let procurementSig = formData?.procurement_signature || formData?.procurementSignature || (submissionData?.form_data?.procurement_signature) || (submissionData?.form_data?.procurementSignature) || submissionData?.procurement_signature;
           
           if (procurementComments) {
             const commentsField = document.getElementById('procurementComments');
@@ -2989,9 +3253,49 @@
             }
           }
           
-          // Load previous reviewers (OM + BD) in read-only blocks for Procurement
+          // Load previous reviewers (Supervisor + OM + BD) in read-only blocks for Procurement
           const prevForProc = document.getElementById('previousForProcurementSection');
           let hasPrevForProc = false;
+          
+          // Supervisor for Procurement
+          let supervisorCommentsProc = null;
+          let supervisorSigProc = null;
+          
+          if (formData) {
+            if (formData.supervisor_comments) supervisorCommentsProc = formData.supervisor_comments;
+            if (formData.supervisor_signature) supervisorSigProc = formData.supervisor_signature;
+          }
+          
+          if (supervisorCommentsProc || supervisorSigProc) {
+            hasPrevForProc = true;
+            const sec = document.getElementById('supervisorReadOnlyProc');
+            if (sec) {
+              sec.style.display = 'block';
+              document.getElementById('previousForProcurementSection').style.display = 'block';
+              
+              // Add timestamp if available
+              const header = sec.querySelector('h6');
+              if (header && submissionData && submissionData.created_at) {
+                const timestamp = formatSigningTime(submissionData.created_at);
+                if (timestamp) {
+                  header.innerHTML = `Supervisor Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
+            }
+            
+            const cDiv = document.getElementById('supervisorCommentsReadOnlyProc');
+            if (cDiv) {
+              if (supervisorCommentsProc) {
+                cDiv.textContent = supervisorCommentsProc;
+              } else {
+                cDiv.textContent = 'No comments provided';
+                cDiv.style.fontStyle = 'italic';
+                cDiv.style.color = '#9ca3af';
+              }
+            }
+            
+            displaySignatureInContainer('supervisorSignatureReadOnlyProc', supervisorSigProc, 'Supervisor Signature');
+          }
           
           // OM for Procurement
           let opsManagerCommentsProc = null;
@@ -3027,6 +3331,15 @@
             if (sec) {
               sec.style.display = 'block';
               document.getElementById('previousForProcurementSection').style.display = 'block';
+              
+              // Add timestamp if available
+              const header = sec.querySelector('h6');
+              if (header && submissionData && submissionData.operations_manager_approved_at) {
+                const timestamp = formatSigningTime(submissionData.operations_manager_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `Operations Manager Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
             }
             
             const cDiv = document.getElementById('opsManagerCommentsReadOnlyProc');
@@ -3084,6 +3397,15 @@
             if (sec) {
               sec.style.display = 'block';
               document.getElementById('previousForProcurementSection').style.display = 'block';
+              
+              // Add timestamp if available
+              const header = sec.querySelector('h6');
+              if (header && submissionData && submissionData.business_dev_approved_at) {
+                const timestamp = formatSigningTime(submissionData.business_dev_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `Business Development Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
             }
             
             const cDiv = document.getElementById('bdCommentsReadOnlyProc');
@@ -3119,9 +3441,15 @@
             if (typeof checkFormData === 'string') {
               try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
             }
-            if (checkFormData && checkFormData.general_manager_signature) {
-              gmSignature = checkFormData.general_manager_signature;
+            if (checkFormData) {
+              gmSignature = checkFormData.general_manager_signature || checkFormData.generalManagerSignature;
             }
+          }
+          if (!gmSignature && submissionData && submissionData.general_manager_signature) {
+            gmSignature = submissionData.general_manager_signature;
+          }
+          if (!gmSignature && submissionData && submissionData.generalManagerSignature) {
+            gmSignature = submissionData.generalManagerSignature;
           }
           
           if (gmSignature) {
@@ -3178,6 +3506,44 @@
           const prevSection = document.getElementById('previousReviewersReadOnlySection');
           let hasAnyData = false;
           
+          // Supervisor
+          let supervisorCommentsGM = null;
+          let supervisorSigGM = null;
+          
+          if (formData) {
+            if (formData.supervisor_comments) supervisorCommentsGM = formData.supervisor_comments;
+            if (formData.supervisor_signature) supervisorSigGM = formData.supervisor_signature;
+          }
+          
+          if (supervisorCommentsGM || supervisorSigGM) {
+            hasAnyData = true;
+            const section = document.getElementById('supervisorReadOnlyGM');
+            if (section) {
+              section.style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.created_at) {
+                const timestamp = formatSigningTime(submissionData.created_at);
+                if (timestamp) {
+                  header.innerHTML = `Supervisor Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
+              
+              const commentsDiv = document.getElementById('supervisorCommentsReadOnlyGM');
+              if (commentsDiv) {
+                if (supervisorCommentsGM) commentsDiv.textContent = supervisorCommentsGM;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
+              }
+              
+              displaySignatureInContainer('supervisorSignatureReadOnlyGM', supervisorSigGM, 'Supervisor Signature');
+            }
+          }
+          
           // Operations Manager
           let opsManagerCommentsGM = null;
           let opsManagerSigGM = null;
@@ -3211,6 +3577,15 @@
             const section = document.getElementById('opsManagerReadOnlyGM');
             if (section) {
               section.style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.operations_manager_approved_at) {
+                const timestamp = formatSigningTime(submissionData.operations_manager_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `Operations Manager Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
               
               const commentsDiv = document.getElementById('opsManagerCommentsReadOnlyGM');
               if (commentsDiv) {
@@ -3256,6 +3631,15 @@
             if (section) {
               section.style.display = 'block';
               
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.business_dev_approved_at) {
+                const timestamp = formatSigningTime(submissionData.business_dev_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `Business Development Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
+              
               const commentsDiv = document.getElementById('bdCommentsReadOnlyGM');
               if (commentsDiv) {
                 if (bdCommentsGM) commentsDiv.textContent = bdCommentsGM;
@@ -3267,8 +3651,8 @@
               }
               
               displaySignatureInContainer('bdSignatureReadOnlyGM', bdSigGM, 'Business Development Signature');
-                }
-              }
+            }
+          }
           
           // Procurement
           let procurementCommentsGM = null;
@@ -3299,6 +3683,15 @@
             const section = document.getElementById('procurementReadOnlyGM');
             if (section) {
               section.style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.procurement_approved_at) {
+                const timestamp = formatSigningTime(submissionData.procurement_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `Procurement Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
               
               const commentsDiv = document.getElementById('procurementCommentsReadOnlyGM');
               if (commentsDiv) {
@@ -3541,9 +3934,11 @@
             }
           }
           
-          // Also check submission model fields
           if (!gmCommentsAdmin && submissionData && submissionData.general_manager_comments) {
             gmCommentsAdmin = submissionData.general_manager_comments;
+          }
+          if (!gmSigAdmin && submissionData && (submissionData.general_manager_signature || submissionData.generalManagerSignature)) {
+            gmSigAdmin = submissionData.general_manager_signature || submissionData.generalManagerSignature;
           }
           
           if (gmCommentsAdmin || gmSigAdmin) {
@@ -4400,6 +4795,13 @@
         };
 
         blocks.forEach((block, index) => {
+          let itemPhotoUrls = uploadedPhotoUrls || [];
+          if (block.dataset.photoUrls) {
+            try {
+              const parsed = JSON.parse(block.dataset.photoUrls);
+              if (Array.isArray(parsed) && parsed.length) itemPhotoUrls = parsed;
+            } catch (e) { /* use uploadedPhotoUrls */ }
+          }
           const item = {
             item_number: index + 1,
             description: getVal(block, 'input[name="work_desc[]"]'),
@@ -4411,11 +4813,12 @@
             price: getVal(block, 'input[name="price[]"]'),
             labour: getVal(block, 'input[name="labour[]"]'),
             comments: getVal(block, 'textarea[name="comments[]"]'),
-            photo_urls: uploadedPhotoUrls || []  // Photos are optional
+            photo_urls: itemPhotoUrls
           };
 
-          // Skip completely empty blocks
-          if (!isAnyFieldFilled(item)) return;
+          // Include block if any field is filled OR it has photos (preserve items with only images)
+          const hasPhotos = itemPhotoUrls && itemPhotoUrls.length > 0;
+          if (!isAnyFieldFilled(item) && !hasPhotos) return;
           workItems.push(item);
         });
         
@@ -4538,14 +4941,18 @@
                 // Merge photos from existing work_items into current workItems
                 existingFormData.work_items.forEach((existingItem, idx) => {
                   if (workItems[idx] && existingItem.photo_urls && Array.isArray(existingItem.photo_urls)) {
-                    // Merge photos: combine existing photos with any new ones
                     const existingPhotos = existingItem.photo_urls || [];
                     const currentPhotos = workItems[idx].photo_urls || [];
-                    // Combine and deduplicate
                     const allPhotos = [...new Set([...existingPhotos, ...currentPhotos])];
                     workItems[idx].photo_urls = allPhotos;
                   }
                 });
+                // Append existing-only items (previously submitted, no matching block in current form)
+                for (let i = workItems.length; i < existingFormData.work_items.length; i++) {
+                  workItems.push(existingFormData.work_items[i]);
+                }
+                payload.work_items = workItems;
+                console.log('✅ Merged work_items: preserved', existingFormData.work_items.length, 'items total');
               }
             }
             
@@ -4801,6 +5208,9 @@
           }
           {% else %}
           // Edit mode for reviewers (operations_manager, business_development, procurement, general_manager) or admin
+          console.log('🚀🚀🚀 NEW CODE LOADED - VERSION 2026-01-24 11:58 🚀🚀🚀');
+          console.log('  - User designation from template: {{ user_designation }}');
+          console.log('  - Is edit mode: {{ is_edit_mode }}');
           const submissionId = window.editSubmissionId;
           const token = localStorage.getItem('access_token');
           const headers = { 'Content-Type': 'application/json' };
@@ -4810,14 +5220,32 @@
           
           {% if user_designation == 'operations_manager' %}
           // Operations Manager: First update, then approve (to trigger document generation)
+          // Get OM comments and signature for approval payload
+          console.log('🔍 Collecting OM data for approval...');
+          const omCommentsField = document.getElementById('operationsManagerComments');
+          console.log('  - OM comments field:', omCommentsField);
+          console.log('  - OM comments field value:', omCommentsField?.value);
+          const operationsManagerComments = omCommentsField?.value || '';
+          console.log('  - Final operationsManagerComments:', operationsManagerComments);
+          
+          const opSigInput = document.getElementById('opManSignatureData');
+          console.log('  - OM signature input:', opSigInput);
+          console.log('  - OM signature input value:', opSigInput?.value ? opSigInput.value.substring(0, 50) + '...' : 'none');
+          console.log('  - pads:', pads);
+          console.log('  - pads.opPad:', pads?.opPad);
+          console.log('  - pads.opPad.isEmpty():', pads?.opPad?.isEmpty());
+          
+          const opData = (pads && pads.opPad && !pads.opPad.isEmpty()) 
+                       ? pads.opPad.toDataURL('image/png') 
+                       : (opSigInput?.value || '');
+          console.log('  - Final opData length:', opData?.length || 0);
+          
           const updateUrl = `/api/workflow/submissions/${submissionId}/update`;
           const updateBody = {
             site_name: payload.project_name,
             visit_date: payload.visit_date,
             form_data: payload
           };
-          
-          // Step 1: Update the submission
           const updateRes = await fetch(updateUrl, {
             method: 'PUT',
             headers: headers,
@@ -4836,12 +5264,7 @@
           }
           
           // Step 2: Approve to trigger document generation and move to next stage
-          const operationsManagerComments = document.getElementById('operationsManagerComments')?.value || '';
-          const opData = (pads && pads.opPad && !pads.opPad.isEmpty()) 
-                       ? pads.opPad.toDataURL('image/png') 
-                       : (document.getElementById('opManSignatureData')?.value || '');
-          
-          // Ensure signature is in both places for compatibility (like HVAC form)
+          // Ensure signature and comments are in both top-level and form_data for consistency
           const approvalPayload = {
             comments: operationsManagerComments || '',
             signature: opData || '',
@@ -4857,13 +5280,29 @@
             console.warn('⚠️ Operations Manager signature is empty - opData:', opData ? 'exists but empty' : 'undefined');
           }
           
+          if (operationsManagerComments && operationsManagerComments.trim()) {
+            approvalPayload.form_data.operations_manager_comments = operationsManagerComments.trim();
+          }
+          if (!opData?.trim()) {
+            console.warn('⚠️ Operations Manager signature is empty');
+          }
+          
           console.log('📤 Operations Manager approval payload:', {
-            commentsLength: (operationsManagerComments || '').length,
-            signatureLength: (opData || '').length,
-            signaturePreview: opData ? opData.substring(0, 50) + '...' : 'none',
+            topLevelComments: (approvalPayload.comments || '').substring(0, 80),
+            topLevelSignature: (approvalPayload.signature || '').substring(0, 50),
+            formDataCommentsLength: (approvalPayload.form_data.operations_manager_comments || '').length,
+            formDataSignatureLength: (approvalPayload.form_data.operations_manager_signature || '').length,
             formDataKeys: Object.keys(approvalPayload.form_data || {}),
             workItemsCount: (approvalPayload.form_data.work_items || []).length
           });
+          console.log('📤 Full approval payload structure:', JSON.stringify({
+            comments: approvalPayload.comments ? 'HAS_COMMENTS' : 'NO_COMMENTS',
+            signature: approvalPayload.signature ? 'HAS_SIGNATURE' : 'NO_SIGNATURE',
+            form_data_has_om_comments: !!approvalPayload.form_data.operations_manager_comments,
+            form_data_has_om_signature: !!approvalPayload.form_data.operations_manager_signature
+          }));
+          console.log('📤 Approval payload FULL form_data keys:', Object.keys(approvalPayload.form_data || {}));
+          console.log('📤 Calling approve-ops-manager endpoint...');
           
           const approveRes = await fetch(`/api/workflow/submissions/${submissionId}/approve-ops-manager`, {
             method: 'POST',
@@ -4916,6 +5355,15 @@
                   <a href="/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
                 </div>
               `;
+              
+              // Update OM signature hint to show "Form signed"
+              const opManHint = document.getElementById('opManSignatureHint');
+              if (opManHint) {
+                opManHint.textContent = '✓ Form signed';
+                opManHint.classList.remove('text-danger');
+                opManHint.classList.add('text-success');
+              }
+              
               clearDraft();
             }
           } else {
@@ -4923,48 +5371,48 @@
           }
           
           {% elif user_designation == 'business_development' %}
-          // Business Development: First update, then approve
+          const businessDevComments = document.getElementById('businessDevComments')?.value || '';
+          const bdSigData = (pads && pads.businessDevPad && !pads.businessDevPad.isEmpty()) 
+                         ? pads.businessDevPad.toDataURL('image/png') 
+                         : (document.getElementById('businessDevSignatureData')?.value || '');
+          if (businessDevComments && businessDevComments.trim()) {
+            payload.business_dev_comments = businessDevComments.trim();
+          }
+          if (bdSigData && bdSigData.trim()) {
+            payload.business_dev_signature = bdSigData;
+            payload.businessDevSignature = bdSigData;
+          }
           const updateUrl = `/api/workflow/submissions/${submissionId}/update`;
           const updateBody = {
             site_name: payload.project_name,
             visit_date: payload.visit_date,
             form_data: payload
           };
-          
           const updateRes = await fetch(updateUrl, {
             method: 'PUT',
             headers: headers,
             body: JSON.stringify(updateBody),
             credentials: 'include'
           });
-          
           if (!updateRes.ok) {
             const txt = await updateRes.text();
             throw new Error('Update failed: ' + updateRes.status + ' ' + txt);
           }
-          
           const updateJson = await updateRes.json();
           if (!updateJson.success) {
             throw new Error(updateJson.error || 'Update failed');
           }
-          
-          // Step 2: Approve BD
-          const businessDevComments = document.getElementById('businessDevComments')?.value || '';
-          const bdSigData = (pads && pads.businessDevPad && !pads.businessDevPad.isEmpty()) 
-                         ? pads.businessDevPad.toDataURL('image/png') 
-                         : (document.getElementById('businessDevSignatureData')?.value || '');
-          
-          // Ensure signature is in form_data for consistency
           const bdApprovalPayload = {
             comments: businessDevComments || '',
             signature: bdSigData || '',
             form_data: payload
           };
-          
-          if (bdSigData && bdSigData.trim()) {
+          if (!bdApprovalPayload.form_data.business_dev_comments && businessDevComments?.trim()) {
+            bdApprovalPayload.form_data.business_dev_comments = businessDevComments.trim();
+          }
+          if (!bdApprovalPayload.form_data.business_dev_signature && bdSigData?.trim()) {
             bdApprovalPayload.form_data.business_dev_signature = bdSigData;
             bdApprovalPayload.form_data.businessDevSignature = bdSigData;
-            console.log('✅ Business Development signature included in approval payload');
           }
           
           console.log('📤 Business Development approval payload:', {
@@ -4997,54 +5445,63 @@
                 <a href="/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
               </div>
             `;
+            
+            // Update BD signature hint
+            const bdHint = document.getElementById('bdSignatureHint');
+            if (bdHint) {
+              bdHint.textContent = '✓ Form signed';
+              bdHint.classList.remove('text-danger');
+              bdHint.classList.add('text-success');
+            }
+            
             clearDraft();
           } else {
             throw new Error(approveJson.error || 'Approval failed');
           }
           
           {% elif user_designation == 'procurement' %}
-          // Procurement: First update, then approve
+          const procurementComments = document.getElementById('procurementComments')?.value || '';
+          const procurementSigData = (pads && pads.procurementPad && !pads.procurementPad.isEmpty()) 
+                                   ? pads.procurementPad.toDataURL('image/png') 
+                                   : (document.getElementById('procurementSignatureData')?.value || '');
+          if (procurementComments && procurementComments.trim()) {
+            payload.procurement_comments = procurementComments.trim();
+          }
+          if (procurementSigData && procurementSigData.trim()) {
+            payload.procurement_signature = procurementSigData;
+            payload.procurementSignature = procurementSigData;
+          }
           const updateUrl = `/api/workflow/submissions/${submissionId}/update`;
           const updateBody = {
             site_name: payload.project_name,
             visit_date: payload.visit_date,
             form_data: payload
           };
-          
           const updateRes = await fetch(updateUrl, {
             method: 'PUT',
             headers: headers,
             body: JSON.stringify(updateBody),
             credentials: 'include'
           });
-          
           if (!updateRes.ok) {
             const txt = await updateRes.text();
             throw new Error('Update failed: ' + updateRes.status + ' ' + txt);
           }
-          
           const updateJson = await updateRes.json();
           if (!updateJson.success) {
             throw new Error(updateJson.error || 'Update failed');
           }
-          
-          // Step 2: Approve Procurement
-          const procurementComments = document.getElementById('procurementComments')?.value || '';
-          const procurementSigData = (pads && pads.procurementPad && !pads.procurementPad.isEmpty()) 
-                                   ? pads.procurementPad.toDataURL('image/png') 
-                                   : (document.getElementById('procurementSignatureData')?.value || '');
-          
-          // Ensure signature is in form_data for consistency
           const procurementApprovalPayload = {
             comments: procurementComments || '',
             signature: procurementSigData || '',
             form_data: payload
           };
-          
-          if (procurementSigData && procurementSigData.trim()) {
+          if (!procurementApprovalPayload.form_data.procurement_comments && procurementComments?.trim()) {
+            procurementApprovalPayload.form_data.procurement_comments = procurementComments.trim();
+          }
+          if (!procurementApprovalPayload.form_data.procurement_signature && procurementSigData?.trim()) {
             procurementApprovalPayload.form_data.procurement_signature = procurementSigData;
             procurementApprovalPayload.form_data.procurementSignature = procurementSigData;
-            console.log('✅ Procurement signature included in approval payload');
           }
           
           console.log('📤 Procurement approval payload:', {
@@ -5077,54 +5534,63 @@
                 <a href="/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
               </div>
             `;
+            
+            // Update Procurement signature hint
+            const procurementHint = document.getElementById('procurementSignatureHint');
+            if (procurementHint) {
+              procurementHint.textContent = '✓ Form signed';
+              procurementHint.classList.remove('text-danger');
+              procurementHint.classList.add('text-success');
+            }
+            
             clearDraft();
           } else {
             throw new Error(approveJson.error || 'Approval failed');
           }
           
           {% elif user_designation == 'general_manager' %}
-          // General Manager: First update, then approve (final approval)
+          const generalManagerComments = document.getElementById('generalManagerComments')?.value || '';
+          const gmSigData = (pads && pads.generalManagerPad && !pads.generalManagerPad.isEmpty()) 
+                         ? pads.generalManagerPad.toDataURL('image/png') 
+                         : (document.getElementById('generalManagerSignatureData')?.value || '');
+          if (generalManagerComments && generalManagerComments.trim()) {
+            payload.general_manager_comments = generalManagerComments.trim();
+          }
+          if (gmSigData && gmSigData.trim()) {
+            payload.general_manager_signature = gmSigData;
+            payload.generalManagerSignature = gmSigData;
+          }
           const updateUrl = `/api/workflow/submissions/${submissionId}/update`;
           const updateBody = {
             site_name: payload.project_name,
             visit_date: payload.visit_date,
             form_data: payload
           };
-          
           const updateRes = await fetch(updateUrl, {
             method: 'PUT',
             headers: headers,
             body: JSON.stringify(updateBody),
             credentials: 'include'
           });
-          
           if (!updateRes.ok) {
             const txt = await updateRes.text();
             throw new Error('Update failed: ' + updateRes.status + ' ' + txt);
           }
-          
           const updateJson = await updateRes.json();
           if (!updateJson.success) {
             throw new Error(updateJson.error || 'Update failed');
           }
-          
-          // Step 2: Approve General Manager (final approval)
-          const generalManagerComments = document.getElementById('generalManagerComments')?.value || '';
-          const gmSigData = (pads && pads.generalManagerPad && !pads.generalManagerPad.isEmpty()) 
-                         ? pads.generalManagerPad.toDataURL('image/png') 
-                         : (document.getElementById('generalManagerSignatureData')?.value || '');
-          
-          // Ensure signature is in form_data for consistency
           const gmApprovalPayload = {
             comments: generalManagerComments || '',
             signature: gmSigData || '',
             form_data: payload
           };
-          
-          if (gmSigData && gmSigData.trim()) {
+          if (!gmApprovalPayload.form_data.general_manager_comments && generalManagerComments?.trim()) {
+            gmApprovalPayload.form_data.general_manager_comments = generalManagerComments.trim();
+          }
+          if (!gmApprovalPayload.form_data.general_manager_signature && gmSigData?.trim()) {
             gmApprovalPayload.form_data.general_manager_signature = gmSigData;
             gmApprovalPayload.form_data.generalManagerSignature = gmSigData;
-            console.log('✅ General Manager signature included in approval payload');
           }
           
           console.log('📤 General Manager approval payload:', {
@@ -5180,6 +5646,15 @@
                   <a href="/dashboard" class="btn btn-sm btn-primary">Return to Dashboard</a>
                 </div>
               `;
+              
+              // Update GM signature hint
+              const gmHint = document.getElementById('gmSignatureHint');
+              if (gmHint) {
+                gmHint.textContent = '✓ Form signed';
+                gmHint.classList.remove('text-danger');
+                gmHint.classList.add('text-success');
+              }
+              
               clearDraft();
             }
           } else {

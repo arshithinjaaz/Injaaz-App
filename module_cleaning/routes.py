@@ -20,6 +20,7 @@ from common.db_utils import (
     get_job_status_db,
     get_submission_db
 )
+from common.error_responses import error_response, success_response
 from app.models import db, User
 from app.middleware import token_required
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -108,8 +109,41 @@ def download_file(job_id, file_type):
         if not file_url:
             return error_response(f"{file_type.upper()} file URL not found", status_code=404, error_code='NOT_FOUND')
         
+        logger.info(f"Download requested for {file_type}: {file_url}")
+        
+        # Check if it's a localhost URL (development)
+        if file_url.startswith('http://127.0.0.1') or file_url.startswith('http://localhost') or file_url.startswith('http://0.0.0.0'):
+            # Local development URL - extract filename and serve from local storage
+            from urllib.parse import urlparse, unquote
+            
+            # Handle URLs with # character in filename
+            if '#' in file_url:
+                url_parts = file_url.split('#', 1)
+                base_url = url_parts[0]
+                fragment = url_parts[1] if len(url_parts) > 1 else ''
+                parsed = urlparse(base_url)
+                full_path = parsed.path
+                if fragment:
+                    full_path = full_path + '#' + fragment
+            else:
+                parsed = urlparse(file_url)
+                full_path = parsed.path
+            
+            # Extract filename from path
+            local_filename = unquote(full_path.lstrip('/').replace('generated/', ''))
+            local_path = os.path.join(GENERATED_DIR, local_filename)
+            
+            logger.info(f"Local URL detected, serving from filesystem: {local_path}")
+            
+            if not os.path.exists(local_path):
+                logger.error(f"File not found at local path: {local_path}")
+                return error_response("File not found locally", status_code=404, error_code='NOT_FOUND')
+            
+            mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if file_type == 'excel' else 'application/pdf'
+            return send_file(local_path, as_attachment=True, download_name=filename, mimetype=mimetype)
+        
         # Check if it's a Cloudinary URL
-        if 'cloudinary.com' in file_url:
+        elif 'cloudinary.com' in file_url:
             try:
                 clean_url = file_url.split('?')[0]
                 response = requests.get(clean_url, timeout=60, stream=True)
@@ -136,14 +170,20 @@ def download_file(job_id, file_type):
                 logger.error(traceback.format_exc())
                 return error_response("Failed to fetch file from Cloudinary", status_code=500, error_code='STORAGE_ERROR')
         else:
-            # Local URL
-            local_filename = file_url.lstrip('/').replace('generated/', '')
+            # Relative local URL (starts with /)
+            from urllib.parse import unquote
+            
+            local_filename = unquote(file_url.lstrip('/').replace('generated/', ''))
             local_path = os.path.join(GENERATED_DIR, local_filename)
             
+            logger.info(f"Relative URL detected, serving from filesystem: {local_path}")
+            
             if not os.path.exists(local_path):
+                logger.error(f"File not found at local path: {local_path}")
                 return error_response("File not found locally", status_code=404, error_code='NOT_FOUND')
             
-            return send_file(local_path, as_attachment=True, download_name=filename)
+            mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if file_type == 'excel' else 'application/pdf'
+            return send_file(local_path, as_attachment=True, download_name=filename, mimetype=mimetype)
     
     except Exception as e:
         logger.error(f"Download error: {str(e)}")
@@ -284,8 +324,18 @@ def form():
                             logger.info(f"✅ Found Operations Manager signature (opMan_signature) in nested form_data.data structure")
             
             # Merge Business Development comments from model field into form_data if not already present
+            # CRITICAL: Only use actual BD comments, never fall back to supervisor comments
+            existing_bd_comments = form_data.get('business_dev_comments')
+            supervisor_comments = form_data.get('supervisor_comments')
+            
+            # Check if BD comments are incorrectly set to supervisor comments
+            if existing_bd_comments and supervisor_comments and existing_bd_comments == supervisor_comments:
+                logger.warning(f"⚠️ WARNING: BD comments appear to be incorrectly set to supervisor comments for submission {submission.submission_id}!")
+                form_data['business_dev_comments'] = None
+                existing_bd_comments = None
+            
             if hasattr(submission, 'business_dev_comments') and submission.business_dev_comments:
-                if not form_data.get('business_dev_comments'):
+                if not existing_bd_comments or existing_bd_comments == supervisor_comments:
                     form_data['business_dev_comments'] = submission.business_dev_comments
                     logger.info(f"✅ Added Business Development comments from model field to form_data for display")
             
@@ -299,8 +349,17 @@ def form():
                             logger.info(f"✅ Found Business Development signature in nested form_data.data structure")
             
             # Merge Procurement comments from model field into form_data if not already present
+            # CRITICAL: Only use actual Procurement comments, never fall back to supervisor/BD comments
+            existing_proc_comments = form_data.get('procurement_comments')
+            
+            # Check if Procurement comments are incorrectly set to supervisor or BD comments
+            if existing_proc_comments and supervisor_comments and existing_proc_comments == supervisor_comments:
+                logger.warning(f"⚠️ WARNING: Procurement comments appear to be incorrectly set to supervisor comments for submission {submission.submission_id}!")
+                form_data['procurement_comments'] = None
+                existing_proc_comments = None
+            
             if hasattr(submission, 'procurement_comments') and submission.procurement_comments:
-                if not form_data.get('procurement_comments'):
+                if not existing_proc_comments:
                     form_data['procurement_comments'] = submission.procurement_comments
                     logger.info(f"✅ Added Procurement comments from model field to form_data for display")
             
@@ -336,9 +395,10 @@ def form():
         # Pass designation details so the template can adapt workflow UI
         user_designation = user.designation if hasattr(user, 'designation') else None
         
-        # Consider admins, supervisors, and managers as "supervisor edit" for review purposes
+        # Only treat as "supervisor edit" if actually a supervisor (or admin NOT in review mode)
+        # This ensures OM/BD/Procurement/GM in review mode don't get supervisor UI
         review_param = request.args.get('review') == 'true'
-        is_supervisor_edit = is_edit_mode and (user_designation in ['supervisor', 'manager'] or user.role == 'admin' or review_param)
+        is_supervisor_edit = is_edit_mode and (user_designation == 'supervisor' or (user.role == 'admin' and not review_param))
         
         return render_template(
             'cleaning_form.html',
@@ -698,19 +758,13 @@ def submit_with_urls():
                     'is_cloud': is_cloud
                 }
                 data['supervisor_comments'] = supervisor_comments
+                logger.info(f"✅ Saved supervisor signature and comments for submission")
             except Exception as e:
                 logger.error(f"Failed to upload supervisor signature: {e}")
         
-        # Save submission
-        subs_dir = os.path.join(GENERATED_DIR, 'submissions')
-        os.makedirs(subs_dir, exist_ok=True)
-        
-        submission_data = {
-            'submission_id': submission_id,
-            'data': data,
-            'timestamp': datetime.utcnow().isoformat(),
-            'base_url': request.host_url.rstrip('/')
-        }
+        # Add base_url and timestamp directly to data
+        data['base_url'] = request.host_url.rstrip('/')
+        data['created_at'] = datetime.utcnow().isoformat()
         
         # Get user_id from JWT token
         user_id = None
@@ -721,10 +775,10 @@ def submit_with_urls():
         except Exception:
             pass  # No token or invalid token - submission will be anonymous
         
-        # Save submission to database
+        # Save submission to database - pass data directly as form_data (matches Civil/HVAC structure)
         submission_db = create_submission_db(
             module_type='cleaning',
-            form_data=submission_data,
+            form_data=data,
             site_name=data.get('project_name', 'Cleaning Assessment'),
             visit_date=data.get('date_of_visit', datetime.utcnow().strftime('%Y-%m-%d')),
             user_id=user_id

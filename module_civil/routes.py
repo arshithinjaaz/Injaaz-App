@@ -158,47 +158,108 @@ def index():
                     form_data['operations_manager_comments'] = submission.operations_manager_comments
                     logger.info(f"✅ Added Operations Manager comments from model field to form_data for display")
             
-            # Operations Manager signature is stored in form_data, but ensure it's there
+            # Operations Manager signature: check form_data first, then model field, then nested
             if not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
-                if isinstance(submission.form_data, dict):
-                    nested_data = submission.form_data.get('data') if isinstance(submission.form_data.get('data'), dict) else {}
-                    if nested_data:
-                        if nested_data.get('operations_manager_signature'):
-                            form_data['operations_manager_signature'] = nested_data.get('operations_manager_signature')
-                            logger.info(f"✅ Found Operations Manager signature in nested form_data.data structure")
-                        elif nested_data.get('opMan_signature'):
-                            form_data['operations_manager_signature'] = nested_data.get('opMan_signature')
-                            logger.info(f"✅ Found Operations Manager signature (opMan_signature) in nested form_data.data structure")
+                # First check top-level form_data directly from submission
+                fd = submission.form_data if isinstance(submission.form_data, dict) else {}
+                if isinstance(fd, str):
+                    try:
+                        fd = json.loads(fd)
+                    except:
+                        fd = {}
+                sig = fd.get('operations_manager_signature') or fd.get('opMan_signature')
+                if sig:
+                    form_data['operations_manager_signature'] = sig
+                    logger.info(f"✅ Found Operations Manager signature in form_data for display")
+                elif fd.get('data') and isinstance(fd['data'], dict):
+                    nested = fd['data']
+                    sig = nested.get('operations_manager_signature') or nested.get('opMan_signature')
+                    if sig:
+                        form_data['operations_manager_signature'] = sig
+                        logger.info(f"✅ Found Operations Manager signature in nested form_data.data for display")
+                else:
+                    # If still not found, log for debugging
+                    logger.warning(f"⚠️ Operations Manager signature not found in form_data for submission {submission.submission_id}")
+                    logger.warning(f"  - form_data keys: {list(form_data.keys()) if isinstance(form_data, dict) else 'not a dict'}")
+                    logger.warning(f"  - submission.form_data type: {type(submission.form_data)}")
+                    if isinstance(submission.form_data, dict):
+                        logger.warning(f"  - submission.form_data keys: {list(submission.form_data.keys())[:20]}")
             
             # Merge Business Development comments from model field into form_data if not already present
+            # CRITICAL: Only use actual BD comments, never fall back to supervisor comments
+            existing_bd_comments = form_data.get('business_dev_comments')
+            supervisor_comments = form_data.get('supervisor_comments')
+            
+            # Check if BD comments are incorrectly set to supervisor comments
+            if existing_bd_comments and supervisor_comments and existing_bd_comments == supervisor_comments:
+                logger.warning(f"⚠️ WARNING: BD comments appear to be incorrectly set to supervisor comments for submission {submission.submission_id}!")
+                form_data['business_dev_comments'] = None
+                existing_bd_comments = None
+            
             if hasattr(submission, 'business_dev_comments') and submission.business_dev_comments:
-                if not form_data.get('business_dev_comments'):
+                if not existing_bd_comments or existing_bd_comments == supervisor_comments:
                     form_data['business_dev_comments'] = submission.business_dev_comments
                     logger.info(f"✅ Added Business Development comments from model field to form_data for display")
             
-            # Business Development signature is stored in form_data, but ensure it's there
-            if not form_data.get('business_dev_signature'):
-                if isinstance(submission.form_data, dict):
-                    nested_data = submission.form_data.get('data') if isinstance(submission.form_data.get('data'), dict) else {}
-                    if nested_data:
-                        if nested_data.get('business_dev_signature'):
-                            form_data['business_dev_signature'] = nested_data.get('business_dev_signature')
-                            logger.info(f"✅ Found Business Development signature in nested form_data.data structure")
+            if not form_data.get('business_dev_signature') and not form_data.get('businessDevSignature'):
+                fd = submission.form_data if isinstance(submission.form_data, dict) else {}
+                sig = fd.get('business_dev_signature') or fd.get('businessDevSignature')
+                if sig:
+                    form_data['business_dev_signature'] = sig
+                    logger.info(f"✅ Found Business Development signature in form_data for display")
+                elif fd.get('data') and isinstance(fd['data'], dict):
+                    sig = (fd['data'].get('business_dev_signature') or fd['data'].get('businessDevSignature'))
+                    if sig:
+                        form_data['business_dev_signature'] = sig
             
-            # Merge Procurement comments from model field into form_data if not already present
+            # CRITICAL: Only use actual Procurement comments, never fall back to supervisor/BD comments
+            existing_proc_comments = form_data.get('procurement_comments')
+            
+            # Check if Procurement comments are incorrectly set to supervisor or BD comments
+            if existing_proc_comments and supervisor_comments and existing_proc_comments == supervisor_comments:
+                logger.warning(f"⚠️ WARNING: Procurement comments appear to be incorrectly set to supervisor comments for submission {submission.submission_id}!")
+                form_data['procurement_comments'] = None
+                existing_proc_comments = None
+            
             if hasattr(submission, 'procurement_comments') and submission.procurement_comments:
-                if not form_data.get('procurement_comments'):
+                if not existing_proc_comments:
                     form_data['procurement_comments'] = submission.procurement_comments
                     logger.info(f"✅ Added Procurement comments from model field to form_data for display")
             
-            # Procurement signature is stored in form_data, but ensure it's there
-            if not form_data.get('procurement_signature'):
-                if isinstance(submission.form_data, dict):
-                    nested_data = submission.form_data.get('data') if isinstance(submission.form_data.get('data'), dict) else {}
-                    if nested_data:
-                        if nested_data.get('procurement_signature'):
-                            form_data['procurement_signature'] = nested_data.get('procurement_signature')
-                            logger.info(f"✅ Found Procurement signature in nested form_data.data structure")
+            if not form_data.get('procurement_signature') and not form_data.get('procurementSignature'):
+                fd = submission.form_data if isinstance(submission.form_data, dict) else {}
+                sig = fd.get('procurement_signature') or fd.get('procurementSignature')
+                if sig:
+                    form_data['procurement_signature'] = sig
+                    logger.info(f"✅ Found Procurement signature in form_data for display")
+                elif fd.get('data') and isinstance(fd['data'], dict):
+                    sig = (fd['data'].get('procurement_signature') or fd['data'].get('procurementSignature'))
+                    if sig:
+                        form_data['procurement_signature'] = sig
+            
+            # CRITICAL: Only use actual GM comments, never fall back to supervisor/BD/Proc comments
+            existing_gm_comments = form_data.get('general_manager_comments')
+            
+            # Check if GM comments are incorrectly set to supervisor comments
+            if existing_gm_comments and supervisor_comments and existing_gm_comments == supervisor_comments:
+                logger.warning(f"⚠️ WARNING: GM comments appear to be incorrectly set to supervisor comments for submission {submission.submission_id}!")
+                form_data['general_manager_comments'] = None
+                existing_gm_comments = None
+            
+            if hasattr(submission, 'general_manager_comments') and submission.general_manager_comments:
+                if not existing_gm_comments:
+                    form_data['general_manager_comments'] = submission.general_manager_comments
+                    logger.info(f"✅ Added General Manager comments from model field to form_data for display")
+            
+            if not form_data.get('general_manager_signature') and not form_data.get('generalManagerSignature'):
+                fd = submission.form_data if isinstance(submission.form_data, dict) else {}
+                sig = fd.get('general_manager_signature') or fd.get('generalManagerSignature')
+                if sig:
+                    form_data['general_manager_signature'] = sig
+                elif fd.get('data') and isinstance(fd['data'], dict):
+                    sig = (fd['data'].get('general_manager_signature') or fd['data'].get('generalManagerSignature'))
+                    if sig:
+                        form_data['general_manager_signature'] = sig
             
             submission_data = {
                 'submission_id': submission.submission_id,
@@ -210,7 +271,15 @@ def index():
                 'supervisor_id': submission.supervisor_id if hasattr(submission, 'supervisor_id') else None,
                 'operations_manager_approved_at': submission.operations_manager_approved_at.isoformat() if hasattr(submission, 'operations_manager_approved_at') and submission.operations_manager_approved_at else None,
                 'business_dev_approved_at': submission.business_dev_approved_at.isoformat() if hasattr(submission, 'business_dev_approved_at') and submission.business_dev_approved_at else None,
-                'procurement_approved_at': submission.procurement_approved_at.isoformat() if hasattr(submission, 'procurement_approved_at') and submission.procurement_approved_at else None
+                'procurement_approved_at': submission.procurement_approved_at.isoformat() if hasattr(submission, 'procurement_approved_at') and submission.procurement_approved_at else None,
+                'operations_manager_comments': form_data.get('operations_manager_comments') or (submission.operations_manager_comments if hasattr(submission, 'operations_manager_comments') else None),
+                'operations_manager_signature': form_data.get('operations_manager_signature') or form_data.get('opMan_signature'),
+                'business_dev_comments': form_data.get('business_dev_comments') or (submission.business_dev_comments if hasattr(submission, 'business_dev_comments') else None),
+                'business_dev_signature': form_data.get('business_dev_signature') or form_data.get('businessDevSignature'),
+                'procurement_comments': form_data.get('procurement_comments') or (submission.procurement_comments if hasattr(submission, 'procurement_comments') else None),
+                'procurement_signature': form_data.get('procurement_signature') or form_data.get('procurementSignature'),
+                'general_manager_comments': form_data.get('general_manager_comments') or (submission.general_manager_comments if hasattr(submission, 'general_manager_comments') else None),
+                'general_manager_signature': form_data.get('general_manager_signature') or form_data.get('generalManagerSignature'),
             }
             is_edit_mode = True
         else:
@@ -223,9 +292,9 @@ def index():
         # Pass designation info so the template can adjust signature visibility
         user_designation = user.designation if hasattr(user, 'designation') else None
         
-        # Consider admins, supervisors, and managers as "supervisor edit" for review purposes
-        review_param = request.args.get('review') == 'true'
-        is_supervisor_edit = is_edit_mode and (user_designation in ['supervisor', 'manager'] or user.role == 'admin' or review_param)
+        # Only supervisors (and admins acting as supervisors) should use the supervisor edit path
+        # Operations Manager, BD, Procurement, GM use their own workflow-specific paths
+        is_supervisor_edit = is_edit_mode and (user_designation == 'supervisor' or (user.role == 'admin' and request.args.get('review') != 'true'))
         
         return render_template(
             'civil_form.html',
