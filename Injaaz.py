@@ -27,6 +27,7 @@ hvac_mep_bp = None
 civil_bp = None
 cleaning_bp = None
 auth_bp = None
+bd_bp = None
 
 try:
     from module_hvac_mep.routes import hvac_mep_bp  # noqa: F401
@@ -69,6 +70,13 @@ try:
 except Exception as e:
     logger.exception("Could not import app.workflow.routes.workflow_bp: %s", e)
     workflow_bp = None
+
+try:
+    from app.bd.routes import bd_bp  # noqa: F401
+    logger.info("Imported app.bd.routes.bd_bp")
+except Exception as e:
+    logger.exception("Could not import app.bd.routes.bd_bp: %s", e)
+    bd_bp = None
 
 # Ensure required directories exist at startup
 os.makedirs(GENERATED_DIR, exist_ok=True)
@@ -172,6 +180,10 @@ def create_app():
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload):
         from app.models import Session
+        # Refresh tokens are not stored in sessions table; only access tokens are tracked.
+        # Skipping the revocation check for refresh tokens allows access token refresh to work.
+        if jwt_payload.get('type') == 'refresh':
+            return False
         jti = jwt_payload['jti']
         session = Session.query.filter_by(token_jti=jti).first()
         return session is None or session.is_revoked
@@ -567,6 +579,15 @@ def create_app():
         logger.info("✅ Registered workflow blueprint at /api/workflow")
     else:
         logger.warning("⚠️  Workflow blueprint not available - check imports")
+
+    # Register BD email module blueprint
+    if bd_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(bd_bp)
+        app.register_blueprint(bd_bp)
+        logger.info("✅ Registered BD blueprint at /bd")
+    else:
+        logger.warning("⚠️  BD blueprint not available - check imports")
     
     # Register reports API blueprint for on-demand regeneration
     try:

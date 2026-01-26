@@ -7,6 +7,7 @@ from app.models import db, User, AuditLog
 from app.middleware import admin_required
 from common.error_responses import error_response, success_response
 from datetime import datetime
+import json
 import secrets
 import string
 
@@ -682,6 +683,54 @@ def update_submission(submission_id):
         db.session.rollback()
         current_app.logger.error(f"Error updating submission: {str(e)}", exc_info=True)
         return error_response('Failed to update submission', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/submissions/<submission_id>/close', methods=['POST'])
+@jwt_required()
+@admin_required
+def close_submission(submission_id):
+    """Close a submission from admin side (read-only for all users)"""
+    try:
+        admin_id = get_jwt_identity()
+        data = request.get_json() or {}
+        reason = (data.get('reason') or '').strip()
+
+        from app.models import Submission
+
+        submission = Submission.query.filter_by(submission_id=submission_id).first_or_404()
+        if submission.workflow_status == 'closed_by_admin':
+            return success_response({'submission_id': submission_id}, message='Submission already closed')
+
+        # Update workflow/status fields
+        submission.workflow_status = 'closed_by_admin'
+        submission.status = 'closed'
+
+        # Store close metadata in form_data (no schema change required)
+        form_data = submission.form_data or {}
+        if isinstance(form_data, str):
+            try:
+                form_data = json.loads(form_data)
+            except Exception:
+                form_data = {}
+
+        form_data['_admin_closed'] = {
+            'closed_at': datetime.utcnow().isoformat() + 'Z',
+            'closed_by': admin_id,
+            'reason': reason or 'Closed by admin'
+        }
+        submission.form_data = form_data
+
+        db.session.commit()
+
+        log_audit(admin_id, 'close_submission', 'submission', submission_id, {
+            'reason': reason or 'Closed by admin'
+        })
+
+        return success_response({'submission_id': submission_id}, message='Submission closed by admin')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error closing submission: {str(e)}", exc_info=True)
+        return error_response('Failed to close submission', status_code=500, error_code='DATABASE_ERROR')
 
 
 @admin_bp.route('/submissions/<submission_id>', methods=['GET'])

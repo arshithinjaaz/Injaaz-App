@@ -10,7 +10,7 @@ from flask import current_app
 logger = logging.getLogger(__name__)
 
 
-def send_email(recipient, subject, body, html_body=None):
+def send_email(recipient, subject, body, html_body=None, cc=None):
     """
     Send email using SMTP configuration from app config
     
@@ -19,6 +19,7 @@ def send_email(recipient, subject, body, html_body=None):
         subject: Email subject
         body: Plain text body
         html_body: Optional HTML body
+        cc: Optional CC email(s)
     
     Returns:
         bool: True if sent successfully, False otherwise
@@ -45,6 +46,12 @@ def send_email(recipient, subject, body, html_body=None):
         else:
             msg['To'] = recipient
         
+        if cc:
+            if isinstance(cc, (list, tuple)):
+                msg['Cc'] = ', '.join(cc)
+            else:
+                msg['Cc'] = cc
+
         if html_body:
             msg.set_content(body)
             msg.add_alternative(html_body, subtype='html')

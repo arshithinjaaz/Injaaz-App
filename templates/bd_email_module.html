@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BD Email Module - Injaaz</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <style>
+    :root {
+      --primary: #125435;
+      --text-dark: #111827;
+      --text-light: #6b7280;
+      --border: #e5e7eb;
+      --bg: #f9fafb;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text-dark);
+    }
+
+    .navbar {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .navbar-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .navbar-title img {
+      height: 32px;
+    }
+
+    .btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 0.55rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+    }
+
+    .card-title {
+      margin: 0 0 1rem;
+      font-size: 1.35rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+    }
+
+    .field label {
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .field input,
+    .field textarea {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.95rem;
+      width: 100%;
+    }
+
+    .field textarea {
+      min-height: 180px;
+      resize: vertical;
+    }
+
+    .helper {
+      font-size: 0.85rem;
+      color: var(--text-light);
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .alert {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .alert.success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .alert.error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <div class="navbar-title">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz">
+      BD Email Module
+    </div>
+    <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <h1 class="card-title">Send Email to General Manager</h1>
+      <p class="helper">Use this form to notify the GM. You can customize To/CC, subject, and message.</p>
+
+      <form id="emailForm">
+        <div class="field">
+          <label for="toEmail">To (Info)</label>
+          <input id="toEmail" name="to" type="text" value="{{ gm_emails|join(', ') }}" placeholder="gm@example.com">
+          <span class="helper">Separate multiple emails with commas.</span>
+        </div>
+
+        <div class="field">
+          <label for="ccEmail">CC (Info)</label>
+          <input id="ccEmail" name="cc" type="text" placeholder="cc@example.com">
+        </div>
+
+        <div class="field">
+          <label for="subject">Subject</label>
+          <input id="subject" name="subject" type="text" placeholder="Approval Update - Submission">
+        </div>
+
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea id="message" name="message" placeholder="Type your message here..."></textarea>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-secondary" onclick="resetForm()">Clear</button>
+          <button type="submit" class="btn">Send Email</button>
+        </div>
+      </form>
+
+      <div id="alertBox"></div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('emailForm');
+    const alertBox = document.getElementById('alertBox');
+
+    function showAlert(message, type) {
+      alertBox.innerHTML = `<div class="alert ${type}">${message}</div>`;
+    }
+
+    function resetForm() {
+      document.getElementById('subject').value = '';
+      document.getElementById('message').value = '';
+      document.getElementById('ccEmail').value = '';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      showAlert('', '');
+
+      const payload = {
+        to: document.getElementById('toEmail').value,
+        cc: document.getElementById('ccEmail').value,
+        subject: document.getElementById('subject').value,
+        message: document.getElementById('message').value
+      };
+
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        showAlert('You are not logged in.', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch('/bd/email-module/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          showAlert(data.message || 'Email sent successfully', 'success');
+        } else {
+          showAlert(data.error || 'Failed to send email', 'error');
+        }
+      } catch (error) {
+        showAlert('Failed to send email', 'error');
+      }
+    });
+  </script>
+</body>
+</html>

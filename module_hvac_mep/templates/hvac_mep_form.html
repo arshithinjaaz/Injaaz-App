@@ -41,6 +41,28 @@
       --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
       --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
+
+  /* Signature display: remove inner box and green background */
+  div[id*="SignatureReadOnly"],
+  #omOwnSignatureReadOnly {
+    background: #fff !important;
+    padding: 0 !important;
+  }
+
+  div[id*="SignatureReadOnly"] img,
+  #omOwnSignatureReadOnly img {
+    background: transparent !important;
+    border: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+  }
     
     body {
       background: var(--bg-page);
@@ -357,6 +379,13 @@
       border-bottom: 2px solid var(--primary);
     }
     
+    .section-heading-no-border {
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    
     /* Minimal typography */
     h2 {
       font-size: 1.75rem;
@@ -635,19 +664,16 @@
     #generalManagerSignaturePad {
       border: 2px solid var(--border-light);
       border-radius: 6px;
-      width: 500px !important;
-      max-width: 500px;
-      height: 160px !important;
-      max-height: 160px !important;
-      min-height: 160px !important;
+      width: 100% !important;
+      max-width: 100%;
+      height: 120px !important;
+      max-height: 120px !important;
+      min-height: 120px !important;
       background: #ffffff;
       cursor: crosshair;
       display: block;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       touch-action: none; /* Crucial for mobile drawing */
       overflow: hidden; /* Prevent signature from going outside the box */
-      /* Ensure consistent aspect ratio - 500x160 = 3.125:1 */
-      aspect-ratio: 500 / 160;
     }
     
     /* Responsive: scale down on smaller screens but maintain aspect ratio */
@@ -988,6 +1014,24 @@
       {% endif %}
     </p>
 
+    {% if is_edit_mode and can_edit == False %}
+    <!-- Read-Only Mode Banner -->
+    <div class="alert alert-info" style="background: #e0f2fe; border-color: #0ea5e9; margin-bottom: 1.5rem;">
+      <div class="d-flex align-items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-info-circle-fill me-3" viewBox="0 0 16 16" style="color: #0ea5e9; flex-shrink: 0;">
+          <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
+        </svg>
+        <div>
+          {% if submission_data and submission_data.workflow_status == 'closed_by_admin' %}
+          <strong>Closed by Admin:</strong> This form has been closed by an administrator. It is read-only for all users.
+          {% else %}
+          <strong>Read-Only Mode:</strong> You are viewing this form for reference only. This form has moved past your approval stage in the workflow. Only the current reviewer can make changes.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <form id="mainForm" enctype="multipart/form-data" onsubmit="return false;" novalidate>
       <!-- Tab Navigation -->
       <ul class="nav nav-tabs" id="hvacTabs" role="tablist">
@@ -1285,160 +1329,142 @@
 
         <!-- TAB 3: Sign-off & Submit -->
         <div class="tab-pane fade" id="tab-3" role="tabpanel">
-          <h4 class="section-heading">Signatures & Submission</h4>
+          {% if user_designation == 'supervisor' %}
+          <h4 class="section-heading-no-border">Supervisor Sign-off</h4>
+          {% elif user_designation == 'operations_manager' %}
+          <h4 class="section-heading-no-border">Operations Manager Review</h4>
+          {% elif user_designation == 'business_development' %}
+          <h4 class="section-heading-no-border">Business Development Review</h4>
+          {% elif user_designation == 'procurement' %}
+          <h4 class="section-heading-no-border">Procurement Review</h4>
+          {% elif user_designation == 'general_manager' %}
+          <h4 class="section-heading-no-border">General Manager Review</h4>
+          {% else %}
+          <h4 class="section-heading-no-border">Sign-off & Submit</h4>
+          {% endif %}
+          
           <div class="row g-3">
-        
-        {% if not (user_designation == 'supervisor' or is_supervisor_edit) %}
-        <!-- Supervisor signature display - Hidden for all supervisor users -->
-        <div class="col-md-6 mb-3">
-          <div class="signature-container">
-          <div class="signature-label">
-              <label class="form-label mb-0" style="flex: 1;">Supervisor Signature</label>
-              <span class="signature-hint">Draw signature</span>
-          </div>
-          <canvas id="techSignaturePad" class="signature-pad"></canvas>
-          <input type="hidden" id="techSignatureData" name="tech_signature">
-          <button type="button" id="clearTech" class="btn btn-outline-secondary btn-sm mt-2">Clear</button>
-          </div>
-        </div>
-        {% endif %}
-
-        {% if (is_supervisor_edit or user_designation == 'supervisor') and not (user and user.role == 'admin') %}
-        <!-- Supervisor Review Section -->
-        <div class="col-12 mb-4">
-          <div class="row">
-            <div class="col-lg-7 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
-              <textarea id="supervisorComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
-            </div>
-            
-            <div class="col-lg-5 mb-3">
-              <div class="signature-container h-100 d-flex flex-column">
-                <div class="signature-label">
-                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Supervisor Signature</label>
-                  <span class="signature-hint text-danger small">Required for approval</span>
+          
+          <!-- ==================== SUPERVISOR SECTION ==================== -->
+          <!-- Supervisor Review Section - SHOWN FIRST/TOP (Supervisor signs first in workflow) -->
+          {% if user_designation == 'supervisor' or (user and user.role == 'admin') %}
+          <div class="col-12 mb-4">
+            <h6 class="fw-bold mb-3" style="color: var(--primary);">Supervisor Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
+                <textarea id="supervisorComments" name="supervisor_comments" class="form-control" rows="5" style="min-height: 120px;" placeholder="Enter your comments or observations..."></textarea>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature 
+                  <span id="supervisorSignatureHint" class="text-danger">Required for approval</span>
+                </label>
+                <div style="height: 120px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+                  <canvas id="supervisorSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
                 </div>
-                <canvas id="supervisorSignaturePad" class="signature-pad"></canvas>
                 <input type="hidden" id="supervisorSignatureData" name="supervisor_signature">
-                <button type="button" id="clearSupervisor" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+                <button type="button" id="clearSupervisor" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
               </div>
             </div>
           </div>
-        </div>
-        {% endif %}
-
-        {% if user_designation == 'operations_manager' and is_edit_mode %}
-        <!-- Operations Manager Review Section -->
-        <div class="col-12 mb-4">
-          <div class="row">
-            <div class="col-lg-7 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
-              <textarea id="operationsManagerComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+          {% endif %}
+          
+          {% if user_designation == 'supervisor' and is_edit_mode %}
+          <!-- Subsequent Reviews: OM, BD, PO, GM (Read-only for Supervisor) - SHOWN BELOW SUPERVISOR -->
+          <div class="col-12 mb-4" id="previousForSupervisorSection" style="display: none;">
+            <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
+              <strong>Subsequent Reviews</strong>
             </div>
             
-            <div class="col-lg-5 mb-3">
-              <div class="signature-container h-100 d-flex flex-column">
-                <div class="signature-label">
-                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operations Manager Signature</label>
-                  <span class="signature-hint text-danger small">Required for approval</span>
+            <!-- Operations Manager -->
+            <div id="opsManagerReadOnlySupervisor" style="display: none; margin-bottom: 1.5rem;">
+              <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Operations Manager Review</h6>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
+                  <div id="opsManagerCommentsReadOnlySupervisor" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
                 </div>
-                <canvas id="opManSignaturePad" class="signature-pad"></canvas>
-                <input type="hidden" id="opManSignatureData" name="opMan_signature">
-                <button type="button" id="clearOp" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-
-        {% if user_designation == 'business_development' and is_edit_mode %}
-        <!-- Previous Reviewers: Operations Manager + Procurement (Read-only for BD) -->
-        <div class="col-12 mb-4" id="previousForBDSection" style="display: none;">
-          <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
-            <strong>Previous Reviews</strong>
-          </div>
-          
-          <!-- Operations Manager -->
-          <div id="opsManagerReadOnlySection" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Operations Manager Review</h6>
-            <div class="row">
-              <div class="col-lg-7 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
-                <div id="opsManagerCommentsReadOnly" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 100px; white-space: pre-wrap;" readonly></div>
-              </div>
-              <div class="col-lg-5 mb-3">
-                <div class="signature-container h-100 d-flex flex-column">
-                  <div class="signature-label">
-                    <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operations Manager Signature</label>
-                    <span class="signature-hint text-success small">✓ Signed</span>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Signature <span class="text-success">✓ Signed</span></label>
+                  <div id="opsManagerSignatureReadOnlySupervisor" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <span style="color: #9ca3af;">Loading signature...</span>
                   </div>
-                <div id="opsManagerSignatureReadOnly" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                  <span style="color: #9ca3af;">Loading signature...</span>
-                </div>
                 </div>
               </div>
-            </div>
-          </div>
-          
-          <!-- Procurement (so BD can see if PO has signed) -->
-          <div id="procurementReadOnlyBD" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Procurement Review</h6>
-            <div class="row">
-              <div class="col-lg-7 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
-                <div id="procurementCommentsReadOnlyBD" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
-              </div>
-              <div class="col-lg-5 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature</label>
-                <div id="procurementSignatureReadOnlyBD" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                  <span style="color: #9ca3af;">Loading signature...</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Business Development Review Section -->
-        <div class="col-12 mb-4">
-          <div class="row">
-            <div class="col-lg-7 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
-              <textarea id="businessDevComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
             </div>
             
-            <div class="col-lg-5 mb-3">
-              <div class="signature-container h-100 d-flex flex-column">
-                <div class="signature-label">
-                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Business Development Signature</label>
-                  <span class="signature-hint text-danger small">Required for approval</span>
+            <!-- Business Development -->
+            <div id="bdReadOnlySupervisor" style="display: none; margin-bottom: 1.5rem;">
+              <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Business Development Review</h6>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
+                  <div id="bdCommentsReadOnlySupervisor" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
                 </div>
-                <canvas id="businessDevSignaturePad" class="signature-pad"></canvas>
-                <input type="hidden" id="businessDevSignatureData" name="business_dev_signature">
-                <button type="button" id="clearBusinessDev" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Signature <span class="text-success">✓ Signed</span></label>
+                  <div id="bdSignatureReadOnlySupervisor" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <span style="color: #9ca3af;">Loading signature...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Procurement -->
+            <div id="procurementReadOnlySupervisor" style="display: none; margin-bottom: 1.5rem;">
+              <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Procurement Review</h6>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
+                  <div id="procurementCommentsReadOnlySupervisor" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature <span class="text-success">✓ Signed</span></label>
+                  <div id="procurementSignatureReadOnlySupervisor" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <span style="color: #9ca3af;">Loading signature...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- General Manager -->
+            <div id="gmReadOnlySupervisor" style="display: none; margin-bottom: 1.5rem;">
+              <h6 class="fw-bold mb-3" style="color: #0ea5e9;">General Manager Review</h6>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Comments</label>
+                  <div id="gmCommentsReadOnlySupervisor" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Signature <span class="text-success">✓ Signed</span></label>
+                  <div id="gmSignatureReadOnlySupervisor" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <span style="color: #9ca3af;">Loading signature...</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        {% endif %}
+          {% endif %}
 
-        {% if user_designation == 'procurement' and is_edit_mode %}
-        <!-- Previous Reviewers: Operations Manager + Business Development (Read-only for Procurement) -->
-        <div class="col-12 mb-4" id="previousForProcurementSection" style="display: none;">
+        <!-- ==================== OPERATIONS MANAGER SECTION ==================== -->
+        {% if user_designation == 'operations_manager' and is_edit_mode %}
+        <!-- Previous Reviewers: Show Supervisor signature (Read-only for OM) - SHOWN FIRST/TOP -->
+        <div class="col-12 mb-4" id="previousForOMSection" style="display: none;">
           <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
             <strong>Previous Reviews</strong>
           </div>
           
-          <!-- Operations Manager -->
-          <div id="opsManagerReadOnlyProc" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Operations Manager Review</h6>
+          <!-- Supervisor -->
+          <div id="supervisorReadOnlyOM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Supervisor Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
-                <div id="opsManagerCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
+                <div id="supervisorCommentsReadOnlyOM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
-                <div id="opsManagerSignatureReadOnlyProc" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature <span class="text-success">✓ Signed</span></label>
+                <div id="supervisorSignatureReadOnlyOM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1446,81 +1472,16 @@
           </div>
           
           <!-- Business Development -->
-          <div id="bdReadOnlyProc" style="display: none;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Business Development Review</h6>
+          <div id="bdReadOnlyOM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Business Development Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
-                <div id="bdCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
+                <div id="bdCommentsReadOnlyOM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
-                <div id="bdSignatureReadOnlyProc" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                  <span style="color: #9ca3af;">Loading signature...</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Procurement Review Section -->
-        <div class="col-12 mb-4">
-          <div class="row">
-            <div class="col-lg-7 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
-              <textarea id="procurementComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
-            </div>
-            
-            <div class="col-lg-5 mb-3">
-              <div class="signature-container h-100 d-flex flex-column">
-                <div class="signature-label">
-                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Procurement Signature</label>
-                  <span class="signature-hint text-danger small">Required for approval</span>
-                </div>
-                <canvas id="procurementSignaturePad" class="signature-pad"></canvas>
-                <input type="hidden" id="procurementSignatureData" name="procurement_signature">
-                <button type="button" id="clearProcurement" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-
-        {% if user_designation == 'general_manager' and is_edit_mode %}
-        <!-- Previous Reviewers: Operations Manager, BD, Procurement (Read-only for GM) -->
-        <div class="col-12 mb-4" id="previousReviewersReadOnlySection" style="display: none;">
-          <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
-            <strong>Previous Reviews</strong>
-          </div>
-          
-          <!-- Operations Manager -->
-          <div id="opsManagerReadOnlyGM" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Operations Manager Review</h6>
-            <div class="row">
-              <div class="col-lg-7 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
-                <div id="opsManagerCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
-              </div>
-              <div class="col-lg-5 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
-                <div id="opsManagerSignatureReadOnlyGM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                  <span style="color: #9ca3af;">Loading signature...</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Business Development -->
-          <div id="bdReadOnlyGM" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Business Development Review</h6>
-            <div class="row">
-              <div class="col-lg-7 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
-                <div id="bdCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
-              </div>
-              <div class="col-lg-5 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
-                <div id="bdSignatureReadOnlyGM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Signature <span class="text-success">✓ Signed</span></label>
+                <div id="bdSignatureReadOnlyOM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1528,16 +1489,33 @@
           </div>
           
           <!-- Procurement -->
-          <div id="procurementReadOnlyGM" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Procurement Review</h6>
+          <div id="procurementReadOnlyOM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Procurement Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
-                <div id="procurementCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
+                <div id="procurementCommentsReadOnlyOM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
-                <div id="procurementSignatureReadOnlyGM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature <span class="text-success">✓ Signed</span></label>
+                <div id="procurementSignatureReadOnlyOM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- General Manager -->
+          <div id="gmReadOnlyOM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">General Manager Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Comments</label>
+                <div id="gmCommentsReadOnlyOM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Signature <span class="text-success">✓ Signed</span></label>
+                <div id="gmSignatureReadOnlyOM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1545,24 +1523,286 @@
           </div>
         </div>
         
-        <!-- General Manager Review Section -->
-        <div class="col-12 mb-4">
+        <!-- Operations Manager Review Section (Editable) - SHOWN AT BOTTOM -->
+        <div class="col-12 mb-4" id="omEditableSection">
+          <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Operations Manager Review</h6>
           <div class="row">
-            <div class="col-lg-7 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Comments</label>
-              <textarea id="generalManagerComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
+              <textarea id="operationsManagerComments" class="form-control" rows="5" style="min-height: 120px; border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
             </div>
-            
-            <div class="col-lg-5 mb-3">
-              <div class="signature-container h-100 d-flex flex-column">
-                <div class="signature-label">
-                  <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">General Manager Signature</label>
-                  <span class="signature-hint text-danger small">Required for approval</span>
-                </div>
-                <canvas id="generalManagerSignaturePad" class="signature-pad"></canvas>
-                <input type="hidden" id="generalManagerSignatureData" name="general_manager_signature">
-                <button type="button" id="clearGeneralManager" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="width: fit-content;">Clear Signature</button>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Signature 
+                <span id="omSignatureHint" class="text-danger">Required for approval</span>
+              </label>
+              <div style="height: 120px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+                <canvas id="opManSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
               </div>
+              <input type="hidden" id="opManSignatureData" name="opMan_signature">
+              <button type="button" id="clearOp" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- ==================== BUSINESS DEVELOPMENT SECTION ==================== -->
+        {% if user_designation == 'business_development' and is_edit_mode %}
+        <!-- Previous Reviewers: Supervisor + Operations Manager (Read-only for BD) - SHOWN FIRST/TOP -->
+        <div class="col-12 mb-4" id="previousForBDSection" style="display: none;">
+          <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
+            <strong>Previous Reviews</strong>
+          </div>
+          
+          <!-- Supervisor -->
+          <div id="supervisorReadOnlyBD" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Supervisor Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
+                <div id="supervisorCommentsReadOnlyBD" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature <span class="text-success">✓ Signed</span></label>
+                <div id="supervisorSignatureReadOnlyBD" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Operations Manager -->
+          <div id="opsManagerReadOnlySection" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Operations Manager Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
+                <div id="opsManagerCommentsReadOnly" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Signature <span class="text-success">✓ Signed</span></label>
+                <div id="opsManagerSignatureReadOnly" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Procurement (so BD can see if PO has signed) -->
+          <div id="procurementReadOnlyBD" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Procurement Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
+                <div id="procurementCommentsReadOnlyBD" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature <span class="text-success">✓ Signed</span></label>
+                <div id="procurementSignatureReadOnlyBD" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Business Development Review Section (Editable) - SHOWN AT BOTTOM -->
+        <div class="col-12 mb-4">
+          <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Business Development Review</h6>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
+              <textarea id="businessDevComments" class="form-control" rows="5" style="min-height: 120px; border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Signature 
+                <span class="text-danger">Required for approval</span>
+              </label>
+              <div style="height: 120px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+                <canvas id="businessDevSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
+              </div>
+              <input type="hidden" id="businessDevSignatureData" name="business_dev_signature">
+              <button type="button" id="clearBusinessDev" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- ==================== PROCUREMENT SECTION ==================== -->
+        {% if user_designation == 'procurement' and is_edit_mode %}
+        <!-- Previous Reviewers: Supervisor + Operations Manager + Business Development (Read-only for Procurement) - SHOWN FIRST/TOP -->
+        <div class="col-12 mb-4" id="previousForProcurementSection" style="display: none;">
+          <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
+            <strong>Previous Reviews</strong>
+          </div>
+          
+          <!-- Supervisor -->
+          <div id="supervisorReadOnlyProc" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Supervisor Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
+                <div id="supervisorCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature <span class="text-success">✓ Signed</span></label>
+                <div id="supervisorSignatureReadOnlyProc" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Operations Manager -->
+          <div id="opsManagerReadOnlyProc" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Operations Manager Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
+                <div id="opsManagerCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Signature <span class="text-success">✓ Signed</span></label>
+                <div id="opsManagerSignatureReadOnlyProc" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Business Development -->
+          <div id="bdReadOnlyProc" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Business Development Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
+                <div id="bdCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Signature <span class="text-success">✓ Signed</span></label>
+                <div id="bdSignatureReadOnlyProc" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Procurement Review Section (Editable) - SHOWN AT BOTTOM -->
+        <div class="col-12 mb-4">
+          <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Procurement Review</h6>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
+              <textarea id="procurementComments" class="form-control" rows="5" style="min-height: 120px; border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature 
+                <span class="text-danger">Required for approval</span>
+              </label>
+              <div style="height: 120px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+                <canvas id="procurementSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
+              </div>
+              <input type="hidden" id="procurementSignatureData" name="procurement_signature">
+              <button type="button" id="clearProcurement" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- ==================== GENERAL MANAGER SECTION ==================== -->
+        {% if user_designation == 'general_manager' and is_edit_mode %}
+        <!-- Previous Reviewers: Supervisor, Operations Manager, BD, Procurement (Read-only for GM) - SHOWN FIRST/TOP -->
+        <div class="col-12 mb-4" id="previousReviewersReadOnlySection" style="display: none;">
+          <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
+            <strong>Previous Reviews</strong>
+          </div>
+          
+          <!-- Supervisor -->
+          <div id="supervisorReadOnlyGM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Supervisor Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
+                <div id="supervisorCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature <span class="text-success">✓ Signed</span></label>
+                <div id="supervisorSignatureReadOnlyGM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Operations Manager -->
+          <div id="opsManagerReadOnlyGM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Operations Manager Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
+                <div id="opsManagerCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Signature <span class="text-success">✓ Signed</span></label>
+                <div id="opsManagerSignatureReadOnlyGM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Business Development -->
+          <div id="bdReadOnlyGM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Business Development Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
+                <div id="bdCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Signature <span class="text-success">✓ Signed</span></label>
+                <div id="bdSignatureReadOnlyGM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Procurement -->
+          <div id="procurementReadOnlyGM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Procurement Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
+                <div id="procurementCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature <span class="text-success">✓ Signed</span></label>
+                <div id="procurementSignatureReadOnlyGM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- General Manager Review Section (Editable) - SHOWN AT BOTTOM -->
+        <div class="col-12 mb-4">
+          <h6 class="fw-bold mb-3" style="color: #0ea5e9;">General Manager Review</h6>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Comments</label>
+              <textarea id="generalManagerComments" class="form-control" rows="5" style="min-height: 120px; border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Signature 
+                <span class="text-danger">Required for approval</span>
+              </label>
+              <div style="height: 120px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+                <canvas id="generalManagerSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
+              </div>
+              <input type="hidden" id="generalManagerSignatureData" name="general_manager_signature">
+              <button type="button" id="clearGeneralManager" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
             </div>
           </div>
         </div>
@@ -1663,13 +1903,19 @@
         {% endif %}
 
         <!-- Submit Section -->
-        <div class="col-12 mb-5 mt-4 text-center">
-          <div class="d-flex justify-content-between mb-3">
+        <div class="col-12 mb-5 mt-4">
+          <div class="d-flex justify-content-between align-items-center">
             <button type="button" class="btn btn-secondary" onclick="goToTab(2)">&laquo; Previous</button>
+            {% if can_edit != False %}
+            <button type="button" id="submitAllBtn" class="btn btn-success px-5 py-2 shadow-sm" style="font-weight: 700; letter-spacing: 0.5px; border-radius: 8px;">
+              {% if is_edit_mode %}✓ UPDATE SUBMISSION{% else %}🚀 SUBMIT INSPECTION{% endif %}
+            </button>
+            {% else %}
+            <div class="alert alert-info mb-0" style="background: #f0f9ff; border-color: #0ea5e9; padding: 0.75rem 1rem;">
+              <strong>Read-Only:</strong> This form is view-only. You cannot submit changes.
+            </div>
+            {% endif %}
           </div>
-          <button type="button" id="submitAllBtn" class="btn btn-success px-5 py-2 shadow-sm" style="font-weight: 700; letter-spacing: 0.5px; border-radius: 8px;">
-            {% if is_edit_mode %}✓ UPDATE SUBMISSION{% else %}🚀 SUBMIT INSPECTION{% endif %}
-          </button>
         </div>
 
         <!-- Status & Downloads -->
@@ -2000,6 +2246,30 @@
       // Make pads available globally for loadSubmissionData
       window.signaturePads = pads;
 
+      // Helper function to format timestamp (converts UTC to Dubai time)
+      function formatSigningTime(timestamp) {
+        if (!timestamp) return '';
+        try {
+          // Ensure timestamp is treated as UTC (backend stores UTC without 'Z' suffix)
+          let utcTimestamp = timestamp;
+          if (typeof timestamp === 'string' && !timestamp.endsWith('Z') && !timestamp.includes('+')) {
+            utcTimestamp = timestamp + 'Z';
+          }
+          const date = new Date(utcTimestamp);
+          const options = {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'Asia/Dubai'
+          };
+          return date.toLocaleString('en-US', options) + ' (GST)';
+        } catch (e) {
+          return '';
+        }
+      }
+
       // Initialize Upload Queue System
       let photoQueue = null;
       let photoQueueUI = null;
@@ -2294,11 +2564,15 @@
         saveDraft(); // Auto-save after removing photo
       }
 
-      dropZone.addEventListener('click', () => curPhotos.click());
-      dropZone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag-over'); });
-      dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('drag-over'); });
-      dropZone.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
-      curPhotos.addEventListener('change', () => handleFiles(curPhotos.files));
+      if (dropZone) {
+        dropZone.addEventListener('click', () => curPhotos.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('drag-over'); });
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
+      }
+      if (curPhotos) {
+        curPhotos.addEventListener('change', () => handleFiles(curPhotos.files));
+      }
 
       // CRITICAL: Dropdown logic
       function clearSelect(el, placeholder='Select') {
@@ -2324,50 +2598,55 @@
         clearSelect(curDescription, 'Select Description');
       }
 
-      curAsset.addEventListener('change', () => {
-        curSystem.innerHTML = '<option value="">Select System</option>';
-        curDescription.innerHTML = '<option value="">Select Description</option>';
-        const cat = curAsset.value;
-        if (!cat) { 
-          curSystem.disabled = true; 
-          curDescription.disabled = true; 
-          return; 
-        }
-        const sysObj = (window.DROPDOWN_DATA && window.DROPDOWN_DATA[cat]) ? window.DROPDOWN_DATA[cat] : null;
-        if (sysObj && typeof sysObj === 'object') {
-          Object.keys(sysObj).forEach(sk => {
-            const o = document.createElement('option');
-            o.value = sk;
-            o.textContent = sk;
-            curSystem.appendChild(o);
-          });
-          curSystem.disabled = false;
-          curDescription.disabled = true;
-        } else {
-          curSystem.disabled = true;
-          curDescription.disabled = true;
-        }
-      });
-
-      curSystem.addEventListener('change', () => {
-        curDescription.innerHTML = '<option value="">Select Description</option>';
-        const cat = curAsset.value;
-        const sk = curSystem.value;
-        if (!cat || !sk) { 
-          curDescription.disabled = true; 
-          return; 
-        }
-        const arr = (window.DROPDOWN_DATA && window.DROPDOWN_DATA[cat]) ? window.DROPDOWN_DATA[cat][sk] || [] : [];
-        arr.forEach(v => {
-          const o = document.createElement('option');
-          o.value = v;
-          o.textContent = v;
-          curDescription.appendChild(o);
+      if (curAsset) {
+        curAsset.addEventListener('change', () => {
+          curSystem.innerHTML = '<option value="">Select System</option>';
+          curDescription.innerHTML = '<option value="">Select Description</option>';
+          const cat = curAsset.value;
+          if (!cat) { 
+            curSystem.disabled = true; 
+            curDescription.disabled = true; 
+            return; 
+          }
+          const sysObj = (window.DROPDOWN_DATA && window.DROPDOWN_DATA[cat]) ? window.DROPDOWN_DATA[cat] : null;
+          if (sysObj && typeof sysObj === 'object') {
+            Object.keys(sysObj).forEach(sk => {
+              const o = document.createElement('option');
+              o.value = sk;
+              o.textContent = sk;
+              curSystem.appendChild(o);
+            });
+            curSystem.disabled = false;
+            curDescription.disabled = true;
+          } else {
+            curSystem.disabled = true;
+            curDescription.disabled = true;
+          }
         });
-        curDescription.disabled = false;
-      });
+      }
 
-      addItemBtn.addEventListener('click', async () => {
+      if (curSystem) {
+        curSystem.addEventListener('change', () => {
+          curDescription.innerHTML = '<option value="">Select Description</option>';
+          const cat = curAsset.value;
+          const sk = curSystem.value;
+          if (!cat || !sk) { 
+            curDescription.disabled = true; 
+            return; 
+          }
+          const arr = (window.DROPDOWN_DATA && window.DROPDOWN_DATA[cat]) ? window.DROPDOWN_DATA[cat][sk] || [] : [];
+          arr.forEach(v => {
+            const o = document.createElement('option');
+            o.value = v;
+            o.textContent = v;
+            curDescription.appendChild(o);
+          });
+          curDescription.disabled = false;
+        });
+      }
+
+      if (addItemBtn) {
+        addItemBtn.addEventListener('click', async () => {
         const asset = curAsset.value || '';
         const system = curSystem.value || '';
         const description = curDescription.value || '';
@@ -2489,34 +2768,43 @@
           statusBox.innerHTML = `<div class="alert alert-success">✅ Item added with ${uploadedPhotoUrls.length} photo(s) uploaded to cloud</div>`;
           setTimeout(() => { statusBox.innerHTML = ''; }, 3000);
           
-        } catch (err) {
-          statusBox.innerHTML = `<div class="alert alert-danger">❌ Failed to upload photos: ${err.message}</div>`;
-        } finally {
-          uploadModal.style.display = 'none';
-          addItemBtn.disabled = false;
-          addItemBtn.textContent = 'Add Item';
-        }
-      });
+          } catch (err) {
+            statusBox.innerHTML = `<div class="alert alert-danger">❌ Failed to upload photos: ${err.message}</div>`;
+          } finally {
+            if (uploadModal) uploadModal.style.display = 'none';
+            addItemBtn.disabled = false;
+            addItemBtn.textContent = 'Add Item';
+          }
+        });
+      }
 
-      clearCurrentBtn.addEventListener('click', resetCurrent);
-      clearItemsBtn.addEventListener('click', () => {
-        if (!confirm('Clear all items? (Photos already uploaded to cloud will remain there)')) return;
-        items = [];
-        renderItems();
-        saveDraft();
-      });
+      if (clearCurrentBtn) {
+        clearCurrentBtn.addEventListener('click', resetCurrent);
+      }
+      if (clearItemsBtn) {
+        clearItemsBtn.addEventListener('click', () => {
+          if (!confirm('Clear all items? (Photos already uploaded to cloud will remain there)')) return;
+          items = [];
+          renderItems();
+          saveDraft();
+        });
+      }
 
       function resetCurrent() {
-        curAsset.value = '';
-        curSystem.innerHTML = '<option value="">Select System</option>';
-        curSystem.disabled = true;
-        curDescription.innerHTML = '<option value="">Select Description</option>';
-        curDescription.disabled = true;
-        curQuantity.value = '1';
-        curBrand.value = '';
-        curSpecification.value = '';
-        curComments.value = '';
-        curPhotos.value = '';
+        if (curAsset) curAsset.value = '';
+        if (curSystem) {
+          curSystem.innerHTML = '<option value="">Select System</option>';
+          curSystem.disabled = true;
+        }
+        if (curDescription) {
+          curDescription.innerHTML = '<option value="">Select Description</option>';
+          curDescription.disabled = true;
+        }
+        if (curQuantity) curQuantity.value = '1';
+        if (curBrand) curBrand.value = '';
+        if (curSpecification) curSpecification.value = '';
+        if (curComments) curComments.value = '';
+        if (curPhotos) curPhotos.value = '';
         currentPreviews.forEach(u => URL.revokeObjectURL(u));
         currentFiles = [];
         currentPreviews = [];
@@ -2525,7 +2813,7 @@
           photoPreviewContainer.style.display = 'none';
         }
         if (photoCount) photoCount.style.display = 'none';
-        fileWarning.style.display = 'none';
+        if (fileWarning) fileWarning.style.display = 'none';
       }
 
       function renderItems() {
@@ -2888,7 +3176,7 @@
         const supervisorSignatureData = document.getElementById('supervisorSignatureData');
         const supervisorCanvas = document.getElementById('supervisorSignaturePad');
         
-        {% if is_supervisor_edit or user_designation == 'supervisor' %}
+        {% if user_designation == 'supervisor' %}
         // Always check canvas first (if supervisor signed on canvas, use that)
         if (pads && pads.supervisorPad && !pads.supervisorPad.isEmpty()) {
           supervisorData = pads.supervisorPad.toDataURL('image/png');
@@ -3143,15 +3431,21 @@
               }
             }
             
-            // Validate signature is present before updating
+            // Validate signature is present before updating (only for actual supervisors)
+            {% if user_designation == 'supervisor' %}
             if (!supervisorData || supervisorData.trim() === '') {
               alert('Please provide your supervisor signature before submitting. Draw your signature in the signature pad.');
               loadingOverlay.style.display = 'none';
               return;
             }
+            {% endif %}
             
-            // Update payload with latest signature
-            payload.supervisor_signature = supervisorData;
+            // Update payload with latest signature (only if supervisor)
+            {% if user_designation == 'supervisor' %}
+            if (supervisorData && supervisorData.trim() !== '') {
+              payload.supervisor_signature = supervisorData;
+            }
+            {% endif %}
             
             console.log('📤 Updating with supervisor signature (length:', supervisorData.length, ')');
             
@@ -3768,7 +4062,9 @@
         }
       }
 
-      submitAllBtn.addEventListener('click', submitAll);
+      if (submitAllBtn) {
+        submitAllBtn.addEventListener('click', submitAll);
+      }
 
       // Tab Navigation Function
       // goToTab function already defined at top of script for onclick handlers
@@ -3833,8 +4129,10 @@
       setInterval(saveDraft, DRAFT_SAVE_INTERVAL);
 
       // Save on form field changes
-      document.getElementById('site_name').addEventListener('input', saveDraft);
-      document.getElementById('visit_date').addEventListener('change', saveDraft);
+      const siteNameEl = document.getElementById('site_name');
+      const visitDateEl = document.getElementById('visit_date');
+      if (siteNameEl) siteNameEl.addEventListener('input', saveDraft);
+      if (visitDateEl) visitDateEl.addEventListener('change', saveDraft);
 
       // Load submission data if in edit mode
       function loadSubmissionData() {
@@ -4121,8 +4419,13 @@
           // Standard function to display signatures in read-only containers
           // This ensures all signatures are displayed consistently with proper aspect ratio
           function displaySignatureInContainer(containerId, signatureData, altText) {
+            console.log(`🖼️ displaySignatureInContainer called: containerId=${containerId}, hasData=${!!signatureData}`);
             const container = document.getElementById(containerId);
-            if (!container) return;
+            if (!container) {
+              console.log(`  ❌ Container NOT FOUND: ${containerId}`);
+              return;
+            }
+            console.log(`  ✅ Container found: ${containerId}`);
             
             // Clear container
             container.innerHTML = '';
@@ -4131,6 +4434,7 @@
             container.style.justifyContent = 'center';
             
             if (!signatureData) {
+              console.log(`  ⚠️ No signature data for ${containerId}`);
               container.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
               return;
             }
@@ -4139,20 +4443,28 @@
             let sigUrl = signatureData;
             if (typeof sigUrl === 'object' && sigUrl !== null && sigUrl.url) {
               sigUrl = sigUrl.url;
+              console.log(`  📝 Extracted URL from object: ${sigUrl.substring(0, 50)}...`);
             }
             
             // Validate signature URL
             if (typeof sigUrl === 'string' && (sigUrl.startsWith('data:') || sigUrl.startsWith('http') || sigUrl.startsWith('/'))) {
+              console.log(`  ✅ Valid signature URL, creating image element for ${containerId}`);
               const img = document.createElement('img');
               img.src = sigUrl;
               img.alt = altText || 'Signature';
-              // Standard signature display style - maintains aspect ratio, centered, contained
-              img.style.cssText = 'max-width: 100%; max-height: 140px; width: auto; height: auto; object-fit: contain; object-position: center; display: block; margin: 0 auto;';
+              // Standard signature display style - fills container, maintains aspect ratio
+              img.style.cssText = 'max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; object-position: center; display: block;';
+              img.onload = () => {
+                console.log(`  ✅ Image loaded successfully for ${containerId}`);
+              };
               img.onerror = () => {
+                console.log(`  ❌ Image FAILED to load for ${containerId}, src: ${sigUrl.substring(0, 80)}...`);
                 container.innerHTML = '<span style="color: #dc3545;">Failed to load signature</span>';
               };
               container.appendChild(img);
+              console.log(`  ✅ Image element appended to ${containerId}`);
             } else {
+              console.log(`  ❌ Invalid signature URL format for ${containerId}: ${typeof sigUrl} - ${sigUrl}`);
               container.innerHTML = '<span style="color: #9ca3af;">Signature not available</span>';
             }
           }
@@ -4279,7 +4591,7 @@
                   const sigImg = document.createElement('img');
                   sigImg.src = techSig;
                   sigImg.alt = 'Supervisor Signature';
-                  sigImg.style.cssText = 'max-width: 100%; max-height: 180px; width: auto; height: auto; object-fit: contain; object-position: center; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px; display: block; margin: 0 auto;';
+                  sigImg.style.cssText = 'max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; object-position: center; display: block; margin: 0 auto;';
                   techCanvas.parentElement.insertBefore(sigImg, techCanvas);
                   
                   // Hide clear button
@@ -4467,27 +4779,14 @@
                 const supervisorSigInput = document.getElementById('supervisorSignatureData');
                 
                 if (supervisorCanvas && supervisorSigInput) {
-                  // Check if supervisor is editing their own form (can clear/re-sign)
-                  {% if submission_data and submission_data.workflow_status %}
-                  const workflowStatus = {{ submission_data.workflow_status|tojson|safe }};
+                  // Check if current user is a supervisor AND can edit
+                  // Only supervisors should see "(You can edit and re-sign)" for supervisor signature
+                  {% if user_designation == 'supervisor' %}
+                  const isCurrentUserSupervisor = true;
                   {% else %}
-                  const workflowStatus = null;
+                  const isCurrentUserSupervisor = false;
                   {% endif %}
-                  // Check ownership: supervisor owns submission if supervisor_id matches
-                  {% if submission_data and submission_data.supervisor_id %}
-                  const submissionSupervisorId = {{ submission_data.supervisor_id|tojson|safe }};
-                  {% else %}
-                  const submissionSupervisorId = null;
-                  {% endif %}
-                  {% if current_user_id is defined and current_user_id is not none %}
-                  const currentUserId = {{ current_user_id|tojson|safe }};
-                  {% else %}
-                  const currentUserId = null;
-                  {% endif %}
-                  const isOwnSubmission = (submissionSupervisorId && submissionSupervisorId === currentUserId) || 
-                                          workflowStatus === 'submitted' || 
-                                          workflowStatus === 'rejected' || 
-                                          !workflowStatus;
+                  const canEditSupervisor = isCurrentUserSupervisor && submissionData && submissionData.can_edit === true;
                   
                   // Check if image already exists to avoid duplicates
                   const existingImg = supervisorCanvas.parentElement.querySelector('img[alt="Supervisor Signature"]');
@@ -4499,99 +4798,115 @@
                   // Store in hidden input
                   supervisorSigInput.value = supervisorSig;
                   
-                  if (isOwnSubmission) {
-                    // Supervisor editing their own form - load into canvas for editing (allow clear/re-sign)
-                    console.log('✅ Supervisor editing own form - loading signature into canvas for editing');
-                    // Ensure canvas is visible for editing
-                    supervisorCanvas.style.display = 'block';
-                    
-                    // Ensure clear button is visible and functional
-                    const clearSupervisorBtn = document.getElementById('clearSupervisor');
-                    if (clearSupervisorBtn) {
-                      clearSupervisorBtn.style.display = 'block';
-                      clearSupervisorBtn.style.visibility = 'visible';
-                      // Re-attach event listener to ensure it works after signature is loaded
-                      // Remove existing click listeners
-                      const newClearBtn = clearSupervisorBtn.cloneNode(true);
-                      clearSupervisorBtn.parentNode.replaceChild(newClearBtn, clearSupervisorBtn);
-                      
-                      newClearBtn.addEventListener('click', function() {
-                        if (pads && pads.supervisorPad) {
-                          pads.supervisorPad.clear();
-                          if (supervisorSigInput) supervisorSigInput.value = '';
-                          console.log('✅ Supervisor signature cleared');
-                        } else {
-                          console.warn('⚠️ Supervisor pad not available for clearing');
-                        }
-                      });
-                    }
-                    
-                    // Load signature into pad
-                    const loadSupervisorSig = () => {
-                      if (pads && pads.supervisorPad && supervisorCanvas) {
-                        try {
-                          const img = new Image();
-                          img.crossOrigin = 'anonymous';
-                          img.onload = function() {
-                            try {
-                              // Clear pad first, then load signature
-                              pads.supervisorPad.clear();
-                              pads.supervisorPad.fromDataURL(supervisorSig);
-                              console.log('✅ Loaded supervisor signature into pad for editing');
-                            } catch (e) {
-                              console.error('❌ Error loading signature into pad:', e);
+                  // Always load signature into canvas (like Cleaning form does)
+                  // Then make it read-only if user can't edit
+                  console.log('✅ Loading supervisor signature into canvas, canEdit:', canEditSupervisor);
+                  supervisorCanvas.style.display = 'block';
+                  
+                  // Load signature into canvas
+                  const loadSupervisorSig = () => {
+                    if (pads && pads.supervisorPad && supervisorCanvas) {
+                      try {
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.onload = function() {
+                          try {
+                            // Get canvas context and dimensions
+                            const ctx = supervisorCanvas.getContext('2d');
+                            const rect = supervisorCanvas.getBoundingClientRect();
+                            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                            
+                            // Set canvas dimensions
+                            if (rect.width > 0 && rect.height > 0) {
+                              supervisorCanvas.width = rect.width * ratio;
+                              supervisorCanvas.height = rect.height * ratio;
+                              ctx.scale(ratio, ratio);
                             }
-                          };
-                          img.onerror = function() {
-                            console.error('❌ Failed to load supervisor signature image');
-                          };
-                          img.src = supervisorSig;
-                        } catch (e) {
-                          console.error('❌ Error setting up supervisor signature image load:', e);
-                        }
-                      } else {
-                        console.warn('⚠️ Supervisor signature pad not ready yet, will retry...');
-                        setTimeout(loadSupervisorSig, 200);
+                            
+                            const canvasWidth = rect.width || supervisorCanvas.width;
+                            const canvasHeight = rect.height || supervisorCanvas.height;
+                            
+                            // Clear canvas with white background
+                            ctx.fillStyle = 'white';
+                            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                            
+                            // Calculate dimensions preserving aspect ratio
+                            const imgW = img.naturalWidth || img.width;
+                            const imgH = img.naturalHeight || img.height;
+                            const scale = Math.min(canvasWidth / imgW, canvasHeight / imgH) * 0.9;
+                            const drawW = imgW * scale;
+                            const drawH = imgH * scale;
+                            const x = (canvasWidth - drawW) / 2;
+                            const y = (canvasHeight - drawH) / 2;
+                            
+                            // Draw signature centered
+                            ctx.drawImage(img, x, y, drawW, drawH);
+                            
+                            // Mark canvas as having a loaded signature
+                            supervisorCanvas.dataset.signatureLoaded = 'true';
+                            
+                            console.log('✅ Loaded supervisor signature into canvas');
+                            
+                            // Update hint based on edit capability
+                            const supervisorHint = document.getElementById('supervisorSignatureHint');
+                            if (supervisorHint) {
+                              if (canEditSupervisor) {
+                                supervisorHint.innerHTML = '<span class="text-success">✓ Form signed</span> <span class="text-muted small"></span>';
+                              } else {
+                                supervisorHint.innerHTML = '<span class="text-success">✓ Form signed</span>';
+                              }
+                              supervisorHint.classList.remove('text-danger');
+                              supervisorHint.style.color = '#10b981';
+                            }
+                            
+                            // If user can't edit, make canvas read-only
+                            if (!canEditSupervisor) {
+                              supervisorCanvas.style.pointerEvents = 'none';
+                              supervisorCanvas.style.cursor = 'default';
+                              
+                              // Hide clear button
+                              const clearBtn = document.getElementById('clearSupervisor');
+                              if (clearBtn) {
+                                clearBtn.style.display = 'none';
+                              }
+                            } else {
+                              // User can edit - ensure clear button is visible and functional
+                              const clearSupervisorBtn = document.getElementById('clearSupervisor');
+                              if (clearSupervisorBtn) {
+                                clearSupervisorBtn.style.display = 'block';
+                                clearSupervisorBtn.style.visibility = 'visible';
+                                
+                                // Re-attach event listener
+                                const newClearBtn = clearSupervisorBtn.cloneNode(true);
+                                clearSupervisorBtn.parentNode.replaceChild(newClearBtn, clearSupervisorBtn);
+                                
+                                newClearBtn.addEventListener('click', function() {
+                                  if (pads && pads.supervisorPad) {
+                                    pads.supervisorPad.clear();
+                                    if (supervisorSigInput) supervisorSigInput.value = '';
+                                    supervisorCanvas.dataset.signatureLoaded = 'false';
+                                    console.log('✅ Supervisor signature cleared');
+                                  }
+                                });
+                              }
+                            }
+                          } catch (e) {
+                            console.error('❌ Error drawing signature on canvas:', e);
+                          }
+                        };
+                        img.onerror = function() {
+                          console.error('❌ Failed to load supervisor signature image');
+                        };
+                        img.src = supervisorSig;
+                      } catch (e) {
+                        console.error('❌ Error setting up supervisor signature image load:', e);
                       }
-                    };
-                    loadSupervisorSig();
-                  } else {
-                    // Not their own form - show as read-only image
-                    console.log('✅ Showing supervisor signature as read-only image');
-                    supervisorCanvas.style.display = 'none';
-                    
-                    // Create image element to display the signature
-                    const sigImg = document.createElement('img');
-                    sigImg.src = supervisorSig;
-                    sigImg.alt = 'Supervisor Signature';
-                    sigImg.style.cssText = 'max-width: 100%; max-width: 500px; max-height: 160px; width: auto; height: auto; object-fit: contain; object-position: center; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: block; margin: 0 auto;';
-                    supervisorCanvas.parentElement.insertBefore(sigImg, supervisorCanvas);
-                    
-                    // Hide clear button (look for button by ID)
-                    const clearBtn = document.getElementById('clearSupervisor');
-                    if (clearBtn) {
-                      clearBtn.style.display = 'none';
+                    } else {
+                      console.warn('⚠️ Supervisor signature pad not ready yet, will retry...');
+                      setTimeout(loadSupervisorSig, 200);
                     }
-                    
-                    // Update label to show signature is already present
-                    const label = supervisorCanvas.parentElement.querySelector('.signature-label');
-                    if (label) {
-                      const existingHint = label.querySelector('.signature-hint');
-                      if (existingHint) {
-                        existingHint.innerHTML = '<span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
-                      }
-                    }
-                    
-                    sigImg.onload = function() {
-                      console.log('✅ Supervisor signature image displayed successfully');
-                    };
-                    
-                    sigImg.onerror = function() {
-                      console.error('❌ Failed to load supervisor signature image');
-                      supervisorCanvas.style.display = 'block';
-                      this.style.display = 'none';
-                    };
-                  }
+                  };
+                  loadSupervisorSig();
                 } else {
                   console.warn('⚠️ Supervisor signature canvas or input not found');
                 }
@@ -4603,6 +4918,373 @@
               console.warn('  formData keys:', Object.keys(formData));
               console.warn('  submissionData.form_data keys:', Object.keys(submissionData.form_data || {}));
             }
+            {% endif %}
+            
+            // Load Operations Manager comments and signature for Supervisor (read-only)
+            {% if user_designation == 'supervisor' %}
+            console.log('========================================');
+            console.log('🔍 SUPERVISOR PREVIOUS REVIEWS DEBUG START');
+            console.log('========================================');
+            console.log('📦 Current user_designation: supervisor');
+            console.log('📦 is_edit_mode:', {{ 'true' if is_edit_mode else 'false' }});
+            console.log('📦 can_edit:', {{ 'true' if can_edit else 'false' }});
+            console.log('📦 submissionData available:', !!submissionData);
+            console.log('📦 formData available:', !!formData);
+            if (formData) {
+              console.log('📦 formData keys:', Object.keys(formData));
+            }
+            if (submissionData) {
+              console.log('📦 submissionData keys:', Object.keys(submissionData));
+              console.log('📦 submissionData.workflow_status:', submissionData.workflow_status);
+              console.log('📦 submissionData.operations_manager_approved_at:', submissionData.operations_manager_approved_at);
+              console.log('📦 submissionData.business_dev_approved_at:', submissionData.business_dev_approved_at);
+            }
+            
+            let omCommentsSupervisor = null;
+            let omSigSupervisor = null;
+            
+            console.log('🔍 STEP 1: Looking for OM data in formData...');
+            // Check formData for OM data
+            if (formData) {
+              console.log('  formData.operations_manager_comments:', formData.operations_manager_comments ? 'EXISTS' : 'NOT FOUND');
+              console.log('  formData.operations_manager_signature:', formData.operations_manager_signature ? 'EXISTS' : 'NOT FOUND');
+              console.log('  formData.opMan_signature:', formData.opMan_signature ? 'EXISTS' : 'NOT FOUND');
+              if (formData.operations_manager_comments) omCommentsSupervisor = formData.operations_manager_comments;
+              if (formData.operations_manager_signature) omSigSupervisor = formData.operations_manager_signature;
+              if (!omSigSupervisor && formData.opMan_signature) omSigSupervisor = formData.opMan_signature;
+            } else {
+              console.log('  ⚠️ formData is null/undefined');
+            }
+            
+            console.log('🔍 STEP 2: Looking for OM data in submissionData...');
+            // Fallback: check submissionData
+            if ((!omCommentsSupervisor || !omSigSupervisor) && submissionData) {
+              console.log('  submissionData.operations_manager_comments:', submissionData.operations_manager_comments ? 'EXISTS' : 'NOT FOUND');
+              if (!omCommentsSupervisor && submissionData.operations_manager_comments) {
+                omCommentsSupervisor = submissionData.operations_manager_comments;
+                console.log('  ✅ Found OM comments in submissionData');
+              }
+              if (!omSigSupervisor && submissionData.form_data) {
+                let checkFormData = submissionData.form_data;
+                console.log('  submissionData.form_data type:', typeof checkFormData);
+                if (typeof checkFormData === 'string') {
+                  try { checkFormData = JSON.parse(checkFormData); console.log('  ✅ Parsed form_data from string'); } catch (e) { console.log('  ❌ Failed to parse form_data:', e); }
+                }
+                if (checkFormData) {
+                  console.log('  checkFormData.operations_manager_signature:', checkFormData.operations_manager_signature ? 'EXISTS' : 'NOT FOUND');
+                  console.log('  checkFormData.opMan_signature:', checkFormData.opMan_signature ? 'EXISTS' : 'NOT FOUND');
+                  if (checkFormData.operations_manager_signature) { omSigSupervisor = checkFormData.operations_manager_signature; console.log('  ✅ Found OM sig in form_data.operations_manager_signature'); }
+                  if (!omSigSupervisor && checkFormData.opMan_signature) { omSigSupervisor = checkFormData.opMan_signature; console.log('  ✅ Found OM sig in form_data.opMan_signature'); }
+                }
+              }
+            } else if (!submissionData) {
+              console.log('  ⚠️ submissionData is null/undefined');
+            }
+            
+            console.log('🔍 STEP 3: OM data summary');
+            console.log('  omCommentsSupervisor:', omCommentsSupervisor ? `"${omCommentsSupervisor.substring(0, 50)}..."` : 'NULL');
+            console.log('  omSigSupervisor:', omSigSupervisor ? (typeof omSigSupervisor === 'string' ? `"${omSigSupervisor.substring(0, 50)}..."` : 'OBJECT') : 'NULL');
+            
+            // Display OM's previous review for supervisor (read-only)
+            console.log('🔍 STEP 4: Attempting to display OM section...');
+            if (omCommentsSupervisor || omSigSupervisor) {
+              console.log('  ✅ Have OM data, looking for DOM elements...');
+              const section = document.getElementById('opsManagerReadOnlySupervisor');
+              const prevSection = document.getElementById('previousForSupervisorSection');
+              console.log('  opsManagerReadOnlySupervisor element:', section ? 'FOUND' : 'NOT FOUND');
+              console.log('  previousForSupervisorSection element:', prevSection ? 'FOUND' : 'NOT FOUND');
+              if (section && prevSection) {
+                console.log('  ✅ Both DOM elements found, making visible...');
+                section.style.display = 'block';
+                prevSection.style.display = 'block';
+                console.log('  ✅ OM section and Previous Reviews section set to display:block');
+                
+                // Add timestamp if available
+                const header = section.querySelector('h6');
+                if (header && submissionData && submissionData.operations_manager_approved_at) {
+                  const timestamp = formatSigningTime(submissionData.operations_manager_approved_at);
+                  if (timestamp) {
+                    header.innerHTML = `Operations Manager Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                    console.log('  ✅ Updated header with timestamp:', timestamp);
+                  }
+                }
+                
+                // Load OM comments
+                if (omCommentsSupervisor) {
+                  const commentsDiv = document.getElementById('opsManagerCommentsReadOnlySupervisor');
+                  if (commentsDiv) {
+                    commentsDiv.textContent = omCommentsSupervisor;
+                    console.log('  ✅ Loaded OM comments into DOM');
+                  } else {
+                    console.log('  ❌ opsManagerCommentsReadOnlySupervisor element NOT FOUND');
+                  }
+                }
+                
+                // Load OM signature
+                console.log('  📝 Calling displaySignatureInContainer for OM signature...');
+                displaySignatureInContainer('opsManagerSignatureReadOnlySupervisor', omSigSupervisor, 'Operations Manager Signature');
+              } else {
+                console.log('  ❌ DOM elements not found - cannot display OM section');
+              }
+            } else {
+              console.log('  ⚠️ No OM data found - skipping OM section display');
+            }
+            
+            console.log('========================================');
+            console.log('🔍 NOW LOADING BD DATA FOR SUPERVISOR');
+            console.log('========================================');
+            
+            // Load Business Development review for Supervisor (read-only)
+            let bdCommentsSupervisor = null;
+            let bdSigSupervisor = null;
+            
+            console.log('🔍 STEP 5: Looking for BD data in formData...');
+            if (formData) {
+              console.log('  formData.business_dev_comments:', formData.business_dev_comments ? 'EXISTS' : 'NOT FOUND');
+              console.log('  formData.business_dev_signature:', formData.business_dev_signature ? 'EXISTS' : 'NOT FOUND');
+              if (formData.business_dev_comments) bdCommentsSupervisor = formData.business_dev_comments;
+              if (formData.business_dev_signature) bdSigSupervisor = formData.business_dev_signature;
+            }
+            
+            console.log('🔍 STEP 6: Looking for BD data in submissionData...');
+            // Fallback: check submissionData
+            if ((!bdCommentsSupervisor || !bdSigSupervisor) && submissionData) {
+              console.log('  submissionData.business_dev_comments:', submissionData.business_dev_comments ? 'EXISTS' : 'NOT FOUND');
+              console.log('  submissionData.business_dev_signature:', submissionData.business_dev_signature ? 'EXISTS' : 'NOT FOUND');
+              if (!bdCommentsSupervisor && submissionData.business_dev_comments) {
+                bdCommentsSupervisor = submissionData.business_dev_comments;
+                console.log('  ✅ Found BD comments in submissionData');
+              }
+              // Check top-level signature first, then form_data
+              if (!bdSigSupervisor && submissionData.business_dev_signature) {
+                bdSigSupervisor = submissionData.business_dev_signature;
+                console.log('  ✅ Found BD sig in submissionData.business_dev_signature');
+              }
+              if (!bdSigSupervisor && submissionData.form_data) {
+                let checkFormData = submissionData.form_data;
+                if (typeof checkFormData === 'string') {
+                  try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                }
+                if (checkFormData && checkFormData.business_dev_signature) {
+                  bdSigSupervisor = checkFormData.business_dev_signature;
+                  console.log('  ✅ Found BD sig in form_data.business_dev_signature');
+                }
+              }
+            }
+            
+            console.log('🔍 STEP 7: BD data summary');
+            console.log('  bdCommentsSupervisor:', bdCommentsSupervisor ? `"${bdCommentsSupervisor.substring(0, 50)}..."` : 'NULL');
+            console.log('  bdSigSupervisor:', bdSigSupervisor ? (typeof bdSigSupervisor === 'string' ? `"${bdSigSupervisor.substring(0, 50)}..."` : 'OBJECT') : 'NULL');
+            
+            // Display BD's review for supervisor (read-only)
+            console.log('🔍 STEP 8: Attempting to display BD section...');
+            if (bdCommentsSupervisor || bdSigSupervisor) {
+              console.log('  ✅ Have BD data, looking for DOM elements...');
+              const section = document.getElementById('bdReadOnlySupervisor');
+              const prevSection = document.getElementById('previousForSupervisorSection');
+              console.log('  bdReadOnlySupervisor element:', section ? 'FOUND' : 'NOT FOUND');
+              console.log('  previousForSupervisorSection element:', prevSection ? 'FOUND' : 'NOT FOUND');
+              if (section && prevSection) {
+                console.log('  ✅ Both DOM elements found, making visible...');
+                section.style.display = 'block';
+                prevSection.style.display = 'block';
+                console.log('  ✅ BD section and Previous Reviews section set to display:block');
+                
+                // Add timestamp if available
+                const header = section.querySelector('h6');
+                if (header && submissionData && submissionData.business_dev_approved_at) {
+                  const timestamp = formatSigningTime(submissionData.business_dev_approved_at);
+                  if (timestamp) {
+                    header.innerHTML = `Business Development Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                    console.log('  ✅ Updated BD header with timestamp:', timestamp);
+                  }
+                }
+                
+                // Load BD comments
+                if (bdCommentsSupervisor) {
+                  const commentsDiv = document.getElementById('bdCommentsReadOnlySupervisor');
+                  if (commentsDiv) {
+                    commentsDiv.textContent = bdCommentsSupervisor;
+                    console.log('  ✅ Loaded BD comments into DOM');
+                  } else {
+                    console.log('  ❌ bdCommentsReadOnlySupervisor element NOT FOUND');
+                  }
+                }
+                
+                // Load BD signature
+                console.log('  📝 Calling displaySignatureInContainer for BD signature...');
+                displaySignatureInContainer('bdSignatureReadOnlySupervisor', bdSigSupervisor, 'Business Development Signature');
+              } else {
+                console.log('  ❌ DOM elements not found - cannot display BD section');
+              }
+            } else {
+              console.log('  ⚠️ No BD data found - skipping BD section display');
+            }
+            
+            console.log('========================================');
+            console.log('🔍 NOW LOADING PROCUREMENT DATA FOR SUPERVISOR');
+            console.log('========================================');
+            
+            // Load Procurement review for Supervisor (read-only)
+            let procCommentsSupervisor = null;
+            let procSigSupervisor = null;
+            
+            console.log('🔍 STEP 9: Looking for Procurement data...');
+            if (formData) {
+              console.log('  formData.procurement_comments:', formData.procurement_comments ? 'EXISTS' : 'NOT FOUND');
+              console.log('  formData.procurement_signature:', formData.procurement_signature ? 'EXISTS' : 'NOT FOUND');
+              if (formData.procurement_comments) procCommentsSupervisor = formData.procurement_comments;
+              if (formData.procurement_signature) procSigSupervisor = formData.procurement_signature;
+            }
+            
+            // Fallback: check submissionData
+            if ((!procCommentsSupervisor || !procSigSupervisor) && submissionData) {
+              if (!procCommentsSupervisor && submissionData.procurement_comments) {
+                procCommentsSupervisor = submissionData.procurement_comments;
+                console.log('  ✅ Found Procurement comments in submissionData');
+              }
+              // Check top-level signature first, then form_data
+              if (!procSigSupervisor && submissionData.procurement_signature) {
+                procSigSupervisor = submissionData.procurement_signature;
+                console.log('  ✅ Found Procurement sig in submissionData');
+              }
+              if (!procSigSupervisor && submissionData.form_data) {
+                let checkFormData = submissionData.form_data;
+                if (typeof checkFormData === 'string') {
+                  try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                }
+                if (checkFormData && checkFormData.procurement_signature) {
+                  procSigSupervisor = checkFormData.procurement_signature;
+                  console.log('  ✅ Found Procurement sig in form_data');
+                }
+              }
+            }
+            
+            console.log('  procCommentsSupervisor:', procCommentsSupervisor ? 'HAS VALUE' : 'NULL');
+            console.log('  procSigSupervisor:', procSigSupervisor ? 'HAS VALUE' : 'NULL');
+            
+            // Display Procurement's review for supervisor (read-only)
+            if (procCommentsSupervisor || procSigSupervisor) {
+              console.log('  ✅ Have Procurement data, displaying...');
+              const section = document.getElementById('procurementReadOnlySupervisor');
+              const prevSection = document.getElementById('previousForSupervisorSection');
+              if (section && prevSection) {
+                section.style.display = 'block';
+                prevSection.style.display = 'block';
+                console.log('  ✅ Procurement section made visible');
+                
+                // Add timestamp if available
+                const header = section.querySelector('h6');
+                if (header && submissionData && submissionData.procurement_approved_at) {
+                  const timestamp = formatSigningTime(submissionData.procurement_approved_at);
+                  if (timestamp) {
+                    header.innerHTML = `Procurement Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                  }
+                }
+                
+                // Load Procurement comments
+                if (procCommentsSupervisor) {
+                  const commentsDiv = document.getElementById('procurementCommentsReadOnlySupervisor');
+                  if (commentsDiv) {
+                    commentsDiv.textContent = procCommentsSupervisor;
+                  }
+                }
+                
+                // Load Procurement signature
+                displaySignatureInContainer('procurementSignatureReadOnlySupervisor', procSigSupervisor, 'Procurement Signature');
+              }
+            } else {
+              console.log('  ⚠️ No Procurement data found - skipping');
+            }
+            
+            console.log('========================================');
+            console.log('🔍 NOW LOADING GM DATA FOR SUPERVISOR');
+            console.log('========================================');
+            
+            // Load General Manager review for Supervisor (read-only)
+            let gmCommentsSupervisor = null;
+            let gmSigSupervisor = null;
+            
+            console.log('🔍 STEP 10: Looking for GM data...');
+            if (formData) {
+              console.log('  formData.general_manager_comments:', formData.general_manager_comments ? 'EXISTS' : 'NOT FOUND');
+              console.log('  formData.general_manager_signature:', formData.general_manager_signature ? 'EXISTS' : 'NOT FOUND');
+              if (formData.general_manager_comments) gmCommentsSupervisor = formData.general_manager_comments;
+              if (formData.general_manager_signature) gmSigSupervisor = formData.general_manager_signature;
+            }
+            
+            // Fallback: check submissionData
+            if ((!gmCommentsSupervisor || !gmSigSupervisor) && submissionData) {
+              if (!gmCommentsSupervisor && submissionData.general_manager_comments) {
+                gmCommentsSupervisor = submissionData.general_manager_comments;
+                console.log('  ✅ Found GM comments in submissionData');
+              }
+              // Check top-level signature first, then form_data
+              if (!gmSigSupervisor && submissionData.general_manager_signature) {
+                gmSigSupervisor = submissionData.general_manager_signature;
+                console.log('  ✅ Found GM sig in submissionData');
+              }
+              if (!gmSigSupervisor && submissionData.form_data) {
+                let checkFormData = submissionData.form_data;
+                if (typeof checkFormData === 'string') {
+                  try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                }
+                if (checkFormData && checkFormData.general_manager_signature) {
+                  gmSigSupervisor = checkFormData.general_manager_signature;
+                  console.log('  ✅ Found GM sig in form_data');
+                }
+              }
+            }
+            
+            console.log('  gmCommentsSupervisor:', gmCommentsSupervisor ? 'HAS VALUE' : 'NULL');
+            console.log('  gmSigSupervisor:', gmSigSupervisor ? 'HAS VALUE' : 'NULL');
+            
+            // Display GM's review for supervisor (read-only)
+            if (gmCommentsSupervisor || gmSigSupervisor) {
+              console.log('  ✅ Have GM data, displaying...');
+              const section = document.getElementById('gmReadOnlySupervisor');
+              const prevSection = document.getElementById('previousForSupervisorSection');
+              if (section && prevSection) {
+                section.style.display = 'block';
+                prevSection.style.display = 'block';
+                console.log('  ✅ GM section made visible');
+                
+                // Add timestamp if available
+                const header = section.querySelector('h6');
+                if (header && submissionData && submissionData.general_manager_approved_at) {
+                  const timestamp = formatSigningTime(submissionData.general_manager_approved_at);
+                  if (timestamp) {
+                    header.innerHTML = `General Manager Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                  }
+                }
+                
+                // Load GM comments
+                if (gmCommentsSupervisor) {
+                  const commentsDiv = document.getElementById('gmCommentsReadOnlySupervisor');
+                  if (commentsDiv) {
+                    commentsDiv.textContent = gmCommentsSupervisor;
+                  }
+                }
+                
+                // Load GM signature
+                displaySignatureInContainer('gmSignatureReadOnlySupervisor', gmSigSupervisor, 'General Manager Signature');
+              }
+            } else {
+              console.log('  ⚠️ No GM data found - skipping');
+            }
+            
+            // Final summary
+            console.log('========================================');
+            console.log('🔍 SUPERVISOR PREVIOUS REVIEWS DEBUG COMPLETE');
+            console.log('========================================');
+            const prevSectionFinal = document.getElementById('previousForSupervisorSection');
+            console.log('📊 Final Status:');
+            console.log('  previousForSupervisorSection visible:', prevSectionFinal ? prevSectionFinal.style.display : 'ELEMENT NOT FOUND');
+            console.log('  OM data found:', omCommentsSupervisor || omSigSupervisor ? 'YES' : 'NO');
+            console.log('  BD data found:', bdCommentsSupervisor || bdSigSupervisor ? 'YES' : 'NO');
+            console.log('  Procurement data found:', procCommentsSupervisor || procSigSupervisor ? 'YES' : 'NO');
+            console.log('  GM data found:', gmCommentsSupervisor || gmSigSupervisor ? 'YES' : 'NO');
+            console.log('========================================');
             {% endif %}
             
             // Load Operations Manager comments
@@ -4621,6 +5303,303 @@
               if (commentsField) {
                 commentsField.value = operationsManagerComments;
                 console.log('✅ Loaded Operations Manager comments into field');
+              }
+            }
+            
+            // Load previous reviewers for Operations Manager (read-only)
+            console.log('🔍 OM - Loading previous reviewers...');
+            const prevForOM = document.getElementById('previousForOMSection');
+            let hasPrevForOM = false;
+            
+            // Load Supervisor for OM
+            let supervisorCommentsOM = null;
+            let supervisorSigOM = null;
+            
+            console.log('🔍 OM - Checking formData for supervisor data...');
+            console.log('  formData:', formData);
+            console.log('  formData.supervisor_comments:', formData?.supervisor_comments);
+            console.log('  formData.supervisor_signature:', formData?.supervisor_signature);
+            
+            if (formData) {
+              if (formData.supervisor_comments) supervisorCommentsOM = formData.supervisor_comments;
+              if (formData.supervisor_signature) supervisorSigOM = formData.supervisor_signature;
+            }
+            
+            if ((!supervisorCommentsOM || !supervisorSigOM) && submissionData && submissionData.form_data) {
+              let checkFormData = submissionData.form_data;
+              if (typeof checkFormData === 'string') {
+                try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+              }
+              if (checkFormData) {
+                if (!supervisorCommentsOM && checkFormData.supervisor_comments) supervisorCommentsOM = checkFormData.supervisor_comments;
+                if (!supervisorSigOM && checkFormData.supervisor_signature) supervisorSigOM = checkFormData.supervisor_signature;
+              }
+            }
+            
+            if (!supervisorCommentsOM && submissionData && submissionData.supervisor_comments) {
+              supervisorCommentsOM = submissionData.supervisor_comments;
+            }
+            
+            console.log('🔍 OM - Final supervisor data:');
+            console.log('  supervisorCommentsOM:', supervisorCommentsOM);
+            console.log('  supervisorSigOM:', supervisorSigOM);
+            
+            if (supervisorCommentsOM || supervisorSigOM) {
+              console.log('✅ OM - Displaying supervisor section');
+              hasPrevForOM = true;
+              const section = document.getElementById('supervisorReadOnlyOM');
+              console.log('  supervisorReadOnlyOM element:', section);
+              if (section) {
+                section.style.display = 'block';
+                if (prevForOM) {
+                  prevForOM.style.display = 'block';
+                  console.log('✅ OM - Made previousForOMSection visible');
+                }
+                
+                // Add timestamp if available
+                const header = section.querySelector('h6');
+                if (header && submissionData && submissionData.created_at) {
+                  const timestamp = formatSigningTime(submissionData.created_at);
+                  if (timestamp) {
+                    header.innerHTML = `Supervisor Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                  }
+                }
+                
+                const commentsDiv = document.getElementById('supervisorCommentsReadOnlyOM');
+                if (commentsDiv) {
+                  if (supervisorCommentsOM) commentsDiv.textContent = supervisorCommentsOM;
+                  else {
+                    commentsDiv.textContent = 'No comments provided';
+                    commentsDiv.style.fontStyle = 'italic';
+                    commentsDiv.style.color = '#9ca3af';
+                  }
+                }
+                
+                console.log('🎨 OM - Calling displaySignatureInContainer for supervisor');
+                displaySignatureInContainer('supervisorSignatureReadOnlyOM', supervisorSigOM, 'Supervisor Signature');
+                console.log('✅ OM - Supervisor section fully loaded');
+              }
+            } else {
+              console.warn('⚠️ OM - No supervisor data found to display');
+            }
+            
+            // Load BD for OM (read-only)
+            let bdCommentsOM = null;
+            let bdSigOM = null;
+            
+            if (formData) {
+              if (formData.business_dev_comments) bdCommentsOM = formData.business_dev_comments;
+              if (formData.business_dev_signature) bdSigOM = formData.business_dev_signature;
+            }
+            
+            if ((!bdCommentsOM || !bdSigOM) && submissionData && submissionData.form_data) {
+              let checkFormData = submissionData.form_data;
+              if (typeof checkFormData === 'string') {
+                try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+              }
+              if (checkFormData) {
+                if (!bdCommentsOM && checkFormData.business_dev_comments) bdCommentsOM = checkFormData.business_dev_comments;
+                if (!bdSigOM && checkFormData.business_dev_signature) bdSigOM = checkFormData.business_dev_signature;
+              }
+            }
+            
+            if (!bdCommentsOM && submissionData && submissionData.business_dev_comments) {
+              bdCommentsOM = submissionData.business_dev_comments;
+            }
+            if (!bdSigOM && submissionData && submissionData.business_dev_signature) {
+              bdSigOM = submissionData.business_dev_signature;
+            }
+            
+            if (bdCommentsOM || bdSigOM) {
+              hasPrevForOM = true;
+              const section = document.getElementById('bdReadOnlyOM');
+              if (section) {
+                section.style.display = 'block';
+                if (prevForOM) prevForOM.style.display = 'block';
+                
+                // Add timestamp if available
+                const header = section.querySelector('h6');
+                if (header && submissionData && submissionData.business_dev_approved_at) {
+                  const timestamp = formatSigningTime(submissionData.business_dev_approved_at);
+                  if (timestamp) {
+                    header.innerHTML = `Business Development Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                  }
+                }
+                
+                const commentsDiv = document.getElementById('bdCommentsReadOnlyOM');
+                if (commentsDiv) {
+                  if (bdCommentsOM) commentsDiv.textContent = bdCommentsOM;
+                  else {
+                    commentsDiv.textContent = 'No comments provided';
+                    commentsDiv.style.fontStyle = 'italic';
+                    commentsDiv.style.color = '#9ca3af';
+                  }
+                }
+                
+                displaySignatureInContainer('bdSignatureReadOnlyOM', bdSigOM, 'Business Development Signature');
+              }
+            }
+            
+            // Load Procurement for OM (read-only)
+            let procCommentsOM = null;
+            let procSigOM = null;
+            
+            if (formData) {
+              if (formData.procurement_comments) procCommentsOM = formData.procurement_comments;
+              if (formData.procurement_signature) procSigOM = formData.procurement_signature;
+            }
+            
+            if ((!procCommentsOM || !procSigOM) && submissionData && submissionData.form_data) {
+              let checkFormData = submissionData.form_data;
+              if (typeof checkFormData === 'string') {
+                try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+              }
+              if (checkFormData) {
+                if (!procCommentsOM && checkFormData.procurement_comments) procCommentsOM = checkFormData.procurement_comments;
+                if (!procSigOM && checkFormData.procurement_signature) procSigOM = checkFormData.procurement_signature;
+              }
+            }
+            
+            if (!procCommentsOM && submissionData && submissionData.procurement_comments) {
+              procCommentsOM = submissionData.procurement_comments;
+            }
+            if (!procSigOM && submissionData && submissionData.procurement_signature) {
+              procSigOM = submissionData.procurement_signature;
+            }
+            
+            if (procCommentsOM || procSigOM) {
+              hasPrevForOM = true;
+              const section = document.getElementById('procurementReadOnlyOM');
+              if (section) {
+                section.style.display = 'block';
+                if (prevForOM) prevForOM.style.display = 'block';
+                
+                // Add timestamp if available
+                const header = section.querySelector('h6');
+                if (header && submissionData && submissionData.procurement_approved_at) {
+                  const timestamp = formatSigningTime(submissionData.procurement_approved_at);
+                  if (timestamp) {
+                    header.innerHTML = `Procurement Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                  }
+                }
+                
+                const commentsDiv = document.getElementById('procurementCommentsReadOnlyOM');
+                if (commentsDiv) {
+                  if (procCommentsOM) commentsDiv.textContent = procCommentsOM;
+                  else {
+                    commentsDiv.textContent = 'No comments provided';
+                    commentsDiv.style.fontStyle = 'italic';
+                    commentsDiv.style.color = '#9ca3af';
+                  }
+                }
+                
+                displaySignatureInContainer('procurementSignatureReadOnlyOM', procSigOM, 'Procurement Signature');
+              }
+            }
+            
+            // Load General Manager review for OM (read-only)
+            let gmCommentsOM = null;
+            let gmSigOM = null;
+            
+            if (formData) {
+              if (formData.general_manager_comments) gmCommentsOM = formData.general_manager_comments;
+              if (formData.general_manager_signature) gmSigOM = formData.general_manager_signature;
+            }
+            
+            // Fallback: check submissionData
+            if ((!gmCommentsOM || !gmSigOM) && submissionData) {
+              if (!gmCommentsOM && submissionData.general_manager_comments) {
+                gmCommentsOM = submissionData.general_manager_comments;
+              }
+              if (!gmSigOM && submissionData.form_data) {
+                let checkFormData = submissionData.form_data;
+                if (typeof checkFormData === 'string') {
+                  try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+                }
+                if (checkFormData && checkFormData.general_manager_signature) {
+                  gmSigOM = checkFormData.general_manager_signature;
+                }
+              }
+            }
+            
+            // Display GM's review for OM (read-only)
+            if (gmCommentsOM || gmSigOM) {
+              hasPrevForOM = true;
+              const section = document.getElementById('gmReadOnlyOM');
+              if (section && prevForOM) {
+                section.style.display = 'block';
+                prevForOM.style.display = 'block';
+                
+                // Add timestamp if available
+                const header = section.querySelector('h6');
+                if (header && submissionData && submissionData.general_manager_approved_at) {
+                  const timestamp = formatSigningTime(submissionData.general_manager_approved_at);
+                  if (timestamp) {
+                    header.innerHTML = `General Manager Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                  }
+                }
+                
+                // Load GM comments
+                const commentsDiv = document.getElementById('gmCommentsReadOnlyOM');
+                if (commentsDiv) {
+                  if (gmCommentsOM) {
+                    commentsDiv.textContent = gmCommentsOM;
+                  } else {
+                    commentsDiv.textContent = 'No comments provided';
+                    commentsDiv.style.fontStyle = 'italic';
+                    commentsDiv.style.color = '#9ca3af';
+                  }
+                }
+                
+                // Load GM signature
+                displaySignatureInContainer('gmSignatureReadOnlyOM', gmSigOM, 'General Manager Signature');
+              }
+            }
+            {% endif %}
+            
+            // Load Supervisor comments and signature for BD (read-only)
+            {% if user_designation == 'business_development' %}
+            let supervisorCommentsBD = null;
+            let supervisorSigBD = null;
+            
+            // Check formData first
+            if (formData) {
+              if (formData.supervisor_comments) supervisorCommentsBD = formData.supervisor_comments;
+              if (formData.supervisor_signature) supervisorSigBD = formData.supervisor_signature;
+            }
+            
+            // Check submissionData.form_data
+            if ((!supervisorCommentsBD || !supervisorSigBD) && submissionData && submissionData.form_data) {
+              let checkFormData = submissionData.form_data;
+              if (typeof checkFormData === 'string') {
+                try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+              }
+              if (checkFormData) {
+                if (!supervisorCommentsBD && checkFormData.supervisor_comments) supervisorCommentsBD = checkFormData.supervisor_comments;
+                if (!supervisorSigBD && checkFormData.supervisor_signature) supervisorSigBD = checkFormData.supervisor_signature;
+              }
+            }
+            
+            // Display Supervisor section if we have data
+            if (supervisorCommentsBD || supervisorSigBD) {
+              const section = document.getElementById('supervisorReadOnlyBD');
+              if (section) {
+                section.style.display = 'block';
+                document.getElementById('previousForBDSection').style.display = 'block';
+                
+                const commentsDiv = document.getElementById('supervisorCommentsReadOnlyBD');
+                if (commentsDiv) {
+                  if (supervisorCommentsBD) {
+                    commentsDiv.textContent = supervisorCommentsBD;
+                  } else {
+                    commentsDiv.textContent = 'No comments provided';
+                    commentsDiv.style.fontStyle = 'italic';
+                    commentsDiv.style.color = '#9ca3af';
+                  }
+                }
+                
+                // Use standard signature display function
+                displaySignatureInContainer('supervisorSignatureReadOnlyBD', supervisorSigBD, 'Supervisor Signature');
               }
             }
             {% endif %}
@@ -4840,18 +5819,22 @@
                     existingImg.remove();
                   }
                   
-                  // Check if this is Operations Manager reviewing during their stage (can edit)
-                  {% if submission_data and submission_data.workflow_status %}
-                  const workflowStatus = {{ submission_data.workflow_status|tojson|safe }};
-                  {% else %}
-                  const workflowStatus = null;
-                  {% endif %}
-                  const canEdit = workflowStatus === 'operations_manager_review';
+                  // Check if Operations Manager can still edit (uses backend can_edit flag for "short time owner" feature)
+                  // OM can edit if: form is at operations_manager_review OR at bd_procurement_review but BD/Procurement haven't started
+                  const canEdit = submissionData && submissionData.can_edit === true;
                   
                   if (canEdit) {
                     // Operations Manager can edit - load into canvas, allow clear
                     console.log('✅ Operations Manager editing - loading signature into canvas');
                     opCanvas.style.display = 'block';
+                    
+                    // Show hint that OM can edit and re-sign
+                    const omSignatureHint = opCanvas.parentElement.querySelector('.signature-hint');
+                    if (omSignatureHint && submissionData.operations_manager_approved_at) {
+                      const timestamp = typeof formatSigningTime === 'function' ? formatSigningTime(submissionData.operations_manager_approved_at) : '';
+                      omSignatureHint.innerHTML = `<span class="text-success">✓ Signed${timestamp ? ': ' + timestamp : ''}</span> <span class="text-muted small"></span>`;
+                      omSignatureHint.classList.remove('text-danger');
+                    }
                     
                     // Ensure clear button is visible and functional
                     const clearOpBtn = document.getElementById('clearOp');
@@ -4868,6 +5851,8 @@
                           pads.opPad.clear();
                           const opSigInput = document.getElementById('opManSignatureData');
                           if (opSigInput) opSigInput.value = '';
+                          // Reset signatureLoaded flag so resize works properly
+                          if (opCanvas) opCanvas.dataset.signatureLoaded = 'false';
                           console.log('✅ Operations Manager signature cleared');
                         }
                       });
@@ -4881,9 +5866,29 @@
                           img.crossOrigin = 'anonymous';
                           img.onload = function() {
                             try {
-                              pads.opPad.clear();
-                              pads.opPad.fromDataURL(opSig);
-                              console.log('✅ Loaded Operations Manager signature into pad');
+                              // Get canvas dimensions
+                              const canvasW = opCanvas.width;
+                              const canvasH = opCanvas.height;
+                              const imgW = img.naturalWidth || img.width;
+                              const imgH = img.naturalHeight || img.height;
+                              
+                              // Calculate scale to fit signature in canvas
+                              const scale = Math.min(canvasW / imgW, canvasH / imgH) * 0.9;
+                              const drawW = imgW * scale;
+                              const drawH = imgH * scale;
+                              const x = (canvasW - drawW) / 2;
+                              const y = (canvasH - drawH) / 2;
+                              
+                              // Clear and draw signature directly on canvas
+                              const ctx = opCanvas.getContext('2d');
+                              ctx.fillStyle = 'white';
+                              ctx.fillRect(0, 0, canvasW, canvasH);
+                              ctx.drawImage(img, x, y, drawW, drawH);
+                              
+                              // Mark canvas as having a loaded signature (to prevent resize from clearing it)
+                              opCanvas.dataset.signatureLoaded = 'true';
+                              
+                              console.log('✅ Loaded Operations Manager signature into pad (dimensions: ' + Math.round(canvasW) + ' x ' + Math.round(canvasH) + ')');
                             } catch (e) {
                               console.error('❌ Error loading signature into pad:', e);
                             }
@@ -4901,32 +5906,40 @@
                     };
                     loadOpSig();
                   } else {
-                    // Read-only view - show as image
-                    opCanvas.style.display = 'none';
+                    // OM cannot edit anymore - show read-only version
+                    console.log('✅ OM cannot edit anymore - showing read-only version');
                     
-                    const sigImg = document.createElement('img');
-                    sigImg.src = opSig;
-                    sigImg.alt = 'Manager Signature';
-                    sigImg.style.cssText = 'max-width: 100%; max-height: 180px; width: auto; height: auto; object-fit: contain; object-position: center; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px; display: block; margin: 0 auto;';
-                    opCanvas.parentElement.insertBefore(sigImg, opCanvas);
+                    // Hide editable section, show read-only section
+                    const editableSection = document.getElementById('omEditableSection');
+                    const readOnlySection = document.getElementById('omOwnReviewReadOnly');
                     
-                    // Hide clear button
-                    const clearOpBtn = document.getElementById('clearOp');
-                    if (clearOpBtn) clearOpBtn.style.display = 'none';
+                    if (editableSection) editableSection.style.display = 'none';
+                    if (readOnlySection) readOnlySection.style.display = 'block';
                     
-                    // Store signature URL in hidden input
-                    const opSigInput = document.getElementById('opManSignatureData');
-                    if (opSigInput) opSigInput.value = opSig;
-                    
-                    // Update label
-                    const opLabel = opCanvas.parentElement.querySelector('label');
-                    if (opLabel) {
-                      opLabel.innerHTML = 'OPERATIONS MANAGER SIGNATURE <span style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✓ Already Signed</span>';
+                    // Load OM comments into read-only section
+                    const omCommentsReadOnly = document.getElementById('omOwnCommentsReadOnly');
+                    if (omCommentsReadOnly) {
+                      const omComments = formData?.operations_manager_comments || submissionData?.operations_manager_comments;
+                      if (omComments) {
+                        omCommentsReadOnly.textContent = omComments;
+                      } else {
+                        omCommentsReadOnly.textContent = 'No comments provided';
+                        omCommentsReadOnly.style.fontStyle = 'italic';
+                        omCommentsReadOnly.style.color = '#9ca3af';
+                      }
                     }
                     
-                    // Update hint text
-                    const hintSpan = opCanvas.parentElement.querySelector('.signature-hint');
-                    if (hintSpan) hintSpan.style.display = 'none';
+                    // Add timestamp to read-only section header
+                    const omReadOnlyHeader = readOnlySection?.querySelector('.alert');
+                    if (omReadOnlyHeader && submissionData?.operations_manager_approved_at) {
+                      const timestamp = typeof formatSigningTime === 'function' ? formatSigningTime(submissionData.operations_manager_approved_at) : '';
+                      if (timestamp) {
+                        omReadOnlyHeader.innerHTML = `<strong>✓ Your Previous Review</strong> <span style="color: #10b981; font-size: 0.75rem; font-weight: normal; margin-left: 0.5rem;">Signed: ${timestamp}</span>`;
+                      }
+                    }
+                    
+                    // Load OM signature into read-only section
+                    displaySignatureInContainer('omOwnSignatureReadOnly', opSig, 'Your Signature');
                   }
                 }
               }
@@ -4966,6 +5979,18 @@
                   pads.businessDevPad.clear();
                   pads.businessDevPad.fromDataURL(sigUrl);
                   console.log('✅ Loaded BD signature into pad');
+                  
+                  // Check if BD can still edit (based on can_edit from backend)
+                  const bdCanEdit = submissionData && submissionData.can_edit === true;
+                  if (bdCanEdit && submissionData.business_dev_approved_at) {
+                    console.log('ℹ️ BD can still edit - showing re-sign hint');
+                    const bdHint = document.querySelector('#businessDevSignaturePad')?.parentElement?.querySelector('.signature-hint');
+                    if (bdHint) {
+                      const timestamp = typeof formatSigningTime === 'function' ? formatSigningTime(submissionData.business_dev_approved_at) : '';
+                      bdHint.innerHTML = `<span class="text-success">✓ Signed${timestamp ? ': ' + timestamp : ''}</span> <span class="text-muted small"></span>`;
+                      bdHint.classList.remove('text-danger');
+                    }
+                  }
                 };
                 img.src = sigUrl;
               }
@@ -5006,15 +6031,73 @@
                   pads.procurementPad.clear();
                   pads.procurementPad.fromDataURL(sigUrl);
                   console.log('✅ Loaded Procurement signature into pad');
+                  
+                  // Check if Procurement can still edit (based on can_edit from backend)
+                  const procCanEdit = submissionData && submissionData.can_edit === true;
+                  if (procCanEdit && submissionData.procurement_approved_at) {
+                    console.log('ℹ️ Procurement can still edit - showing re-sign hint');
+                    const procHint = document.querySelector('#procurementSignaturePad')?.parentElement?.querySelector('.signature-hint');
+                    if (procHint) {
+                      const timestamp = typeof formatSigningTime === 'function' ? formatSigningTime(submissionData.procurement_approved_at) : '';
+                      procHint.innerHTML = `<span class="text-success">✓ Signed${timestamp ? ': ' + timestamp : ''}</span> <span class="text-muted small"></span>`;
+                      procHint.classList.remove('text-danger');
+                    }
+                  }
                 };
                 img.src = sigUrl;
               }
             }
           }
 
-          // Also show previous reviewers (OM + BD) in read-only blocks for Procurement
+          // Also show previous reviewers (Supervisor + OM + BD) in read-only blocks for Procurement
           const prevForProc = document.getElementById('previousForProcurementSection');
           let hasPrevForProc = false;
+
+          // Supervisor for Procurement - comprehensive data loading
+          let supervisorCommentsProc = null;
+          let supervisorSigProc = null;
+          
+          // Check formData first
+          if (formData) {
+            if (formData.supervisor_comments) supervisorCommentsProc = formData.supervisor_comments;
+            if (formData.supervisor_signature) supervisorSigProc = formData.supervisor_signature;
+          }
+          
+          // Check submissionData.form_data
+          if ((!supervisorCommentsProc || !supervisorSigProc) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              if (!supervisorCommentsProc && checkFormData.supervisor_comments) supervisorCommentsProc = checkFormData.supervisor_comments;
+              if (!supervisorSigProc && checkFormData.supervisor_signature) supervisorSigProc = checkFormData.supervisor_signature;
+            }
+          }
+          
+          // Display Supervisor section for Procurement
+          if (supervisorCommentsProc || supervisorSigProc) {
+            hasPrevForProc = true;
+            const section = document.getElementById('supervisorReadOnlyProc');
+            if (section) {
+              section.style.display = 'block';
+              document.getElementById('previousForProcurementSection').style.display = 'block';
+              
+              const commentsDiv = document.getElementById('supervisorCommentsReadOnlyProc');
+              if (commentsDiv) {
+                if (supervisorCommentsProc) {
+                  commentsDiv.textContent = supervisorCommentsProc;
+                } else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
+              }
+              
+              // Use standard signature display function
+              displaySignatureInContainer('supervisorSignatureReadOnlyProc', supervisorSigProc, 'Supervisor Signature');
+            }
+          }
 
           // OM for Procurement - comprehensive data loading
           let opsManagerCommentsProc = null;
@@ -5183,18 +6266,66 @@
               const gmSigInput = document.getElementById('generalManagerSignatureData');
               
               if (gmCanvas && pads && pads.generalManagerPad) {
+                // Check if GM can still edit (based on can_edit from backend)
+                const gmCanEdit = submissionData && submissionData.can_edit === true;
+                
                 try {
                   // For data URLs, try to load into pad
                   if (sigUrl.startsWith('data:image')) {
                     pads.generalManagerPad.fromDataURL(sigUrl);
                     console.log('✅ Loaded GM signature into canvas');
+                    
+                    // Show edit hint if GM can still edit
+                    if (gmCanEdit && submissionData.general_manager_approved_at) {
+                      console.log('ℹ️ GM can still edit - showing re-sign hint');
+                      const gmHint = gmCanvas.parentElement?.querySelector('.signature-hint');
+                      if (gmHint) {
+                        const timestamp = typeof formatSigningTime === 'function' ? formatSigningTime(submissionData.general_manager_approved_at) : '';
+                        gmHint.innerHTML = `<span class="text-success">✓ Signed${timestamp ? ': ' + timestamp : ''}</span> <span class="text-muted small"></span>`;
+                        gmHint.classList.remove('text-danger');
+                      }
+                    }
+                  } else if (gmCanEdit) {
+                    // GM can edit but signature is HTTP URL - load into canvas using image
+                    console.log('ℹ️ GM can edit - loading HTTP signature into editable canvas');
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = function() {
+                      const ctx = gmCanvas.getContext('2d');
+                      const rect = gmCanvas.getBoundingClientRect();
+                      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                      gmCanvas.width = rect.width * ratio;
+                      gmCanvas.height = rect.height * ratio;
+                      ctx.scale(ratio, ratio);
+                      ctx.fillStyle = 'white';
+                      ctx.fillRect(0, 0, rect.width, rect.height);
+                      const scale = Math.min(rect.width / img.width, rect.height / img.height) * 0.9;
+                      const drawW = img.width * scale;
+                      const drawH = img.height * scale;
+                      const x = (rect.width - drawW) / 2;
+                      const y = (rect.height - drawH) / 2;
+                      ctx.drawImage(img, x, y, drawW, drawH);
+                      gmCanvas.dataset.signatureLoaded = 'true';
+                      console.log('✅ GM signature drawn to editable canvas');
+                    };
+                    img.src = sigUrl;
+                    
+                    // Show edit hint
+                    if (submissionData.general_manager_approved_at) {
+                      const gmHint = gmCanvas.parentElement?.querySelector('.signature-hint');
+                      if (gmHint) {
+                        const timestamp = typeof formatSigningTime === 'function' ? formatSigningTime(submissionData.general_manager_approved_at) : '';
+                        gmHint.innerHTML = `<span class="text-success">✓ Signed${timestamp ? ': ' + timestamp : ''}</span> <span class="text-muted small"></span>`;
+                        gmHint.classList.remove('text-danger');
+                      }
+                    }
                   } else {
-                    // For URL signatures, display as image instead
+                    // GM cannot edit - display as read-only image
                     gmCanvas.style.display = 'none';
                     const sigImg = document.createElement('img');
                     sigImg.src = sigUrl;
                     sigImg.alt = 'General Manager Signature';
-                    sigImg.style.cssText = 'max-width: 100%; max-height: 180px; width: auto; height: auto; object-fit: contain; object-position: center; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px; display: block; margin: 0 auto;';
+                    sigImg.style.cssText = 'max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; object-position: center; display: block; margin: 0 auto;';
                     gmCanvas.parentElement.insertBefore(sigImg, gmCanvas);
                     
                     // Hide clear button
@@ -5211,7 +6342,7 @@
                     const hintSpan = gmCanvas.parentElement.querySelector('.signature-hint');
                     if (hintSpan) hintSpan.style.display = 'none';
                     
-                    console.log('✅ Loaded GM signature as image');
+                    console.log('✅ Loaded GM signature as image (read-only)');
                   }
                   
                   // Store in hidden input
@@ -5469,6 +6600,47 @@
           {% if user_designation == 'general_manager' %}
           const prevSection = document.getElementById('previousReviewersReadOnlySection');
           let hasAnyData = false;
+          
+          // Supervisor - comprehensive data loading for GM
+          let supervisorCommentsGM = null;
+          let supervisorSigGM = null;
+          
+          if (formData) {
+            if (formData.supervisor_comments) supervisorCommentsGM = formData.supervisor_comments;
+            if (formData.supervisor_signature) supervisorSigGM = formData.supervisor_signature;
+          }
+          
+          if ((!supervisorCommentsGM || !supervisorSigGM) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              if (!supervisorCommentsGM && checkFormData.supervisor_comments) supervisorCommentsGM = checkFormData.supervisor_comments;
+              if (!supervisorSigGM && checkFormData.supervisor_signature) supervisorSigGM = checkFormData.supervisor_signature;
+            }
+          }
+          
+          if (supervisorCommentsGM || supervisorSigGM) {
+            hasAnyData = true;
+            const section = document.getElementById('supervisorReadOnlyGM');
+            if (section) {
+              section.style.display = 'block';
+              
+              const commentsDiv = document.getElementById('supervisorCommentsReadOnlyGM');
+              if (commentsDiv) {
+                if (supervisorCommentsGM) commentsDiv.textContent = supervisorCommentsGM;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
+              }
+              
+              // Use standard signature display function
+              displaySignatureInContainer('supervisorSignatureReadOnlyGM', supervisorSigGM, 'Supervisor Signature');
+            }
+          }
           
           // Operations Manager - comprehensive data loading
           let opsManagerCommentsGM = null;

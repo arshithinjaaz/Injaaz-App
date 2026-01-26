@@ -42,6 +42,28 @@
       --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
       --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
+
+  /* Signature display: remove inner box and green background */
+  div[id*="SignatureReadOnly"],
+  #omOwnSignatureReadOnly {
+    background: #fff !important;
+    padding: 0 !important;
+  }
+
+  div[id*="SignatureReadOnly"] img,
+  #omOwnSignatureReadOnly img {
+    background: transparent !important;
+    border: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+  }
     
     body {
       background: var(--bg-page);
@@ -251,7 +273,7 @@
       }
       
       textarea.form-control {
-        min-height: 100px;
+        min-height: 120px;
       }
       
       /* Buttons */
@@ -455,14 +477,13 @@
       border: 2px solid var(--border-light);
       border-radius: 6px;
       width: 100% !important;
-      max-width: 500px;
-      height: 160px !important;
-      max-height: 160px !important;
-      min-height: 160px !important;
+      max-width: 100%;
+      height: 120px !important;
+      max-height: 120px !important;
+      min-height: 120px !important;
       background: #ffffff;
       cursor: crosshair;
       display: block;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       touch-action: none;
     }
     
@@ -730,7 +751,7 @@
     /* Tabs styling */
     .nav-tabs {
       border-bottom: 1px solid var(--border-light);
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
     
     .nav-tabs .nav-link {
@@ -754,6 +775,22 @@
     .nav-tabs .nav-link:hover {
       color: var(--text-primary);
       border-bottom-color: var(--border-light);
+    }
+    
+    .section-heading {
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 1.25rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--primary);
+    }
+    
+    .section-heading-no-border {
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 1.25rem;
+      margin-bottom: 1.5rem;
     }
     
     /* Work Items Table - Better alignment and spacing */
@@ -1021,6 +1058,24 @@
       {% endif %}
     </p>
 
+    {% if is_edit_mode and can_edit == False %}
+    <!-- Read-Only Mode Banner -->
+    <div class="alert alert-info" style="background: #e0f2fe; border-color: #0ea5e9; margin-bottom: 1.5rem;">
+      <div class="d-flex align-items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-info-circle-fill me-3" viewBox="0 0 16 16" style="color: #0ea5e9; flex-shrink: 0;">
+          <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
+        </svg>
+        <div>
+          {% if submission_data and submission_data.workflow_status == 'closed_by_admin' %}
+          <strong>Closed by Admin:</strong> This form has been closed by an administrator. It is read-only for all users.
+          {% else %}
+          <strong>Read-Only Mode:</strong> You are viewing this form for reference only. This form has moved past your approval stage in the workflow. Only the current reviewer can make changes.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <form id="mainForm" novalidate>
       <!-- Tab Navigation -->
       <ul class="nav nav-tabs" id="civilTabs" role="tablist">
@@ -1210,15 +1265,29 @@
     
     <!-- TAB 4: Sign-off & Submit -->
     <div class="tab-pane fade" id="tab-4" role="tabpanel">
+      {% if user_designation == 'supervisor' %}
+      <h4 class="section-heading-no-border">Supervisor Sign-off</h4>
+      {% elif user_designation == 'operations_manager' %}
+      <h4 class="section-heading-no-border">Operations Manager Review</h4>
+      {% elif user_designation == 'business_development' %}
+      <h4 class="section-heading-no-border">Business Development Review</h4>
+      {% elif user_designation == 'procurement' %}
+      <h4 class="section-heading-no-border">Procurement Review</h4>
+      {% elif user_designation == 'general_manager' %}
+      <h4 class="section-heading-no-border">General Manager Review</h4>
+      {% else %}
+      <h4 class="section-heading-no-border">Sign-off & Submit</h4>
+      {% endif %}
+      
       <div class="row g-3">
-        <!-- Supervisor Review Section - Only visible to supervisors and admins -->
-        {% if user_designation == 'supervisor' or (user and user.role == 'admin') %}
-        <div class="col-12 mb-3">
-          <h5 style="color: var(--primary); margin-bottom: 1rem;">Supervisor Review</h5>
+      <!-- Supervisor Review Section - Only visible to supervisors and admins -->
+      {% if user_designation == 'supervisor' or (user and user.role == 'admin') %}
+      <div class="col-12 mb-3" style="border-top: 2px solid var(--primary); padding-top: 1.5rem; margin-top: 1rem;">
+        <h5 style="color: var(--primary); margin-bottom: 1rem;">Supervisor Review</h5>
           
           <div class="col-12 mb-3">
             <label class="form-label">Supervisor Comments</label>
-            <textarea id="supervisorComments" class="form-control" rows="3" placeholder="Enter your comments or observations..."></textarea>
+            <textarea id="supervisorComments" class="form-control" rows="5" style="min-height: 120px;" placeholder="Enter your comments or observations..."></textarea>
           </div>
           
           <div class="col-12 mb-3">
@@ -1256,16 +1325,67 @@
           </div>
           
           <!-- Supervisor -->
-          <div id="supervisorReadOnlyOM" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Supervisor Review</h6>
+          <div id="supervisorReadOnlyOM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Supervisor Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
-                <div id="supervisorCommentsReadOnlyOM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+                <div id="supervisorCommentsReadOnlyOM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature</label>
-                <div id="supervisorSignatureReadOnlyOM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <div id="supervisorSignatureReadOnlyOM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Business Development -->
+          <div id="bdReadOnlyOM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Business Development Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
+                <div id="bdCommentsReadOnlyOM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Signature</label>
+                <div id="bdSignatureReadOnlyOM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Procurement -->
+          <div id="procurementReadOnlyOM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Procurement Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
+                <div id="procurementCommentsReadOnlyOM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature</label>
+                <div id="procurementSignatureReadOnlyOM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- General Manager -->
+          <div id="gmReadOnlyOM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">General Manager Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Comments</label>
+                <div id="gmCommentsReadOnlyOM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Signature</label>
+                <div id="gmSignatureReadOnlyOM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1279,13 +1399,13 @@
             <strong>✓ Your Previous Review</strong>
           </div>
           <div class="row">
-            <div class="col-lg-7 mb-3">
+            <div class="col-md-6 mb-3">
               <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Your Comments</label>
               <div id="omOwnCommentsReadOnly" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
             </div>
-            <div class="col-lg-5 mb-3">
+            <div class="col-md-6 mb-3">
               <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Your Signature</label>
-              <div id="omOwnSignatureReadOnly" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+              <div id="omOwnSignatureReadOnly" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                 <span style="color: #9ca3af;">Loading signature...</span>
               </div>
             </div>
@@ -1295,12 +1415,12 @@
         <!-- Operations Manager Review Section (for new/pending approvals) -->
         <div class="col-12 mb-4" id="omEditableSection">
           <div class="row">
-            <div class="col-lg-7 mb-3">
+            <div class="col-md-6 mb-3">
               <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
-              <textarea id="operationsManagerComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+              <textarea id="operationsManagerComments" class="form-control" rows="5" style="min-height: 120px; border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
             </div>
             
-            <div class="col-lg-5 mb-3">
+            <div class="col-md-6 mb-3">
               <div class="signature-container h-100 d-flex flex-column">
                 <div class="signature-label">
                   <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Operations Manager Signature</label>
@@ -1315,6 +1435,83 @@
         </div>
         {% endif %}
 
+        {% if user_designation == 'supervisor' and is_edit_mode %}
+        <!-- Previous Reviewers: All reviews after Supervisor (Read-only for Supervisor) -->
+        <div class="col-12 mb-4" id="previousForSupervisorSection" style="display: none;">
+          <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #0ea5e9;">
+            <strong>Previous Reviews</strong>
+          </div>
+          
+          <!-- Operations Manager -->
+          <div id="opsManagerReadOnlySupervisor" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Operations Manager Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
+                <div id="opsManagerCommentsReadOnlySupervisor" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Signature</label>
+                <div id="opsManagerSignatureReadOnlySupervisor" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Business Development -->
+          <div id="bdReadOnlySupervisor" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Business Development Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
+                <div id="bdCommentsReadOnlySupervisor" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Signature</label>
+                <div id="bdSignatureReadOnlySupervisor" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Procurement -->
+          <div id="procurementReadOnlySupervisor" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Procurement Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
+                <div id="procurementCommentsReadOnlySupervisor" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature</label>
+                <div id="procurementSignatureReadOnlySupervisor" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- General Manager -->
+          <div id="gmReadOnlySupervisor" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">General Manager Review</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Comments</label>
+                <div id="gmCommentsReadOnlySupervisor" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Signature</label>
+                <div id="gmSignatureReadOnlySupervisor" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <span style="color: #9ca3af;">Loading signature...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
         {% if user_designation == 'business_development' and is_edit_mode %}
         <!-- Previous Reviewers: Supervisor + Operations Manager + Procurement (Read-only for BD) -->
         <div class="col-12 mb-4" id="previousForBDSection" style="display: none;">
@@ -1323,14 +1520,14 @@
           </div>
           
           <!-- Supervisor -->
-          <div id="supervisorReadOnlyBD" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Supervisor Review</h6>
+          <div id="supervisorReadOnlyBD" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Supervisor Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
-                <div id="supervisorCommentsReadOnlyBD" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+                <div id="supervisorCommentsReadOnlyBD" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature</label>
                 <div id="supervisorSignatureReadOnlyBD" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
                   <span style="color: #9ca3af;">Loading signature...</span>
@@ -1340,14 +1537,14 @@
           </div>
           
           <!-- Operations Manager -->
-          <div id="opsManagerReadOnlySection" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Operations Manager Review</h6>
+          <div id="opsManagerReadOnlySection" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Operations Manager Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
-                <div id="opsManagerCommentsReadOnly" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+                <div id="opsManagerCommentsReadOnly" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Signature</label>
                 <div id="opsManagerSignatureReadOnly" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
                   <span style="color: #9ca3af;">Loading signature...</span>
@@ -1357,14 +1554,14 @@
           </div>
           
           <!-- Procurement (so BD can see if PO has signed) -->
-          <div id="procurementReadOnlyBD" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Procurement Review</h6>
+          <div id="procurementReadOnlyBD" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Procurement Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
-                <div id="procurementCommentsReadOnlyBD" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+                <div id="procurementCommentsReadOnlyBD" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature</label>
                 <div id="procurementSignatureReadOnlyBD" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
                   <span style="color: #9ca3af;">Loading signature...</span>
@@ -1377,12 +1574,12 @@
         <!-- Business Development Review Section -->
         <div class="col-12 mb-4">
           <div class="row">
-            <div class="col-lg-7 mb-3">
+            <div class="col-md-6 mb-3">
               <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
-              <textarea id="businessDevComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+              <textarea id="businessDevComments" class="form-control" rows="5" style="min-height: 120px; border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
             </div>
             
-            <div class="col-lg-5 mb-3">
+            <div class="col-md-6 mb-3">
               <div class="signature-container h-100 d-flex flex-column">
                 <div class="signature-label">
                   <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Business Development Signature</label>
@@ -1405,14 +1602,14 @@
           </div>
           
           <!-- Supervisor -->
-          <div id="supervisorReadOnlyProc" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Supervisor Review</h6>
+          <div id="supervisorReadOnlyProc" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Supervisor Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
-                <div id="supervisorCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+                <div id="supervisorCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
                 <div id="supervisorSignatureReadOnlyProc" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
                   <span style="color: #9ca3af;">Loading signature...</span>
@@ -1422,14 +1619,14 @@
           </div>
           
           <!-- Operations Manager -->
-          <div id="opsManagerReadOnlyProc" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Operations Manager Review</h6>
+          <div id="opsManagerReadOnlyProc" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Operations Manager Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
-                <div id="opsManagerCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+                <div id="opsManagerCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
                 <div id="opsManagerSignatureReadOnlyProc" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
                   <span style="color: #9ca3af;">Loading signature...</span>
@@ -1440,13 +1637,13 @@
           
           <!-- Business Development -->
           <div id="bdReadOnlyProc" style="display: none;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Business Development Review</h6>
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Business Development Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
-                <div id="bdCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+                <div id="bdCommentsReadOnlyProc" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
                 <div id="bdSignatureReadOnlyProc" style="min-height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center;">
                   <span style="color: #9ca3af;">Loading signature...</span>
@@ -1459,12 +1656,12 @@
         <!-- Procurement Review Section -->
         <div class="col-12 mb-4">
           <div class="row">
-            <div class="col-lg-7 mb-3">
+            <div class="col-md-6 mb-3">
               <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
-              <textarea id="procurementComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+              <textarea id="procurementComments" class="form-control" rows="5" style="min-height: 120px; border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
             </div>
             
-            <div class="col-lg-5 mb-3">
+            <div class="col-md-6 mb-3">
               <div class="signature-container h-100 d-flex flex-column">
                 <div class="signature-label">
                   <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">Procurement Signature</label>
@@ -1487,16 +1684,16 @@
           </div>
           
           <!-- Supervisor -->
-          <div id="supervisorReadOnlyGM" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Supervisor Review</h6>
+          <div id="supervisorReadOnlyGM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Supervisor Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
-                <div id="supervisorCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+                <div id="supervisorCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
-                <div id="supervisorSignatureReadOnlyGM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <div id="supervisorSignatureReadOnlyGM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1504,16 +1701,16 @@
           </div>
           
           <!-- Operations Manager -->
-          <div id="opsManagerReadOnlyGM" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Operations Manager Review</h6>
+          <div id="opsManagerReadOnlyGM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Operations Manager Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
-                <div id="opsManagerCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+                <div id="opsManagerCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
-                <div id="opsManagerSignatureReadOnlyGM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <div id="opsManagerSignatureReadOnlyGM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1521,16 +1718,16 @@
           </div>
           
           <!-- Business Development -->
-          <div id="bdReadOnlyGM" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Business Development Review</h6>
+          <div id="bdReadOnlyGM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Business Development Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
-                <div id="bdCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+                <div id="bdCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
-                <div id="bdSignatureReadOnlyGM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <div id="bdSignatureReadOnlyGM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1538,16 +1735,16 @@
           </div>
           
           <!-- Procurement -->
-          <div id="procurementReadOnlyGM" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Procurement Review</h6>
+          <div id="procurementReadOnlyGM" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Procurement Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Comments</label>
-                <div id="procurementCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 80px; white-space: pre-wrap;" readonly></div>
+                <div id="procurementCommentsReadOnlyGM" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; white-space: pre-wrap;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Signature</label>
-                <div id="procurementSignatureReadOnlyGM" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <div id="procurementSignatureReadOnlyGM" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1558,12 +1755,12 @@
         <!-- General Manager Review Section -->
         <div class="col-12 mb-4">
           <div class="row">
-            <div class="col-lg-7 mb-3">
+            <div class="col-md-6 mb-3">
               <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Comments</label>
-              <textarea id="generalManagerComments" class="form-control" rows="6" style="border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+              <textarea id="generalManagerComments" class="form-control" rows="5" style="min-height: 120px; border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
             </div>
             
-            <div class="col-lg-5 mb-3">
+            <div class="col-md-6 mb-3">
               <div class="signature-container h-100 d-flex flex-column">
                 <div class="signature-label">
                   <label class="form-label fw-bold small text-uppercase mb-0" style="color: #4b5563;">General Manager Signature</label>
@@ -1586,16 +1783,16 @@
           </div>
           
           <!-- Supervisor Review -->
-          <div id="supervisorReadOnlyAdmin" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Supervisor Review</h6>
+          <div id="supervisorReadOnlyAdmin" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Supervisor Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
                 <div id="supervisorCommentsReadOnlyAdmin" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; max-height: 200px; padding: 0.75rem; white-space: pre-wrap; overflow-y: auto; word-wrap: break-word; line-height: 1.5;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature</label>
-                <div id="supervisorSignatureReadOnlyAdmin" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <div id="supervisorSignatureReadOnlyAdmin" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1603,16 +1800,16 @@
           </div>
           
           <!-- Operations Manager -->
-          <div id="opsManagerReadOnlyAdmin" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Operations Manager Review</h6>
+          <div id="opsManagerReadOnlyAdmin" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Operations Manager Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
                 <div id="opsManagerCommentsReadOnlyAdmin" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; max-height: 200px; padding: 0.75rem; white-space: pre-wrap; overflow-y: auto; word-wrap: break-word; line-height: 1.5;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Signature</label>
-                <div id="opsManagerSignatureReadOnlyAdmin" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <div id="opsManagerSignatureReadOnlyAdmin" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1620,16 +1817,16 @@
           </div>
           
           <!-- Business Development -->
-          <div id="bdReadOnlyAdmin" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Business Development Review</h6>
+          <div id="bdReadOnlyAdmin" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Business Development Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
                 <div id="bdCommentsReadOnlyAdmin" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; max-height: 200px; padding: 0.75rem; white-space: pre-wrap; overflow-y: auto; word-wrap: break-word; line-height: 1.5;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Signature</label>
-                <div id="bdSignatureReadOnlyAdmin" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <div id="bdSignatureReadOnlyAdmin" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1637,16 +1834,16 @@
           </div>
           
           <!-- Procurement -->
-          <div id="procurementReadOnlyAdmin" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">Procurement Review</h6>
+          <div id="procurementReadOnlyAdmin" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Procurement Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
                 <div id="procurementCommentsReadOnlyAdmin" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; max-height: 200px; padding: 0.75rem; white-space: pre-wrap; overflow-y: auto; word-wrap: break-word; line-height: 1.5;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature</label>
-                <div id="procurementSignatureReadOnlyAdmin" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <div id="procurementSignatureReadOnlyAdmin" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1654,16 +1851,16 @@
           </div>
           
           <!-- General Manager -->
-          <div id="gmReadOnlyAdmin" style="display: none; margin-bottom: 2rem;">
-            <h6 class="fw-bold mb-2" style="color: #0ea5e9;">General Manager Review</h6>
+          <div id="gmReadOnlyAdmin" style="display: none; margin-bottom: 1.5rem;">
+            <h6 class="fw-bold mb-3" style="color: #0ea5e9;">General Manager Review</h6>
             <div class="row">
-              <div class="col-lg-7 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Comments</label>
                 <div id="gmCommentsReadOnlyAdmin" class="form-control" style="background: #f9fafb; border-color: #e5e7eb; min-height: 120px; max-height: 200px; padding: 0.75rem; white-space: pre-wrap; overflow-y: auto; word-wrap: break-word; line-height: 1.5;" readonly></div>
               </div>
-              <div class="col-lg-5 mb-3">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Signature</label>
-                <div id="gmSignatureReadOnlyAdmin" style="min-height: 140px; max-height: 140px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <div id="gmSignatureReadOnlyAdmin" style="height: 120px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                   <span style="color: #9ca3af;">Loading signature...</span>
                 </div>
               </div>
@@ -1675,6 +1872,7 @@
 
       <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
         <button type="button" class="btn btn-outline-secondary" onclick="goToTab(3)">← Previous</button>
+        {% if can_edit != False %}
         <div class="d-flex gap-2">
           <button type="button" id="uploadImagesBtn" class="btn btn-success btn-lg">
             <span id="uploadImagesBtnText">📤 Upload Images</span>
@@ -1684,6 +1882,11 @@
           <span id="submitBtnText">{% if is_edit_mode %}Update Submission{% else %}📄 Generate Reports{% endif %}</span>
         </button>
         </div>
+        {% else %}
+        <div class="alert alert-info mb-0" style="background: #f0f9ff; border-color: #0ea5e9; padding: 0.75rem 1rem;">
+          <strong>Read-Only:</strong> This form is view-only. You cannot submit changes.
+        </div>
+        {% endif %}
       </div>
       <div id="uploadStatus" class="alert alert-info d-none mb-3"></div>
       <div id="statusBox" class="mt-3"></div>
@@ -1928,6 +2131,10 @@
             const opSigInput = document.getElementById('opManSignatureData');
             if (opSigInput) opSigInput.value = '';
             
+            // Reset signatureLoaded flag so resize works properly
+            const opCanvas = document.getElementById('opManSignaturePad');
+            if (opCanvas) opCanvas.dataset.signatureLoaded = 'false';
+            
             // Reset signature hint back to "Required for approval"
             const opManHint = document.getElementById('opManSignatureHint');
             if (opManHint) {
@@ -2106,11 +2313,16 @@
         }, 100);
       }
 
-      // Helper function to format timestamp
+      // Helper function to format timestamp (converts UTC to Dubai time)
       function formatSigningTime(timestamp) {
         if (!timestamp) return '';
         try {
-          const date = new Date(timestamp);
+          // Ensure timestamp is treated as UTC (backend stores UTC without 'Z' suffix)
+          let utcTimestamp = timestamp;
+          if (typeof timestamp === 'string' && !timestamp.endsWith('Z') && !timestamp.includes('+')) {
+            utcTimestamp = timestamp + 'Z';
+          }
+          const date = new Date(utcTimestamp);
           const options = {
             month: 'short',
             day: 'numeric',
@@ -2154,7 +2366,7 @@
           img.src = sigUrl;
           img.alt = altText || 'Signature';
           // Standard signature display style - maintains aspect ratio, centered, contained
-          img.style.cssText = 'max-width: 100%; max-height: 140px; width: auto; height: auto; object-fit: contain; object-position: center; display: block; margin: 0 auto;';
+          img.style.cssText = 'max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; object-position: center; display: block;';
           img.onerror = () => {
             container.innerHTML = '<span style="color: #dc3545;">Failed to load signature</span>';
           };
@@ -2577,53 +2789,21 @@
                         console.log('✅ Updated signature status label to "Form signed"');
                       }
                       
-                      // Check if form is already submitted/approved - if so, make signature read-only
-                      const workflowStatus = submissionData.workflow_status || '';
-                      const isFormSubmitted = workflowStatus && 
-                        (workflowStatus.includes('approved') || 
-                         workflowStatus === 'operations_manager_approved' ||
-                         workflowStatus === 'bd_procurement_approved' ||
-                         workflowStatus === 'general_manager_approved' ||
-                         workflowStatus === 'completed');
+                      // Check if current user is a supervisor AND can edit
+                      // Only supervisors should see "(You can edit and re-sign)" for supervisor signature
+                      {% if user_designation == 'supervisor' %}
+                      const isCurrentUserSupervisor = true;
+                      {% else %}
+                      const isCurrentUserSupervisor = false;
+                      {% endif %}
+                      const canEditSupervisor = isCurrentUserSupervisor && submissionData && submissionData.can_edit === true;
                       
-                      if (isFormSubmitted) {
-                        // Form already submitted - show signature as read-only image
-                        const supervisorCanvas = document.getElementById('supervisorSignaturePad');
-                        const clearBtn = document.getElementById('clearSupervisor');
-                        const signatureContainer = supervisorCanvas?.parentElement;
-                        
-                        if (supervisorCanvas && signatureContainer) {
-                          // Hide the canvas and clear button
-                          supervisorCanvas.style.display = 'none';
-                          if (clearBtn) clearBtn.style.display = 'none';
-                          
-                          // Create read-only image display
-                          const readOnlyDiv = document.createElement('div');
-                          readOnlyDiv.className = 'signature-read-only';
-                          readOnlyDiv.style.cssText = 'min-height: 150px; border: 2px solid #10b981; border-radius: 6px; background: #f0fdf4; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center;';
-                          
-                          const label = document.createElement('div');
-                          label.textContent = '✓ Form Already Signed';
-                          label.style.cssText = 'font-weight: 600; color: #10b981; margin-bottom: 10px; font-size: 0.9rem;';
-                          
-                          const img = document.createElement('img');
-                          img.src = dataUrl;
-                          img.alt = 'Supervisor Signature';
-                          img.style.cssText = 'max-width: 100%; max-height: 120px; object-fit: contain; border-radius: 4px;';
-                          
-                          readOnlyDiv.appendChild(label);
-                          readOnlyDiv.appendChild(img);
-                          signatureContainer.appendChild(readOnlyDiv);
-                          
-                          // Disable the pad
-                          if (pads.supervisorPad) {
-                            pads.supervisorPad.off();
-                          }
-                        }
-                        
-                        console.log('✅ Form already submitted - signature shown as read-only');
-                      } else {
-                        // Form not yet submitted - draw directly onto pad canvas (avoids fromDataURL stretch)
+                      // Always draw signature on canvas (like Cleaning form)
+                      // Then make it read-only if user can't edit
+                      console.log('✅ Loading supervisor signature, canEdit:', canEditSupervisor);
+                      
+                      {
+                        // Draw signature onto pad canvas (avoids fromDataURL stretch)
                         pads.supervisorPad.clear();
                         const ctx = supervisorCanvas.getContext('2d');
                         const ratio = Math.max(window.devicePixelRatio || 1, 1);
@@ -2637,12 +2817,29 @@
                           Math.round(drawX * scaleX), Math.round(drawY * scaleY),
                           Math.round(drawW * scaleX), Math.round(drawH * scaleY));
                         ctx.restore();
+                        
+                        // Mark canvas as having a loaded signature
+                        supervisorCanvas.dataset.signatureLoaded = 'true';
+                        
                         const supervisorSigInput = document.getElementById('supervisorSignatureData');
                         if (supervisorSigInput) {
                           supervisorSigInput.value = dataUrl;
                           console.log('✅ Supervisor signature stored in hidden input');
                         }
                         console.log('✅ Supervisor signature drawn to pad (correct aspect, no stretch)');
+                        
+                        // If user can't edit, make canvas read-only
+                        if (!canEditSupervisor) {
+                          supervisorCanvas.style.pointerEvents = 'none';
+                          supervisorCanvas.style.cursor = 'default';
+                          
+                          // Hide clear button
+                          const clearBtn = document.getElementById('clearSupervisor');
+                          if (clearBtn) {
+                            clearBtn.style.display = 'none';
+                          }
+                          console.log('✅ Supervisor signature shown as read-only (can_edit=false)');
+                        }
                       }
                     } catch (err) {
                       console.error('❌ Error loading signature:', err);
@@ -2745,6 +2942,243 @@
           window.editSubmissionId = submissionData.submission_id;
           console.log('✅ Submission data loaded for editing');
           
+          // Load Operations Manager comments and signature for Supervisor (read-only)
+          {% if user_designation == 'supervisor' %}
+          let omCommentsSupervisor = null;
+          let omSigSupervisor = null;
+          
+          // Check formData for OM data
+          if (formData) {
+            if (formData.operations_manager_comments) omCommentsSupervisor = formData.operations_manager_comments;
+            if (formData.operations_manager_signature) omSigSupervisor = formData.operations_manager_signature;
+            if (!omSigSupervisor && formData.opMan_signature) omSigSupervisor = formData.opMan_signature;
+          }
+          
+          // Fallback: check submissionData
+          if ((!omCommentsSupervisor || !omSigSupervisor) && submissionData) {
+            if (!omCommentsSupervisor && submissionData.operations_manager_comments) {
+              omCommentsSupervisor = submissionData.operations_manager_comments;
+            }
+            if (!omSigSupervisor && submissionData.form_data) {
+              let checkFormData = submissionData.form_data;
+              if (typeof checkFormData === 'string') {
+                try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+              }
+              if (checkFormData) {
+                if (checkFormData.operations_manager_signature) omSigSupervisor = checkFormData.operations_manager_signature;
+                if (!omSigSupervisor && checkFormData.opMan_signature) omSigSupervisor = checkFormData.opMan_signature;
+              }
+            }
+          }
+          
+          // Display OM's previous review for supervisor (read-only)
+          if (omCommentsSupervisor || omSigSupervisor) {
+            const section = document.getElementById('opsManagerReadOnlySupervisor');
+            const prevSection = document.getElementById('previousForSupervisorSection');
+            if (section && prevSection) {
+              section.style.display = 'block';
+              prevSection.style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.operations_manager_approved_at) {
+                const timestamp = formatSigningTime(submissionData.operations_manager_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `Operations Manager Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
+              
+              // Load OM comments
+              if (omCommentsSupervisor) {
+                const commentsDiv = document.getElementById('opsManagerCommentsReadOnlySupervisor');
+                if (commentsDiv) {
+                  commentsDiv.textContent = omCommentsSupervisor;
+                }
+              }
+              
+              // Load OM signature
+              displaySignatureInContainer('opsManagerSignatureReadOnlySupervisor', omSigSupervisor, 'Operations Manager Signature');
+            }
+          }
+          
+          // Load Business Development review for Supervisor (read-only)
+          let bdCommentsSupervisor = null;
+          let bdSigSupervisor = null;
+          
+          if (formData) {
+            if (formData.business_dev_comments) bdCommentsSupervisor = formData.business_dev_comments;
+            if (formData.business_dev_signature) bdSigSupervisor = formData.business_dev_signature;
+          }
+          
+          // Fallback: check submissionData
+          if ((!bdCommentsSupervisor || !bdSigSupervisor) && submissionData) {
+            if (!bdCommentsSupervisor && submissionData.business_dev_comments) {
+              bdCommentsSupervisor = submissionData.business_dev_comments;
+            }
+            // Check top-level signature first, then form_data
+            if (!bdSigSupervisor && submissionData.business_dev_signature) {
+              bdSigSupervisor = submissionData.business_dev_signature;
+            }
+            if (!bdSigSupervisor && submissionData.form_data) {
+              let checkFormData = submissionData.form_data;
+              if (typeof checkFormData === 'string') {
+                try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+              }
+              if (checkFormData && checkFormData.business_dev_signature) {
+                bdSigSupervisor = checkFormData.business_dev_signature;
+              }
+            }
+          }
+          
+          // Display BD's review for supervisor (read-only)
+          if (bdCommentsSupervisor || bdSigSupervisor) {
+            const section = document.getElementById('bdReadOnlySupervisor');
+            const prevSection = document.getElementById('previousForSupervisorSection');
+            if (section && prevSection) {
+              section.style.display = 'block';
+              prevSection.style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.business_dev_approved_at) {
+                const timestamp = formatSigningTime(submissionData.business_dev_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `Business Development Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
+              
+              // Load BD comments
+              if (bdCommentsSupervisor) {
+                const commentsDiv = document.getElementById('bdCommentsReadOnlySupervisor');
+                if (commentsDiv) {
+                  commentsDiv.textContent = bdCommentsSupervisor;
+                }
+              }
+              
+              // Load BD signature
+              displaySignatureInContainer('bdSignatureReadOnlySupervisor', bdSigSupervisor, 'Business Development Signature');
+            }
+          }
+          
+          // Load Procurement review for Supervisor (read-only)
+          let procCommentsSupervisor = null;
+          let procSigSupervisor = null;
+          
+          if (formData) {
+            if (formData.procurement_comments) procCommentsSupervisor = formData.procurement_comments;
+            if (formData.procurement_signature) procSigSupervisor = formData.procurement_signature;
+          }
+          
+          // Fallback: check submissionData
+          if ((!procCommentsSupervisor || !procSigSupervisor) && submissionData) {
+            if (!procCommentsSupervisor && submissionData.procurement_comments) {
+              procCommentsSupervisor = submissionData.procurement_comments;
+            }
+            // Check top-level signature first, then form_data
+            if (!procSigSupervisor && submissionData.procurement_signature) {
+              procSigSupervisor = submissionData.procurement_signature;
+            }
+            if (!procSigSupervisor && submissionData.form_data) {
+              let checkFormData = submissionData.form_data;
+              if (typeof checkFormData === 'string') {
+                try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+              }
+              if (checkFormData && checkFormData.procurement_signature) {
+                procSigSupervisor = checkFormData.procurement_signature;
+              }
+            }
+          }
+          
+          // Display Procurement's review for supervisor (read-only)
+          if (procCommentsSupervisor || procSigSupervisor) {
+            const section = document.getElementById('procurementReadOnlySupervisor');
+            const prevSection = document.getElementById('previousForSupervisorSection');
+            if (section && prevSection) {
+              section.style.display = 'block';
+              prevSection.style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.procurement_approved_at) {
+                const timestamp = formatSigningTime(submissionData.procurement_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `Procurement Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
+              
+              // Load Procurement comments
+              if (procCommentsSupervisor) {
+                const commentsDiv = document.getElementById('procurementCommentsReadOnlySupervisor');
+                if (commentsDiv) {
+                  commentsDiv.textContent = procCommentsSupervisor;
+                }
+              }
+              
+              // Load Procurement signature
+              displaySignatureInContainer('procurementSignatureReadOnlySupervisor', procSigSupervisor, 'Procurement Signature');
+            }
+          }
+          
+          // Load General Manager review for Supervisor (read-only)
+          let gmCommentsSupervisor = null;
+          let gmSigSupervisor = null;
+          
+          if (formData) {
+            if (formData.general_manager_comments) gmCommentsSupervisor = formData.general_manager_comments;
+            if (formData.general_manager_signature) gmSigSupervisor = formData.general_manager_signature;
+          }
+          
+          // Fallback: check submissionData
+          if ((!gmCommentsSupervisor || !gmSigSupervisor) && submissionData) {
+            if (!gmCommentsSupervisor && submissionData.general_manager_comments) {
+              gmCommentsSupervisor = submissionData.general_manager_comments;
+            }
+            // Check top-level signature first, then form_data
+            if (!gmSigSupervisor && submissionData.general_manager_signature) {
+              gmSigSupervisor = submissionData.general_manager_signature;
+            }
+            if (!gmSigSupervisor && submissionData.form_data) {
+              let checkFormData = submissionData.form_data;
+              if (typeof checkFormData === 'string') {
+                try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+              }
+              if (checkFormData && checkFormData.general_manager_signature) {
+                gmSigSupervisor = checkFormData.general_manager_signature;
+              }
+            }
+          }
+          
+          // Display GM's review for supervisor (read-only)
+          if (gmCommentsSupervisor || gmSigSupervisor) {
+            const section = document.getElementById('gmReadOnlySupervisor');
+            const prevSection = document.getElementById('previousForSupervisorSection');
+            if (section && prevSection) {
+              section.style.display = 'block';
+              prevSection.style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.general_manager_approved_at) {
+                const timestamp = formatSigningTime(submissionData.general_manager_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `General Manager Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
+              
+              // Load GM comments
+              if (gmCommentsSupervisor) {
+                const commentsDiv = document.getElementById('gmCommentsReadOnlySupervisor');
+                if (commentsDiv) {
+                  commentsDiv.textContent = gmCommentsSupervisor;
+                }
+              }
+              
+              // Load GM signature
+              displaySignatureInContainer('gmSignatureReadOnlySupervisor', gmSigSupervisor, 'General Manager Signature');
+            }
+          }
+          {% endif %}
+          
           // Load Operations Manager comments
           {% if user_designation == 'operations_manager' %}
           console.log('🔍 Looking for operations_manager_comments...');
@@ -2833,6 +3267,178 @@
             }
           }
           
+          // Load BD for OM (read-only)
+          let bdCommentsOM = null;
+          let bdSigOM = null;
+          
+          if (formData) {
+            if (formData.business_dev_comments) bdCommentsOM = formData.business_dev_comments;
+            if (formData.business_dev_signature) bdSigOM = formData.business_dev_signature;
+          }
+          
+          if ((!bdCommentsOM || !bdSigOM) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              if (!bdCommentsOM && checkFormData.business_dev_comments) bdCommentsOM = checkFormData.business_dev_comments;
+              if (!bdSigOM && checkFormData.business_dev_signature) bdSigOM = checkFormData.business_dev_signature;
+            }
+          }
+          
+          if (!bdCommentsOM && submissionData && submissionData.business_dev_comments) {
+            bdCommentsOM = submissionData.business_dev_comments;
+          }
+          if (!bdSigOM && submissionData && submissionData.business_dev_signature) {
+            bdSigOM = submissionData.business_dev_signature;
+          }
+          
+          if (bdCommentsOM || bdSigOM) {
+            hasPrevForOM = true;
+            const section = document.getElementById('bdReadOnlyOM');
+            if (section) {
+              section.style.display = 'block';
+              if (prevForOM) prevForOM.style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.business_dev_approved_at) {
+                const timestamp = formatSigningTime(submissionData.business_dev_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `Business Development Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
+              
+              const commentsDiv = document.getElementById('bdCommentsReadOnlyOM');
+              if (commentsDiv) {
+                if (bdCommentsOM) commentsDiv.textContent = bdCommentsOM;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
+              }
+              
+              displaySignatureInContainer('bdSignatureReadOnlyOM', bdSigOM, 'Business Development Signature');
+            }
+          }
+          
+          // Load Procurement for OM (read-only)
+          let procCommentsOM = null;
+          let procSigOM = null;
+          
+          if (formData) {
+            if (formData.procurement_comments) procCommentsOM = formData.procurement_comments;
+            if (formData.procurement_signature) procSigOM = formData.procurement_signature;
+          }
+          
+          if ((!procCommentsOM || !procSigOM) && submissionData && submissionData.form_data) {
+            let checkFormData = submissionData.form_data;
+            if (typeof checkFormData === 'string') {
+              try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+            }
+            if (checkFormData) {
+              if (!procCommentsOM && checkFormData.procurement_comments) procCommentsOM = checkFormData.procurement_comments;
+              if (!procSigOM && checkFormData.procurement_signature) procSigOM = checkFormData.procurement_signature;
+            }
+          }
+          
+          if (!procCommentsOM && submissionData && submissionData.procurement_comments) {
+            procCommentsOM = submissionData.procurement_comments;
+          }
+          if (!procSigOM && submissionData && submissionData.procurement_signature) {
+            procSigOM = submissionData.procurement_signature;
+          }
+          
+          if (procCommentsOM || procSigOM) {
+            hasPrevForOM = true;
+            const section = document.getElementById('procurementReadOnlyOM');
+            if (section) {
+              section.style.display = 'block';
+              if (prevForOM) prevForOM.style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.procurement_approved_at) {
+                const timestamp = formatSigningTime(submissionData.procurement_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `Procurement Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
+              
+              const commentsDiv = document.getElementById('procurementCommentsReadOnlyOM');
+              if (commentsDiv) {
+                if (procCommentsOM) commentsDiv.textContent = procCommentsOM;
+                else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
+              }
+              
+              displaySignatureInContainer('procurementSignatureReadOnlyOM', procSigOM, 'Procurement Signature');
+            }
+          }
+          
+          // Load General Manager review for OM (read-only)
+          let gmCommentsOM = null;
+          let gmSigOM = null;
+          
+          if (formData) {
+            if (formData.general_manager_comments) gmCommentsOM = formData.general_manager_comments;
+            if (formData.general_manager_signature) gmSigOM = formData.general_manager_signature;
+          }
+          
+          // Fallback: check submissionData
+          if ((!gmCommentsOM || !gmSigOM) && submissionData) {
+            if (!gmCommentsOM && submissionData.general_manager_comments) {
+              gmCommentsOM = submissionData.general_manager_comments;
+            }
+            if (!gmSigOM && submissionData.form_data) {
+              let checkFormData = submissionData.form_data;
+              if (typeof checkFormData === 'string') {
+                try { checkFormData = JSON.parse(checkFormData); } catch (e) {}
+              }
+              if (checkFormData && checkFormData.general_manager_signature) {
+                gmSigOM = checkFormData.general_manager_signature;
+              }
+            }
+          }
+          
+          // Display GM's review for OM (read-only)
+          if (gmCommentsOM || gmSigOM) {
+            hasPrevForOM = true;
+            const section = document.getElementById('gmReadOnlyOM');
+            if (section && prevForOM) {
+              section.style.display = 'block';
+              prevForOM.style.display = 'block';
+              
+              // Add timestamp if available
+              const header = section.querySelector('h6');
+              if (header && submissionData && submissionData.general_manager_approved_at) {
+                const timestamp = formatSigningTime(submissionData.general_manager_approved_at);
+                if (timestamp) {
+                  header.innerHTML = `General Manager Review <span style="color: #10b981; font-size: 0.75rem; font-weight: normal;">✓ Signed: ${timestamp}</span>`;
+                }
+              }
+              
+              // Load GM comments
+              const commentsDiv = document.getElementById('gmCommentsReadOnlyOM');
+              if (commentsDiv) {
+                if (gmCommentsOM) {
+                  commentsDiv.textContent = gmCommentsOM;
+                } else {
+                  commentsDiv.textContent = 'No comments provided';
+                  commentsDiv.style.fontStyle = 'italic';
+                  commentsDiv.style.color = '#9ca3af';
+                }
+              }
+              
+              // Load GM signature
+              displaySignatureInContainer('gmSignatureReadOnlyOM', gmSigOM, 'General Manager Signature');
+            }
+          }
           // Load Operations Manager signature (for Operations Manager editing)
           console.log('🔍 Looking for operations_manager_signature...');
           console.log('  formData keys:', formData ? Object.keys(formData) : 'no formData');
@@ -2942,6 +3548,10 @@
                     if (opSigInput) {
                       opSigInput.value = dataUrl;
                     }
+                    
+                    // Mark canvas as having a loaded signature (to prevent resize from clearing it)
+                    opCanvas.dataset.signatureLoaded = 'true';
+                    
                     console.log('✅ Operations Manager signature loaded into pad via fromDataURL (fitted)');
                     
                     // Update signature hint to show "Form signed" instead of "Required for approval"
@@ -2973,44 +3583,60 @@
             console.log('ℹ️ No Operations Manager signature found in submission data');
           }
           
-          // Check if OM has already approved - if so, show read-only version of their own data
+          // Check if OM has already approved
           if (submissionData && submissionData.operations_manager_approved_at) {
-            console.log('✅ OM has already approved this form - showing read-only version');
+            // KEY FIX: Use can_edit from backend which determines if OM can still edit
+            // OM can edit if: form is at operations_manager_review OR at bd_procurement_review but BD/Procurement haven't started
+            const canEditOwnReview = submissionData.can_edit === true;
             
-            // Hide editable section, show read-only section
-            const editableSection = document.getElementById('omEditableSection');
-            const readOnlySection = document.getElementById('omOwnReviewReadOnly');
-            
-            if (editableSection) editableSection.style.display = 'none';
-            if (readOnlySection) readOnlySection.style.display = 'block';
-            
-            // Load OM comments into read-only section
-            const omCommentsReadOnly = document.getElementById('omOwnCommentsReadOnly');
-            if (omCommentsReadOnly) {
-              const omComments = formData?.operations_manager_comments || submissionData.operations_manager_comments;
-              if (omComments) {
-                omCommentsReadOnly.textContent = omComments;
-              } else {
-                omCommentsReadOnly.textContent = 'No comments provided';
-                omCommentsReadOnly.style.fontStyle = 'italic';
-                omCommentsReadOnly.style.color = '#9ca3af';
+            if (canEditOwnReview) {
+              console.log('ℹ️ OM has signed but can still edit - keeping editable for re-sign');
+              // Keep editable section visible (signature and comments already pre-loaded above)
+              // Add a visual indicator showing they've previously signed
+              const omSignatureHint = document.getElementById('omSignatureHint');
+              if (omSignatureHint) {
+                const timestamp = formatSigningTime(submissionData.operations_manager_approved_at);
+                omSignatureHint.innerHTML = `<span class="text-success">✓ Signed: ${timestamp || 'Previously'}</span> <span class="text-muted small"></span>`;
+                omSignatureHint.classList.remove('text-danger');
               }
-            }
+            } else {
+              console.log('✅ OM cannot edit anymore - showing read-only version');
             
-            // Add timestamp to read-only section header
-            const omReadOnlyHeader = readOnlySection?.querySelector('h6') || readOnlySection?.querySelector('.alert');
-            if (omReadOnlyHeader && submissionData.operations_manager_approved_at) {
-              const timestamp = formatSigningTime(submissionData.operations_manager_approved_at);
-              if (timestamp) {
-                omReadOnlyHeader.innerHTML = `<strong>✓ Your Previous Review</strong> <span style="color: #10b981; font-size: 0.75rem; font-weight: normal; margin-left: 0.5rem;">Signed: ${timestamp}</span>`;
+              // Hide editable section, show read-only section
+              const editableSection = document.getElementById('omEditableSection');
+              const readOnlySection = document.getElementById('omOwnReviewReadOnly');
+              
+              if (editableSection) editableSection.style.display = 'none';
+              if (readOnlySection) readOnlySection.style.display = 'block';
+              
+              // Load OM comments into read-only section
+              const omCommentsReadOnly = document.getElementById('omOwnCommentsReadOnly');
+              if (omCommentsReadOnly) {
+                const omComments = formData?.operations_manager_comments || submissionData.operations_manager_comments;
+                if (omComments) {
+                  omCommentsReadOnly.textContent = omComments;
+                } else {
+                  omCommentsReadOnly.textContent = 'No comments provided';
+                  omCommentsReadOnly.style.fontStyle = 'italic';
+                  omCommentsReadOnly.style.color = '#9ca3af';
+                }
               }
-            }
-            
-            // Load OM signature into read-only section
-            const omSigReadOnly = document.getElementById('omOwnSignatureReadOnly');
-            if (omSigReadOnly && opSig) {
-              displaySignatureInContainer('omOwnSignatureReadOnly', opSig, 'Your Signature');
-              console.log('✅ Loaded OM signature into read-only section');
+              
+              // Add timestamp to read-only section header
+              const omReadOnlyHeader = readOnlySection?.querySelector('h6') || readOnlySection?.querySelector('.alert');
+              if (omReadOnlyHeader && submissionData.operations_manager_approved_at) {
+                const timestamp = formatSigningTime(submissionData.operations_manager_approved_at);
+                if (timestamp) {
+                  omReadOnlyHeader.innerHTML = `<strong>✓ Your Previous Review</strong> <span style="color: #10b981; font-size: 0.75rem; font-weight: normal; margin-left: 0.5rem;">Signed: ${timestamp}</span>`;
+                }
+              }
+              
+              // Load OM signature into read-only section
+              const omSigReadOnly = document.getElementById('omOwnSignatureReadOnly');
+              if (omSigReadOnly && opSig) {
+                displaySignatureInContainer('omOwnSignatureReadOnly', opSig, 'Your Signature');
+                console.log('✅ Loaded OM signature into read-only section');
+              }
             }
           } else {
             console.log('ℹ️ OM has not yet approved - showing editable section');
@@ -3210,6 +3836,18 @@
                   pads.businessDevPad.clear();
                   pads.businessDevPad.fromDataURL(sigUrl);
                   console.log('✅ Loaded BD signature into pad');
+                  
+                  // Check if BD can still edit (based on can_edit from backend)
+                  const bdCanEdit = submissionData && submissionData.can_edit === true;
+                  if (bdCanEdit && submissionData.business_dev_approved_at) {
+                    console.log('ℹ️ BD can still edit - showing re-sign hint');
+                    const bdHint = document.getElementById('bdSignatureHint');
+                    if (bdHint) {
+                      const timestamp = typeof formatSigningTime === 'function' ? formatSigningTime(submissionData.business_dev_approved_at) : '';
+                      bdHint.innerHTML = `<span class="text-success">✓ Signed${timestamp ? ': ' + timestamp : ''}</span> <span class="text-muted small"></span>`;
+                      bdHint.classList.remove('text-danger');
+                    }
+                  }
                 };
                 img.src = sigUrl;
               }
@@ -3247,6 +3885,18 @@
                   pads.procurementPad.clear();
                   pads.procurementPad.fromDataURL(sigUrl);
                   console.log('✅ Loaded Procurement signature into pad');
+                  
+                  // Check if Procurement can still edit (based on can_edit from backend)
+                  const procCanEdit = submissionData && submissionData.can_edit === true;
+                  if (procCanEdit && submissionData.procurement_approved_at) {
+                    console.log('ℹ️ Procurement can still edit - showing re-sign hint');
+                    const procHint = document.getElementById('procurementSignatureHint');
+                    if (procHint) {
+                      const timestamp = typeof formatSigningTime === 'function' ? formatSigningTime(submissionData.procurement_approved_at) : '';
+                      procHint.innerHTML = `<span class="text-success">✓ Signed${timestamp ? ': ' + timestamp : ''}</span> <span class="text-muted small"></span>`;
+                      procHint.classList.remove('text-danger');
+                    }
+                  }
                 };
                 img.src = sigUrl;
               }
@@ -3463,16 +4113,65 @@
               const gmSigInput = document.getElementById('generalManagerSignatureData');
               
               if (gmCanvas && pads && pads.generalManagerPad) {
+                // Check if GM can still edit (based on can_edit from backend)
+                const gmCanEdit = submissionData && submissionData.can_edit === true;
+                
                 try {
                   if (sigUrl.startsWith('data:image')) {
                     pads.generalManagerPad.fromDataURL(sigUrl);
                     console.log('✅ Loaded GM signature into canvas');
+                    
+                    // Show edit hint if GM can still edit
+                    if (gmCanEdit && submissionData.general_manager_approved_at) {
+                      console.log('ℹ️ GM can still edit - showing re-sign hint');
+                      const gmHint = document.getElementById('gmSignatureHint');
+                      if (gmHint) {
+                        const timestamp = typeof formatSigningTime === 'function' ? formatSigningTime(submissionData.general_manager_approved_at) : '';
+                        gmHint.innerHTML = `<span class="text-success">✓ Signed${timestamp ? ': ' + timestamp : ''}</span> <span class="text-muted small"></span>`;
+                        gmHint.classList.remove('text-danger');
+                      }
+                    }
+                  } else if (gmCanEdit) {
+                    // GM can edit but signature is HTTP URL - load into canvas using image
+                    console.log('ℹ️ GM can edit - loading HTTP signature into editable canvas');
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = function() {
+                      const ctx = gmCanvas.getContext('2d');
+                      const rect = gmCanvas.getBoundingClientRect();
+                      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                      gmCanvas.width = rect.width * ratio;
+                      gmCanvas.height = rect.height * ratio;
+                      ctx.scale(ratio, ratio);
+                      ctx.fillStyle = 'white';
+                      ctx.fillRect(0, 0, rect.width, rect.height);
+                      const scale = Math.min(rect.width / img.width, rect.height / img.height) * 0.9;
+                      const drawW = img.width * scale;
+                      const drawH = img.height * scale;
+                      const x = (rect.width - drawW) / 2;
+                      const y = (rect.height - drawH) / 2;
+                      ctx.drawImage(img, x, y, drawW, drawH);
+                      gmCanvas.dataset.signatureLoaded = 'true';
+                      console.log('✅ GM signature drawn to editable canvas');
+                    };
+                    img.src = sigUrl;
+                    
+                    // Show edit hint
+                    if (submissionData.general_manager_approved_at) {
+                      const gmHint = document.getElementById('gmSignatureHint');
+                      if (gmHint) {
+                        const timestamp = typeof formatSigningTime === 'function' ? formatSigningTime(submissionData.general_manager_approved_at) : '';
+                        gmHint.innerHTML = `<span class="text-success">✓ Signed${timestamp ? ': ' + timestamp : ''}</span> <span class="text-muted small"></span>`;
+                        gmHint.classList.remove('text-danger');
+                      }
+                    }
                   } else {
+                    // GM cannot edit - show as read-only image
                     gmCanvas.style.display = 'none';
                   const sigImg = document.createElement('img');
                     sigImg.src = sigUrl;
                     sigImg.alt = 'General Manager Signature';
-                    sigImg.style.cssText = 'max-width: 100%; max-height: 180px; width: auto; height: auto; object-fit: contain; object-position: center; border: 2px solid #10b981; border-radius: 8px; background: #f0fdf4; padding: 10px; display: block; margin: 0 auto;';
+                    sigImg.style.cssText = 'max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; object-position: center; display: block; margin: 0 auto;';
                     gmCanvas.parentElement.insertBefore(sigImg, gmCanvas);
                   
                     const clearBtn = document.getElementById('clearGeneralManager');
@@ -3486,7 +4185,7 @@
                     const hintSpan = gmCanvas.parentElement.querySelector('.signature-hint');
                   if (hintSpan) hintSpan.style.display = 'none';
                     
-                    console.log('✅ Loaded GM signature as image');
+                    console.log('✅ Loaded GM signature as image (read-only)');
                   }
                   
                   if (gmSigInput) {

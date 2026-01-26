@@ -516,6 +516,12 @@
       color: #374151;
     }
 
+    .status-badge.closed {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+
     .workflow-badge {
       display: inline-block;
       padding: 0.25rem 0.75rem;
@@ -548,6 +554,82 @@
     .workflow-badge.rejected {
       background: #fee2e2;
       color: #991b1b;
+    }
+
+    .workflow-badge.closed {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+
+    .section-controls {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .dashboard-filter {
+      min-width: 200px;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #111827;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .status-toggle-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      background: #ffffff;
+    }
+
+    .status-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      color: #111827;
+      font-weight: 500;
+    }
+
+    .status-toggle input[type="checkbox"] {
+      width: 34px;
+      height: 18px;
+      appearance: none;
+      background: #e5e7eb;
+      border-radius: 999px;
+      position: relative;
+      outline: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .status-toggle input[type="checkbox"]::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+      transition: transform 0.2s ease;
+    }
+
+    .status-toggle input[type="checkbox"]:checked {
+      background: #22c55e;
+    }
+
+    .status-toggle input[type="checkbox"]:checked::after {
+      transform: translateX(16px);
     }
 
     .designation-select {
@@ -809,6 +891,22 @@
     <div class="users-section">
       <div class="section-header">
         <h2 class="section-title">All Users</h2>
+        <div class="section-controls">
+          <div class="status-toggle-group" aria-label="User status filter">
+            <label class="status-toggle">
+              <input type="checkbox" id="statusActiveToggle" checked onchange="setUsersStatusFilters()">
+              <span id="statusToggleLabel">Active</span>
+            </label>
+          </div>
+          <select id="usersDesignationFilter" class="dashboard-filter" onchange="setUsersDesignationFilter(this.value)">
+            <option value="all" selected>All Users</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="operations_manager">Operations Manager</option>
+            <option value="business_development">Business Development</option>
+            <option value="procurement">Procurement</option>
+            <option value="general_manager">General Manager</option>
+          </select>
+        </div>
       </div>
       <div id="usersTableContainer">
         <p>Loading users...</p>
@@ -818,16 +916,24 @@
     <div class="users-section">
       <div class="section-header">
         <h2 class="section-title">Generated Documents</h2>
-        <button class="btn btn-primary" onclick="loadDocuments()">Refresh</button>
+        <div class="section-controls">
+          <select id="documentsFilter" class="dashboard-filter" onchange="setDocumentsFilter(this.value)">
+            <option value="active" selected>Active</option>
+            <option value="completed">Completed</option>
+            <option value="closed">Closed</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button class="btn btn-primary" onclick="loadDocuments()">Refresh</button>
+        </div>
       </div>
       <div class="documents-header">
         <div class="checkbox-select-all">
-          <input type="checkbox" id="selectAllDocuments" onchange="toggleSelectAll()">
+          <input type="checkbox" id="selectAllDocuments" onchange="toggleSelectAllDocuments()">
           <label for="selectAllDocuments">Select All</label>
         </div>
         <div class="bulk-actions">
-          <button class="btn btn-danger" onclick="deleteSelectedDocuments()" id="deleteSelectedBtn" disabled>
-            Delete Selected
+          <button class="btn btn-outline-danger" onclick="closeSelectedDocuments()" id="closeSelectedBtn" disabled>
+            Close Selected
           </button>
         </div>
       </div>
@@ -916,27 +1022,99 @@
 
   <script>
     let users = [];
+    let usersDesignationFilter = 'all';
+    let usersStatusFilters = { active: true };
     const token = localStorage.getItem('access_token');
 
     if (!token) {
       window.location.href = '/login';
     }
 
-    async function loadUsers() {
+    async function refreshAccessToken() {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (!refreshToken) {
+        return null;
+      }
+
       try {
-        const response = await fetch('/api/admin/users', {
+        const response = await fetch('/api/auth/refresh', {
+          method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${refreshToken}`
+          },
+          credentials: 'include'
         });
 
-        if (response.status === 401 || response.status === 403) {
-          showAlert('Access denied. Admin privileges required.', 'error');
-          setTimeout(() => {
-            window.location.href = '/dashboard';
-          }, 2000);
-          return;
+        if (response.status === 401 || response.status === 422) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+          return null;
         }
+
+        const data = await response.json();
+        if (data.access_token) {
+          localStorage.setItem('access_token', data.access_token);
+          return data.access_token;
+        }
+        return null;
+      } catch (error) {
+        console.error('Error refreshing token:', error);
+        return null;
+      }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+      let accessToken = localStorage.getItem('access_token');
+      if (!accessToken) {
+        return new Response(null, { status: 401 });
+      }
+
+      let response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      if (response.status !== 401) {
+        return response;
+      }
+
+      const newToken = await refreshAccessToken();
+      if (!newToken) {
+        return response;
+      }
+
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Authorization': `Bearer ${newToken}`
+        }
+      });
+
+      return response;
+    }
+
+    function handleUnauthorized(response) {
+      if (response.status === 401 || response.status === 403) {
+        showAlert('Access denied. Please log in again.', 'error');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 1500);
+        return true;
+      }
+      return false;
+    }
+
+    async function loadUsers() {
+      try {
+        const response = await authenticatedFetch('/api/admin/users');
+
+        if (handleUnauthorized(response)) return;
 
         const data = await response.json();
         if (data.success) {
@@ -953,8 +1131,17 @@
 
     function renderUsersTable() {
       const container = document.getElementById('usersTableContainer');
-      
-      if (users.length === 0) {
+
+      const filteredUsers = users.filter(user => {
+        if (usersStatusFilters.active && !user.is_active) return false;
+        if (!usersStatusFilters.active && user.is_active) return false;
+        if (usersDesignationFilter !== 'all') {
+          return user.designation === usersDesignationFilter;
+        }
+        return true;
+      });
+
+      if (filteredUsers.length === 0) {
         container.innerHTML = '<p>No users found.</p>';
         return;
       }
@@ -983,7 +1170,7 @@
           <tbody>
       `;
 
-      users.forEach(user => {
+      filteredUsers.forEach(user => {
         const roleBadge = user.role === 'admin' ? 'badge-admin' : 
                          user.role === 'inspector' ? 'badge-inspector' : 'badge-user';
         const statusBadge = user.is_active ? 'badge-active' : 'badge-inactive';
@@ -1036,19 +1223,36 @@
       container.innerHTML = html;
     }
 
+    function setUsersDesignationFilter(value) {
+      usersDesignationFilter = value;
+      renderUsersTable();
+    }
+
+    function setUsersStatusFilters() {
+      const activeToggle = document.getElementById('statusActiveToggle');
+      const label = document.getElementById('statusToggleLabel');
+      const isActive = !!(activeToggle && activeToggle.checked);
+      usersStatusFilters = { active: isActive };
+      if (label) {
+        label.textContent = isActive ? 'Active' : 'Inactive';
+      }
+      renderUsersTable();
+    }
+
     async function resetPassword(userId, username) {
       if (!confirm(`Reset password for user "${username}"? A temporary password will be generated.`)) {
         return;
       }
 
       try {
-        const response = await fetch(`/api/admin/users/${userId}/reset-password`, {
+        const response = await authenticatedFetch(`/api/admin/users/${userId}/reset-password`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
+
+        if (handleUnauthorized(response)) return;
 
         const data = await response.json();
         if (data.success) {
@@ -1069,13 +1273,14 @@
       }
 
       try {
-        const response = await fetch(`/api/admin/users/${userId}/toggle-active`, {
+        const response = await authenticatedFetch(`/api/admin/users/${userId}/toggle-active`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
+
+        if (handleUnauthorized(response)) return;
 
         const data = await response.json();
         if (data.success) {
@@ -1117,14 +1322,15 @@
       };
 
       try {
-        const response = await fetch(`/api/admin/users/${userId}/update-access`, {
+        const response = await authenticatedFetch(`/api/admin/users/${userId}/update-access`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(accessData)
         });
+
+        if (handleUnauthorized(response)) return;
 
         const data = await response.json();
         if (data.success) {
@@ -1173,19 +1379,13 @@
 
     // Documents Management
     let documents = [];
+    let documentsFilter = 'pending';
 
     async function loadDocuments() {
       try {
-        const response = await fetch('/api/admin/documents', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await authenticatedFetch('/api/admin/documents');
 
-        if (response.status === 401 || response.status === 403) {
-          showAlert('Access denied. Admin privileges required.', 'error');
-          return;
-        }
+        if (handleUnauthorized(response)) return;
 
         const data = await response.json();
         if (data.success) {
@@ -1202,10 +1402,36 @@
       }
     }
 
+    function setDocumentsFilter(value) {
+      documentsFilter = value;
+      renderDocumentsTable();
+    }
+
     function renderDocumentsTable() {
       const container = document.getElementById('documentsTableContainer');
-      
-      if (documents.length === 0) {
+
+      const filteredDocuments = documents.filter(doc => {
+        const workflowStatus = doc.workflow_status || '';
+        const status = doc.status || '';
+        const isReviewing = workflowStatus.includes('reviewing') || workflowStatus.includes('notified');
+
+        if (documentsFilter === 'active') {
+          return !['completed', 'closed_by_admin', 'rejected'].includes(workflowStatus)
+            && !['completed', 'closed'].includes(status);
+        }
+        if (documentsFilter === 'completed') {
+          return workflowStatus === 'completed' || status === 'completed';
+        }
+        if (documentsFilter === 'closed') {
+          return workflowStatus === 'closed_by_admin' || status === 'closed';
+        }
+        if (documentsFilter === 'rejected') {
+          return workflowStatus === 'rejected';
+        }
+        return true;
+      });
+
+      if (filteredDocuments.length === 0) {
         container.innerHTML = '<p>No documents found.</p>';
         return;
       }
@@ -1229,12 +1455,13 @@
           <tbody>
       `;
 
-      documents.forEach(doc => {
+      filteredDocuments.forEach(doc => {
         const moduleClass = doc.module_type === 'hvac_mep' ? 'hvac' : 
                            doc.module_type === 'civil' ? 'civil' : 'cleaning';
         const statusClass = doc.status === 'completed' ? 'completed' :
                            doc.status === 'processing' ? 'processing' :
-                           doc.status === 'submitted' ? 'submitted' : 'draft';
+                           doc.status === 'submitted' ? 'submitted' :
+                           doc.status === 'closed' ? 'closed' : 'draft';
         
         // Workflow status badge class
         let workflowClass = 'submitted';
@@ -1242,6 +1469,7 @@
         else if (doc.workflow_status?.includes('reviewing')) workflowClass = 'reviewing';
         else if (doc.workflow_status?.includes('notified')) workflowClass = 'notified';
         else if (doc.workflow_status === 'rejected') workflowClass = 'rejected';
+        else if (doc.workflow_status === 'closed_by_admin') workflowClass = 'closed';
 
         // Format workflow status for display
         let workflowDisplay = doc.workflow_status || 'Submitted';
@@ -1296,7 +1524,7 @@
 
         html += `
           <tr>
-            <td data-label="Select"><input type="checkbox" class="document-checkbox" value="${doc.submission_id}" onchange="updateDocumentDeleteButton()"></td>
+            <td data-label="Select"><input type="checkbox" class="document-checkbox" value="${doc.submission_id}" onchange="updateDocumentCloseButton()"></td>
             <td data-label="Document ID"><code style="font-size: 0.85rem;">${doc.submission_id}</code></td>
             <td data-label="Module"><span class="module-badge ${moduleClass}">${doc.module_display}</span></td>
             <td data-label="Site/Project"><strong>${doc.site_name}</strong></td>
@@ -1318,6 +1546,7 @@
                 ${doc.excel_url ? `<a href="${doc.excel_url}" target="_blank" class="btn-download" title="Download Excel">📊 Excel</a>` : ''}
                 ${doc.pdf_url ? `<a href="${doc.pdf_url}" target="_blank" class="btn-download" title="Download PDF">📄 PDF</a>` : ''}
                 <button class="btn btn-sm btn-primary" onclick="editSubmission('${doc.submission_id}', '${doc.module_type}')" title="Edit Submission">✏️ Edit</button>
+                ${doc.workflow_status !== 'closed_by_admin' ? `<button class="btn btn-sm btn-outline-danger" onclick="closeSubmission('${doc.submission_id}')" title="Close Submission">Close</button>` : ''}
               </div>
             </td>
           </tr>
@@ -1330,6 +1559,33 @@
       `;
 
       container.innerHTML = html;
+    }
+
+    async function closeSubmission(submissionId) {
+      const reason = window.prompt('Optional reason for closing this form:') || '';
+      if (!window.confirm('Close this form? It will become read-only for all users.')) {
+        return;
+      }
+      try {
+        const response = await authenticatedFetch(`/api/admin/submissions/${submissionId}/close`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ reason })
+        });
+        if (handleUnauthorized(response)) return;
+        const data = await response.json();
+        if (data.success) {
+          showAlert('Form closed by admin', 'success');
+          loadDocuments();
+        } else {
+          showAlert(data.error || 'Failed to close form', 'error');
+        }
+      } catch (error) {
+        console.error('Error closing form:', error);
+        showAlert('Error closing form', 'error');
+      }
     }
 
     // Set user designation
@@ -1352,14 +1608,15 @@
         // Prepare the designation value (empty string becomes null)
         const designationValue = designation === '' || designation === 'None' ? null : designation;
 
-        const response = await fetch(`/api/admin/users/${userId}`, {
+        const response = await authenticatedFetch(`/api/admin/users/${userId}`, {
           method: 'PUT',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ designation: designationValue })
         });
+
+        if (handleUnauthorized(response)) return;
 
         const data = await response.json();
 
@@ -1419,13 +1676,14 @@
       }
 
       try {
-        const response = await fetch(`/api/admin/users/${userId}`, {
+        const response = await authenticatedFetch(`/api/admin/users/${userId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
+
+        if (handleUnauthorized(response)) return;
 
         const data = await response.json();
         if (data.success) {
@@ -1442,50 +1700,71 @@
 
     // Documents bulk delete functions (toggleSelectAll defined above)
 
-    // toggleSelectAll for documents table header
+    // toggleSelectAll for documents
     function toggleSelectAllDocuments() {
-      const selectAll = document.getElementById('selectAllHeader');
+      const selectAll = document.getElementById('selectAllDocuments') || document.getElementById('selectAllHeader');
       if (selectAll) {
         const checkboxes = document.querySelectorAll('.document-checkbox');
         checkboxes.forEach(cb => cb.checked = selectAll.checked);
-        updateDocumentDeleteButton();
+        updateDocumentCloseButton();
       }
     }
 
-    async function deleteSelectedDocuments() {
+    function updateDocumentCloseButton() {
+      const checked = document.querySelectorAll('.document-checkbox:checked');
+      const closeBtn = document.getElementById('closeSelectedBtn');
+      if (!closeBtn) return;
+      closeBtn.disabled = checked.length === 0;
+      closeBtn.textContent = checked.length > 0 ? `Close Selected (${checked.length})` : 'Close Selected';
+    }
+
+    async function closeSelectedDocuments() {
       const checked = document.querySelectorAll('.document-checkbox:checked');
       if (checked.length === 0) {
-        showAlert('Please select at least one document to delete', 'error');
+        showAlert('Please select at least one document to close', 'error');
         return;
       }
 
       const submissionIds = Array.from(checked).map(cb => cb.value);
       const count = submissionIds.length;
-      
-      if (!confirm(`Are you sure you want to delete ${count} document(s)? This action cannot be undone.`)) {
+      const reason = window.prompt('Optional reason for closing these forms:') || '';
+
+      if (!confirm(`Close ${count} document(s)? They will become read-only for all users.`)) {
         return;
       }
 
       try {
-        const response = await fetch('/api/admin/documents', {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ submission_ids: submissionIds })
-        });
+        let successCount = 0;
+        let failCount = 0;
 
-        const data = await response.json();
-        if (data.success) {
-          showAlert(data.message || `Successfully deleted ${count} document(s)`, 'success');
-          loadDocuments();
-        } else {
-          showAlert(data.error || 'Failed to delete documents', 'error');
+        for (const submissionId of submissionIds) {
+          const response = await authenticatedFetch(`/api/admin/submissions/${submissionId}/close`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ reason })
+          });
+
+          if (handleUnauthorized(response)) return;
+
+          const data = await response.json();
+          if (response.ok && data.success) {
+            successCount += 1;
+          } else {
+            failCount += 1;
+          }
         }
+
+        if (successCount > 0) {
+          showAlert(`Closed ${successCount} document(s)` + (failCount ? `, ${failCount} failed` : ''), 'success');
+        } else {
+          showAlert('Failed to close documents', 'error');
+        }
+        loadDocuments();
       } catch (error) {
-        console.error('Error deleting documents:', error);
-        showAlert('Error deleting documents', 'error');
+        console.error('Error closing documents:', error);
+        showAlert('Error closing documents', 'error');
       }
     }
 
@@ -1531,11 +1810,9 @@
         document.getElementById('editModal').classList.add('active');
         
         // Fetch submission data
-        const response = await fetch(`/api/admin/submissions/${submissionId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await authenticatedFetch(`/api/admin/submissions/${submissionId}`);
+
+        if (handleUnauthorized(response)) return;
 
         if (!response.ok) {
           showAlert('Failed to load submission data', 'error');
@@ -1898,10 +2175,9 @@
       const formData = collectFormData(window.currentModuleType);
       
       try {
-        const response = await fetch(`/api/admin/submissions/${submissionId}`, {
+        const response = await authenticatedFetch(`/api/admin/submissions/${submissionId}`, {
           method: 'PUT',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -1910,6 +2186,8 @@
             form_data: formData
           })
         });
+
+        if (handleUnauthorized(response)) return;
 
         const data = await response.json();
         if (data.success) {

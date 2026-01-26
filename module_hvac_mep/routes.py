@@ -167,40 +167,107 @@ def index():
             if user.role == 'admin':
                 can_edit = True
                 can_view = True
-            # Supervisor - can edit/view their own submissions
+            # Supervisor - can edit ONLY if form is still at their stage, otherwise read-only
             elif user_designation == 'supervisor' and hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id:
-                can_edit = True
-                can_view = True
-            # Operations Manager - can review when status is operations_manager_review, can view if they've reviewed it
+                # Supervisor can edit if form is still at operations_manager_review (pending OM approval)
+                # Once OM approves (status changes to bd_procurement_review or beyond), supervisor can only view
+                if workflow_status == 'operations_manager_review':
+                    # Form submitted but OM hasn't approved yet - supervisor can still edit/resubmit
+                    can_edit = True
+                    can_view = True
+                elif workflow_status in ['bd_procurement_review', 'general_manager_review', 'completed']:
+                    # Form has moved past OM - supervisor can only view (read-only)
+                    can_view = True
+                else:
+                    # Draft or initial state - supervisor can edit
+                    can_edit = True
+                    can_view = True
+            # Operations Manager - can review/edit while form is at their stage, 
+            # AND can still edit if form moved to bd_procurement_review but BD/Procurement haven't approved yet
             elif user_designation == 'operations_manager':
                 if workflow_status == 'operations_manager_review':
                     can_edit = True
                     can_view = True
+                elif workflow_status == 'bd_procurement_review':
+                    # OM can still edit their review if BD and Procurement haven't started approving yet
+                    bd_started = hasattr(submission, 'business_dev_approved_at') and submission.business_dev_approved_at
+                    proc_started = hasattr(submission, 'procurement_approved_at') and submission.procurement_approved_at
+                    if not bd_started and not proc_started:
+                        can_edit = True
+                        can_view = True
+                    else:
+                        # BD or Procurement has started reviewing - OM can only view
+                        can_view = True
                 elif hasattr(submission, 'operations_manager_id') and submission.operations_manager_id == user.id:
                     # Can view forms they've already reviewed (for history/document access)
                     can_view = True
-            # Business Development - can review when status is bd_procurement_review and not yet approved by them
+            # Business Development - can edit while form is at bd_procurement_review stage
+            # Can re-sign even after signing, and also at general_manager_review if GM hasn't started yet
             elif user_designation == 'business_development':
                 if workflow_status == 'bd_procurement_review':
-                    if not hasattr(submission, 'business_dev_approved_at') or not submission.business_dev_approved_at:
+                    # BD can edit while form is at this stage (even after they've signed)
+                    can_edit = True
+                    can_view = True
+                elif workflow_status == 'general_manager_review':
+                    # BD can still edit if GM hasn't started reviewing yet
+                    gm_started = hasattr(submission, 'general_manager_approved_at') and submission.general_manager_approved_at
+                    if not gm_started:
                         can_edit = True
+                        can_view = True
+                    else:
+                        can_view = True
+                elif workflow_status == 'completed':
+                    # Form is completed - BD can only view
                     can_view = True
                 elif hasattr(submission, 'business_dev_id') and submission.business_dev_id == user.id:
                     can_view = True
-            # Procurement - can review when status is bd_procurement_review and not yet approved by them
+            # Procurement - can edit while form is at bd_procurement_review stage
+            # Can re-sign even after signing, and also at general_manager_review if GM hasn't started yet
             elif user_designation == 'procurement':
                 if workflow_status == 'bd_procurement_review':
-                    if not hasattr(submission, 'procurement_approved_at') or not submission.procurement_approved_at:
+                    # Procurement can edit while form is at this stage (even after they've signed)
+                    can_edit = True
+                    can_view = True
+                elif workflow_status == 'general_manager_review':
+                    # Procurement can still edit if GM hasn't started reviewing yet
+                    gm_started = hasattr(submission, 'general_manager_approved_at') and submission.general_manager_approved_at
+                    if not gm_started:
                         can_edit = True
+                        can_view = True
+                    else:
+                        can_view = True
+                elif workflow_status == 'completed':
+                    # Form is completed - Procurement can only view
                     can_view = True
                 elif hasattr(submission, 'procurement_id') and submission.procurement_id == user.id:
                     can_view = True
-            # General Manager - can review when status is general_manager_review
+            # General Manager - can edit while form is at general_manager_review stage
+            # Can also re-sign even after form is completed (they're the final approver)
             elif user_designation == 'general_manager':
                 if workflow_status == 'general_manager_review':
+                    # GM can edit while form is at this stage (even after they've signed)
+                    can_edit = True
+                    can_view = True
+                elif workflow_status == 'completed':
+                    # GM can still edit their review even after form is completed
+                    # (as the final approver, they should be able to modify their decision)
                     can_edit = True
                     can_view = True
                 elif hasattr(submission, 'general_manager_id') and submission.general_manager_id == user.id:
+                    can_view = True
+
+            # Admin-closed submissions are read-only for all users
+            if workflow_status == 'closed_by_admin':
+                can_edit = False
+                if user.role == 'admin':
+                    can_view = True
+                elif (
+                    (hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id) or
+                    (hasattr(submission, 'operations_manager_id') and submission.operations_manager_id == user.id) or
+                    (hasattr(submission, 'business_dev_id') and submission.business_dev_id == user.id) or
+                    (hasattr(submission, 'procurement_id') and submission.procurement_id == user.id) or
+                    (hasattr(submission, 'general_manager_id') and submission.general_manager_id == user.id)
+                ):
                     can_view = True
             
             if not can_view:
@@ -329,7 +396,12 @@ def index():
                 'form_data': form_data,
                 'is_edit_mode': True,
                 'workflow_status': submission.workflow_status if hasattr(submission, 'workflow_status') else None,
-                'supervisor_id': submission.supervisor_id if hasattr(submission, 'supervisor_id') else None
+                'supervisor_id': submission.supervisor_id if hasattr(submission, 'supervisor_id') else None,
+                'can_edit': can_edit,  # Pass can_edit to JavaScript so it can show editable vs read-only UI
+                'operations_manager_approved_at': submission.operations_manager_approved_at.isoformat() if hasattr(submission, 'operations_manager_approved_at') and submission.operations_manager_approved_at else None,
+                'business_dev_approved_at': submission.business_dev_approved_at.isoformat() if hasattr(submission, 'business_dev_approved_at') and submission.business_dev_approved_at else None,
+                'procurement_approved_at': submission.procurement_approved_at.isoformat() if hasattr(submission, 'procurement_approved_at') and submission.procurement_approved_at else None,
+                'general_manager_approved_at': submission.general_manager_approved_at.isoformat() if hasattr(submission, 'general_manager_approved_at') and submission.general_manager_approved_at else None,
             }
             is_edit_mode = True
             
@@ -375,11 +447,20 @@ def index():
                     else:
                         logger.info(f"Tech signature type: {type(tech_sig)}")
         
+        # Pass can_edit to template so it knows if user can modify the form
+        can_edit_form = False
+        if edit_submission_id and 'can_edit' in locals():
+            can_edit_form = can_edit
+        elif not edit_submission_id:
+            # New form - supervisor can always create
+            can_edit_form = True
+        
         return render_template("hvac_mep_form.html", 
                              submission_data=submission_data, 
                              is_edit_mode=is_edit_mode,
                              user_designation=user_designation,
                              is_supervisor_edit=is_supervisor_edit,
+                             can_edit=can_edit_form,
                              current_user_id=user_id,
                              user=user)
     except Exception as e:

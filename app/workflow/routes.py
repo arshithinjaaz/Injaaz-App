@@ -11,6 +11,7 @@ from sqlalchemy import or_, and_
 from sqlalchemy.orm.attributes import flag_modified
 from app.models import db, User, Submission, AuditLog
 from common.error_responses import error_response, success_response
+from common.workflow_notifications import send_team_notification
 from datetime import datetime
 import copy
 
@@ -167,14 +168,17 @@ def log_audit(user_id, action, resource_type=None, resource_id=None, details=Non
 def get_user_pending_submissions(user):
     """Get submissions pending for a user's designation"""
     designation = user.designation
+    base_filter = Submission.workflow_status != 'closed_by_admin'
     
     if designation == 'operations_manager':
         return Submission.query.filter(
+            base_filter,
             Submission.workflow_status == 'operations_manager_review'
         ).order_by(Submission.created_at.desc()).all()
     
     elif designation == 'business_development':
         return Submission.query.filter(
+            base_filter,
             Submission.workflow_status == 'bd_procurement_review',
             or_(
                 Submission.business_dev_approved_at.is_(None),
@@ -184,6 +188,7 @@ def get_user_pending_submissions(user):
     
     elif designation == 'procurement':
         return Submission.query.filter(
+            base_filter,
             Submission.workflow_status == 'bd_procurement_review',
             or_(
                 Submission.procurement_approved_at.is_(None),
@@ -193,12 +198,14 @@ def get_user_pending_submissions(user):
     
     elif designation == 'general_manager':
         return Submission.query.filter(
+            base_filter,
             Submission.workflow_status == 'general_manager_review'
         ).order_by(Submission.created_at.desc()).all()
     
     elif designation == 'supervisor':
         # Supervisors see their own submissions or rejected ones
         return Submission.query.filter(
+            base_filter,
             or_(
                 Submission.supervisor_id == user.id,
                 and_(
@@ -218,6 +225,9 @@ def can_edit_submission(user, submission):
     
     designation = user.designation
     status = submission.workflow_status
+
+    if status == 'closed_by_admin':
+        return False
     
     # Supervisor can edit their own submissions if:
     # - Status is submitted/rejected (initial state)
@@ -368,7 +378,7 @@ def get_pending_submissions():
                 return error_response('No designation assigned', status_code=403, error_code='NO_DESIGNATION')
             # Admin sees all pending
             submissions = Submission.query.filter(
-                Submission.workflow_status != 'completed'
+                Submission.workflow_status.notin_(['completed', 'closed_by_admin', 'rejected'])
             ).order_by(Submission.created_at.desc()).all()
         else:
             submissions = get_user_pending_submissions(user)
@@ -995,6 +1005,8 @@ def approve_supervisor_resubmission(submission_id):
             'has_signature': bool(signature),
             'verified': verified
         })
+
+        send_team_notification(submission, user, "Supervisor signed")
         
         return success_response({
             'submission': submission.to_dict(),
@@ -1028,9 +1040,19 @@ def approve_operations_manager(submission_id):
         if not submission:
             return error_response('Submission not found', status_code=404, error_code='NOT_FOUND')
         
-        if submission.workflow_status != 'operations_manager_review':
+        # Allow OM to approve at operations_manager_review stage OR re-approve at bd_procurement_review
+        # (OM can edit their review even after form moves to BD/Procurement stage, as long as they haven't started approving)
+        if submission.workflow_status not in ['operations_manager_review', 'bd_procurement_review']:
             return error_response('Submission is not at Operations Manager review stage', 
                                 status_code=400, error_code='INVALID_STATUS')
+        
+        # Check if BD or Procurement has already started reviewing - if so, OM can no longer edit
+        if submission.workflow_status == 'bd_procurement_review':
+            bd_started = submission.business_dev_approved_at is not None
+            proc_started = submission.procurement_approved_at is not None
+            if bd_started or proc_started:
+                return error_response('Cannot modify review after BD/Procurement has started reviewing', 
+                                    status_code=400, error_code='ALREADY_APPROVED_BY_NEXT_STAGE')
         
         # Extract data
         comments = data.get('comments', '')
@@ -1269,6 +1291,8 @@ def approve_operations_manager(submission_id):
             'comments': comments,
             'has_signature': bool(signature)
         })
+
+        send_team_notification(submission, user, "Operations Manager signed")
         
         return success_response({
             'submission': submission.to_dict(),
@@ -1302,13 +1326,18 @@ def approve_business_development(submission_id):
         if not submission:
             return error_response('Submission not found', status_code=404, error_code='NOT_FOUND')
         
-        if submission.workflow_status != 'bd_procurement_review':
+        # Allow BD to approve at bd_procurement_review stage OR re-approve at general_manager_review
+        # (BD can edit their review even after form moves to GM stage, as long as GM hasn't approved)
+        if submission.workflow_status not in ['bd_procurement_review', 'general_manager_review']:
             return error_response('Submission is not at BD/Procurement review stage', 
                                 status_code=400, error_code='INVALID_STATUS')
         
-        if submission.business_dev_approved_at:
-            return error_response('Already approved', 
-                                status_code=400, error_code='ALREADY_APPROVED')
+        # Check if GM has already approved - if so, BD can no longer edit
+        if submission.workflow_status == 'general_manager_review' and submission.general_manager_approved_at:
+            return error_response('Cannot modify review after General Manager has approved', 
+                                status_code=400, error_code='ALREADY_APPROVED_BY_GM')
+        
+        # Note: Removed "Already approved" check to allow BD to re-approve/update their review
         
         comments = data.get('comments', '')
         signature = data.get('signature', '')
@@ -1458,6 +1487,8 @@ def approve_business_development(submission_id):
             current_app.logger.error(f"Error queuing regeneration job after BD approval: {regen_err}", exc_info=True)
         
         log_audit(user_id, 'business_dev_approved', 'submission', submission_id, {'comments': comments})
+
+        send_team_notification(submission, user, "Business Development signed")
         
         return success_response({
             'submission': submission.to_dict(),
@@ -1491,13 +1522,18 @@ def approve_procurement(submission_id):
         if not submission:
             return error_response('Submission not found', status_code=404, error_code='NOT_FOUND')
         
-        if submission.workflow_status != 'bd_procurement_review':
+        # Allow Procurement to approve at bd_procurement_review stage OR re-approve at general_manager_review
+        # (Procurement can edit their review even after form moves to GM stage, as long as GM hasn't approved)
+        if submission.workflow_status not in ['bd_procurement_review', 'general_manager_review']:
             return error_response('Submission is not at BD/Procurement review stage', 
                                 status_code=400, error_code='INVALID_STATUS')
         
-        if submission.procurement_approved_at:
-            return error_response('Already approved', 
-                                status_code=400, error_code='ALREADY_APPROVED')
+        # Check if GM has already approved - if so, Procurement can no longer edit
+        if submission.workflow_status == 'general_manager_review' and submission.general_manager_approved_at:
+            return error_response('Cannot modify review after General Manager has approved', 
+                                status_code=400, error_code='ALREADY_APPROVED_BY_GM')
+        
+        # Note: Removed "Already approved" check to allow Procurement to re-approve/update their review
         
         comments = data.get('comments', '')
         signature = data.get('signature', '')
@@ -1633,6 +1669,8 @@ def approve_procurement(submission_id):
             current_app.logger.error(f"Error queuing regeneration job after Procurement approval: {regen_err}", exc_info=True)
         
         log_audit(user_id, 'procurement_approved', 'submission', submission_id, {'comments': comments})
+
+        send_team_notification(submission, user, "Procurement signed")
         
         return success_response({
             'submission': submission.to_dict(),
@@ -1666,7 +1704,9 @@ def approve_general_manager(submission_id):
         if not submission:
             return error_response('Submission not found', status_code=404, error_code='NOT_FOUND')
         
-        if submission.workflow_status != 'general_manager_review':
+        # Allow GM to approve at general_manager_review stage OR re-approve when completed
+        # (GM can edit their review even after form is completed as the final approver)
+        if submission.workflow_status not in ['general_manager_review', 'completed']:
             return error_response('Submission is not at General Manager review stage', 
                                 status_code=400, error_code='INVALID_STATUS')
         
