@@ -5,74 +5,221 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BD Email Module - Injaaz</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
   <style>
     :root {
       --primary: #125435;
+      --primary-light: #1a7a4d;
+      --primary-dark: #0d3d24;
       --text-dark: #111827;
       --text-light: #6b7280;
       --border: #e5e7eb;
       --bg: #f9fafb;
+      --bg-light: #fafafa;
+      --white: #ffffff;
     }
 
     body {
       margin: 0;
       font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-      background: var(--bg);
+      background: var(--bg-light);
       color: var(--text-dark);
+      padding-top: 96px;
+      animation: pageFade 0.35s ease;
     }
 
-    .navbar {
-      background: #ffffff;
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 1.5rem;
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(30px) saturate(180%);
+      border-bottom: 1px solid rgba(18, 84, 53, 0.08);
+      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.02);
+      transition: all 0.3s ease;
+    }
+
+    .nav-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 1rem 4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 2rem;
+      min-height: 80px;
+    }
+
+    .logo {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 1rem;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      position: relative;
+      flex-shrink: 0;
     }
 
-    .navbar-title {
-      font-weight: 600;
-      font-size: 1.1rem;
+    .logo img {
+      height: 45px;
+      width: auto;
+      filter: drop-shadow(0 2px 8px rgba(18, 84, 53, 0.15));
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .logo span {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -0.5px;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .nav-right {
       display: flex;
+      align-items: center;
+      gap: 3rem;
+      flex-shrink: 0;
+    }
+
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 2.5rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .nav-menu a {
+      color: var(--text-light);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+      position: relative;
+      padding: 0.5rem 0;
+      white-space: nowrap;
+    }
+
+    .nav-menu a::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary-light), var(--primary));
+      transform: translateX(-50%);
+      transition: width 0.3s ease;
+    }
+
+    .nav-menu a:hover {
+      color: var(--primary);
+    }
+
+    .nav-menu a:hover::before {
+      width: 100%;
+    }
+
+    .logout-btn {
+      display: inline-flex;
       align-items: center;
       gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: white;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      border: none;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(18, 84, 53, 0.2);
+      letter-spacing: 0.3px;
+      position: relative;
+      overflow: hidden;
     }
 
-    .navbar-title img {
-      height: 32px;
+    .logout-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .logout-btn:hover::before {
+      left: 100%;
     }
 
     .btn {
       background: var(--primary);
       color: #fff;
       border: none;
-      padding: 0.55rem 1rem;
-      border-radius: 8px;
+      padding: 0.6rem 1.1rem;
+      border-radius: 10px;
       cursor: pointer;
       font-weight: 600;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
     }
 
     .btn-secondary {
-      background: #e5e7eb;
-      color: #111827;
+      background: #eef2f7;
+      color: #1f2937;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(18, 84, 53, 0.15);
     }
 
     .container {
-      max-width: 900px;
+      max-width: 1360px;
       margin: 2rem auto;
       padding: 0 1.25rem;
     }
 
+    .layout {
+      display: grid;
+      grid-template-columns: 1.45fr 1.25fr;
+      gap: 1.5rem;
+      align-items: stretch;
+    }
+
     .card {
       background: #ffffff;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      padding: 1.5rem;
+      border-radius: 16px;
+      border: 1px solid #eef2f7;
+      padding: 1.75rem;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    .card.panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     }
 
     .card-title {
-      margin: 0 0 1rem;
-      font-size: 1.35rem;
+      margin: 0 0 0.85rem;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #0f172a;
     }
 
     .field {
@@ -89,16 +236,64 @@
 
     .field input,
     .field textarea {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.6rem 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 0.7rem 0.85rem;
       font-size: 0.95rem;
       width: 100%;
+      background: #ffffff;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .field input:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: rgba(18, 84, 53, 0.55);
+      box-shadow: 0 0 0 4px rgba(18, 84, 53, 0.12);
     }
 
     .field textarea {
-      min-height: 180px;
+      min-height: 240px;
       resize: vertical;
+    }
+
+    .attachments-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #ffffff;
+      padding: 0.85rem;
+      min-height: 88px;
+      font-size: 0.9rem;
+    }
+
+    .attachments-list {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .attachment-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      align-items: center;
+    }
+
+    .attachment-row strong {
+      font-weight: 600;
+    }
+
+    .attachment-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      background: rgba(18, 84, 53, 0.08);
+    }
+
+    .attachment-link:hover {
+      background: rgba(18, 84, 53, 0.14);
+      text-decoration: none;
     }
 
     .helper {
@@ -111,6 +306,168 @@
       gap: 0.75rem;
       align-items: center;
       justify-content: flex-end;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      width: 100%;
+    }
+
+    .search-box {
+      width: 100%;
+      position: relative;
+    }
+
+    .filter-row {
+      display: grid;
+      grid-template-columns: 1fr 0.6fr 0.6fr;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .filter-select {
+      width: 100%;
+      padding: 0.65rem 0.9rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      background: #ffffff;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.7rem 1rem 0.7rem 2.25rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      display: block;
+      box-sizing: border-box;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: rgba(18, 84, 53, 0.55);
+      box-shadow: 0 0 0 4px rgba(18, 84, 53, 0.12);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      font-size: 0.85rem;
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .filter-actions .btn {
+      white-space: nowrap;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .history-table th,
+    .history-table td {
+      padding: 0.85rem 0.9rem;
+      text-align: left;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+    }
+
+    .history-table th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: #64748b;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .history-table th:first-child,
+    .history-table td:first-child {
+      width: 28px;
+    }
+
+    .history-table td {
+      font-size: 0.85rem;
+    }
+
+    .history-table tr:hover {
+      background: #f8fafc;
+    }
+
+    .history-table tr.row-selected {
+      background: #ecfdf5;
+    }
+
+    @keyframes pageFade {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.65rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      transition: transform 0.2s ease;
+    }
+
+    .badge:hover {
+      transform: translateY(-1px);
+    }
+
+    .badge-submitted { background: #e0f2fe; color: #0369a1; }
+    .badge-reviewing { background: #fef3c7; color: #92400e; }
+    .badge-approved { background: #d1fae5; color: #065f46; }
+    .badge-rejected { background: #fee2e2; color: #991b1b; }
+    .badge-closed { background: #e5e7eb; color: #374151; }
+
+    .module-tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.45rem;
+      border-radius: 6px;
+      background: #f1f5f9;
+      color: #475569;
+      display: inline-block;
+      transition: transform 0.2s ease;
+    }
+
+    .module-tag:hover {
+      transform: translateY(-1px);
+    }
+
+    .table-wrapper {
+      max-height: 600px;
+      overflow: auto;
+      border-radius: 14px;
+      border: 1px solid #eef2f7;
+      flex: 1;
+      box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.03);
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
     }
 
     .alert {
@@ -132,54 +489,183 @@
   </style>
 </head>
 <body>
-  <div class="navbar">
-    <div class="navbar-title">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz">
-      BD Email Module
+  <nav class="nav" id="nav">
+    <div class="nav-container">
+      <a href="/dashboard" class="logo">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
+        <span>Injaaz Application</span>
+      </a>
+      <div class="nav-right">
+        <ul class="nav-menu">
+          <li><a href="/dashboard#modules">Modules</a></li>
+          <li><a href="/about">About</a></li>
+          <li><a href="/dashboard">Profile</a></li>
+          <li><a href="/dashboard">Contact</a></li>
+          <li><a href="/api/workflow/history">Review History</a></li>
+          <li><a href="/bd/email-module" style="color: var(--primary); font-weight: 600;">Email Module</a></li>
+        </ul>
+        <button class="logout-btn" id="logoutBtn" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3h12.75" />
+          </svg>
+          <span>Logout</span>
+        </button>
+      </div>
     </div>
-    <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
-  </div>
+  </nav>
 
   <div class="container">
-    <div class="card">
-      <h1 class="card-title">Send Email to General Manager</h1>
-      <p class="helper">Use this form to notify the GM. You can customize To/CC, subject, and message.</p>
+    <div class="layout">
+      <div class="card panel">
+        <h1 class="card-title">Send Email to General Manager</h1>
+        <p class="helper">Use this form to notify the GM. You can customize To/CC, subject, and message.</p>
 
-      <form id="emailForm">
-        <div class="field">
-          <label for="toEmail">To (Info)</label>
-          <input id="toEmail" name="to" type="text" value="{{ gm_emails|join(', ') }}" placeholder="gm@example.com">
-          <span class="helper">Separate multiple emails with commas.</span>
+        <form id="emailForm">
+          <input type="hidden" id="selectedSubmissionIds" name="submission_ids" value="">
+          <div class="field">
+            <label for="toEmail">To (Info)</label>
+            <input id="toEmail" name="to" type="text" value="{{ gm_emails|join(', ') }}" placeholder="gm@example.com">
+            <span class="helper">Separate multiple emails with commas.</span>
+          </div>
+
+          <div class="field">
+            <label for="ccEmail">CC (Info)</label>
+            <input id="ccEmail" name="cc" type="text" placeholder="cc@example.com">
+          </div>
+
+          <div class="field">
+            <label for="subject">Subject</label>
+            <input id="subject" name="subject" type="text" placeholder="Approval Update - Submission">
+          </div>
+
+          <div class="field">
+            <label for="message">Message</label>
+            <textarea id="message" name="message" placeholder="Type your message here..."></textarea>
+          </div>
+          <div class="field">
+            <label>Attachments</label>
+            <div class="attachments-box" id="attachmentsBox">
+              <div class="helper">Select submissions to view attachments.</div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">Clear</button>
+            <button type="submit" class="btn">Send Email</button>
+          </div>
+        </form>
+
+        <div id="alertBox"></div>
+      </div>
+
+      <div class="card panel">
+        <h2 class="card-title">Reviewed Forms</h2>
+        <p class="helper">Select one or more forms and add to the email.</p>
+        <div class="filters">
+          <div class="filter-row">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="searchInput" class="search-input" placeholder="Search by site, ID, module, or status">
+            </div>
+            <select id="moduleFilter" class="filter-select">
+              <option value="">All Modules</option>
+              <option value="hvac_mep">HVAC & MEP</option>
+              <option value="civil">Civil Works</option>
+              <option value="cleaning">Cleaning</option>
+            </select>
+            <select id="statusFilter" class="filter-select">
+              <option value="">All Status</option>
+              <option value="completed">Completed</option>
+              <option value="closed">Closed</option>
+              <option value="rejected">Rejected</option>
+              <option value="submitted">Submitted</option>
+              <option value="review">In Review</option>
+            </select>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn" id="addSelectedBtn">Add to Email</button>
+            <button type="button" class="btn btn-secondary" id="clearSelectedBtn">Clear Selection</button>
+          </div>
         </div>
-
-        <div class="field">
-          <label for="ccEmail">CC (Info)</label>
-          <input id="ccEmail" name="cc" type="text" placeholder="cc@example.com">
+        <div class="table-wrapper">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th style="width: 26px;"><input type="checkbox" id="selectAllRows"></th>
+                <th>Submission</th>
+                <th>Module</th>
+                <th>Visit</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="submissionTableBody">
+              {% if submissions %}
+                {% for submission in submissions %}
+                  {% set status_value = submission.workflow_status or submission.status or 'submitted' %}
+                  <tr class="submission-row"
+                      data-id="{{ submission.submission_id }}"
+                      data-module="{{ submission.module_type }}"
+                      data-site="{{ submission.site_name or '' }}"
+                      data-visit="{{ submission.visit_date.strftime('%Y-%m-%d') if submission.visit_date else '' }}"
+                      data-status="{{ status_value }}">
+                    <td><input type="checkbox" class="row-check"></td>
+                    <td>
+                      <strong>{{ submission.site_name or 'N/A' }}</strong>
+                      <div class="helper">{{ submission.submission_id }}</div>
+                    </td>
+                    <td>
+                      <span class="module-tag">
+                        {% if submission.module_type == 'hvac_mep' %}HVAC & MEP{% elif submission.module_type == 'civil' %}Civil Works{% elif submission.module_type == 'cleaning' %}Cleaning{% else %}{{ submission.module_type }}{% endif %}
+                      </span>
+                    </td>
+                    <td>{{ submission.visit_date.strftime('%Y-%m-%d') if submission.visit_date else 'N/A' }}</td>
+                    <td>
+                      {% if status_value in ['completed', 'approved', 'gm_approved', 'general_manager_approved'] %}
+                        <span class="badge badge-approved">Completed</span>
+                      {% elif status_value in ['rejected'] %}
+                        <span class="badge badge-rejected">Rejected</span>
+                      {% elif status_value in ['closed', 'closed_by_admin'] %}
+                        <span class="badge badge-closed">Closed</span>
+                      {% elif status_value in ['submitted'] %}
+                        <span class="badge badge-submitted">Submitted</span>
+                      {% else %}
+                        <span class="badge badge-reviewing">In Review</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="5" class="helper" style="padding: 1.5rem;">No reviewed forms available.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
         </div>
-
-        <div class="field">
-          <label for="subject">Subject</label>
-          <input id="subject" name="subject" type="text" placeholder="Approval Update - Submission">
-        </div>
-
-        <div class="field">
-          <label for="message">Message</label>
-          <textarea id="message" name="message" placeholder="Type your message here..."></textarea>
-        </div>
-
-        <div class="actions">
-          <button type="button" class="btn btn-secondary" onclick="resetForm()">Clear</button>
-          <button type="submit" class="btn">Send Email</button>
-        </div>
-      </form>
-
-      <div id="alertBox"></div>
+      </div>
     </div>
   </div>
 
   <script>
     const form = document.getElementById('emailForm');
     const alertBox = document.getElementById('alertBox');
+    const submissionTableBody = document.getElementById('submissionTableBody');
+    const searchInput = document.getElementById('searchInput');
+    const moduleFilter = document.getElementById('moduleFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const selectAllRows = document.getElementById('selectAllRows');
+    const addSelectedBtn = document.getElementById('addSelectedBtn');
+    const clearSelectedBtn = document.getElementById('clearSelectedBtn');
+    const selectedSubmissionIdsInput = document.getElementById('selectedSubmissionIds');
+    const attachmentsBox = document.getElementById('attachmentsBox');
+    const appBaseUrl = "{{ config.get('APP_BASE_URL', '') }}";
+
+    function moduleDisplay(moduleType) {
+      if (moduleType === 'hvac_mep') return 'HVAC & MEP';
+      if (moduleType === 'civil') return 'Civil Works';
+      if (moduleType === 'cleaning') return 'Cleaning Services';
+      return moduleType || 'Form';
+    }
 
     function showAlert(message, type) {
       alertBox.innerHTML = `<div class="alert ${type}">${message}</div>`;
@@ -191,15 +677,279 @@
       document.getElementById('ccEmail').value = '';
     }
 
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async () => {
+        try {
+          const token = localStorage.getItem('access_token');
+          if (token) {
+            await fetch('/api/auth/logout', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              }
+            });
+          }
+        } finally {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
+      });
+    }
+
+    function buildSubmissionBlock(row) {
+      if (!row) return;
+      const submissionId = row.getAttribute('data-id');
+      const moduleType = row.getAttribute('data-module');
+      const siteName = row.getAttribute('data-site') || 'N/A';
+      const visitDate = row.getAttribute('data-visit') || 'N/A';
+      const moduleName = moduleDisplay(moduleType);
+
+      return [
+        `Submission ID: ${submissionId}`,
+        `Module: ${moduleName}`,
+        `Site/Project: ${siteName}`,
+        `Visit Date: ${visitDate}`,
+        `Attachments: PDF, Excel`
+      ].join('\n');
+    }
+
+    function getSelectedRows() {
+      if (!submissionTableBody) return [];
+      return Array.from(submissionTableBody.querySelectorAll('.submission-row'))
+        .filter(row => {
+          const checkbox = row.querySelector('.row-check');
+          return checkbox && checkbox.checked;
+        });
+    }
+
+    function updateSelectedIds() {
+      if (!submissionTableBody || !selectedSubmissionIdsInput) return;
+      const selectedRows = getSelectedRows();
+      const ids = selectedRows.map(row => row.getAttribute('data-id')).filter(Boolean);
+      selectedSubmissionIdsInput.value = ids.join(',');
+    }
+
+    async function updateAttachmentView() {
+      if (!attachmentsBox) return;
+      const selectedRows = getSelectedRows();
+      if (selectedRows.length === 0) {
+        attachmentsBox.innerHTML = '<div class="helper">Select submissions to view attachments.</div>';
+        return;
+      }
+
+      attachmentsBox.innerHTML = '<div class="helper">Loading attachments...</div>';
+      const ids = selectedRows.map(row => row.getAttribute('data-id')).filter(Boolean);
+      const token = localStorage.getItem('access_token');
+      try {
+        const response = await fetch(`/bd/email-module/attachments?ids=${encodeURIComponent(ids.join(','))}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          attachmentsBox.innerHTML = `<div class="helper">${data.error || 'Unable to load attachments.'}</div>`;
+          return;
+        }
+
+        if (!data.items || data.items.length === 0) {
+          attachmentsBox.innerHTML = '<div class="helper">No attachments available for the selected submissions.</div>';
+          return;
+        }
+
+        const rowsHtml = data.items.map(item => {
+          const pdfLink = item.pdf_url
+            ? `<a class="attachment-link" href="${item.pdf_url}" target="_blank">PDF</a>`
+            : `<span class="helper">PDF not available</span>`;
+          const excelLink = item.excel_url
+            ? `<a class="attachment-link" href="${item.excel_url}" target="_blank">Excel</a>`
+            : `<span class="helper">Excel not available</span>`;
+          return `
+            <div class="attachment-row">
+              <strong>${item.submission_id}</strong>
+              ${pdfLink}
+              ${excelLink}
+            </div>
+          `;
+        }).join('');
+
+        attachmentsBox.innerHTML = `<div class="attachments-list">${rowsHtml}</div>`;
+      } catch (error) {
+        attachmentsBox.innerHTML = '<div class="helper">Unable to load attachments.</div>';
+      }
+    }
+
+    function updateSubjectAndMessage() {
+      const selectedRows = getSelectedRows();
+      const subjectField = document.getElementById('subject');
+      const messageField = document.getElementById('message');
+
+      if (subjectField) {
+        const isAutoSubject = subjectField.dataset.auto === 'true';
+        if (!subjectField.value || isAutoSubject) {
+          if (selectedRows.length === 1) {
+            const first = selectedRows[0];
+            const moduleName = moduleDisplay(first.getAttribute('data-module'));
+            const siteName = first.getAttribute('data-site') || 'N/A';
+            subjectField.value = `GM Review - ${moduleName} - ${siteName}`;
+          } else if (selectedRows.length > 1) {
+            subjectField.value = `GM Review - ${selectedRows.length} Submissions`;
+          } else {
+            subjectField.value = '';
+          }
+          subjectField.dataset.auto = 'true';
+        }
+      }
+
+      if (messageField) {
+        const isAutoMessage = messageField.dataset.auto === 'true';
+        if (!messageField.value || isAutoMessage) {
+          if (selectedRows.length === 0) {
+            messageField.value = '';
+          } else {
+            const header = "Hello,\n\nPlease review the following submissions:\n";
+            const footer = "\nThank you.";
+            const blocks = selectedRows.map(row => buildSubmissionBlock(row)).join('\n\n');
+            messageField.value = `${header}\n${blocks}${footer}`;
+          }
+          messageField.dataset.auto = 'true';
+        }
+      }
+    }
+
+    function applyFilters() {
+      if (!submissionTableBody) return;
+      const query = (searchInput?.value || '').toLowerCase();
+      const moduleVal = moduleFilter?.value || '';
+      const statusVal = statusFilter?.value || '';
+      const rows = submissionTableBody.querySelectorAll('.submission-row');
+      rows.forEach(row => {
+        const id = row.getAttribute('data-id') || '';
+        const site = row.getAttribute('data-site') || '';
+        const moduleType = row.getAttribute('data-module') || '';
+        const status = row.getAttribute('data-status') || '';
+        const matchesQuery = !query || [id, site, moduleType, status].some(val => val.toLowerCase().includes(query));
+        const matchesModule = !moduleVal || moduleVal === moduleType;
+        const matchesStatus = !statusVal || status.includes(statusVal);
+        row.style.display = matchesQuery && matchesModule && matchesStatus ? '' : 'none';
+      });
+    }
+
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
+    if (moduleFilter) moduleFilter.addEventListener('change', applyFilters);
+    if (statusFilter) statusFilter.addEventListener('change', applyFilters);
+
+    const subjectField = document.getElementById('subject');
+    const messageField = document.getElementById('message');
+    if (subjectField) {
+      subjectField.addEventListener('input', () => {
+        subjectField.dataset.auto = 'false';
+      });
+    }
+    if (messageField) {
+      messageField.addEventListener('input', () => {
+        messageField.dataset.auto = 'false';
+      });
+    }
+
+    if (selectAllRows) {
+      selectAllRows.addEventListener('change', () => {
+        if (!submissionTableBody) return;
+        const rows = submissionTableBody.querySelectorAll('.submission-row');
+        rows.forEach(row => {
+          if (row.style.display === 'none') return;
+          const checkbox = row.querySelector('.row-check');
+          if (checkbox) {
+            checkbox.checked = selectAllRows.checked;
+            row.classList.toggle('row-selected', checkbox.checked);
+          }
+        });
+        updateSelectedIds();
+        updateAttachmentView();
+        updateSubjectAndMessage();
+      });
+    }
+
+    if (submissionTableBody) {
+      submissionTableBody.addEventListener('change', (event) => {
+        const checkbox = event.target.closest('.row-check');
+        if (!checkbox) return;
+        const row = checkbox.closest('.submission-row');
+        if (row) {
+          row.classList.toggle('row-selected', checkbox.checked);
+        }
+        updateSelectedIds();
+        updateAttachmentView();
+        updateSubjectAndMessage();
+      });
+
+      submissionTableBody.addEventListener('click', (event) => {
+        const checkbox = event.target.closest('.row-check');
+        if (checkbox) return;
+        const row = event.target.closest('.submission-row');
+        if (!row) return;
+        const rowCheckbox = row.querySelector('.row-check');
+        if (rowCheckbox) {
+          rowCheckbox.checked = !rowCheckbox.checked;
+          row.classList.toggle('row-selected', rowCheckbox.checked);
+        }
+        updateSelectedIds();
+        updateAttachmentView();
+        updateSubjectAndMessage();
+      });
+    }
+
+    if (clearSelectedBtn) {
+      clearSelectedBtn.addEventListener('click', () => {
+        const rows = submissionTableBody ? submissionTableBody.querySelectorAll('.submission-row') : [];
+        rows.forEach(row => {
+          const checkbox = row.querySelector('.row-check');
+          if (checkbox) checkbox.checked = false;
+          row.classList.remove('row-selected');
+        });
+        if (selectAllRows) selectAllRows.checked = false;
+        updateSelectedIds();
+        updateAttachmentView();
+        updateSubjectAndMessage();
+      });
+    }
+
+    if (addSelectedBtn) {
+      addSelectedBtn.addEventListener('click', () => {
+        if (!submissionTableBody) return;
+        const selectedRows = Array.from(submissionTableBody.querySelectorAll('.submission-row'))
+          .filter(row => {
+            const checkbox = row.querySelector('.row-check');
+            return checkbox && checkbox.checked;
+          });
+
+        if (selectedRows.length === 0) {
+          showAlert('Select at least one reviewed form.', 'error');
+          return;
+        }
+
+        updateSubjectAndMessage();
+        updateSelectedIds();
+        updateAttachmentView();
+      });
+    }
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       showAlert('', '');
 
+      updateSelectedIds();
+      const idsValue = selectedSubmissionIdsInput ? selectedSubmissionIdsInput.value : '';
       const payload = {
         to: document.getElementById('toEmail').value,
         cc: document.getElementById('ccEmail').value,
         subject: document.getElementById('subject').value,
-        message: document.getElementById('message').value
+        message: document.getElementById('message').value,
+        submission_ids: idsValue ? idsValue.split(',').filter(Boolean) : []
       };
 
       const token = localStorage.getItem('access_token');

@@ -1,0 +1,63 @@
+/* Light, global animations */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+body {
+  animation: pageFade 0.35s ease;
+}
+
+.btn,
+button,
+a {
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.btn:hover,
+button:hover {
+  transform: translateY(-1px);
+}
+
+.card,
+.module-card,
+.history-section,
+.admin-card,
+.form-section {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover,
+.module-card:hover,
+.history-section:hover,
+.admin-card:hover,
+.form-section:hover {
+  transform: translateY(-2px);
+}
+
+.badge,
+.status-badge,
+.workflow-badge,
+.module-tag {
+  transition: transform 0.2s ease;
+}
+
+.badge:hover,
+.status-badge:hover,
+.workflow-badge:hover,
+.module-tag:hover {
+  transform: translateY(-1px);
+}
+
+@keyframes pageFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

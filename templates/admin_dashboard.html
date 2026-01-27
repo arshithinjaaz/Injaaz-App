@@ -7,6 +7,7 @@
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -522,6 +523,11 @@
       border: 1px solid #d1d5db;
     }
 
+    .status-badge.active {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
     .workflow-badge {
       display: inline-block;
       padding: 0.25rem 0.75rem;
@@ -560,6 +566,12 @@
       background: #f3f4f6;
       color: #374151;
       border: 1px solid #d1d5db;
+    }
+
+    .workflow-badge.active {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
     }
 
     .section-controls {
@@ -1379,7 +1391,7 @@
 
     // Documents Management
     let documents = [];
-    let documentsFilter = 'pending';
+    let documentsFilter = 'active';
 
     async function loadDocuments() {
       try {
@@ -1458,7 +1470,7 @@
       filteredDocuments.forEach(doc => {
         const moduleClass = doc.module_type === 'hvac_mep' ? 'hvac' : 
                            doc.module_type === 'civil' ? 'civil' : 'cleaning';
-        const statusClass = doc.status === 'completed' ? 'completed' :
+        let statusClass = doc.status === 'completed' ? 'completed' :
                            doc.status === 'processing' ? 'processing' :
                            doc.status === 'submitted' ? 'submitted' :
                            doc.status === 'closed' ? 'closed' : 'draft';
@@ -1474,6 +1486,12 @@
         // Format workflow status for display
         let workflowDisplay = doc.workflow_status || 'Submitted';
         workflowDisplay = workflowDisplay.replace(/_/g, ' ');
+
+        if (documentsFilter === 'active') {
+          statusClass = 'active';
+          workflowClass = 'active';
+          workflowDisplay = 'Active';
+        }
         
         // Helper function to ensure UTC date strings are properly parsed
         const parseUTCDate = (dateString) => {
@@ -1535,7 +1553,7 @@
                 <span class="user-email">${userEmail}</span>
               </div>
             </td>
-            <td data-label="Status"><span class="status-badge ${statusClass}">${doc.status}</span></td>
+            <td data-label="Status"><span class="status-badge ${statusClass}">${documentsFilter === 'active' ? 'Active' : doc.status}</span></td>
             <td data-label="Workflow Status">
               <span class="workflow-badge ${workflowClass}">${workflowDisplay}</span>
               ${supervisorLog}

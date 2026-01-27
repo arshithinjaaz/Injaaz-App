@@ -4,13 +4,15 @@ Email service for sending emails (password resets, notifications)
 import smtplib
 import ssl
 import logging
+import os
+import mimetypes
 from email.message import EmailMessage
 from flask import current_app
 
 logger = logging.getLogger(__name__)
 
 
-def send_email(recipient, subject, body, html_body=None, cc=None):
+def send_email(recipient, subject, body, html_body=None, cc=None, attachments=None):
     """
     Send email using SMTP configuration from app config
     
@@ -20,6 +22,7 @@ def send_email(recipient, subject, body, html_body=None, cc=None):
         body: Plain text body
         html_body: Optional HTML body
         cc: Optional CC email(s)
+        attachments: Optional list of file paths or dicts with bytes
     
     Returns:
         bool: True if sent successfully, False otherwise
@@ -57,6 +60,32 @@ def send_email(recipient, subject, body, html_body=None, cc=None):
             msg.add_alternative(html_body, subtype='html')
         else:
             msg.set_content(body)
+
+        attachments = attachments or []
+        for item in attachments:
+            try:
+                if isinstance(item, str):
+                    path = item
+                    if not os.path.exists(path):
+                        logger.warning("Attachment not found: %s", path)
+                        continue
+                    ctype, encoding = mimetypes.guess_type(path)
+                    if ctype is None:
+                        ctype = "application/octet-stream"
+                    maintype, subtype = ctype.split("/", 1)
+                    with open(path, "rb") as fh:
+                        data = fh.read()
+                    msg.add_attachment(data, maintype=maintype, subtype=subtype, filename=os.path.basename(path))
+                elif isinstance(item, dict):
+                    data = item.get("content")
+                    filename = item.get("filename")
+                    mime_type = item.get("mime_type") or "application/octet-stream"
+                    if not data or not filename:
+                        continue
+                    maintype, subtype = mime_type.split("/", 1)
+                    msg.add_attachment(data, maintype=maintype, subtype=subtype, filename=filename)
+            except Exception:
+                logger.error("Failed to attach file", exc_info=True)
         
         # Send email
         if mail_use_tls:
