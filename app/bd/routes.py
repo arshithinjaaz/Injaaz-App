@@ -35,12 +35,79 @@ def _parse_submission_ids(value):
 
 
 def _download_attachment(url, fallback_name):
+    if url and url.startswith('/generated/'):
+        base_dir = current_app.config.get(
+            "GENERATED_DIR",
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "generated")
+        )
+        rel_path = url.lstrip('/')
+        if rel_path.startswith('generated/'):
+            rel_path = rel_path.replace('generated/', '', 1)
+        local_path = os.path.join(base_dir, rel_path)
+        if os.path.exists(local_path):
+            with open(local_path, "rb") as fh:
+                data = fh.read()
+            mime_type = mimetypes.guess_type(local_path)[0] or "application/octet-stream"
+            return {"content": data, "filename": os.path.basename(local_path), "mime_type": mime_type}
+
+    if url and url.startswith('/'):
+        base_url = current_app.config.get("APP_BASE_URL") or request.url_root.rstrip('/')
+        url = f"{base_url}{url}"
+
     parsed = urlparse(url)
     filename = os.path.basename(parsed.path) or fallback_name
     with urlopen(url) as response:
         data = response.read()
     mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
     return {"content": data, "filename": filename, "mime_type": mime_type}
+
+
+def _collect_submission_attachments(submission):
+    attachments = []
+    found_documents = False
+
+    report_files = File.query.filter_by(
+        submission_id=submission.id
+    ).filter(
+        File.file_type.in_(['report_excel', 'report_pdf'])
+    ).all()
+
+    for file in report_files:
+        if file.file_path and os.path.exists(file.file_path):
+            attachments.append(file.file_path)
+            found_documents = True
+            continue
+        if file.cloud_url:
+            try:
+                fallback = f"{submission.submission_id}-{file.file_type}.pdf"
+                if file.file_type == 'report_excel':
+                    fallback = f"{submission.submission_id}.xlsx"
+                attachments.append(_download_attachment(file.cloud_url, fallback))
+                found_documents = True
+            except Exception:
+                current_app.logger.exception("Failed to download report %s", file.cloud_url)
+
+    if found_documents:
+        return attachments, True
+
+    job = Job.query.filter_by(
+        submission_id=submission.id,
+        status='completed'
+    ).order_by(Job.completed_at.desc()).first()
+    if job and job.result_data:
+        pdf_url = job.result_data.get('pdf_url') or job.result_data.get('pdf')
+        excel_url = job.result_data.get('excel_url') or job.result_data.get('excel')
+        try:
+            if pdf_url:
+                attachments.append(_download_attachment(pdf_url, f"{submission.submission_id}.pdf"))
+                found_documents = True
+            if excel_url:
+                attachments.append(_download_attachment(excel_url, f"{submission.submission_id}.xlsx"))
+                found_documents = True
+        except Exception:
+            current_app.logger.exception("Failed to download job result files")
+
+    return attachments, found_documents
 
 
 def _get_report_urls(submission):
@@ -85,6 +152,14 @@ def _get_gm_emails():
     return [u.email for u in gms if u and u.email]
 
 
+def _get_role_emails(designation):
+    users = User.query.filter(
+        User.is_active == True,
+        User.designation == designation
+    ).all()
+    return [u.email for u in users if u and u.email]
+
+
 @bd_bp.route('/email-module', methods=['GET'])
 @jwt_required()
 def email_module():
@@ -94,6 +169,10 @@ def email_module():
         return redirect('/dashboard')
 
     gm_emails = _get_gm_emails()
+    bd_emails = _get_role_emails('business_development')
+    po_emails = _get_role_emails('procurement')
+    om_emails = _get_role_emails('operations_manager')
+    supervisor_emails = _get_role_emails('supervisor')
     submissions = Submission.query.filter(
         Submission.business_dev_id == user.id,
         Submission.business_dev_approved_at.isnot(None)
@@ -101,7 +180,11 @@ def email_module():
     return render_template(
         'bd_email_module.html',
         gm_emails=gm_emails,
-        submissions=submissions
+        submissions=submissions,
+        bd_emails=bd_emails,
+        po_emails=po_emails,
+        om_emails=om_emails,
+        supervisor_emails=supervisor_emails
     )
 
 
@@ -193,6 +276,11 @@ def send_email_to_gm():
 
     cc_list = _parse_emails(cc_value)
 
+    mail_server = current_app.config.get('MAIL_SERVER')
+    mail_port = current_app.config.get('MAIL_PORT')
+    if not mail_server or not mail_port:
+        return jsonify({'success': False, 'error': 'Email server is not configured'}), 400
+
     attachments = []
     missing_documents = []
     if submission_ids:
@@ -203,47 +291,8 @@ def send_email_to_gm():
             ).first()
             if not submission:
                 continue
-            found_documents = False
-
-            report_files = File.query.filter_by(
-                submission_id=submission.id
-            ).filter(
-                File.file_type.in_(['report_excel', 'report_pdf'])
-            ).all()
-
-            if report_files:
-                for file in report_files:
-                    if file.file_path and os.path.exists(file.file_path):
-                        attachments.append(file.file_path)
-                        found_documents = True
-                        continue
-                    if file.cloud_url:
-                        try:
-                            fallback = f"{submission.submission_id}-{file.file_type}.pdf"
-                            if file.file_type == 'report_excel':
-                                fallback = f"{submission.submission_id}.xlsx"
-                            attachments.append(_download_attachment(file.cloud_url, fallback))
-                            found_documents = True
-                        except Exception:
-                            current_app.logger.exception("Failed to download report %s", file.cloud_url)
-            else:
-                job = Job.query.filter_by(
-                    submission_id=submission.id,
-                    status='completed'
-                ).order_by(Job.completed_at.desc()).first()
-                if job and job.result_data:
-                    pdf_url = job.result_data.get('pdf_url') or job.result_data.get('pdf')
-                    excel_url = job.result_data.get('excel_url') or job.result_data.get('excel')
-                    try:
-                        if pdf_url:
-                            attachments.append(_download_attachment(pdf_url, f"{submission.submission_id}.pdf"))
-                            found_documents = True
-                        if excel_url:
-                            attachments.append(_download_attachment(excel_url, f"{submission.submission_id}.xlsx"))
-                            found_documents = True
-                    except Exception:
-                        current_app.logger.exception("Failed to download job result files")
-
+            submission_attachments, found_documents = _collect_submission_attachments(submission)
+            attachments.extend(submission_attachments)
             if not found_documents:
                 missing_documents.append(submission.submission_id)
 
@@ -270,5 +319,11 @@ def send_email_to_gm():
 
     if sent:
         current_app.logger.info(f"BD email sent by user {user_id} to {recipients}")
+        if missing_documents:
+            return jsonify({
+                'success': True,
+                'message': 'Email sent, but some submissions have no documents',
+                'missing_documents': missing_documents
+            }), 200
         return jsonify({'success': True, 'message': 'Email sent to General Manager'}), 200
     return jsonify({'success': False, 'error': 'Failed to send email'}), 500

@@ -24,6 +24,8 @@ class User(db.Model):
     designation = db.Column(db.String(30), default=None)  # 'supervisor', 'operations_manager', 'business_development', 'procurement', 'general_manager'
     is_active = db.Column(db.Boolean, default=True)
     password_changed = db.Column(db.Boolean, default=False)  # Track if password was changed from default
+    default_signature = db.Column(db.Text, default=None)  # Base64 data URL for default signature
+    default_comment = db.Column(db.Text, default=None)  # Default comment for approvals
     # Module access permissions (admin has access to all by default)
     access_hvac = db.Column(db.Boolean, default=False)  # HVAC&MEP form access
     access_civil = db.Column(db.Boolean, default=False)  # Civil works form access
@@ -76,6 +78,8 @@ class User(db.Model):
             'access_cleaning': self.access_cleaning if self.role != 'admin' else True,
             'password_changed': self.password_changed if hasattr(self, 'password_changed') else True,
             'designation': self.designation if hasattr(self, 'designation') else None,
+            'default_signature': self.default_signature if hasattr(self, 'default_signature') else None,
+            'default_comment': self.default_comment if hasattr(self, 'default_comment') else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None
         }

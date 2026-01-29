@@ -312,6 +312,54 @@ def get_current_user():
         return jsonify({'error': 'Failed to fetch user'}), 500
 
 
+@auth_bp.route('/signature-default', methods=['POST'])
+@jwt_required()
+def update_signature_default():
+    """Update user's default signature and comment"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        data = request.get_json() or {}
+        signature_data = data.get('signature_data_url')
+        default_comment = data.get('default_comment')
+        remove_default = bool(data.get('remove_default'))
+
+        storage = 'cloudinary'
+        if remove_default:
+            user.default_signature = None
+            user.default_comment = None
+        else:
+            if signature_data:
+                from app.services.cloudinary_service import upload_base64_signature
+                signature_url = upload_base64_signature(signature_data, f"user_{user.id}")
+                if not signature_url:
+                    if current_app.config.get('FLASK_ENV', 'development') == 'development':
+                        storage = 'inline'
+                        user.default_signature = signature_data
+                    else:
+                        return jsonify({'error': 'Failed to upload signature. Check Cloudinary configuration.'}), 500
+                else:
+                    user.default_signature = signature_url
+            if default_comment is not None:
+                user.default_comment = default_comment
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Default signature updated',
+            'default_signature': user.default_signature,
+            'default_comment': user.default_comment,
+            'storage': storage
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Update signature default error: {str(e)}")
+        return jsonify({'error': 'Failed to update default signature'}), 500
+
+
 @auth_bp.route('/change-password', methods=['POST'])
 @jwt_required()
 def change_password():

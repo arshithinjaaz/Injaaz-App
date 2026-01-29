@@ -177,6 +177,15 @@
       color: #1f2937;
     }
 
+    .btn-secondary.btn-selected {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-secondary.btn-selected:hover {
+      background: var(--primary-light);
+    }
+
     .btn:hover {
       transform: translateY(-1px);
       box-shadow: 0 6px 14px rgba(18, 84, 53, 0.15);
@@ -192,7 +201,7 @@
       display: grid;
       grid-template-columns: 1.45fr 1.25fr;
       gap: 1.5rem;
-      align-items: stretch;
+      align-items: start;
     }
 
     .card {
@@ -212,7 +221,11 @@
     .card.panel {
       display: flex;
       flex-direction: column;
-      height: 100%;
+    }
+
+    #reviewPanel {
+      box-sizing: border-box;
+      overflow: hidden;
     }
 
     .card-title {
@@ -242,7 +255,200 @@
       font-size: 0.95rem;
       width: 100%;
       background: #ffffff;
+      box-sizing: border-box;
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .recipient-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.6rem;
+      align-items: center;
+      width: 100%;
+    }
+
+    .recipient-row input {
+      min-width: 0;
+      width: 100%;
+    }
+
+    .recipient-row .btn {
+      width: auto !important;
+      white-space: nowrap;
+    }
+
+    .recipient-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+
+    .recipient-chip {
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #0f172a;
+      font-size: 0.82rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .recipient-chip button {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #64748b;
+      font-weight: 700;
+    }
+
+    .recipient-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.6rem;
+      margin-top: 0.5rem;
+    }
+
+    .group-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+      align-items: center;
+    }
+
+    .group-button-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .group-buttons .btn.btn-secondary {
+      margin: 0;
+    }
+
+    .group-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+
+    .group-edit-btn,
+    .group-remove-btn {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #64748b;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 0.15rem 0.3rem;
+      line-height: 1;
+      border-radius: 6px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .group-edit-btn {
+      font-size: 0.85rem;
+    }
+
+    .group-edit-btn:hover {
+      background: rgba(18, 84, 53, 0.12);
+      color: var(--primary);
+    }
+
+    .group-remove-btn:hover {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .group-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .group-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      background: #f1f5f9;
+      font-size: 0.82rem;
+      color: #0f172a;
+    }
+
+    .group-item button {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #64748b;
+      font-weight: 700;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 14px;
+      border: 1px solid #eef2f7;
+      padding: 1.25rem;
+      width: min(560px, 92vw);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: #0f172a;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.6rem;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .modal-card .field input,
+    .modal-card .field textarea {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .modal-card .field textarea {
+      min-height: 160px;
+    }
+
+    @media (max-width: 640px) {
+      .modal-card {
+        width: min(92vw, 92vw);
+        padding: 1rem;
+      }
+
+      .modal-actions {
+        justify-content: stretch;
+      }
+
+      .modal-actions .btn {
+        width: 100%;
+      }
     }
 
     .field input:focus,
@@ -254,7 +460,7 @@
 
     .field textarea {
       min-height: 240px;
-      resize: vertical;
+      resize: none;
     }
 
     .attachments-box {
@@ -264,6 +470,7 @@
       padding: 0.85rem;
       min-height: 88px;
       font-size: 0.9rem;
+      box-sizing: border-box;
     }
 
     .attachments-list {
@@ -415,6 +622,33 @@
       background: #ecfdf5;
     }
 
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding-bottom: 0.25rem;
+      font-size: 0.85rem;
+      color: var(--text-light);
+      flex-wrap: wrap;
+    }
+
+    #reviewPanel .pagination {
+      margin-top: auto;
+      justify-content: center;
+    }
+
+    .pagination .btn {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      min-width: 64px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     @keyframes pageFade {
       from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
@@ -456,12 +690,16 @@
     }
 
     .table-wrapper {
-      max-height: 600px;
-      overflow: auto;
+      max-height: none;
+      overflow: hidden;
       border-radius: 14px;
       border: 1px solid #eef2f7;
-      flex: 1;
+      margin-top: 0.75rem;
       box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.03);
+    }
+
+    #reviewPanel .table-wrapper {
+      flex: 1;
     }
 
     @media (max-width: 900px) {
@@ -516,7 +754,7 @@
 
   <div class="container">
     <div class="layout">
-      <div class="card panel">
+      <div class="card panel" id="emailPanel">
         <h1 class="card-title">Send Email to General Manager</h1>
         <p class="helper">Use this form to notify the GM. You can customize To/CC, subject, and message.</p>
 
@@ -526,11 +764,34 @@
             <label for="toEmail">To (Info)</label>
             <input id="toEmail" name="to" type="text" value="{{ gm_emails|join(', ') }}" placeholder="gm@example.com">
             <span class="helper">Separate multiple emails with commas.</span>
+            <div class="recipient-actions">
+              <button type="button" class="btn btn-secondary" id="addAllGmBtn">Add GM</button>
+              <button type="button" class="btn btn-secondary" id="addAllBdBtn">Add BD</button>
+              <button type="button" class="btn btn-secondary" id="addAllPoBtn">Add PO</button>
+              <button type="button" class="btn btn-secondary" id="addAllOmBtn">Add OM</button>
+              <button type="button" class="btn btn-secondary" id="addAllSupervisorBtn">Add Supervisors</button>
+              <button type="button" class="btn btn-secondary" id="addToGroupBtn">Add Group</button>
+            </div>
+            <div class="recipient-list" id="recipientList"></div>
+            <div class="group-buttons" id="toGroupButtons"></div>
+            <div class="group-list" id="toGroupList"></div>
           </div>
 
           <div class="field">
             <label for="ccEmail">CC (Info)</label>
             <input id="ccEmail" name="cc" type="text" placeholder="cc@example.com">
+            <span class="helper">Separate multiple emails with commas.</span>
+            <div class="recipient-actions">
+              <button type="button" class="btn btn-secondary" id="addCcGmBtn">Add GM</button>
+              <button type="button" class="btn btn-secondary" id="addCcBdBtn">Add BD</button>
+              <button type="button" class="btn btn-secondary" id="addCcPoBtn">Add PO</button>
+              <button type="button" class="btn btn-secondary" id="addCcOmBtn">Add OM</button>
+              <button type="button" class="btn btn-secondary" id="addCcSupervisorBtn">Add Supervisors</button>
+              <button type="button" class="btn btn-secondary" id="addCcGroupBtn">Add Group</button>
+            </div>
+            <div class="recipient-list" id="ccRecipientList"></div>
+            <div class="group-buttons" id="ccGroupButtons"></div>
+            <div class="group-list" id="ccGroupList"></div>
           </div>
 
           <div class="field">
@@ -558,7 +819,7 @@
         <div id="alertBox"></div>
       </div>
 
-      <div class="card panel">
+      <div class="card panel" id="reviewPanel">
         <h2 class="card-title">Reviewed Forms</h2>
         <p class="helper">Select one or more forms and add to the email.</p>
         <div class="filters">
@@ -642,6 +903,26 @@
             </tbody>
           </table>
         </div>
+        <div class="pagination" id="reviewPagination"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="groupModal">
+    <div class="modal-card">
+      <div class="modal-title" id="groupModalTitle">Add Group</div>
+      <div class="field">
+        <label for="groupNameInput">Group Name</label>
+        <input id="groupNameInput" type="text" placeholder="e.g. Facilities Team">
+      </div>
+      <div class="field">
+        <label for="groupEmailsInput">Group Emails</label>
+        <textarea id="groupEmailsInput" placeholder="email1@domain.com, email2@domain.com"></textarea>
+        <span class="helper">Separate multiple emails with commas.</span>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="groupCancelBtn">Cancel</button>
+        <button type="button" class="btn" id="groupSaveBtn">Save Group</button>
       </div>
     </div>
   </div>
@@ -659,6 +940,25 @@
     const selectedSubmissionIdsInput = document.getElementById('selectedSubmissionIds');
     const attachmentsBox = document.getElementById('attachmentsBox');
     const appBaseUrl = "{{ config.get('APP_BASE_URL', '') }}";
+    const addAllGmBtn = document.getElementById('addAllGmBtn');
+    const addAllBdBtn = document.getElementById('addAllBdBtn');
+    const addAllPoBtn = document.getElementById('addAllPoBtn');
+    const addAllOmBtn = document.getElementById('addAllOmBtn');
+    const addAllSupervisorBtn = document.getElementById('addAllSupervisorBtn');
+    const addToGroupBtn = document.getElementById('addToGroupBtn');
+    const recipientList = document.getElementById('recipientList');
+    const gmEmails = {{ gm_emails|tojson }};
+    const bdEmails = {{ bd_emails|tojson }};
+    const poEmails = {{ po_emails|tojson }};
+    const omEmails = {{ om_emails|tojson }};
+    const supervisorEmails = {{ supervisor_emails|tojson }};
+    const addCcGroupBtn = document.getElementById('addCcGroupBtn');
+    const ccRecipientList = document.getElementById('ccRecipientList');
+    const toGroupList = document.getElementById('toGroupList');
+    const ccGroupList = document.getElementById('ccGroupList');
+    const toGroupButtons = document.getElementById('toGroupButtons');
+    const ccGroupButtons = document.getElementById('ccGroupButtons');
+    const sharedGroups = [];
 
     function moduleDisplay(moduleType) {
       if (moduleType === 'hvac_mep') return 'HVAC & MEP';
@@ -675,6 +975,181 @@
       document.getElementById('subject').value = '';
       document.getElementById('message').value = '';
       document.getElementById('ccEmail').value = '';
+    }
+
+    function parseEmails(value) {
+      if (!value) return [];
+      return value
+        .split(/[;,]/)
+        .map(val => val.trim())
+        .filter(Boolean);
+    }
+
+    function updateRecipientsField(targetInput, listElement, emails) {
+      const unique = Array.from(new Set(emails));
+      if (targetInput) {
+        targetInput.value = unique.join(', ');
+      }
+      if (listElement) {
+        listElement.innerHTML = unique.map(email => `
+          <span class="recipient-chip">
+            ${email}
+            <button type="button" data-email="${email}">×</button>
+          </span>
+        `).join('');
+      }
+    }
+
+    function toggleEmailsInField(targetInput, listElement, emailsToToggle) {
+      if (!targetInput || !emailsToToggle || !emailsToToggle.length) return;
+      const cur = parseEmails(targetInput.value);
+      const allPresent = emailsToToggle.every(e => cur.includes(e));
+      const next = allPresent
+        ? cur.filter(e => !emailsToToggle.includes(e))
+        : Array.from(new Set(cur.concat(emailsToToggle)));
+      updateRecipientsField(targetInput, listElement, next);
+    }
+
+    function updateRecipientButtonStates() {
+      const toEl = document.getElementById('toEmail');
+      const ccEl = document.getElementById('ccEmail');
+      const toEmails = parseEmails(toEl?.value);
+      const ccEmails = parseEmails(ccEl?.value);
+      const roles = [
+        { emails: gmEmails || [], toId: 'addAllGmBtn', ccId: 'addCcGmBtn' },
+        { emails: bdEmails || [], toId: 'addAllBdBtn', ccId: 'addCcBdBtn' },
+        { emails: poEmails || [], toId: 'addAllPoBtn', ccId: 'addCcPoBtn' },
+        { emails: omEmails || [], toId: 'addAllOmBtn', ccId: 'addCcOmBtn' },
+        { emails: supervisorEmails || [], toId: 'addAllSupervisorBtn', ccId: 'addCcSupervisorBtn' }
+      ];
+      roles.forEach(({ emails, toId, ccId }) => {
+        const allInTo = emails.length > 0 && emails.every(e => toEmails.includes(e));
+        const allInCc = emails.length > 0 && emails.every(e => ccEmails.includes(e));
+        const toBtn = document.getElementById(toId);
+        const ccBtn = document.getElementById(ccId);
+        toBtn?.classList.toggle('btn-selected', !!allInTo);
+        ccBtn?.classList.toggle('btn-selected', !!allInCc);
+      });
+      const toGroups = document.getElementById('toGroupButtons');
+      const ccGroups = document.getElementById('ccGroupButtons');
+      [toGroups, ccGroups].forEach((container, idx) => {
+        const emails = idx === 0 ? toEmails : ccEmails;
+        if (!container) return;
+        container.querySelectorAll('button[data-group]').forEach(btn => {
+          const g = sharedGroups.find(x => x.name === btn.dataset.group);
+          if (!g || !g.emails) return;
+          const allIn = g.emails.length > 0 && g.emails.every(e => emails.includes(e));
+          btn.classList.toggle('btn-selected', !!allIn);
+        });
+      });
+    }
+
+    function getGroupEmails(groups) {
+      return groups.flatMap(group => group.emails || []);
+    }
+
+    function removeGroupByName(name) {
+      const idx = sharedGroups.findIndex(g => g.name === name);
+      if (idx === -1) return;
+      const group = sharedGroups[idx];
+      sharedGroups.splice(idx, 1);
+      const toRemove = group.emails || [];
+      for (const { input, list } of [
+        { input: toEmailField, list: recipientList },
+        { input: ccEmailField, list: ccRecipientList }
+      ]) {
+        if (!input) continue;
+        const cur = parseEmails(input.value);
+        const next = cur.filter(e => !toRemove.includes(e));
+        updateRecipientsField(input, list, next);
+      }
+      rerenderAllGroupLists();
+    }
+
+    function rerenderAllGroupLists() {
+      renderGroupList(toGroupList, sharedGroups, toEmailField, recipientList);
+      renderGroupList(ccGroupList, sharedGroups, ccEmailField, ccRecipientList);
+      renderGroupButtons();
+      updateRecipientButtonStates();
+    }
+
+    function renderGroupList(listElement, groups, targetInput, listElementForEmails) {
+      if (!listElement) return;
+      listElement.innerHTML = groups.map((group, idx) => `
+        <div class="group-item">
+          <span>${group.name} (${group.emails.length})</span>
+          <button type="button" data-index="${idx}">×</button>
+        </div>
+      `).join('');
+
+      listElement.addEventListener('click', (event) => {
+        const btn = event.target.closest('button[data-index]');
+        if (!btn) return;
+        const index = Number(btn.getAttribute('data-index'));
+        const group = groups[index];
+        if (group) removeGroupByName(group.name);
+      }, { once: true });
+    }
+
+    function renderGroupButtons() {
+      const editIcon = '✎';
+      const html = sharedGroups.map(group => `
+        <span class="group-button-wrap">
+          <button type="button" class="btn btn-secondary" data-group="${group.name}">${group.name}</button>
+          <span class="group-actions">
+            <button type="button" class="group-edit-btn" data-edit-group="${group.name}" title="Edit group">${editIcon}</button>
+            <button type="button" class="group-remove-btn" data-remove-group="${group.name}" title="Remove group">×</button>
+          </span>
+        </span>
+      `).join('');
+      if (toGroupButtons) toGroupButtons.innerHTML = html;
+      if (ccGroupButtons) ccGroupButtons.innerHTML = html;
+    }
+
+    function syncRecipientsFromField(targetInput, listElement, groups, groupListElement) {
+      if (!targetInput) return;
+      const groupEmails = getGroupEmails(groups);
+      const manual = parseEmails(targetInput.value).filter(email => !groupEmails.includes(email));
+      updateRecipientsField(targetInput, listElement, manual.concat(groupEmails));
+      renderGroupList(groupListElement, groups, targetInput, listElement);
+      updateRecipientButtonStates();
+    }
+
+    function openGroupModal(target) {
+      const modal = document.getElementById('groupModal');
+      const title = document.getElementById('groupModalTitle');
+      const nameInput = document.getElementById('groupNameInput');
+      const emailsInput = document.getElementById('groupEmailsInput');
+      delete modal.dataset.mode;
+      delete modal.dataset.editGroup;
+      modal.dataset.target = target;
+      title.textContent = target === 'cc' ? 'Add CC Group' : 'Add To Group';
+      nameInput.value = '';
+      emailsInput.value = '';
+      modal.classList.add('active');
+    }
+
+    function openGroupModalForEdit(groupName) {
+      const modal = document.getElementById('groupModal');
+      const title = document.getElementById('groupModalTitle');
+      const nameInput = document.getElementById('groupNameInput');
+      const emailsInput = document.getElementById('groupEmailsInput');
+      const group = sharedGroups.find(g => g.name === groupName);
+      if (!group) return;
+      modal.dataset.mode = 'edit';
+      modal.dataset.editGroup = groupName;
+      delete modal.dataset.target;
+      title.textContent = 'Edit Group';
+      nameInput.value = group.name;
+      emailsInput.value = (group.emails || []).join(', ');
+      modal.classList.add('active');
+    }
+
+    function closeGroupModal() {
+      const modal = document.getElementById('groupModal');
+      delete modal.dataset.mode;
+      delete modal.dataset.editGroup;
+      modal.classList.remove('active');
     }
 
     const logoutBtn = document.getElementById('logoutBtn');
@@ -835,13 +1310,108 @@
         const matchesQuery = !query || [id, site, moduleType, status].some(val => val.toLowerCase().includes(query));
         const matchesModule = !moduleVal || moduleVal === moduleType;
         const matchesStatus = !statusVal || status.includes(statusVal);
-        row.style.display = matchesQuery && matchesModule && matchesStatus ? '' : 'none';
+        row.dataset.filtered = matchesQuery && matchesModule && matchesStatus ? '1' : '0';
       });
+      applyReviewPagination();
+    }
+
+    let reviewPage = 1;
+    let reviewRowsPerPage = 8;
+    const reviewTargetHeight = 220;
+
+    function calculateReviewRowsPerPage() {
+      const leftPanel = document.getElementById('emailPanel');
+      const reviewPanel = document.getElementById('reviewPanel');
+      const tableHeader = reviewPanel?.querySelector('thead');
+      const filters = reviewPanel?.querySelector('.filters');
+      const title = reviewPanel?.querySelector('.card-title');
+      const firstRow = submissionTableBody?.querySelector('.submission-row');
+      const tableWrapper = reviewPanel?.querySelector('.table-wrapper');
+      if (!leftPanel || !reviewPanel || !firstRow) return;
+      const rowHeight = firstRow.getBoundingClientRect().height || 48;
+      let available = tableWrapper?.getBoundingClientRect().height || 0;
+      if (!available) {
+        available = leftPanel.getBoundingClientRect().height;
+        if (title) available -= title.getBoundingClientRect().height;
+        if (filters) available -= filters.getBoundingClientRect().height;
+        if (tableHeader) available -= tableHeader.getBoundingClientRect().height;
+        available -= 48;
+      }
+      const rows = Math.floor(available / rowHeight);
+      reviewRowsPerPage = Math.max(4, rows);
+    }
+
+    function applyReviewPagination() {
+      const pagination = document.getElementById('reviewPagination');
+      if (!pagination || !submissionTableBody) return;
+      const rows = Array.from(submissionTableBody.querySelectorAll('.submission-row'));
+      rows.forEach(row => {
+        if (!row.dataset.filtered) row.dataset.filtered = '1';
+      });
+      const filtered = rows.filter(row => row.dataset.filtered !== '0');
+      const totalPages = Math.max(1, Math.ceil(filtered.length / reviewRowsPerPage));
+      if (reviewPage > totalPages) reviewPage = totalPages;
+      const start = (reviewPage - 1) * reviewRowsPerPage;
+      const end = start + reviewRowsPerPage;
+      filtered.forEach((row, idx) => {
+        row.style.display = idx >= start && idx < end ? '' : 'none';
+      });
+      rows.filter(row => row.dataset.filtered === '0').forEach(row => {
+        row.style.display = 'none';
+      });
+      pagination.innerHTML = `
+        <button type="button" class="btn btn-secondary" data-page="prev" ${reviewPage === 1 ? 'disabled' : ''}>Prev</button>
+        <span>Page ${reviewPage} of ${totalPages}</span>
+        <button type="button" class="btn btn-secondary" data-page="next" ${reviewPage === totalPages ? 'disabled' : ''}>Next</button>
+      `;
+      if (!pagination.dataset.bound) {
+        pagination.addEventListener('click', (event) => {
+          const btn = event.target.closest('button[data-page]');
+          if (!btn) return;
+          if (btn.dataset.page === 'prev' && reviewPage > 1) reviewPage -= 1;
+          if (btn.dataset.page === 'next') reviewPage += 1;
+          applyReviewPagination();
+        });
+        pagination.dataset.bound = '1';
+      }
+    }
+
+    function syncPanelHeights() {
+      const leftPanel = document.getElementById('emailPanel');
+      const rightPanel = document.getElementById('reviewPanel');
+      if (!leftPanel || !rightPanel) return;
+      const leftHeight = leftPanel.getBoundingClientRect().height;
+      if (leftHeight > 0) {
+        rightPanel.style.height = `${leftHeight}px`;
+      }
+    }
+
+    function syncEmailBodyAndFormListHeights() {
+      const messageField = document.getElementById('message');
+      const tableWrapper = document.querySelector('#reviewPanel .table-wrapper');
+      if (!messageField || !tableWrapper) return;
+      messageField.style.height = `${reviewTargetHeight}px`;
+      tableWrapper.style.height = `${reviewTargetHeight}px`;
     }
 
     if (searchInput) searchInput.addEventListener('input', applyFilters);
     if (moduleFilter) moduleFilter.addEventListener('change', applyFilters);
     if (statusFilter) statusFilter.addEventListener('change', applyFilters);
+    requestAnimationFrame(() => {
+      syncPanelHeights();
+      calculateReviewRowsPerPage();
+      applyReviewPagination();
+      syncEmailBodyAndFormListHeights();
+    });
+    window.addEventListener('resize', () => {
+      clearTimeout(window.__reviewResizeTimer);
+      window.__reviewResizeTimer = setTimeout(() => {
+        syncPanelHeights();
+        calculateReviewRowsPerPage();
+        applyReviewPagination();
+        syncEmailBodyAndFormListHeights();
+      }, 150);
+    });
 
     const subjectField = document.getElementById('subject');
     const messageField = document.getElementById('message');
@@ -853,6 +1423,213 @@
     if (messageField) {
       messageField.addEventListener('input', () => {
         messageField.dataset.auto = 'false';
+      });
+    }
+
+    const toEmailField = document.getElementById('toEmail');
+    if (toEmailField) {
+      toEmailField.addEventListener('input', () => syncRecipientsFromField(toEmailField, recipientList, sharedGroups, toGroupList));
+      syncRecipientsFromField(toEmailField, recipientList, sharedGroups, toGroupList);
+    }
+
+    if (addAllGmBtn) {
+      addAllGmBtn.addEventListener('click', () => {
+        toggleEmailsInField(toEmailField, recipientList, gmEmails || []);
+        updateRecipientButtonStates();
+      });
+    }
+    if (addAllBdBtn) {
+      addAllBdBtn.addEventListener('click', () => {
+        toggleEmailsInField(toEmailField, recipientList, bdEmails || []);
+        updateRecipientButtonStates();
+      });
+    }
+    if (addAllPoBtn) {
+      addAllPoBtn.addEventListener('click', () => {
+        toggleEmailsInField(toEmailField, recipientList, poEmails || []);
+        updateRecipientButtonStates();
+      });
+    }
+    if (addAllOmBtn) {
+      addAllOmBtn.addEventListener('click', () => {
+        toggleEmailsInField(toEmailField, recipientList, omEmails || []);
+        updateRecipientButtonStates();
+      });
+    }
+    if (addAllSupervisorBtn) {
+      addAllSupervisorBtn.addEventListener('click', () => {
+        toggleEmailsInField(toEmailField, recipientList, supervisorEmails || []);
+        updateRecipientButtonStates();
+      });
+    }
+    if (addToGroupBtn) {
+      addToGroupBtn.addEventListener('click', () => openGroupModal('to'));
+    }
+
+    if (recipientList) {
+      recipientList.addEventListener('click', (event) => {
+        const btn = event.target.closest('button[data-email]');
+        if (!btn) return;
+        const email = btn.getAttribute('data-email');
+        const current = parseEmails(toEmailField.value)
+          .filter(val => val !== email);
+        updateRecipientsField(toEmailField, recipientList, current);
+        updateRecipientButtonStates();
+      });
+    }
+
+    const ccEmailField = document.getElementById('ccEmail');
+    const addCcGmBtn = document.getElementById('addCcGmBtn');
+    const addCcBdBtn = document.getElementById('addCcBdBtn');
+    const addCcPoBtn = document.getElementById('addCcPoBtn');
+    const addCcOmBtn = document.getElementById('addCcOmBtn');
+    const addCcSupervisorBtn = document.getElementById('addCcSupervisorBtn');
+    if (ccEmailField) {
+      ccEmailField.addEventListener('input', () => syncRecipientsFromField(ccEmailField, ccRecipientList, sharedGroups, ccGroupList));
+      syncRecipientsFromField(ccEmailField, ccRecipientList, sharedGroups, ccGroupList);
+    }
+
+    if (addCcGmBtn) {
+      addCcGmBtn.addEventListener('click', () => {
+        toggleEmailsInField(ccEmailField, ccRecipientList, gmEmails || []);
+        updateRecipientButtonStates();
+      });
+    }
+    if (addCcBdBtn) {
+      addCcBdBtn.addEventListener('click', () => {
+        toggleEmailsInField(ccEmailField, ccRecipientList, bdEmails || []);
+        updateRecipientButtonStates();
+      });
+    }
+    if (addCcPoBtn) {
+      addCcPoBtn.addEventListener('click', () => {
+        toggleEmailsInField(ccEmailField, ccRecipientList, poEmails || []);
+        updateRecipientButtonStates();
+      });
+    }
+    if (addCcOmBtn) {
+      addCcOmBtn.addEventListener('click', () => {
+        toggleEmailsInField(ccEmailField, ccRecipientList, omEmails || []);
+        updateRecipientButtonStates();
+      });
+    }
+    if (addCcSupervisorBtn) {
+      addCcSupervisorBtn.addEventListener('click', () => {
+        toggleEmailsInField(ccEmailField, ccRecipientList, supervisorEmails || []);
+        updateRecipientButtonStates();
+      });
+    }
+    if (addCcGroupBtn) {
+      addCcGroupBtn.addEventListener('click', () => openGroupModal('cc'));
+    }
+
+    if (ccRecipientList) {
+      ccRecipientList.addEventListener('click', (event) => {
+        const btn = event.target.closest('button[data-email]');
+        if (!btn) return;
+        const email = btn.getAttribute('data-email');
+        const current = parseEmails(ccEmailField.value)
+          .filter(val => val !== email);
+        updateRecipientsField(ccEmailField, ccRecipientList, current);
+        updateRecipientButtonStates();
+      });
+    }
+
+    const groupModal = document.getElementById('groupModal');
+    const groupSaveBtn = document.getElementById('groupSaveBtn');
+    const groupCancelBtn = document.getElementById('groupCancelBtn');
+    if (groupSaveBtn) {
+      groupSaveBtn.addEventListener('click', () => {
+        const nameInput = document.getElementById('groupNameInput');
+        const emailsInput = document.getElementById('groupEmailsInput');
+        const name = nameInput.value.trim();
+        const emails = parseEmails(emailsInput.value);
+        if (!name || emails.length === 0) return;
+        if (groupModal.dataset.mode === 'edit') {
+          const editGroup = groupModal.dataset.editGroup;
+          const group = sharedGroups.find(g => g.name === editGroup);
+          if (!group) return;
+          const oldEmails = (group.emails || []).slice();
+          group.name = name;
+          group.emails = emails;
+          for (const { input, list } of [
+            { input: toEmailField, list: recipientList },
+            { input: ccEmailField, list: ccRecipientList }
+          ]) {
+            if (!input) continue;
+            const cur = parseEmails(input.value);
+            const hadGroup = oldEmails.some(e => cur.includes(e));
+            if (!hadGroup) continue;
+            const withoutOld = cur.filter(e => !oldEmails.includes(e));
+            const next = Array.from(new Set([...withoutOld, ...emails]));
+            updateRecipientsField(input, list, next);
+          }
+        } else {
+          sharedGroups.push({ name, emails });
+          if (groupModal.dataset.target === 'cc') {
+            const currentCc = parseEmails(ccEmailField.value);
+            updateRecipientsField(ccEmailField, ccRecipientList, currentCc.concat(emails));
+          } else {
+            const currentTo = parseEmails(toEmailField.value);
+            updateRecipientsField(toEmailField, recipientList, currentTo.concat(emails));
+          }
+        }
+        rerenderAllGroupLists();
+        closeGroupModal();
+      });
+    }
+
+    rerenderAllGroupLists();
+
+    if (toGroupButtons) {
+      toGroupButtons.addEventListener('click', (event) => {
+        const editBtn = event.target.closest('button[data-edit-group]');
+        if (editBtn) {
+          openGroupModalForEdit(editBtn.dataset.editGroup);
+          return;
+        }
+        const removeBtn = event.target.closest('button[data-remove-group]');
+        if (removeBtn) {
+          removeGroupByName(removeBtn.dataset.removeGroup);
+          return;
+        }
+        const btn = event.target.closest('button[data-group]');
+        if (!btn) return;
+        const group = sharedGroups.find(g => g.name === btn.dataset.group);
+        if (!group) return;
+        toggleEmailsInField(toEmailField, recipientList, group.emails || []);
+        updateRecipientButtonStates();
+      });
+    }
+
+    if (ccGroupButtons) {
+      ccGroupButtons.addEventListener('click', (event) => {
+        const editBtn = event.target.closest('button[data-edit-group]');
+        if (editBtn) {
+          openGroupModalForEdit(editBtn.dataset.editGroup);
+          return;
+        }
+        const removeBtn = event.target.closest('button[data-remove-group]');
+        if (removeBtn) {
+          removeGroupByName(removeBtn.dataset.removeGroup);
+          return;
+        }
+        const btn = event.target.closest('button[data-group]');
+        if (!btn) return;
+        const group = sharedGroups.find(g => g.name === btn.dataset.group);
+        if (!group) return;
+        toggleEmailsInField(ccEmailField, ccRecipientList, group.emails || []);
+        updateRecipientButtonStates();
+      });
+    }
+
+    if (groupCancelBtn) {
+      groupCancelBtn.addEventListener('click', closeGroupModal);
+    }
+
+    if (groupModal) {
+      groupModal.addEventListener('click', (event) => {
+        if (event.target === groupModal) closeGroupModal();
       });
     }
 

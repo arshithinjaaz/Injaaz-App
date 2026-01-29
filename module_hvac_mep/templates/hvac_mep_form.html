@@ -1365,6 +1365,10 @@
                 </div>
                 <input type="hidden" id="supervisorSignatureData" name="supervisor_signature">
                 <button type="button" id="clearSupervisor" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
+                <button type="button" class="btn btn-link text-primary btn-sm text-decoration-none p-0 mt-1 ms-2 add-default-signature"
+                        data-pad="supervisorPad" data-comment="supervisorComments" data-input="supervisorSignatureData">
+                  Add Signature
+                </button>
               </div>
             </div>
           </div>
@@ -1541,6 +1545,10 @@
               </div>
               <input type="hidden" id="opManSignatureData" name="opMan_signature">
               <button type="button" id="clearOp" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
+              <button type="button" class="btn btn-link text-primary btn-sm text-decoration-none p-0 mt-1 ms-2 add-default-signature"
+                      data-pad="opPad" data-comment="operationsManagerComments" data-input="opManSignatureData">
+                Add Signature
+              </button>
             </div>
           </div>
         </div>
@@ -1623,6 +1631,10 @@
               </div>
               <input type="hidden" id="businessDevSignatureData" name="business_dev_signature">
               <button type="button" id="clearBusinessDev" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
+              <button type="button" class="btn btn-link text-primary btn-sm text-decoration-none p-0 mt-1 ms-2 add-default-signature"
+                      data-pad="businessDevPad" data-comment="businessDevComments" data-input="businessDevSignatureData">
+                Add Signature
+              </button>
             </div>
           </div>
         </div>
@@ -1705,6 +1717,10 @@
               </div>
               <input type="hidden" id="procurementSignatureData" name="procurement_signature">
               <button type="button" id="clearProcurement" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
+              <button type="button" class="btn btn-link text-primary btn-sm text-decoration-none p-0 mt-1 ms-2 add-default-signature"
+                      data-pad="procurementPad" data-comment="procurementComments" data-input="procurementSignatureData">
+                Add Signature
+              </button>
             </div>
           </div>
         </div>
@@ -1804,6 +1820,10 @@
               </div>
               <input type="hidden" id="generalManagerSignatureData" name="general_manager_signature">
               <button type="button" id="clearGeneralManager" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
+              <button type="button" class="btn btn-link text-primary btn-sm text-decoration-none p-0 mt-1 ms-2 add-default-signature"
+                      data-pad="generalManagerPad" data-comment="generalManagerComments" data-input="generalManagerSignatureData">
+                Add Signature
+              </button>
             </div>
           </div>
         </div>
@@ -1963,7 +1983,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <script src="{{ url_for('static', filename='signature_pad.umd.min.js') }}"></script>
   <script src="{{ url_for('static', filename='dropdown_init.js') }}"></script>
   <script src="{{ url_for('static', filename='form.js') }}"></script>
 
@@ -2213,6 +2233,73 @@
       return { techPad, opPad, supervisorPad, businessDevPad, procurementPad, generalManagerPad };
     }
 
+    let userDefaultSignature = null;
+    let userDefaultComment = '';
+    async function loadUserDefaults() {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      try {
+        const response = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.user) {
+          userDefaultSignature = data.user.default_signature || null;
+          userDefaultComment = data.user.default_comment || '';
+        }
+      } catch (error) {
+        console.warn('Failed to load user defaults', error);
+      }
+    }
+
+    async function resolveSignatureDataUrl(src) {
+      if (!src) return null;
+      if (src.startsWith('data:image')) return src;
+      try {
+        const response = await fetch(src);
+        if (!response.ok) return null;
+        const blob = await response.blob();
+        return await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.warn('Failed to fetch signature URL', error);
+        return null;
+      }
+    }
+
+    function initDefaultSignatureButtons() {
+      document.querySelectorAll('.add-default-signature').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const padKey = btn.dataset.pad;
+          const commentId = btn.dataset.comment;
+          const inputId = btn.dataset.input;
+          const pads = window.signaturePads || {};
+          const pad = pads[padKey];
+          if (pad && userDefaultSignature) {
+            try {
+              const dataUrl = await resolveSignatureDataUrl(userDefaultSignature);
+              if (dataUrl) {
+                pad.fromDataURL(dataUrl);
+                const sigInput = document.getElementById(inputId);
+                if (sigInput) sigInput.value = dataUrl;
+              }
+            } catch (error) {
+              console.warn('Failed to apply default signature', error);
+            }
+          }
+          const commentEl = document.getElementById(commentId);
+          if (commentEl && userDefaultComment && !commentEl.value.trim()) {
+            commentEl.value = userDefaultComment;
+          }
+        });
+      });
+    }
+
     (function(){
       const curAsset = document.getElementById('curAsset');
       const curSystem = document.getElementById('curSystem');
@@ -2246,6 +2333,10 @@
       
       // Make pads available globally for loadSubmissionData
       window.signaturePads = pads;
+
+      loadUserDefaults().then(() => {
+        initDefaultSignatureButtons();
+      });
 
       // Helper function to format timestamp (converts UTC to Dubai time)
       function formatSigningTime(timestamp) {
