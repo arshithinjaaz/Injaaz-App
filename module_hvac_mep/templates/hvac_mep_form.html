@@ -1349,26 +1349,28 @@
           <!-- ==================== SUPERVISOR SECTION ==================== -->
           <!-- Supervisor Review Section - SHOWN FIRST/TOP (Supervisor signs first in workflow) -->
           {% if user_designation == 'supervisor' or (user and user.role == 'admin') %}
-          <div class="col-12 mb-4">
-            <h6 class="fw-bold mb-3" style="color: var(--primary);">Supervisor Review</h6>
+          <div class="col-12 mb-2">
+            <h6 class="fw-bold mb-2" style="color: var(--primary); font-size: 1rem;">Supervisor Review</h6>
             <div class="row">
-              <div class="col-md-6 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Comments</label>
-                <textarea id="supervisorComments" name="supervisor_comments" class="form-control" rows="5" style="min-height: 120px;" placeholder="Enter your comments or observations..."></textarea>
+              <div class="col-md-6 mb-2">
+                <label class="form-label small mb-1" style="color: #4b5563;">Comments</label>
+                <textarea id="supervisorComments" name="supervisor_comments" class="form-control form-control-sm" rows="3" style="min-height: 80px;" placeholder="Enter your comments..."></textarea>
               </div>
-              <div class="col-md-6 mb-3">
-                <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Supervisor Signature 
-                  <span id="supervisorSignatureHint" class="text-danger">Required for approval</span>
+              <div class="col-md-6 mb-2">
+                <label class="form-label small mb-1" style="color: #4b5563;">Signature 
+                  <span id="supervisorSignatureHint" class="text-success" style="display: none;">✓ Signed</span>
                 </label>
-                <div style="height: 120px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+                <div style="height: 80px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
                   <canvas id="supervisorSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
                 </div>
                 <input type="hidden" id="supervisorSignatureData" name="supervisor_signature">
-                <button type="button" id="clearSupervisor" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
-                <button type="button" class="btn btn-link text-primary btn-sm text-decoration-none p-0 mt-1 ms-2 add-default-signature"
-                        data-pad="supervisorPad" data-comment="supervisorComments" data-input="supervisorSignatureData">
-                  Add Signature
-                </button>
+                <div class="d-flex gap-2 mt-1">
+                  <button type="button" id="clearSupervisor" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Clear</button>
+                  <button type="button" class="btn btn-sm add-default-signature" style="background-color: var(--primary); color: white; border: none; font-size: 0.75rem; padding: 2px 8px;"
+                          data-pad="supervisorPad" data-comment="supervisorComments" data-input="supervisorSignatureData">
+                    Add Saved Signature
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1529,26 +1531,28 @@
         </div>
         
         <!-- Operations Manager Review Section (Editable) - SHOWN AT BOTTOM -->
-        <div class="col-12 mb-4" id="omEditableSection">
-          <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Operations Manager Review</h6>
+        <div class="col-12 mb-2" id="omEditableSection">
+          <h6 class="fw-bold mb-2" style="color: #0ea5e9; font-size: 1rem;">Operations Manager Review</h6>
           <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Comments</label>
-              <textarea id="operationsManagerComments" class="form-control" rows="5" style="min-height: 120px; border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            <div class="col-md-6 mb-2">
+              <label class="form-label small mb-1" style="color: #4b5563;">Comments</label>
+              <textarea id="operationsManagerComments" class="form-control form-control-sm" rows="3" style="min-height: 80px; border-color: #d1d5db;" placeholder="Enter your comments..."></textarea>
             </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Operations Manager Signature 
-                <span id="omSignatureHint" class="text-danger">Required for approval</span>
+            <div class="col-md-6 mb-2">
+              <label class="form-label small mb-1" style="color: #4b5563;">Signature 
+                <span id="omSignatureHint" class="text-success" style="display: none;">✓ Signed</span>
               </label>
-              <div style="height: 120px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+              <div style="height: 80px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
                 <canvas id="opManSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
               </div>
               <input type="hidden" id="opManSignatureData" name="opMan_signature">
-              <button type="button" id="clearOp" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
-              <button type="button" class="btn btn-link text-primary btn-sm text-decoration-none p-0 mt-1 ms-2 add-default-signature"
-                      data-pad="opPad" data-comment="operationsManagerComments" data-input="opManSignatureData">
-                Add Signature
-              </button>
+              <div class="d-flex gap-2 mt-1">
+                <button type="button" id="clearOp" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Clear</button>
+                <button type="button" class="btn btn-sm add-default-signature" style="background-color: var(--primary); color: white; border: none; font-size: 0.75rem; padding: 2px 8px;"
+                        data-pad="opPad" data-comment="operationsManagerComments" data-input="opManSignatureData">
+                  Add Saved Signature
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1615,26 +1619,28 @@
         </div>
         
         <!-- Business Development Review Section (Editable) - SHOWN AT BOTTOM -->
-        <div class="col-12 mb-4">
-          <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Business Development Review</h6>
+        <div class="col-12 mb-2">
+          <h6 class="fw-bold mb-2" style="color: #0ea5e9; font-size: 1rem;">Business Development Review</h6>
           <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Comments</label>
-              <textarea id="businessDevComments" class="form-control" rows="5" style="min-height: 120px; border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            <div class="col-md-6 mb-2">
+              <label class="form-label small mb-1" style="color: #4b5563;">Comments</label>
+              <textarea id="businessDevComments" class="form-control form-control-sm" rows="3" style="min-height: 80px; border-color: #d1d5db;" placeholder="Enter your comments..."></textarea>
             </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Business Development Signature 
-                <span class="text-danger">Required for approval</span>
+            <div class="col-md-6 mb-2">
+              <label class="form-label small mb-1" style="color: #4b5563;">Signature 
+                <span id="bdSignatureHint" class="text-success" style="display: none;">✓ Signed</span>
               </label>
-              <div style="height: 120px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+              <div style="height: 80px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
                 <canvas id="businessDevSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
               </div>
               <input type="hidden" id="businessDevSignatureData" name="business_dev_signature">
-              <button type="button" id="clearBusinessDev" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
-              <button type="button" class="btn btn-link text-primary btn-sm text-decoration-none p-0 mt-1 ms-2 add-default-signature"
-                      data-pad="businessDevPad" data-comment="businessDevComments" data-input="businessDevSignatureData">
-                Add Signature
-              </button>
+              <div class="d-flex gap-2 mt-1">
+                <button type="button" id="clearBusinessDev" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Clear</button>
+                <button type="button" class="btn btn-sm add-default-signature" style="background-color: var(--primary); color: white; border: none; font-size: 0.75rem; padding: 2px 8px;"
+                        data-pad="businessDevPad" data-comment="businessDevComments" data-input="businessDevSignatureData">
+                  Add Saved Signature
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1701,26 +1707,28 @@
         </div>
         
         <!-- Procurement Review Section (Editable) - SHOWN AT BOTTOM -->
-        <div class="col-12 mb-4">
-          <h6 class="fw-bold mb-3" style="color: #0ea5e9;">Procurement Review</h6>
+        <div class="col-12 mb-2">
+          <h6 class="fw-bold mb-2" style="color: #0ea5e9; font-size: 1rem;">Procurement Review</h6>
           <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Comments</label>
-              <textarea id="procurementComments" class="form-control" rows="5" style="min-height: 120px; border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            <div class="col-md-6 mb-2">
+              <label class="form-label small mb-1" style="color: #4b5563;">Comments</label>
+              <textarea id="procurementComments" class="form-control form-control-sm" rows="3" style="min-height: 80px; border-color: #d1d5db;" placeholder="Enter your comments..."></textarea>
             </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">Procurement Signature 
-                <span class="text-danger">Required for approval</span>
+            <div class="col-md-6 mb-2">
+              <label class="form-label small mb-1" style="color: #4b5563;">Signature 
+                <span id="procurementSignatureHint" class="text-success" style="display: none;">✓ Signed</span>
               </label>
-              <div style="height: 120px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+              <div style="height: 80px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
                 <canvas id="procurementSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
               </div>
               <input type="hidden" id="procurementSignatureData" name="procurement_signature">
-              <button type="button" id="clearProcurement" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
-              <button type="button" class="btn btn-link text-primary btn-sm text-decoration-none p-0 mt-1 ms-2 add-default-signature"
-                      data-pad="procurementPad" data-comment="procurementComments" data-input="procurementSignatureData">
-                Add Signature
-              </button>
+              <div class="d-flex gap-2 mt-1">
+                <button type="button" id="clearProcurement" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Clear</button>
+                <button type="button" class="btn btn-sm add-default-signature" style="background-color: var(--primary); color: white; border: none; font-size: 0.75rem; padding: 2px 8px;"
+                        data-pad="procurementPad" data-comment="procurementComments" data-input="procurementSignatureData">
+                  Add Saved Signature
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1804,26 +1812,28 @@
         </div>
         
         <!-- General Manager Review Section (Editable) - SHOWN AT BOTTOM -->
-        <div class="col-12 mb-4">
-          <h6 class="fw-bold mb-3" style="color: #0ea5e9;">General Manager Review</h6>
+        <div class="col-12 mb-2">
+          <h6 class="fw-bold mb-2" style="color: #0ea5e9; font-size: 1rem;">General Manager Review</h6>
           <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Comments</label>
-              <textarea id="generalManagerComments" class="form-control" rows="5" style="min-height: 120px; border-color: #d1d5db;" placeholder="Enter your review comments or observations here..."></textarea>
+            <div class="col-md-6 mb-2">
+              <label class="form-label small mb-1" style="color: #4b5563;">Comments</label>
+              <textarea id="generalManagerComments" class="form-control form-control-sm" rows="3" style="min-height: 80px; border-color: #d1d5db;" placeholder="Enter your comments..."></textarea>
             </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold small text-uppercase" style="color: #4b5563;">General Manager Signature 
-                <span class="text-danger">Required for approval</span>
+            <div class="col-md-6 mb-2">
+              <label class="form-label small mb-1" style="color: #4b5563;">Signature 
+                <span id="gmSignatureHint" class="text-success" style="display: none;">✓ Signed</span>
               </label>
-              <div style="height: 120px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+              <div style="height: 80px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
                 <canvas id="generalManagerSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
               </div>
               <input type="hidden" id="generalManagerSignatureData" name="general_manager_signature">
-              <button type="button" id="clearGeneralManager" class="btn btn-link text-muted btn-sm text-decoration-none p-0 mt-1" style="font-size: 0.85rem;">Clear Signature</button>
-              <button type="button" class="btn btn-link text-primary btn-sm text-decoration-none p-0 mt-1 ms-2 add-default-signature"
-                      data-pad="generalManagerPad" data-comment="generalManagerComments" data-input="generalManagerSignatureData">
-                Add Signature
-              </button>
+              <div class="d-flex gap-2 mt-1">
+                <button type="button" id="clearGeneralManager" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Clear</button>
+                <button type="button" class="btn btn-sm add-default-signature" style="background-color: var(--primary); color: white; border: none; font-size: 0.75rem; padding: 2px 8px;"
+                        data-pad="generalManagerPad" data-comment="generalManagerComments" data-input="generalManagerSignatureData">
+                  Add Saved Signature
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1928,9 +1938,17 @@
           <div class="d-flex justify-content-between align-items-center">
             <button type="button" class="btn btn-secondary" onclick="goToTab(2)">&laquo; Previous</button>
             {% if can_edit != False %}
-            <button type="button" id="submitAllBtn" class="btn btn-success px-5 py-2 shadow-sm" style="font-weight: 700; letter-spacing: 0.5px; border-radius: 8px;">
-              {% if is_edit_mode %}✓ UPDATE SUBMISSION{% else %}🚀 SUBMIT INSPECTION{% endif %}
-            </button>
+            <div class="d-flex gap-2">
+              {% if user_designation == 'supervisor' or (user and user.role == 'admin') %}
+              <button type="button" id="verifiedBtn" class="btn btn-success px-4 py-2 shadow-sm" style="font-weight: 700; border-radius: 8px;">
+                <span id="verifiedBtnIcon">✓</span> Verify
+              </button>
+              <span id="verifiedStatus" class="d-none align-self-center" style="color: #059669; font-weight: 600;">✓ Verified</span>
+              {% endif %}
+              <button type="button" id="submitAllBtn" class="btn btn-success px-5 py-2 shadow-sm" style="font-weight: 700; letter-spacing: 0.5px; border-radius: 8px;">
+                {% if is_edit_mode %}✓ UPDATE SUBMISSION{% else %}🚀 SUBMIT INSPECTION{% endif %}
+              </button>
+            </div>
             {% else %}
             <div class="alert alert-info mb-0" style="background: #f0f9ff; border-color: #0ea5e9; padding: 0.75rem 1rem;">
               <strong>Read-Only:</strong> This form is view-only. You cannot submit changes.
@@ -2200,6 +2218,49 @@
           supervisorPad.clear(); 
           const supervisorSigInput = document.getElementById('supervisorSignatureData');
           if (supervisorSigInput) supervisorSigInput.value = '';
+        });
+      }
+
+      // Verified button handler (for supervisor)
+      const verifiedBtn = document.getElementById('verifiedBtn');
+      const verifiedStatus = document.getElementById('verifiedStatus');
+      let isVerified = false;
+      
+      if (verifiedBtn) {
+        verifiedBtn.addEventListener('click', () => {
+          // Get supervisor comment and signature
+          const supervisorComments = document.getElementById('supervisorComments');
+          const supervisorSignatureData = document.getElementById('supervisorSignatureData');
+          
+          const hasComment = supervisorComments && supervisorComments.value.trim().length > 0;
+          const hasSignature = (supervisorSignatureData && supervisorSignatureData.value.trim().length > 0) || 
+                              (supervisorPad && !supervisorPad.isEmpty());
+          
+          // If trying to verify, check if comment or signature exists
+          if (!isVerified) {
+            if (!hasComment && !hasSignature) {
+              alert('Please add a comment or signature before verifying.');
+              return;
+            }
+          }
+          
+          isVerified = !isVerified;
+          if (isVerified) {
+            verifiedBtn.classList.remove('btn-success');
+            verifiedBtn.classList.add('btn-outline-success');
+            verifiedBtn.innerHTML = '<span id="verifiedBtnIcon">✓</span> Verified';
+            if (verifiedStatus) {
+              verifiedStatus.classList.remove('d-none');
+              verifiedStatus.textContent = '✓ Verified';
+            }
+          } else {
+            verifiedBtn.classList.remove('btn-outline-success');
+            verifiedBtn.classList.add('btn-success');
+            verifiedBtn.innerHTML = '<span id="verifiedBtnIcon">✓</span> Verify';
+            if (verifiedStatus) {
+              verifiedStatus.classList.add('d-none');
+            }
+          }
         });
       }
 
