@@ -9,6 +9,7 @@ from flask_jwt_extended import (
 from datetime import datetime, timedelta
 from app.models import db, User, Session, AuditLog
 from sqlalchemy.exc import IntegrityError
+from common.error_responses import error_response, success_response
 import re
 
 auth_bp = Blueprint('auth_bp', __name__, url_prefix='/api/auth')
@@ -77,13 +78,13 @@ def register():
         data = request.get_json(force=True, silent=True)
         
         if not data:
-            return jsonify({'error': 'Invalid JSON or missing request body'}), 400
+            return error_response('Invalid JSON or missing request body', 400, 'INVALID_REQUEST')
         
         # Validate required fields
         required_fields = ['username', 'email', 'password', 'full_name']
         for field in required_fields:
             if not data.get(field):
-                return jsonify({'error': f'{field} is required'}), 400
+                return error_response(f'{field} is required', 400, 'VALIDATION_ERROR')
         
         username = data['username'].strip()
         email = data['email'].strip().lower()
@@ -92,19 +93,19 @@ def register():
         
         # Validate email format
         if not validate_email(email):
-            return jsonify({'error': 'Invalid email format'}), 400
+            return error_response('Invalid email format', 400, 'VALIDATION_ERROR')
         
         # Validate password strength
         is_valid, message = validate_password(password)
         if not is_valid:
-            return jsonify({'error': message}), 400
+            return error_response(message, 400, 'WEAK_PASSWORD')
         
         # Check if user already exists
         if User.query.filter_by(username=username).first():
-            return jsonify({'error': 'Username already exists'}), 409
+            return error_response('Username already exists', 409, 'DUPLICATE_USERNAME')
         
         if User.query.filter_by(email=email).first():
-            return jsonify({'error': 'Email already registered'}), 409
+            return error_response('Email already registered', 409, 'DUPLICATE_EMAIL')
         
         # Create new user
         user = User(
@@ -128,11 +129,11 @@ def register():
         
     except IntegrityError:
         db.session.rollback()
-        return jsonify({'error': 'User already exists'}), 409
+        return error_response('User already exists', 409, 'DUPLICATE_USER')
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Registration error: {str(e)}")
-        return jsonify({'error': 'Registration failed'}), 500
+        return error_response('Registration failed', 500, 'INTERNAL_ERROR')
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -148,12 +149,12 @@ def login():
         
         if not data:
             current_app.logger.error("Failed to parse JSON from request")
-            return jsonify({'error': 'Invalid JSON or missing request body'}), 400
+            return error_response('Invalid JSON or missing request body', 400, 'INVALID_REQUEST')
         
         # Validate required fields
         if not data.get('username') or not data.get('password'):
             current_app.logger.warning(f"Missing credentials - username: {bool(data.get('username'))}, password: {bool(data.get('password'))}")
-            return jsonify({'error': 'Username and password are required'}), 400
+            return error_response('Username and password are required', 400, 'VALIDATION_ERROR')
         
         username = data['username'].strip()
         password = data['password']
@@ -166,10 +167,10 @@ def login():
         if not user or not user.check_password(password):
             # Log failed attempt
             log_audit(None, 'login_failed', details={'username': username})
-            return jsonify({'error': 'Invalid username or password'}), 401
+            return error_response('Invalid username or password', 401, 'INVALID_CREDENTIALS')
         
         if not user.is_active:
-            return jsonify({'error': 'Account is disabled'}), 403
+            return error_response('Account is disabled', 403, 'ACCOUNT_DISABLED')
         
         # Check if password change is required (default admin password)
         password_change_required = not user.password_changed if hasattr(user, 'password_changed') else False
@@ -221,10 +222,12 @@ def login():
         current_app.logger.error(f"Login error: {str(e)}", exc_info=True)
         # Provide more helpful error message for database schema issues
         error_msg = 'Login failed'
+        error_code = 'INTERNAL_ERROR'
         if 'does not exist' in str(e) or 'UndefinedColumn' in str(e):
             error_msg = 'Database schema error - please contact administrator'
+            error_code = 'DATABASE_ERROR'
             current_app.logger.error("Database schema appears to be out of date. Migration may be needed.")
-        return jsonify({'error': error_msg, 'details': str(e) if current_app.debug else None}), 500
+        return error_response(error_msg, 500, error_code, str(e) if current_app.debug else None)
 
 
 @auth_bp.route('/refresh', methods=['POST'])
@@ -236,7 +239,7 @@ def refresh():
         user = User.query.get(int(user_id))
         
         if not user or not user.is_active:
-            return jsonify({'error': 'User not found or inactive'}), 404
+            return error_response('User not found or inactive', 404, 'USER_NOT_FOUND')
         
         # Create new access token
         access_token = create_access_token(identity=user_id)
@@ -260,7 +263,7 @@ def refresh():
         
     except Exception as e:
         current_app.logger.error(f"Token refresh error: {str(e)}")
-        return jsonify({'error': 'Token refresh failed'}), 500
+        return error_response('Token refresh failed', 500, 'INTERNAL_ERROR')
 
 
 @auth_bp.route('/logout', methods=['POST'])
@@ -289,7 +292,7 @@ def logout():
         
     except Exception as e:
         current_app.logger.error(f"Logout error: {str(e)}")
-        return jsonify({'error': 'Logout failed'}), 500
+        return error_response('Logout failed', 500, 'INTERNAL_ERROR')
 
 
 @auth_bp.route('/me', methods=['GET'])
@@ -301,7 +304,7 @@ def get_current_user():
         user = User.query.get(int(user_id))
         
         if not user:
-            return jsonify({'error': 'User not found'}), 404
+            return error_response('User not found', 404, 'USER_NOT_FOUND')
         
         return jsonify({
             'user': user.to_dict()
@@ -309,7 +312,7 @@ def get_current_user():
         
     except Exception as e:
         current_app.logger.error(f"Get user error: {str(e)}")
-        return jsonify({'error': 'Failed to fetch user'}), 500
+        return error_response('Failed to fetch user', 500, 'INTERNAL_ERROR')
 
 
 @auth_bp.route('/signature-default', methods=['POST'])
@@ -320,7 +323,7 @@ def update_signature_default():
         user_id = get_jwt_identity()
         user = User.query.get(int(user_id))
         if not user:
-            return jsonify({'error': 'User not found'}), 404
+            return error_response('User not found', 404, 'USER_NOT_FOUND')
 
         data = request.get_json() or {}
         signature_data = data.get('signature_data_url')
@@ -340,7 +343,7 @@ def update_signature_default():
                         storage = 'inline'
                         user.default_signature = signature_data
                     else:
-                        return jsonify({'error': 'Failed to upload signature. Check Cloudinary configuration.'}), 500
+                        return error_response('Failed to upload signature. Check Cloudinary configuration.', 500, 'UPLOAD_ERROR')
                 else:
                     user.default_signature = signature_url
             if default_comment is not None:
@@ -357,7 +360,7 @@ def update_signature_default():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Update signature default error: {str(e)}")
-        return jsonify({'error': 'Failed to update default signature'}), 500
+        return error_response('Failed to update default signature', 500, 'INTERNAL_ERROR')
 
 
 @auth_bp.route('/change-password', methods=['POST'])
@@ -369,20 +372,20 @@ def change_password():
         data = request.get_json()
         
         if not data.get('current_password') or not data.get('new_password'):
-            return jsonify({'error': 'Current and new passwords are required'}), 400
+            return error_response('Current and new passwords are required', 400, 'VALIDATION_ERROR')
         
         user = User.query.get(int(user_id))
         if not user:
-            return jsonify({'error': 'User not found'}), 404
+            return error_response('User not found', 404, 'USER_NOT_FOUND')
         
         # Verify current password
         if not user.check_password(data['current_password']):
-            return jsonify({'error': 'Current password is incorrect'}), 401
+            return error_response('Current password is incorrect', 401, 'INVALID_PASSWORD')
         
         # Validate new password
         is_valid, message = validate_password(data['new_password'])
         if not is_valid:
-            return jsonify({'error': message}), 400
+            return error_response(message, 400, 'WEAK_PASSWORD')
         
         # Update password
         user.set_password(data['new_password'])
@@ -401,11 +404,4 @@ def change_password():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Change password error: {str(e)}")
-        return jsonify({'error': 'Password change failed'}), 500
-
-    user = User.query.filter_by(email=email).first()
-    if not user or not user.check_password(password):
-        return jsonify({"error": "Invalid credentials"}), 401
-    expires = datetime.timedelta(hours=8)
-    access_token = create_access_token(identity=user.id, expires_delta=expires)
-    return jsonify({"access_token": access_token, "user_id": user.id}), 200
+        return error_response('Password change failed', 500, 'INTERNAL_ERROR')

@@ -79,7 +79,7 @@ def download_file(job_id, file_type):
         job_data = get_job_status_db(job_id)
         if not job_data:
             logger.error(f"Job not found: {job_id}")
-            return jsonify({"error": "Job not found"}), 404
+            return error_response("Job not found", 404, "JOB_NOT_FOUND")
         
         # Extract results
         results = {}

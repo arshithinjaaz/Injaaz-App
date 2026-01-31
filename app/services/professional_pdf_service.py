@@ -1,6 +1,7 @@
 """
 Professional PDF Service with Branding, Logo, and Signatures
 Provides reusable components for all module PDFs
+Enhanced with cover pages and professional branding
 """
 import os
 import logging
@@ -11,15 +12,18 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch, cm, mm
 from reportlab.lib import colors
 from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle, Paragraph, 
-                                Spacer, Image, PageBreak, Frame, PageTemplate)
+                                Spacer, Image, PageBreak, Frame, PageTemplate,
+                                KeepTogether, HRFlowable)
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
 from reportlab.pdfgen import canvas
+from reportlab.graphics.shapes import Drawing, Rect, Line
+from reportlab.graphics import renderPDF
 from common.utils import get_image_for_pdf
 
 logger = logging.getLogger(__name__)
 
-# Company branding colors
+# Company branding colors - Enhanced palette
 PRIMARY_COLOR = colors.HexColor('#125435')      # Dark green
 SECONDARY_COLOR = colors.HexColor('#1a7a4d')    # Medium green
 ACCENT_COLOR = colors.HexColor('#E8F5E9')       # Light green
@@ -27,6 +31,12 @@ HEADER_BG = colors.HexColor('#125435')
 TABLE_HEADER_BG = colors.HexColor('#125435')
 TABLE_ALT_ROW = colors.HexColor('#f9fafb')
 BORDER_COLOR = colors.HexColor('#e5e7eb')
+
+# Additional brand colors for cover page
+GRADIENT_START = colors.HexColor('#125435')
+GRADIENT_END = colors.HexColor('#1a7a4d')
+GOLD_ACCENT = colors.HexColor('#D4AF37')
+LIGHT_BG = colors.HexColor('#fafafa')
 
 # Logo path
 LOGO_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'static', 'logo.png')
@@ -604,4 +614,380 @@ def add_paragraph(story, text):
     """Add a normal paragraph"""
     styles = get_professional_styles()
     story.append(Paragraph(text, styles['Normal']))
+    return story
+
+
+def create_cover_page(story, report_info):
+    """Create a professional cover page for the PDF report
+    
+    Args:
+        story: PDF story list
+        report_info: Dictionary with report details:
+            - title: Main report title (e.g., "Site Assessment Report")
+            - subtitle: Optional subtitle (e.g., "HVAC & MEP Inspection")
+            - project_name: Project/Site name
+            - location: Site location
+            - date: Report date
+            - prepared_by: Name of person who prepared the report
+            - prepared_for: Client/company name (optional)
+            - report_id: Submission ID or reference number
+            - status: Workflow status (optional)
+    """
+    styles = get_professional_styles()
+    
+    # Create cover page styles
+    cover_title_style = ParagraphStyle(
+        'CoverTitle',
+        parent=styles['MainTitle'],
+        fontSize=28,
+        textColor=PRIMARY_COLOR,
+        spaceAfter=0.2*inch,
+        spaceBefore=0,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold',
+        leading=34
+    )
+    
+    cover_subtitle_style = ParagraphStyle(
+        'CoverSubtitle',
+        fontSize=16,
+        textColor=SECONDARY_COLOR,
+        spaceAfter=0.5*inch,
+        alignment=TA_CENTER,
+        fontName='Helvetica'
+    )
+    
+    cover_info_style = ParagraphStyle(
+        'CoverInfo',
+        fontSize=12,
+        textColor=colors.HexColor('#374151'),
+        spaceAfter=0.15*inch,
+        alignment=TA_CENTER,
+        fontName='Helvetica'
+    )
+    
+    cover_label_style = ParagraphStyle(
+        'CoverLabel',
+        fontSize=10,
+        textColor=colors.HexColor('#6b7280'),
+        spaceAfter=0.05*inch,
+        alignment=TA_CENTER,
+        fontName='Helvetica'
+    )
+    
+    # Add top spacing
+    story.append(Spacer(1, 1.5*inch))
+    
+    # Logo
+    if os.path.exists(LOGO_PATH):
+        try:
+            logo = Image(LOGO_PATH, width=1.8*inch, height=1.8*inch)
+            logo.hAlign = 'CENTER'
+            story.append(logo)
+            story.append(Spacer(1, 0.3*inch))
+        except Exception as e:
+            logger.warning(f"Could not load logo for cover page: {e}")
+    
+    # Company name
+    story.append(Paragraph("INJAAZ PLATFORM", ParagraphStyle(
+        'CompanyName',
+        fontSize=14,
+        textColor=SECONDARY_COLOR,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold',
+        spaceAfter=0.1*inch
+    )))
+    
+    # Tagline
+    story.append(Paragraph("Excellence in Facility Management", ParagraphStyle(
+        'Tagline',
+        fontSize=10,
+        textColor=colors.HexColor('#6b7280'),
+        alignment=TA_CENTER,
+        fontName='Helvetica-Oblique',
+        spaceAfter=0.6*inch
+    )))
+    
+    # Decorative line
+    story.append(HRFlowable(
+        width="60%",
+        thickness=2,
+        color=PRIMARY_COLOR,
+        spaceBefore=0.2*inch,
+        spaceAfter=0.4*inch,
+        hAlign='CENTER'
+    ))
+    
+    # Main title
+    title = report_info.get('title', 'Site Assessment Report')
+    story.append(Paragraph(title, cover_title_style))
+    
+    # Subtitle
+    subtitle = report_info.get('subtitle', '')
+    if subtitle:
+        story.append(Paragraph(subtitle, cover_subtitle_style))
+    else:
+        story.append(Spacer(1, 0.3*inch))
+    
+    # Project info box
+    project_name = report_info.get('project_name', 'N/A')
+    location = report_info.get('location', '')
+    report_date = report_info.get('date', datetime.now().strftime('%B %d, %Y'))
+    
+    # Create info table
+    info_data = []
+    
+    info_data.append([
+        Paragraph("<b>Project / Site</b>", cover_label_style),
+        Paragraph(project_name, cover_info_style)
+    ])
+    
+    if location:
+        info_data.append([
+            Paragraph("<b>Location</b>", cover_label_style),
+            Paragraph(location, cover_info_style)
+        ])
+    
+    info_data.append([
+        Paragraph("<b>Report Date</b>", cover_label_style),
+        Paragraph(str(report_date), cover_info_style)
+    ])
+    
+    report_id = report_info.get('report_id', '')
+    if report_id:
+        info_data.append([
+            Paragraph("<b>Reference No.</b>", cover_label_style),
+            Paragraph(report_id, cover_info_style)
+        ])
+    
+    # Status badge
+    status = report_info.get('status', '')
+    if status:
+        status_display = status.replace('_', ' ').title()
+        status_color = PRIMARY_COLOR if status == 'completed' else SECONDARY_COLOR
+        info_data.append([
+            Paragraph("<b>Status</b>", cover_label_style),
+            Paragraph(f"<font color='#{status_color.hexval()[2:]}'><b>{status_display}</b></font>", cover_info_style)
+        ])
+    
+    info_table = Table(info_data, colWidths=[2*inch, 3.5*inch])
+    info_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('BACKGROUND', (0, 0), (-1, -1), ACCENT_COLOR),
+        ('BOX', (0, 0), (-1, -1), 1, PRIMARY_COLOR),
+        ('LINEABOVE', (0, 0), (-1, 0), 2, PRIMARY_COLOR),
+        ('LINEBELOW', (0, -1), (-1, -1), 2, PRIMARY_COLOR),
+    ]))
+    
+    story.append(Spacer(1, 0.3*inch))
+    story.append(info_table)
+    
+    # Prepared by section
+    prepared_by = report_info.get('prepared_by', '')
+    prepared_for = report_info.get('prepared_for', '')
+    
+    if prepared_by or prepared_for:
+        story.append(Spacer(1, 0.8*inch))
+        
+        if prepared_for:
+            story.append(Paragraph("Prepared For", cover_label_style))
+            story.append(Paragraph(prepared_for, cover_info_style))
+            story.append(Spacer(1, 0.3*inch))
+        
+        if prepared_by:
+            story.append(Paragraph("Prepared By", cover_label_style))
+            story.append(Paragraph(prepared_by, cover_info_style))
+    
+    # Footer with generation timestamp
+    story.append(Spacer(1, 1*inch))
+    story.append(HRFlowable(
+        width="40%",
+        thickness=1,
+        color=BORDER_COLOR,
+        spaceBefore=0.2*inch,
+        spaceAfter=0.2*inch,
+        hAlign='CENTER'
+    ))
+    
+    story.append(Paragraph(
+        f"Generated on {datetime.now().strftime('%B %d, %Y at %H:%M')}",
+        ParagraphStyle(
+            'Generated',
+            fontSize=9,
+            textColor=colors.HexColor('#9ca3af'),
+            alignment=TA_CENTER,
+            fontName='Helvetica'
+        )
+    ))
+    
+    # Page break after cover
+    story.append(PageBreak())
+    
+    return story
+
+
+def add_executive_summary(story, summary_data):
+    """Add an executive summary section with key metrics
+    
+    Args:
+        story: PDF story list
+        summary_data: Dictionary with summary info:
+            - total_items: Number of items inspected
+            - photos_count: Number of photos
+            - status: Overall status
+            - highlights: List of key findings
+            - recommendations: List of recommendations (optional)
+    """
+    styles = get_professional_styles()
+    
+    story.append(Paragraph("Executive Summary", styles['SectionHeading']))
+    story.append(Spacer(1, 0.15*inch))
+    
+    # Summary stats in a grid
+    stats_data = []
+    stats_row = []
+    
+    total_items = summary_data.get('total_items', 0)
+    photos_count = summary_data.get('photos_count', 0)
+    status = summary_data.get('status', 'N/A')
+    
+    # Create stat boxes
+    stat_style = ParagraphStyle(
+        'StatValue',
+        fontSize=24,
+        textColor=PRIMARY_COLOR,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold'
+    )
+    
+    stat_label_style = ParagraphStyle(
+        'StatLabel',
+        fontSize=9,
+        textColor=colors.HexColor('#6b7280'),
+        alignment=TA_CENTER,
+        fontName='Helvetica'
+    )
+    
+    stats_row.append([
+        Paragraph(str(total_items), stat_style),
+        Paragraph("Items Inspected", stat_label_style)
+    ])
+    
+    stats_row.append([
+        Paragraph(str(photos_count), stat_style),
+        Paragraph("Photos Captured", stat_label_style)
+    ])
+    
+    status_display = status.replace('_', ' ').title()
+    stats_row.append([
+        Paragraph(status_display, ParagraphStyle(
+            'StatusValue',
+            fontSize=14,
+            textColor=PRIMARY_COLOR if status == 'completed' else SECONDARY_COLOR,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )),
+        Paragraph("Status", stat_label_style)
+    ])
+    
+    # Create stats table - each stat is a mini-table
+    stats_tables = []
+    for stat in stats_row:
+        mini_table = Table([stat], colWidths=[1.8*inch])
+        mini_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BACKGROUND', (0, 0), (-1, -1), ACCENT_COLOR),
+            ('BOX', (0, 0), (-1, -1), 1, BORDER_COLOR),
+            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ]))
+        stats_tables.append(mini_table)
+    
+    stats_container = Table([stats_tables], colWidths=[2*inch] * 3)
+    stats_container.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    
+    story.append(stats_container)
+    story.append(Spacer(1, 0.2*inch))
+    
+    # Highlights/Key Findings
+    highlights = summary_data.get('highlights', [])
+    if highlights:
+        story.append(Paragraph("<b>Key Findings:</b>", styles['Normal']))
+        for highlight in highlights[:5]:  # Limit to 5 highlights
+            story.append(Paragraph(f"• {highlight}", styles['Normal']))
+        story.append(Spacer(1, 0.1*inch))
+    
+    # Recommendations
+    recommendations = summary_data.get('recommendations', [])
+    if recommendations:
+        story.append(Paragraph("<b>Recommendations:</b>", styles['Normal']))
+        for rec in recommendations[:3]:  # Limit to 3 recommendations
+            story.append(Paragraph(f"• {rec}", styles['Normal']))
+    
+    story.append(Spacer(1, 0.2*inch))
+    
+    return story
+
+
+def add_qr_code_section(story, url, label="Scan to view online"):
+    """Add a QR code linking to the digital version (placeholder for future)
+    
+    Note: This requires qrcode library. For now, just adds a text reference.
+    """
+    styles = get_professional_styles()
+    
+    story.append(Spacer(1, 0.2*inch))
+    story.append(Paragraph(
+        f"<i>Digital Version: {url}</i>",
+        ParagraphStyle(
+            'QRLabel',
+            fontSize=8,
+            textColor=colors.HexColor('#6b7280'),
+            alignment=TA_CENTER,
+            fontName='Helvetica'
+        )
+    ))
+    
+    return story
+
+
+def add_section_with_icon(story, title, icon_char="📋"):
+    """Add a section heading with an icon character
+    
+    Args:
+        story: PDF story list
+        title: Section title
+        icon_char: Emoji or character to use as icon (limited support in PDFs)
+    """
+    styles = get_professional_styles()
+    
+    # Create styled section heading
+    section_style = ParagraphStyle(
+        'IconSection',
+        parent=styles['SectionHeading'],
+        fontSize=13,
+        textColor=PRIMARY_COLOR,
+        spaceAfter=0.08*inch,
+        spaceBefore=0.12*inch,
+        fontName='Helvetica-Bold',
+        borderPadding=3,
+        borderColor=PRIMARY_COLOR,
+        borderWidth=1,
+        borderRadius=3,
+        backColor=ACCENT_COLOR,
+        leftIndent=4,
+    )
+    
+    # Note: Emoji support in PDFs is limited, so we use a decorated title
+    story.append(Paragraph(f"■ {title}", section_style))
+    
     return story

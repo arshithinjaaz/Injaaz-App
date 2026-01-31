@@ -301,20 +301,34 @@ def get_job_status_db(job_id):
         return None
 
 
-def get_submission_db(submission_id):
+def get_submission_db(submission_id, eager_load=None, return_object=False):
     """
     Get submission from database by submission_id
     
     Args:
         submission_id: Submission ID string (e.g., 'sub_abc123')
+        eager_load: Optional list of relationships to eager load (e.g., ['user', 'jobs'])
+        return_object: If True, return the Submission object instead of dict
     
     Returns:
-        Dictionary with submission data, or None if not found
+        Dictionary with submission data (or Submission object if return_object=True), or None if not found
     """
     try:
-        submission = Submission.query.filter_by(submission_id=submission_id).first()
+        query = Submission.query
+        
+        # Apply eager loading if specified
+        if eager_load:
+            from sqlalchemy.orm import joinedload
+            for rel in eager_load:
+                if hasattr(Submission, rel):
+                    query = query.options(joinedload(getattr(Submission, rel)))
+        
+        submission = query.filter_by(submission_id=submission_id).first()
         if not submission:
             return None
+        
+        if return_object:
+            return submission
         
         return submission.to_dict()
         

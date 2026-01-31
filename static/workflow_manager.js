@@ -1,6 +1,8 @@
 /**
  * Workflow Manager - 5-Stage Approval System
  * Handles workflow progression, approvals, and rejections
+ * 
+ * Dependencies: api-client.js (for authenticated API calls)
  */
 
 class WorkflowManager {
@@ -158,25 +160,24 @@ class WorkflowManager {
             // Get form data updates if any
             const formDataUpdates = this.collectFormDataUpdates();
 
-            const response = await fetch(`/api/workflow/submissions/${this.submissionId}/approve-ops-manager`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                },
-                body: JSON.stringify({
+            const response = await ApiClient.post(
+                `/api/workflow/submissions/${this.submissionId}/approve-ops-manager`,
+                {
                     comments: comments,
                     signature: signature,
                     form_data: formDataUpdates
-                }),
-                credentials: 'include'
-            });
+                },
+                false // Don't auto-redirect, handle manually
+            );
 
             const result = await response.json();
 
             if (response.ok && result.success) {
                 alert('✅ ' + result.message);
                 window.location.reload();
+            } else if (response.status === 401) {
+                alert('❌ Session expired. Please log in again.');
+                window.location.href = '/login';
             } else {
                 alert('❌ Approval failed: ' + (result.error || 'Unknown error'));
             }
@@ -194,24 +195,23 @@ class WorkflowManager {
             const comments = document.getElementById('bdComments')?.value || '';
             const formDataUpdates = this.collectFormDataUpdates();
 
-            const response = await fetch(`/api/workflow/submissions/${this.submissionId}/approve-bd`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                },
-                body: JSON.stringify({
+            const response = await ApiClient.post(
+                `/api/workflow/submissions/${this.submissionId}/approve-bd`,
+                {
                     comments: comments,
                     form_data: formDataUpdates
-                }),
-                credentials: 'include'
-            });
+                },
+                false
+            );
 
             const result = await response.json();
 
             if (response.ok && result.success) {
                 alert('✅ ' + result.message);
                 window.location.reload();
+            } else if (response.status === 401) {
+                alert('❌ Session expired. Please log in again.');
+                window.location.href = '/login';
             } else {
                 alert('❌ Approval failed: ' + (result.error || 'Unknown error'));
             }
@@ -229,24 +229,23 @@ class WorkflowManager {
             const comments = document.getElementById('procurementComments')?.value || '';
             const formDataUpdates = this.collectFormDataUpdates();
 
-            const response = await fetch(`/api/workflow/submissions/${this.submissionId}/approve-procurement`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                },
-                body: JSON.stringify({
+            const response = await ApiClient.post(
+                `/api/workflow/submissions/${this.submissionId}/approve-procurement`,
+                {
                     comments: comments,
                     form_data: formDataUpdates
-                }),
-                credentials: 'include'
-            });
+                },
+                false
+            );
 
             const result = await response.json();
 
             if (response.ok && result.success) {
                 alert('✅ ' + result.message);
                 window.location.reload();
+            } else if (response.status === 401) {
+                alert('❌ Session expired. Please log in again.');
+                window.location.href = '/login';
             } else {
                 alert('❌ Approval failed: ' + (result.error || 'Unknown error'));
             }
@@ -271,25 +270,24 @@ class WorkflowManager {
 
             const formDataUpdates = this.collectFormDataUpdates();
 
-            const response = await fetch(`/api/workflow/submissions/${this.submissionId}/approve-gm`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                },
-                body: JSON.stringify({
+            const response = await ApiClient.post(
+                `/api/workflow/submissions/${this.submissionId}/approve-gm`,
+                {
                     comments: comments,
                     signature: signature,
                     form_data: formDataUpdates
-                }),
-                credentials: 'include'
-            });
+                },
+                false
+            );
 
             const result = await response.json();
 
             if (response.ok && result.success) {
                 alert('✅ ' + result.message);
                 window.location.reload();
+            } else if (response.status === 401) {
+                alert('❌ Session expired. Please log in again.');
+                window.location.href = '/login';
             } else {
                 alert('❌ Approval failed: ' + (result.error || 'Unknown error'));
             }
@@ -321,17 +319,11 @@ class WorkflowManager {
                 return;
             }
 
-            const response = await fetch(`/api/workflow/submissions/${this.submissionId}/reject`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                },
-                body: JSON.stringify({
-                    reason: reason
-                }),
-                credentials: 'include'
-            });
+            const response = await ApiClient.post(
+                `/api/workflow/submissions/${this.submissionId}/reject`,
+                { reason: reason },
+                false
+            );
 
             const result = await response.json();
 
@@ -339,6 +331,9 @@ class WorkflowManager {
                 alert('✅ ' + result.message);
                 $('#rejectionModal').modal('hide');
                 window.location.reload();
+            } else if (response.status === 401) {
+                alert('❌ Session expired. Please log in again.');
+                window.location.href = '/login';
             } else {
                 alert('❌ Rejection failed: ' + (result.error || 'Unknown error'));
             }

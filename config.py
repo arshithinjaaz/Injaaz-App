@@ -53,9 +53,16 @@ DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 # REDIS (for rate limiting and background tasks)
 REDIS_URL = os.getenv("REDIS_URL")
 
-# JWT Settings
-JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 3600))  # 1 hour
-JWT_REFRESH_TOKEN_EXPIRES = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES", 2592000))  # 30 days
+# JWT Settings - Token expiry times (configurable via environment variables)
+# JWT_ACCESS_HOURS: Number of hours for access token validity (default: 1 hour)
+# JWT_REFRESH_DAYS: Number of days for refresh token validity (default: 7 days)
+from datetime import timedelta
+
+_jwt_access_hours = int(os.getenv("JWT_ACCESS_HOURS", 1))
+_jwt_refresh_days = int(os.getenv("JWT_REFRESH_DAYS", 7))
+
+JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=_jwt_access_hours)
+JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=_jwt_refresh_days)
 # JWT Cookie Settings - Enable cookie-based authentication for HTML links
 JWT_TOKEN_LOCATION = ['headers', 'cookies']  # Read from both headers and cookies
 JWT_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"  # HTTPS only in production

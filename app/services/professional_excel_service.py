@@ -446,3 +446,282 @@ def finalize_workbook(ws):
     ws.oddFooter.right.text = "Page &P of &N"
     ws.oddFooter.left.size = 8
     ws.oddFooter.right.size = 8
+
+
+def create_summary_sheet(wb, summary_data, sheet_name="Summary"):
+    """Create a summary/dashboard sheet with metrics and optional charts
+    
+    Args:
+        wb: Workbook object
+        summary_data: Dictionary with summary info:
+            - title: Report title
+            - project_name: Project/site name
+            - date: Report date
+            - status: Workflow status
+            - metrics: List of metric dicts with 'label', 'value', 'change' (optional)
+            - categories: Dict of category names and counts for pie chart
+            - timeline: List of dicts with 'date' and 'value' for line chart (optional)
+        sheet_name: Name for the summary sheet
+        
+    Returns:
+        worksheet: The summary worksheet
+    """
+    from openpyxl.chart import PieChart, BarChart, Reference
+    from openpyxl.chart.label import DataLabelList
+    from openpyxl.chart.series import DataPoint
+    
+    # Create or get the summary sheet
+    if sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+    else:
+        ws = wb.create_sheet(sheet_name, 0)  # Insert at beginning
+    
+    current_row = 1
+    
+    # Add logo and title
+    if os.path.exists(LOGO_PATH):
+        try:
+            img = XLImage(LOGO_PATH)
+            img.width = 50
+            img.height = 50
+            ws.add_image(img, 'A1')
+        except Exception as e:
+            logger.warning(f"Could not add logo to summary sheet: {e}")
+    
+    # Title
+    title = summary_data.get('title', 'Report Summary')
+    title_cell = ws['B1']
+    title_cell.value = title
+    title_cell.font = Font(bold=True, size=18, color=PRIMARY_COLOR, name='Calibri')
+    title_cell.alignment = Alignment(horizontal='left', vertical='center')
+    ws.merge_cells('B1:F1')
+    ws.row_dimensions[1].height = 40
+    
+    # Subtitle with project info
+    current_row = 3
+    project_name = summary_data.get('project_name', '')
+    date = summary_data.get('date', datetime.now().strftime('%Y-%m-%d'))
+    status = summary_data.get('status', 'N/A')
+    
+    info_cell = ws[f'A{current_row}']
+    info_cell.value = f"Project: {project_name}  |  Date: {date}  |  Status: {status.replace('_', ' ').title()}"
+    info_cell.font = Font(size=11, color=SECONDARY_COLOR, name='Calibri')
+    ws.merge_cells(f'A{current_row}:F{current_row}')
+    
+    current_row += 2
+    
+    # Metrics cards section
+    metrics = summary_data.get('metrics', [])
+    if metrics:
+        # Section header
+        ws[f'A{current_row}'].value = "Key Metrics"
+        ws[f'A{current_row}'].font = Font(bold=True, size=14, color=PRIMARY_COLOR, name='Calibri')
+        ws[f'A{current_row}'].fill = PatternFill(start_color=ACCENT_COLOR, end_color=ACCENT_COLOR, fill_type="solid")
+        ws.merge_cells(f'A{current_row}:F{current_row}')
+        ws.row_dimensions[current_row].height = 30
+        current_row += 1
+        
+        # Create metrics row
+        col_offset = 0
+        for i, metric in enumerate(metrics[:4]):  # Max 4 metrics per row
+            col_letter = get_column_letter(col_offset + 1)
+            col_letter_end = get_column_letter(col_offset + 2)
+            
+            # Metric value cell
+            value_cell = ws[f'{col_letter}{current_row}']
+            value_cell.value = metric.get('value', 0)
+            value_cell.font = Font(bold=True, size=24, color=PRIMARY_COLOR, name='Calibri')
+            value_cell.alignment = Alignment(horizontal='center', vertical='center')
+            ws.merge_cells(f'{col_letter}{current_row}:{col_letter_end}{current_row}')
+            
+            # Metric label cell
+            label_cell = ws[f'{col_letter}{current_row + 1}']
+            label_cell.value = metric.get('label', '')
+            label_cell.font = Font(size=10, color="666666", name='Calibri')
+            label_cell.alignment = Alignment(horizontal='center', vertical='center')
+            ws.merge_cells(f'{col_letter}{current_row + 1}:{col_letter_end}{current_row + 1}')
+            
+            # Add change indicator if provided
+            change = metric.get('change')
+            if change is not None:
+                change_cell = ws[f'{col_letter}{current_row + 2}']
+                change_prefix = "+" if change > 0 else ""
+                change_cell.value = f"{change_prefix}{change}%"
+                change_color = "22C55E" if change >= 0 else "EF4444"
+                change_cell.font = Font(size=9, color=change_color, name='Calibri')
+                change_cell.alignment = Alignment(horizontal='center', vertical='center')
+                ws.merge_cells(f'{col_letter}{current_row + 2}:{col_letter_end}{current_row + 2}')
+            
+            # Style the metric box
+            for row in range(current_row, current_row + 3):
+                for col in range(col_offset + 1, col_offset + 3):
+                    cell = ws.cell(row=row, column=col)
+                    cell.fill = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")
+                    cell.border = Border(
+                        left=Side(style='thin', color=BORDER_COLOR),
+                        right=Side(style='thin', color=BORDER_COLOR),
+                        top=Side(style='thin', color=BORDER_COLOR) if row == current_row else Side(style=None),
+                        bottom=Side(style='thin', color=BORDER_COLOR) if row == current_row + 2 else Side(style=None)
+                    )
+            
+            col_offset += 2
+        
+        ws.row_dimensions[current_row].height = 35
+        ws.row_dimensions[current_row + 1].height = 20
+        ws.row_dimensions[current_row + 2].height = 18
+        current_row += 4
+    
+    # Categories section with pie chart
+    categories = summary_data.get('categories', {})
+    if categories:
+        # Section header
+        ws[f'A{current_row}'].value = "Distribution"
+        ws[f'A{current_row}'].font = Font(bold=True, size=14, color=PRIMARY_COLOR, name='Calibri')
+        ws[f'A{current_row}'].fill = PatternFill(start_color=ACCENT_COLOR, end_color=ACCENT_COLOR, fill_type="solid")
+        ws.merge_cells(f'A{current_row}:C{current_row}')
+        ws.row_dimensions[current_row].height = 30
+        current_row += 1
+        
+        # Add data for pie chart
+        data_start_row = current_row
+        for cat_name, cat_value in categories.items():
+            ws[f'A{current_row}'].value = cat_name
+            ws[f'A{current_row}'].font = Font(size=10, name='Calibri')
+            ws[f'B{current_row}'].value = cat_value
+            ws[f'B{current_row}'].font = Font(size=10, name='Calibri')
+            ws[f'B{current_row}'].alignment = Alignment(horizontal='right')
+            current_row += 1
+        
+        # Create pie chart
+        try:
+            pie = PieChart()
+            pie.title = None
+            labels = Reference(ws, min_col=1, min_row=data_start_row, max_row=current_row - 1)
+            data = Reference(ws, min_col=2, min_row=data_start_row, max_row=current_row - 1)
+            pie.add_data(data)
+            pie.set_categories(labels)
+            pie.width = 10
+            pie.height = 8
+            
+            # Add data labels
+            pie.dataLabels = DataLabelList()
+            pie.dataLabels.showPercent = True
+            pie.dataLabels.showVal = False
+            pie.dataLabels.showCatName = False
+            
+            # Set colors for pie slices
+            colors_list = ["125435", "1a7a4d", "34d399", "6ee7b7", "a7f3d0", "d1fae5"]
+            for i, _ in enumerate(categories.keys()):
+                point = DataPoint(idx=i)
+                point.graphicalProperties.solidFill = colors_list[i % len(colors_list)]
+                pie.series[0].data_points.append(point)
+            
+            # Position the chart
+            ws.add_chart(pie, f'D{data_start_row}')
+        except Exception as e:
+            logger.warning(f"Could not create pie chart: {e}")
+        
+        current_row += 2
+    
+    # Set column widths
+    ws.column_dimensions['A'].width = 18
+    ws.column_dimensions['B'].width = 12
+    ws.column_dimensions['C'].width = 12
+    ws.column_dimensions['D'].width = 12
+    ws.column_dimensions['E'].width = 12
+    ws.column_dimensions['F'].width = 12
+    
+    # Add generation timestamp
+    current_row += 1
+    timestamp_cell = ws[f'A{current_row}']
+    timestamp_cell.value = f"Report generated on {datetime.now().strftime('%B %d, %Y at %H:%M')}"
+    timestamp_cell.font = Font(size=9, color="999999", italic=True, name='Calibri')
+    ws.merge_cells(f'A{current_row}:F{current_row}')
+    
+    return ws
+
+
+def create_multi_sheet_report(wb, sheets_config):
+    """Create a multi-sheet Excel report with consistent styling
+    
+    Args:
+        wb: Workbook object
+        sheets_config: List of sheet configurations, each with:
+            - name: Sheet name
+            - title: Sheet title
+            - type: 'data' or 'summary'
+            - content: Sheet-specific content data
+            
+    Returns:
+        Workbook with all sheets created
+    """
+    for sheet_config in sheets_config:
+        sheet_name = sheet_config.get('name', 'Sheet')
+        sheet_type = sheet_config.get('type', 'data')
+        
+        if sheet_type == 'summary':
+            create_summary_sheet(wb, sheet_config.get('content', {}), sheet_name)
+        else:
+            # Create data sheet
+            if sheet_name == wb.active.title:
+                ws = wb.active
+            else:
+                ws = wb.create_sheet(sheet_name)
+            
+            # Add content based on config
+            content = sheet_config.get('content', {})
+            current_row = add_logo_and_title(
+                ws, 
+                content.get('title', sheet_name),
+                content.get('subtitle')
+            )
+            
+            # Add info section if provided
+            info_data = content.get('info_data', [])
+            if info_data:
+                current_row = add_info_section(ws, info_data, current_row)
+            
+            # Add data table if provided
+            headers = content.get('headers', [])
+            data_rows = content.get('data_rows', [])
+            if headers and data_rows:
+                current_row = add_data_table(
+                    ws, headers, data_rows, current_row,
+                    title=content.get('table_title')
+                )
+            
+            finalize_workbook(ws)
+    
+    return wb
+
+
+def add_conditional_formatting(ws, start_row, end_row, column, rules):
+    """Add conditional formatting to a column
+    
+    Args:
+        ws: Worksheet object
+        start_row: Starting row
+        end_row: Ending row
+        column: Column letter
+        rules: List of dicts with 'condition', 'value', 'fill_color'
+            e.g., [{'condition': 'greaterThan', 'value': 0, 'fill_color': 'C6EFCE'}]
+    """
+    from openpyxl.formatting.rule import CellIsRule
+    
+    cell_range = f'{column}{start_row}:{column}{end_row}'
+    
+    for rule in rules:
+        condition = rule.get('condition', 'equal')
+        value = rule.get('value', 0)
+        fill_color = rule.get('fill_color', 'FFFFFF')
+        text_color = rule.get('text_color', '000000')
+        
+        ws.conditional_formatting.add(
+            cell_range,
+            CellIsRule(
+                operator=condition,
+                formula=[str(value)],
+                fill=PatternFill(start_color=fill_color, end_color=fill_color, fill_type='solid'),
+                font=Font(color=text_color)
+            )
+        )

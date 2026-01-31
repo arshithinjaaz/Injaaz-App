@@ -644,7 +644,7 @@ def submit():
                             })
                         except Exception as e:
                             logger.error(f"Failed to upload photo: {e}")
-                            return jsonify({"error": f"Cloud storage error: {str(e)}"}), 500
+                            return error_response(f"Cloud storage error: {str(e)}", 500, "STORAGE_ERROR")
 
                 items.append(
                     {
@@ -678,7 +678,7 @@ def submit():
                         })
                     except Exception as e:
                         logger.error(f"Failed to upload file: {e}")
-                        return jsonify({"error": f"Cloud storage error: {str(e)}"}), 500
+                        return error_response(f"Cloud storage error: {str(e)}", 500, "STORAGE_ERROR")
 
             # If there are explicit item fields (single item), capture them
             asset = request.form.get("asset") or request.form.get("item_0_asset") or ""
@@ -810,7 +810,7 @@ def download_file(job_id, file_type):
         job_data = get_job_status_db(job_id)
         if not job_data:
             logger.error(f"Job not found: {job_id}")
-            return jsonify({"error": "Job not found"}), 404
+            return error_response("Job not found", 404, "JOB_NOT_FOUND")
         
         # Log the job_data structure (debug level only)
         logger.debug(f"Job data for {job_id}: {type(job_data)}")
@@ -908,7 +908,7 @@ def download_file(job_id, file_type):
                 # Verify file content is not empty
                 if len(file_content) == 0:
                     logger.error(f"Empty file content received from Cloudinary: {file_url}")
-                    return jsonify({"error": "File content is empty"}), 500
+                    return error_response("File content is empty", 500, "EMPTY_FILE")
                 
                 logger.debug(f"Serving file: {filename}, size: {len(file_content)} bytes, type: {mimetype}")
                 
@@ -1334,26 +1334,26 @@ def add_photos_to_item():
             item_index = request.form.get("item_index")
             
             if not submission_id or item_index is None:
-                return jsonify({"error": "submission_id and item_index are required"}), 400
+                return error_response("submission_id and item_index are required", 400, "VALIDATION_ERROR")
             
             try:
                 item_index = int(item_index)
             except ValueError:
-                return jsonify({"error": "item_index must be a number"}), 400
+                return error_response("item_index must be a number", 400, "VALIDATION_ERROR")
             
             # Get the submission from database
             from common.db_utils import get_submission_db
             submission = get_submission_db(submission_id)
             
             if not submission:
-                return jsonify({"error": "Submission not found"}), 404
+                return error_response("Submission not found", 404, "NOT_FOUND")
             
             # Parse form_data JSON (submission is a dict, not an object)
             form_data = submission.get('form_data', {})
             items = form_data.get("items", [])
             
             if item_index < 0 or item_index >= len(items):
-                return jsonify({"error": f"Item index {item_index} out of range (0-{len(items)-1})"}), 400
+                return error_response(f"Item index {item_index} out of range (0-{len(items)-1})", 400, "VALIDATION_ERROR")
             
             # Upload new photos
             new_photos = []
@@ -1373,10 +1373,10 @@ def add_photos_to_item():
                         logger.info(f"✅ Uploaded photo: {result['url']}")
                     except Exception as e:
                         logger.error(f"Failed to upload photo: {e}")
-                        return jsonify({"error": f"Photo upload failed: {str(e)}"}), 500
+                        return error_response(f"Photo upload failed: {str(e)}", 500, "UPLOAD_ERROR")
             
             if not new_photos:
-                return jsonify({"error": "No valid photos provided"}), 400
+                return error_response("No valid photos provided", 400, "VALIDATION_ERROR")
             
             # Add photos to the item
             if "photos" not in items[item_index]:
@@ -1395,7 +1395,7 @@ def add_photos_to_item():
             )
             
             if not updated_submission:
-                return jsonify({"error": "Failed to update submission"}), 500
+                return error_response("Failed to update submission", 500, "UPDATE_ERROR")
             
             logger.info(f"✅ Added {len(new_photos)} photos to item {item_index} in submission {submission_id}")
             
@@ -1411,36 +1411,36 @@ def add_photos_to_item():
             data = request.get_json()
             
             if not data:
-                return jsonify({"error": "No data provided"}), 400
+                return error_response("No data provided", 400, "VALIDATION_ERROR")
             
             submission_id = data.get("submission_id")
             item_index = data.get("item_index")
             photo_urls = data.get("photo_urls", [])
             
             if not submission_id or item_index is None:
-                return jsonify({"error": "submission_id and item_index are required"}), 400
+                return error_response("submission_id and item_index are required", 400, "VALIDATION_ERROR")
             
             if not photo_urls or not isinstance(photo_urls, list):
-                return jsonify({"error": "photo_urls must be a non-empty array"}), 400
+                return error_response("photo_urls must be a non-empty array", 400, "VALIDATION_ERROR")
             
             try:
                 item_index = int(item_index)
             except ValueError:
-                return jsonify({"error": "item_index must be a number"}), 400
+                return error_response("item_index must be a number", 400, "VALIDATION_ERROR")
             
             # Get the submission from database
             from common.db_utils import get_submission_db
             submission = get_submission_db(submission_id)
             
             if not submission:
-                return jsonify({"error": "Submission not found"}), 404
+                return error_response("Submission not found", 404, "NOT_FOUND")
             
             # Parse form_data JSON (submission is a dict, not an object)
             form_data = submission.get('form_data', {})
             items = form_data.get("items", [])
             
             if item_index < 0 or item_index >= len(items):
-                return jsonify({"error": f"Item index {item_index} out of range (0-{len(items)-1})"}), 400
+                return error_response(f"Item index {item_index} out of range (0-{len(items)-1})", 400, "VALIDATION_ERROR")
             
             # Add photo URLs to the item
             new_photos = []
@@ -1468,7 +1468,7 @@ def add_photos_to_item():
             )
             
             if not updated_submission:
-                return jsonify({"error": "Failed to update submission"}), 500
+                return error_response("Failed to update submission", 500, "UPDATE_ERROR")
             
             logger.info(f"✅ Added {len(new_photos)} photo URLs to item {item_index} in submission {submission_id}")
             
@@ -1482,4 +1482,4 @@ def add_photos_to_item():
     except Exception as e:
         logger.error(f"❌ Add photos to item failed: {str(e)}")
         logger.error(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
+        return error_response(str(e), 500, "INTERNAL_ERROR")

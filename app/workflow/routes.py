@@ -8,6 +8,7 @@ Stage 4: General Manager (final approval)
 from flask import Blueprint, request, jsonify, current_app, render_template
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import or_, and_
+from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.attributes import flag_modified
 from app.models import db, User, Submission, AuditLog
 from common.error_responses import error_response, success_response
@@ -376,8 +377,10 @@ def get_pending_submissions():
         if not hasattr(user, 'designation') or not user.designation:
             if user.role != 'admin':
                 return error_response('No designation assigned', status_code=403, error_code='NO_DESIGNATION')
-            # Admin sees all pending
-            submissions = Submission.query.filter(
+            # Admin sees all pending - use eager loading for user relationship
+            submissions = Submission.query.options(
+                joinedload(Submission.user)
+            ).filter(
                 Submission.workflow_status.notin_(['completed', 'closed_by_admin', 'rejected'])
             ).order_by(Submission.created_at.desc()).all()
         else:
@@ -385,7 +388,8 @@ def get_pending_submissions():
         
         result = []
         for submission in submissions:
-            sub_user = User.query.get(submission.user_id) if submission.user_id else None
+            # Use eager-loaded user if available, otherwise query
+            sub_user = getattr(submission, 'user', None) or (User.query.get(submission.user_id) if submission.user_id else None)
             sub_dict = submission.to_dict()
             sub_dict['user'] = sub_user.to_dict() if sub_user else None
             sub_dict['can_edit'] = can_edit_submission(user, submission)
@@ -411,40 +415,45 @@ def get_history_submissions():
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
         
-        # Admin sees all submissions
+        # Admin sees all submissions - use eager loading
         if user.role == 'admin':
-            submissions = Submission.query.order_by(Submission.created_at.desc()).all()
+            submissions = Submission.query.options(
+                joinedload(Submission.user)
+            ).order_by(Submission.created_at.desc()).all()
         elif not hasattr(user, 'designation') or not user.designation:
             return error_response('No designation assigned', status_code=403, error_code='NO_DESIGNATION')
         else:
             designation = user.designation
             
+            # Base query with eager loading
+            base_query = Submission.query.options(joinedload(Submission.user))
+            
             # Filter based on designation
             if designation == 'supervisor':
-                submissions = Submission.query.filter(
+                submissions = base_query.filter(
                     Submission.supervisor_id == user.id
                 ).order_by(Submission.created_at.desc()).all()
             
             elif designation == 'operations_manager':
                 # Operations Manager sees all forms they've reviewed (where they're assigned as operations_manager_id)
                 # This includes forms they've approved even if status has moved forward
-                submissions = Submission.query.filter(
+                submissions = base_query.filter(
                     Submission.operations_manager_id == user.id
                 ).order_by(Submission.created_at.desc()).all()
             
             elif designation == 'business_development':
-                submissions = Submission.query.filter(
+                submissions = base_query.filter(
                     Submission.business_dev_id == user.id
                 ).order_by(Submission.created_at.desc()).all()
             
             elif designation == 'procurement':
-                submissions = Submission.query.filter(
+                submissions = base_query.filter(
                     Submission.procurement_id == user.id
                 ).order_by(Submission.created_at.desc()).all()
             
             elif designation == 'general_manager':
                 # GM sees everything that reached their stage
-                submissions = Submission.query.filter(
+                submissions = base_query.filter(
                     or_(
                         Submission.workflow_status == 'general_manager_review',
                         Submission.workflow_status == 'general_manager_approved',
@@ -457,7 +466,8 @@ def get_history_submissions():
         
         result = []
         for submission in submissions:
-            sub_user = User.query.get(submission.user_id) if submission.user_id else None
+            # Use eager-loaded user if available
+            sub_user = getattr(submission, 'user', None) or (User.query.get(submission.user_id) if submission.user_id else None)
             sub_dict = submission.to_dict()
             sub_dict['user'] = sub_user.to_dict() if sub_user else None
             
@@ -770,7 +780,15 @@ def get_submission_detail(submission_id):
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
         
-        submission = Submission.query.filter_by(submission_id=submission_id).first()
+        # Use eager loading to fetch all related users in one query
+        submission = Submission.query.options(
+            joinedload(Submission.user),
+            joinedload(Submission.operations_manager),
+            joinedload(Submission.business_dev),
+            joinedload(Submission.procurement),
+            joinedload(Submission.general_manager)
+        ).filter_by(submission_id=submission_id).first()
+        
         if not submission:
             return error_response('Submission not found', status_code=404, error_code='NOT_FOUND')
         
@@ -787,27 +805,12 @@ def get_submission_detail(submission_id):
         sub_dict = submission.to_dict()
         sub_dict['can_edit'] = can_edit_submission(user, submission)
         
-        # Add user details
-        if submission.user_id:
-            submitter = User.query.get(submission.user_id)
-            sub_dict['user'] = submitter.to_dict() if submitter else None
-        
-        # Add approver details
-        if submission.operations_manager_id:
-            ops_mgr = User.query.get(submission.operations_manager_id)
-            sub_dict['operations_manager'] = ops_mgr.to_dict() if ops_mgr else None
-        
-        if submission.business_dev_id:
-            bd_user = User.query.get(submission.business_dev_id)
-            sub_dict['business_dev'] = bd_user.to_dict() if bd_user else None
-        
-        if submission.procurement_id:
-            proc_user = User.query.get(submission.procurement_id)
-            sub_dict['procurement'] = proc_user.to_dict() if proc_user else None
-        
-        if submission.general_manager_id:
-            gm_user = User.query.get(submission.general_manager_id)
-            sub_dict['general_manager'] = gm_user.to_dict() if gm_user else None
+        # Add user details (using eager-loaded relationships)
+        sub_dict['user'] = submission.user.to_dict() if submission.user else None
+        sub_dict['operations_manager'] = submission.operations_manager.to_dict() if submission.operations_manager else None
+        sub_dict['business_dev'] = submission.business_dev.to_dict() if submission.business_dev else None
+        sub_dict['procurement'] = submission.procurement.to_dict() if submission.procurement else None
+        sub_dict['general_manager'] = submission.general_manager.to_dict() if submission.general_manager else None
         
         return success_response(sub_dict)
     except Exception as e:

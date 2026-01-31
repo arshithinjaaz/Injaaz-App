@@ -543,13 +543,13 @@ def status(job_id):
     try:
         job_data = get_job_status_db(job_id)
         if not job_data:
-            return jsonify({"error": "unknown job"}), 404
+            return error_response("Job not found", 404, "JOB_NOT_FOUND")
         return jsonify(job_data)
     except Exception as e:
         logger.error(f"Status check failed for {job_id}: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        return jsonify({"error": "Status check failed", "details": str(e)}), 500
+        return error_response("Status check failed", 500, "INTERNAL_ERROR", str(e))
 
 
 @civil_bp.route("/generated/<path:filename>", methods=["GET"])
@@ -580,7 +580,7 @@ def download_file(job_id, file_type):
         job_data = get_job_status_db(job_id)
         if not job_data:
             logger.error(f"Job not found: {job_id}")
-            return jsonify({"error": "Job not found"}), 404
+            return error_response("Job not found", 404, "JOB_NOT_FOUND")
         
         # Extract results
         results = {}
@@ -788,9 +788,9 @@ def submit_with_urls():
         visit_date = payload.get("visit_date", "").strip()
         
         if not project_name:
-            return jsonify({"error": "Project name is required"}), 400
+            return error_response("Project name is required", 400, "VALIDATION_ERROR")
         if not location:
-            return jsonify({"error": "Location is required"}), 400
+            return error_response("Location is required", 400, "VALIDATION_ERROR")
         
         # Validate date format
         if visit_date:
@@ -805,10 +805,10 @@ def submit_with_urls():
                 logger.info(f"Date validation: parsed_date={parsed_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
                 if parsed_date > max_allowed_date:
                     logger.warning(f"Rejected future date: {parsed_date} > {max_allowed_date}")
-                    return jsonify({"error": f"Visit date ({parsed_date}) cannot be more than 1 day in the future"}), 400
+                    return error_response(f"Visit date ({parsed_date}) cannot be more than 1 day in the future", 400, "VALIDATION_ERROR")
             except ValueError as e:
                 logger.error(f"Invalid date format: {visit_date}, error: {e}")
-                return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+                return error_response("Invalid date format. Use YYYY-MM-DD", 400, "VALIDATION_ERROR")
         
         # Process signatures (data URLs)
         inspector_sig_dataurl = payload.get("inspector_signature", "")
