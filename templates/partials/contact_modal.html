@@ -1,0 +1,43 @@
+{#
+  Contact Modal Component
+  
+  Usage:
+    {% include 'partials/contact_modal.html' %}
+  
+  Requires:
+    - closeContactModal() JavaScript function
+#}
+
+<div id="contactModal" class="contact-modal">
+  <div class="contact-modal-content">
+    <div class="contact-modal-header">
+      <h2>Contact Us</h2>
+      <button class="contact-modal-close" onclick="closeContactModal()" aria-label="Close">×</button>
+    </div>
+    <div class="contact-modal-info">
+      <div class="contact-modal-item">
+        <span class="contact-modal-icon">📍</span>
+        <div class="contact-modal-details">
+          <h4>Address</h4>
+          <p>Sheik Khalifa Bin Zayed St<br>Ajman, United Arab Emirates</p>
+        </div>
+      </div>
+      <div class="contact-modal-item">
+        <span class="contact-modal-icon">📞</span>
+        <div class="contact-modal-details">
+          <h4>Phone</h4>
+          <a href="tel:+97167123456">+971 6 712 3456</a>
+          <p class="contact-modal-note">Available 24/7</p>
+        </div>
+      </div>
+      <div class="contact-modal-item">
+        <span class="contact-modal-icon">📧</span>
+        <div class="contact-modal-details">
+          <h4>Email</h4>
+          <a href="mailto:info@injaaz.ae">info@injaaz.ae</a>
+          <p class="contact-modal-note">We'll respond within 24 hours</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

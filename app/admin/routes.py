@@ -261,6 +261,87 @@ def delete_user(user_id):
         return jsonify({'error': 'Failed to delete user'}), 500
 
 
+@admin_bp.route('/users/<int:user_id>/activity', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_user_activity(user_id):
+    """Get user's submission and review activity"""
+    try:
+        from app.models import Submission
+        
+        user = User.query.get_or_404(user_id)
+        
+        # Get submissions created by this user (as supervisor)
+        submitted_forms = []
+        if user.designation == 'supervisor':
+            submissions = Submission.query.filter_by(supervisor_id=user.id).order_by(Submission.created_at.desc()).all()
+            for sub in submissions:
+                submitted_forms.append({
+                    'id': sub.id,
+                    'submission_id': sub.submission_id,
+                    'module_type': sub.module_type,
+                    'site_name': sub.site_name or 'N/A',
+                    'visit_date': sub.visit_date.isoformat() if sub.visit_date else None,
+                    'status': sub.status,
+                    'workflow_status': getattr(sub, 'workflow_status', 'submitted'),
+                    'created_at': sub.created_at.isoformat() + 'Z' if sub.created_at else None
+                })
+        
+        # Get forms reviewed by this user based on their designation
+        reviewed_forms = []
+        designation = user.designation
+        reviews = []
+        
+        if designation == 'operations_manager':
+            reviews = Submission.query.filter(
+                Submission.operations_manager_id == user.id
+            ).order_by(Submission.updated_at.desc()).all()
+        elif designation == 'business_development':
+            reviews = Submission.query.filter(
+                Submission.business_dev_id == user.id
+            ).order_by(Submission.updated_at.desc()).all()
+        elif designation == 'procurement':
+            reviews = Submission.query.filter(
+                Submission.procurement_id == user.id
+            ).order_by(Submission.updated_at.desc()).all()
+        elif designation == 'general_manager':
+            reviews = Submission.query.filter(
+                Submission.general_manager_id == user.id
+            ).order_by(Submission.updated_at.desc()).all()
+        
+        for sub in reviews:
+            # Get the supervisor info
+            supervisor = User.query.get(sub.supervisor_id) if sub.supervisor_id else None
+            reviewed_forms.append({
+                'id': sub.id,
+                'submission_id': sub.submission_id,
+                'module_type': sub.module_type,
+                'site_name': sub.site_name or 'N/A',
+                'visit_date': sub.visit_date.isoformat() if sub.visit_date else None,
+                'status': sub.status,
+                'workflow_status': getattr(sub, 'workflow_status', 'submitted'),
+                'created_at': sub.created_at.isoformat() + 'Z' if sub.created_at else None,
+                'supervisor': supervisor.full_name or supervisor.username if supervisor else 'Unknown'
+            })
+        
+        return success_response({
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'full_name': user.full_name,
+                'designation': user.designation,
+                'role': user.role
+            },
+            'submitted_forms': submitted_forms,
+            'submitted_count': len(submitted_forms),
+            'reviewed_forms': reviewed_forms,
+            'reviewed_count': len(reviewed_forms)
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error fetching user activity: {str(e)}", exc_info=True)
+        return error_response('Failed to fetch user activity', status_code=500, error_code='DATABASE_ERROR')
+
+
 @admin_bp.route('/users/<int:user_id>', methods=['PUT'])
 @jwt_required()
 @admin_required

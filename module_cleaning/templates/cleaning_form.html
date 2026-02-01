@@ -558,6 +558,38 @@
       image-rendering: crisp-edges;
     }
     
+    /* Add Saved Signature Button Styles */
+    .add-default-signature {
+      transition: all 0.2s ease;
+      border-radius: 6px !important;
+      font-weight: 500 !important;
+    }
+    
+    .add-default-signature.has-signature {
+      background: linear-gradient(135deg, #125435 0%, #1a7a4d 100%) !important;
+      box-shadow: 0 2px 6px rgba(18, 84, 53, 0.25);
+    }
+    
+    .add-default-signature.has-signature:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(18, 84, 53, 0.35);
+    }
+    
+    .add-default-signature.no-signature {
+      background: #64748b !important;
+      opacity: 0.8;
+    }
+    
+    .add-default-signature.no-signature:hover {
+      opacity: 1;
+      background: #475569 !important;
+    }
+    
+    .add-default-signature:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    
     .signature-label {
       display: flex;
       justify-content: space-between;
@@ -1065,11 +1097,15 @@
                                             </div>
                                             <canvas id="supervisorSignaturePad" class="signature-pad" style="height: 80px;"></canvas>
                                             <input type="hidden" id="supervisorSignatureData" name="supervisor_signature">
-                                            <div class="d-flex gap-2 mt-1">
-                                                <button type="button" id="clearSupervisor" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Clear</button>
-                                                <button type="button" class="btn btn-sm add-default-signature" style="background-color: var(--primary); color: white; border: none; font-size: 0.75rem; padding: 2px 8px;"
+                                            <div class="d-flex gap-2 mt-1 flex-wrap">
+                                                <button type="button" id="clearSupervisor" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
+                                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                                                  Clear
+                                                </button>
+                                                <button type="button" class="btn btn-sm add-default-signature"
                                                         data-pad="supervisorPad" data-comment="supervisorComments" data-input="supervisorSignatureData">
-                                                  Add Saved Signature
+                                                  <svg class="sig-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/></svg>
+                                                  <span class="sig-text">Use Saved Signature</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -1249,10 +1285,14 @@
                                       <canvas id="opManSignaturePad" class="signature-pad" style="height: 80px;"></canvas>
                                       <input type="hidden" id="opManSignatureData" name="opMan_signature">
                                       <div class="d-flex gap-2 mt-1">
-                                        <button type="button" id="clearOp" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Clear</button>
-                                        <button type="button" class="btn btn-sm add-default-signature" style="background-color: var(--primary); color: white; border: none; font-size: 0.75rem; padding: 2px 8px;"
+                                        <button type="button" id="clearOp" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
+                                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                                          Clear
+                                        </button>
+                                        <button type="button" class="btn btn-sm add-default-signature"
                                                 data-pad="opPad" data-comment="operationsManagerComments" data-input="opManSignatureData">
-                                          Add Saved Signature
+                                          <svg class="sig-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/></svg>
+                                          <span class="sig-text">Use Saved Signature</span>
                                         </button>
                                       </div>
                                     </div>
@@ -1358,10 +1398,14 @@
                                     <canvas id="businessDevSignaturePad" class="signature-pad" style="height: 80px;"></canvas>
                                     <input type="hidden" id="businessDevSignatureData" name="business_dev_signature">
                                     <div class="d-flex gap-2 mt-1">
-                                      <button type="button" id="clearBusinessDev" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Clear</button>
-                                      <button type="button" class="btn btn-sm add-default-signature" style="background-color: var(--primary); color: white; border: none; font-size: 0.75rem; padding: 2px 8px;"
+                                      <button type="button" id="clearBusinessDev" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                                        Clear
+                                      </button>
+                                      <button type="button" class="btn btn-sm add-default-signature"
                                               data-pad="businessDevPad" data-comment="businessDevComments" data-input="businessDevSignatureData">
-                                        Add Saved Signature
+                                        <svg class="sig-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/></svg>
+                                        <span class="sig-text">Use Saved Signature</span>
                                       </button>
                                     </div>
                                   </div>
@@ -1446,10 +1490,14 @@
                                     <canvas id="procurementSignaturePad" class="signature-pad" style="height: 80px;"></canvas>
                                     <input type="hidden" id="procurementSignatureData" name="procurement_signature">
                                     <div class="d-flex gap-2 mt-1">
-                                      <button type="button" id="clearProcurement" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Clear</button>
-                                      <button type="button" class="btn btn-sm add-default-signature" style="background-color: var(--primary); color: white; border: none; font-size: 0.75rem; padding: 2px 8px;"
+                                      <button type="button" id="clearProcurement" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                                        Clear
+                                      </button>
+                                      <button type="button" class="btn btn-sm add-default-signature"
                                               data-pad="procurementPad" data-comment="procurementComments" data-input="procurementSignatureData">
-                                        Add Saved Signature
+                                        <svg class="sig-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/></svg>
+                                        <span class="sig-text">Use Saved Signature</span>
                                       </button>
                                     </div>
                                   </div>
@@ -1549,10 +1597,14 @@
                                     <canvas id="generalManagerSignaturePad" class="signature-pad" style="height: 80px;"></canvas>
                                     <input type="hidden" id="generalManagerSignatureData" name="general_manager_signature">
                                     <div class="d-flex gap-2 mt-1">
-                                      <button type="button" id="clearGeneralManager" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 2px 8px;">Clear</button>
-                                      <button type="button" class="btn btn-sm add-default-signature" style="background-color: var(--primary); color: white; border: none; font-size: 0.75rem; padding: 2px 8px;"
+                                      <button type="button" id="clearGeneralManager" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                                        Clear
+                                      </button>
+                                      <button type="button" class="btn btn-sm add-default-signature"
                                               data-pad="generalManagerPad" data-comment="generalManagerComments" data-input="generalManagerSignatureData">
-                                        Add Saved Signature
+                                        <svg class="sig-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/></svg>
+                                        <span class="sig-text">Use Saved Signature</span>
                                       </button>
                                     </div>
                                   </div>
@@ -1968,32 +2020,137 @@
             }
         }
 
+        const sigIconSvg = '<svg class="sig-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/></svg>';
+        const checkIconSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M20 6L9 17l-5-5"/></svg>';
+        
         function initDefaultSignatureButtons() {
             document.querySelectorAll('.add-default-signature').forEach(btn => {
+                const sigText = btn.querySelector('.sig-text');
+                
+                // Update button state based on whether signature exists
+                if (userDefaultSignature) {
+                    btn.classList.add('has-signature');
+                    btn.classList.remove('no-signature');
+                    if (sigText) sigText.textContent = 'Use Saved Signature';
+                    btn.title = 'Click to apply your saved signature';
+                } else {
+                    btn.classList.add('no-signature');
+                    btn.classList.remove('has-signature');
+                    if (sigText) sigText.textContent = 'No Saved Signature';
+                    btn.title = 'No saved signature. Go to Profile to create one.';
+                }
+                
                 btn.addEventListener('click', async () => {
                     const padKey = btn.dataset.pad;
                     const commentId = btn.dataset.comment;
                     const inputId = btn.dataset.input;
                     const pads = window.signaturePads || {};
                     const pad = pads[padKey];
+                    
+                    if (!userDefaultSignature) {
+                        // Show helpful message if no saved signature
+                        showSignatureToast('No saved signature found. Go to your Profile to save a default signature.', 'warning');
+                        return;
+                    }
+                    
                     if (pad && userDefaultSignature) {
                         try {
+                            // Show loading state
+                            const originalHTML = btn.innerHTML;
+                            btn.innerHTML = '⏳ <span class="sig-text">Applying...</span>';
+                            btn.disabled = true;
+                            
                             const dataUrl = await resolveSignatureDataUrl(userDefaultSignature);
                             if (dataUrl) {
                                 pad.fromDataURL(dataUrl);
                                 const sigInput = document.getElementById(inputId);
                                 if (sigInput) sigInput.value = dataUrl;
+                                
+                                // Show success feedback
+                                btn.innerHTML = checkIconSvg + '<span class="sig-text">Applied!</span>';
+                                btn.style.background = '#22c55e';
+                                showSignatureToast('Signature applied successfully!', 'success');
+                                
+                                setTimeout(() => {
+                                    btn.innerHTML = originalHTML;
+                                    btn.style.background = '';
+                                    btn.disabled = false;
+                                }, 1500);
+                            } else {
+                                btn.innerHTML = originalHTML;
+                                btn.disabled = false;
+                                showSignatureToast('Failed to load signature. Please try again.', 'error');
                             }
                         } catch (error) {
                             console.warn('Failed to apply default signature', error);
+                            btn.innerHTML = sigIconSvg + '<span class="sig-text">Use Saved Signature</span>';
+                            btn.disabled = false;
+                            showSignatureToast('Error applying signature. Please try again.', 'error');
                         }
                     }
+                    
                     const commentEl = document.getElementById(commentId);
                     if (commentEl && userDefaultComment && !commentEl.value.trim()) {
                         commentEl.value = userDefaultComment;
                     }
                 });
             });
+        }
+        
+        // Toast notification for signature actions
+        function showSignatureToast(message, type = 'info') {
+            const existing = document.querySelector('.sig-toast');
+            if (existing) existing.remove();
+            
+            const colors = {
+                success: { bg: '#dcfce7', border: '#22c55e', text: '#166534', icon: '✓' },
+                warning: { bg: '#fef3c7', border: '#f59e0b', text: '#92400e', icon: '⚠️' },
+                error: { bg: '#fee2e2', border: '#ef4444', text: '#991b1b', icon: '✕' },
+                info: { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af', icon: 'ℹ' }
+            };
+            const style = colors[type] || colors.info;
+            
+            const toast = document.createElement('div');
+            toast.className = 'sig-toast';
+            toast.innerHTML = `<span style="margin-right: 8px;">${style.icon}</span>${message}`;
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: ${style.bg};
+                border: 1px solid ${style.border};
+                color: ${style.text};
+                padding: 12px 20px;
+                border-radius: 10px;
+                font-size: 14px;
+                font-weight: 500;
+                z-index: 10001;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                animation: slideUp 0.3s ease;
+                display: flex;
+                align-items: center;
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Add animation keyframes if not exists
+            if (!document.querySelector('#sig-toast-style')) {
+                const styleEl = document.createElement('style');
+                styleEl.id = 'sig-toast-style';
+                styleEl.textContent = `
+                    @keyframes slideUp {
+                        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+                        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                    }
+                `;
+                document.head.appendChild(styleEl);
+            }
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideUp 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         loadUserDefaults().then(() => {

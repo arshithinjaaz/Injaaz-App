@@ -992,6 +992,208 @@
     </div>
   </div>
 
+  <!-- User Activity Modal -->
+  <div id="userActivityModal" class="modal">
+    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 class="modal-title" id="userActivityTitle">User Activity</h2>
+        <button type="button" class="modal-close" onclick="closeUserActivityModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; line-height: 1;">&times;</button>
+      </div>
+      <div id="userActivityContent" style="padding: 1rem 0;">
+        <div style="text-align: center; padding: 2rem;">
+          <div class="spinner" style="border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+          <p style="margin-top: 1rem; color: #666;">Loading user activity...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* User Activity Modal Styles */
+    .activity-section {
+      margin-bottom: 1.5rem;
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 1rem;
+      border: 1px solid #e2e8f0;
+    }
+    .activity-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .activity-section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .activity-badge {
+      background: var(--primary);
+      color: white;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .activity-badge.reviewed {
+      background: #3b82f6;
+    }
+    .activity-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    .activity-table th {
+      text-align: left;
+      padding: 0.625rem 0.75rem;
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .activity-table td {
+      padding: 0.625rem 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+    }
+    .activity-table tr:last-child td {
+      border-bottom: none;
+    }
+    .activity-table tr:hover td {
+      background: #f8fafc;
+    }
+    .activity-table tr.clickable-row {
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .activity-table tr.clickable-row:hover td {
+      background: #e0f2fe;
+    }
+    .btn-view-form {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-view-form:hover {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    }
+    .btn-view-form svg {
+      width: 16px;
+      height: 16px;
+    }
+    .status-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-badge.completed { background: #dcfce7; color: #166534; }
+    .status-badge.pending { background: #fef3c7; color: #92400e; }
+    .status-badge.submitted { background: #dbeafe; color: #1e40af; }
+    .status-badge.rejected { background: #fee2e2; color: #991b1b; }
+    .module-badge-sm {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+    .module-badge-sm.hvac { background: #dbeafe; color: #1e40af; }
+    .module-badge-sm.civil { background: #f3e8ff; color: #6b21a8; }
+    .module-badge-sm.cleaning { background: #dcfce7; color: #166534; }
+    .user-info-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: linear-gradient(135deg, #125435 0%, #1a7a4d 100%);
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      color: white;
+    }
+    .user-info-avatar {
+      width: 56px;
+      height: 56px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    .user-info-details h3 {
+      margin: 0 0 0.25rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .user-info-details p {
+      margin: 0;
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+    .user-stats {
+      display: flex;
+      gap: 1.5rem;
+      margin-left: auto;
+    }
+    .user-stat {
+      text-align: center;
+    }
+    .user-stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .user-stat-label {
+      font-size: 0.7rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: #64748b;
+    }
+    .empty-state-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.5;
+    }
+    .btn-activity {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-activity:hover {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    }
+  </style>
+
   <!-- Edit Submission Modal -->
   <div id="editModal" class="modal">
     <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
@@ -1215,6 +1417,16 @@
             </td>
             <td data-label="Actions">
               <div class="action-buttons">
+                <button class="btn btn-sm btn-activity" onclick="openUserActivityModal(${user.id})" title="View user activity">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px;">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                  Activity
+                </button>
                 <button class="btn btn-sm btn-reset" onclick="resetPassword(${user.id}, '${user.username}')">Reset Password</button>
                 <button class="btn btn-sm btn-toggle" onclick="toggleActive(${user.id}, ${user.is_active})">
                   ${user.is_active ? 'Deactivate' : 'Activate'}
@@ -1322,6 +1534,239 @@
     function closeAccessModal() {
       document.getElementById('accessModal').classList.remove('active');
     }
+
+    // User Activity Modal Functions
+    async function openUserActivityModal(userId) {
+      const modal = document.getElementById('userActivityModal');
+      const content = document.getElementById('userActivityContent');
+      const title = document.getElementById('userActivityTitle');
+      
+      // Show loading state
+      content.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+          <div class="spinner" style="border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+          <p style="margin-top: 1rem; color: #666;">Loading user activity...</p>
+        </div>
+      `;
+      modal.classList.add('active');
+      
+      try {
+        const response = await authenticatedFetch(`/api/admin/users/${userId}/activity`);
+        if (handleUnauthorized(response)) return;
+        
+        const data = await response.json();
+        if (data.success) {
+          renderUserActivity(data, content, title);
+        } else {
+          content.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc2626;">Failed to load user activity</div>`;
+        }
+      } catch (error) {
+        console.error('Error loading user activity:', error);
+        content.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc2626;">Error loading user activity</div>`;
+      }
+    }
+    
+    function renderUserActivity(data, container, titleEl) {
+      const user = data.user;
+      const submitted = data.submitted_forms || [];
+      const reviewed = data.reviewed_forms || [];
+      
+      // Get initials
+      const initials = user.full_name 
+        ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+        : user.username.slice(0, 2).toUpperCase();
+      
+      // Format designation
+      const designationMap = {
+        'supervisor': 'Supervisor',
+        'operations_manager': 'Operations Manager',
+        'business_development': 'Business Development',
+        'procurement': 'Procurement',
+        'general_manager': 'General Manager'
+      };
+      const designation = designationMap[user.designation] || user.designation || 'Not assigned';
+      
+      titleEl.textContent = `Activity: ${user.full_name || user.username}`;
+      
+      let html = `
+        <div class="user-info-card">
+          <div class="user-info-avatar">${initials}</div>
+          <div class="user-info-details">
+            <h3>${user.full_name || user.username}</h3>
+            <p>${designation} • ${user.role}</p>
+          </div>
+          <div class="user-stats">
+            <div class="user-stat">
+              <div class="user-stat-value">${data.submitted_count}</div>
+              <div class="user-stat-label">Submitted</div>
+            </div>
+            <div class="user-stat">
+              <div class="user-stat-value">${data.reviewed_count}</div>
+              <div class="user-stat-label">Reviewed</div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Submitted Forms Section
+      html += `
+        <div class="activity-section">
+          <div class="activity-section-header">
+            <div class="activity-section-title">
+              📄 Forms Submitted
+              <span class="activity-badge">${submitted.length}</span>
+            </div>
+          </div>
+      `;
+      
+      if (submitted.length > 0) {
+        html += `
+          <table class="activity-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Module</th>
+                <th>Site Name</th>
+                <th>Visit Date</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        submitted.forEach(form => {
+          const moduleClass = form.module_type === 'hvac_mep' ? 'hvac' : form.module_type === 'civil' ? 'civil' : 'cleaning';
+          const moduleLabel = form.module_type === 'hvac_mep' ? 'HVAC' : form.module_type === 'civil' ? 'Civil' : 'Cleaning';
+          const statusClass = form.workflow_status === 'completed' ? 'completed' : form.workflow_status === 'rejected' ? 'rejected' : 'pending';
+          const created = form.created_at ? new Date(form.created_at).toLocaleDateString() : '-';
+          
+          html += `
+            <tr class="clickable-row" onclick="viewFormFromActivity('${form.module_type}', '${form.submission_id}')">
+              <td><code style="font-size: 0.75rem;">${form.submission_id}</code></td>
+              <td><span class="module-badge-sm ${moduleClass}">${moduleLabel}</span></td>
+              <td>${form.site_name}</td>
+              <td>${form.visit_date || '-'}</td>
+              <td><span class="status-badge ${statusClass}">${form.workflow_status}</span></td>
+              <td>${created}</td>
+              <td>
+                <button class="btn-view-form" onclick="event.stopPropagation(); viewFormFromActivity('${form.module_type}', '${form.submission_id}')" title="View Form">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        html += `</tbody></table>`;
+      } else {
+        html += `
+          <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <p>No forms submitted yet</p>
+          </div>
+        `;
+      }
+      html += `</div>`;
+      
+      // Reviewed Forms Section
+      html += `
+        <div class="activity-section">
+          <div class="activity-section-header">
+            <div class="activity-section-title">
+              ✅ Forms Reviewed
+              <span class="activity-badge reviewed">${reviewed.length}</span>
+            </div>
+          </div>
+      `;
+      
+      if (reviewed.length > 0) {
+        html += `
+          <table class="activity-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Module</th>
+                <th>Site Name</th>
+                <th>Submitted By</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        reviewed.forEach(form => {
+          const moduleClass = form.module_type === 'hvac_mep' ? 'hvac' : form.module_type === 'civil' ? 'civil' : 'cleaning';
+          const moduleLabel = form.module_type === 'hvac_mep' ? 'HVAC' : form.module_type === 'civil' ? 'Civil' : 'Cleaning';
+          const statusClass = form.workflow_status === 'completed' ? 'completed' : form.workflow_status === 'rejected' ? 'rejected' : 'pending';
+          const created = form.created_at ? new Date(form.created_at).toLocaleDateString() : '-';
+          
+          html += `
+            <tr class="clickable-row" onclick="viewFormFromActivity('${form.module_type}', '${form.submission_id}')">
+              <td><code style="font-size: 0.75rem;">${form.submission_id}</code></td>
+              <td><span class="module-badge-sm ${moduleClass}">${moduleLabel}</span></td>
+              <td>${form.site_name}</td>
+              <td>${form.supervisor || '-'}</td>
+              <td><span class="status-badge ${statusClass}">${form.workflow_status}</span></td>
+              <td>${created}</td>
+              <td>
+                <button class="btn-view-form" onclick="event.stopPropagation(); viewFormFromActivity('${form.module_type}', '${form.submission_id}')" title="View Form">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        html += `</tbody></table>`;
+      } else {
+        html += `
+          <div class="empty-state">
+            <div class="empty-state-icon">✓</div>
+            <p>No forms reviewed yet</p>
+          </div>
+        `;
+      }
+      html += `</div>`;
+      
+      container.innerHTML = html;
+    }
+    
+    // Helper function to get the form URL based on module type
+    function getFormViewUrl(moduleType, submissionId) {
+      if (moduleType === 'hvac_mep') {
+        return `/hvac-mep/form?edit=${submissionId}&review=true`;
+      } else if (moduleType === 'civil') {
+        return `/civil/form?edit=${submissionId}&review=true`;
+      } else if (moduleType === 'cleaning') {
+        return `/cleaning/form?edit=${submissionId}&review=true`;
+      }
+      return '#';
+    }
+    
+    // Function to view form from activity modal
+    function viewFormFromActivity(moduleType, submissionId) {
+      const url = getFormViewUrl(moduleType, submissionId);
+      if (url !== '#') {
+        window.location.href = url;
+      }
+    }
+    
+    function closeUserActivityModal() {
+      document.getElementById('userActivityModal').classList.remove('active');
+    }
+    
+    // Close user activity modal on outside click
+    document.getElementById('userActivityModal').addEventListener('click', (e) => {
+      if (e.target.id === 'userActivityModal') {
+        closeUserActivityModal();
+      }
+    });
 
     document.getElementById('accessForm').addEventListener('submit', async (e) => {
       e.preventDefault();
