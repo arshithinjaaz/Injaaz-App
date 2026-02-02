@@ -78,6 +78,24 @@ except Exception as e:
     logger.exception("Could not import app.bd.routes.bd_bp: %s", e)
     bd_bp = None
 
+# HR Module
+hr_bp = None
+try:
+    from module_hr.routes import hr_bp  # noqa: F401
+    logger.info("Imported module_hr.routes.hr_bp")
+except Exception as e:
+    logger.exception("Could not import module_hr.routes.hr_bp: %s", e)
+    hr_bp = None
+
+# Procurement Module
+procurement_module_bp = None
+try:
+    from module_procurement.routes import procurement_bp as procurement_module_bp  # noqa: F401
+    logger.info("Imported module_procurement.routes.procurement_bp")
+except Exception as e:
+    logger.exception("Could not import module_procurement.routes.procurement_bp: %s", e)
+    procurement_module_bp = None
+
 # Ensure required directories exist at startup
 os.makedirs(GENERATED_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -588,6 +606,24 @@ def create_app():
         logger.info("✅ Registered BD blueprint at /bd")
     else:
         logger.warning("⚠️  BD blueprint not available - check imports")
+    
+    # Register HR module blueprint
+    if hr_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(hr_bp)
+        app.register_blueprint(hr_bp, url_prefix='/hr')
+        logger.info("✅ Registered HR blueprint at /hr")
+    else:
+        logger.warning("⚠️  HR blueprint not available - check imports")
+    
+    # Register Procurement module blueprint
+    if procurement_module_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(procurement_module_bp)
+        app.register_blueprint(procurement_module_bp, url_prefix='/procurement')
+        logger.info("✅ Registered Procurement blueprint at /procurement")
+    else:
+        logger.warning("⚠️  Procurement blueprint not available - check imports")
     
     # Register reports API blueprint for on-demand regeneration
     try:

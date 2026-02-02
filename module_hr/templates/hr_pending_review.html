@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pending HR Review - Injaaz</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="stylesheet" href="/static/mobile_responsive.css">
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <style>
+    :root { --primary: #125435; --primary-light: #1a7a4c; }
+    body { background: #f1f5f9; }
+    .page-header { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; }
+    .back-link { color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; opacity: 0.9; }
+    .back-link:hover { color: white; opacity: 1; }
+    .review-card { background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .form-type-badge { padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .type-leave { background: #d1fae5; color: #047857; }
+    .type-termination { background: #fee2e2; color: #dc2626; }
+    .type-long_vacation { background: #dbeafe; color: #1d4ed8; }
+    .type-asset { background: #fef3c7; color: #b45309; }
+    .btn-approve { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; }
+    .btn-approve:hover { color: white; background: #059669; }
+    .btn-reject { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; }
+    .btn-reject:hover { color: white; background: #dc2626; }
+    .detail-row { display: flex; padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; }
+    .detail-label { font-weight: 600; color: #64748b; min-width: 140px; font-size: 0.875rem; }
+    .detail-value { color: #1e293b; }
+    .signature-canvas { border: 2px dashed #d1d5db; border-radius: 8px; background: #fafafa; }
+    
+    /* Success Modal */
+    .success-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+      z-index: 99999; opacity: 0; visibility: hidden; transition: all 0.3s ease;
+    }
+    .success-overlay.show { opacity: 1; visibility: visible; }
+    .success-modal {
+      background: white; border-radius: 20px; padding: 2.5rem; text-align: center;
+      max-width: 400px; width: 90%; transform: scale(0.8); transition: transform 0.3s ease;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .success-overlay.show .success-modal { transform: scale(1); }
+    .success-icon {
+      width: 80px; height: 80px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.5rem; animation: pulse 2s infinite;
+    }
+    .success-icon.approved { background: linear-gradient(135deg, #10b981, #059669); }
+    .success-icon.rejected { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); } 50% { box-shadow: 0 0 0 15px rgba(16,185,129,0); } }
+    .success-icon svg { width: 40px; height: 40px; color: white; }
+    .success-title { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem; }
+    .success-message { color: #64748b; margin-bottom: 1.5rem; }
+    .success-btn { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    
+    .review-card { cursor: pointer; transition: all 0.2s; }
+    .review-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.12); border-color: #f59e0b; }
+  </style>
+</head>
+<body>
+  <!-- Success Modal -->
+  <div class="success-overlay" id="successModal">
+    <div class="success-modal">
+      <div class="success-icon approved" id="successIcon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <h2 class="success-title" id="successTitle">Forwarded to GM!</h2>
+      <p class="success-message" id="successMessage">The request has been approved and forwarded to the General Manager for final approval.</p>
+      <button class="success-btn" onclick="closeSuccessModal()">Continue</button>
+    </div>
+  </div>
+  <div class="container py-4">
+    <div class="page-header">
+      <a href="/hr/" class="back-link">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Back to HR Dashboard
+      </a>
+      <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem;">Pending HR Review</h1>
+      <p style="opacity: 0.9; margin: 0;">Review and approve employee HR requests</p>
+    </div>
+    
+    <div id="pendingList">
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+        <p class="mt-2 text-muted">Loading pending requests...</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Review Modal -->
+  <div class="modal fade" id="reviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content" style="border-radius: 16px;">
+        <div class="modal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+          <h5 class="modal-title" style="font-weight: 600;">Review Request</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+          <div id="requestDetails"></div>
+          
+          <hr>
+          
+          <div class="mb-3">
+            <label class="form-label" style="font-weight: 600;">Your Comments</label>
+            <textarea class="form-control" id="reviewComments" rows="3" placeholder="Add your comments (optional)"></textarea>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label" style="font-weight: 600;">Your Signature</label>
+            <canvas id="signatureCanvas" class="signature-canvas w-100" height="150"></canvas>
+            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="clearSignature()">Clear Signature</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-reject" onclick="rejectRequest()">Reject</button>
+          <button type="button" class="btn btn-approve" onclick="approveRequest()">Approve & Forward to GM</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const token = localStorage.getItem('access_token');
+    let currentSubmissionId = null;
+    let signaturePad = null;
+    
+    function getFormTypeClass(type) {
+      return `type-${type.replace('hr_', '')}`;
+    }
+    
+    function getFormTypeLabel(type) {
+      return type.replace('hr_', '').replace('_', ' ').toUpperCase();
+    }
+    
+    async function loadPending() {
+      try {
+        const response = await fetch('/hr/api/pending-hr-review', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        
+        const container = document.getElementById('pendingList');
+        
+        if (data.submissions && data.submissions.length > 0) {
+          container.innerHTML = data.submissions.map(s => `
+            <div class="review-card">
+              <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                <div>
+                  <span class="form-type-badge ${getFormTypeClass(s.module_type)}">${getFormTypeLabel(s.module_type)}</span>
+                  <h5 style="font-weight: 600; margin: 0.5rem 0 0.25rem;">${s.submission_id}</h5>
+                  <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                    From: <strong>${s.submitter_name || 'Unknown'}</strong> • 
+                    ${new Date(s.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="openReview('${s.submission_id}', ${JSON.stringify(s).replace(/"/g, '&quot;')})">
+                  Review
+                </button>
+              </div>
+              ${s.form_data?.employee_name ? `<p class="mb-1"><strong>Employee:</strong> ${s.form_data.employee_name}</p>` : ''}
+              ${s.form_data?.leave_type ? `<p class="mb-1"><strong>Leave Type:</strong> ${s.form_data.leave_type}</p>` : ''}
+              ${s.form_data?.start_date && s.form_data?.end_date ? `<p class="mb-0"><strong>Period:</strong> ${s.form_data.start_date} to ${s.form_data.end_date}</p>` : ''}
+            </div>
+          `).join('');
+        } else {
+          container.innerHTML = `
+            <div class="text-center py-5 bg-white rounded-3">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+              <h5>No pending reviews</h5>
+              <p class="text-muted">All HR requests have been processed</p>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('pendingList').innerHTML = '<div class="alert alert-danger">Error loading requests</div>';
+      }
+    }
+    
+    function openReview(submissionId, submission) {
+      currentSubmissionId = submissionId;
+      
+      const details = document.getElementById('requestDetails');
+      const formData = submission.form_data || {};
+      
+      let html = `<h6 style="font-weight: 600; margin-bottom: 1rem;">${submission.submission_id}</h6>`;
+      
+      // Display all form data
+      for (const [key, value] of Object.entries(formData)) {
+        if (key.startsWith('submitted_') || key.startsWith('hr_') || key.startsWith('gm_') || !value) continue;
+        const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        html += `<div class="detail-row"><span class="detail-label">${label}:</span><span class="detail-value">${value}</span></div>`;
+      }
+      
+      details.innerHTML = html;
+      
+      // Initialize signature pad
+      const canvas = document.getElementById('signatureCanvas');
+      signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(250, 250, 250)' });
+      
+      // Resize canvas
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      canvas.width = canvas.offsetWidth * ratio;
+      canvas.height = 150 * ratio;
+      canvas.getContext('2d').scale(ratio, ratio);
+      signaturePad.clear();
+      
+      const modal = new bootstrap.Modal(document.getElementById('reviewModal'));
+      modal.show();
+    }
+    
+    function clearSignature() {
+      if (signaturePad) signaturePad.clear();
+    }
+    
+    async function approveRequest() {
+      if (!currentSubmissionId) return;
+      
+      const comments = document.getElementById('reviewComments').value;
+      const signature = signaturePad && !signaturePad.isEmpty() ? signaturePad.toDataURL() : '';
+      
+      try {
+        const response = await fetch(`/hr/api/hr-approve/${currentSubmissionId}`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` 
+          },
+          body: JSON.stringify({ comments, signature })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+          showSuccessModal('approved', 'Forwarded to GM!', 'The request has been approved and forwarded to the General Manager for final approval.');
+          loadPending();
+        } else {
+          showErrorToast('Error: ' + result.error);
+        }
+      } catch (error) {
+        showErrorToast('Error: ' + error.message);
+      }
+    }
+    
+    async function rejectRequest() {
+      if (!currentSubmissionId) return;
+      
+      const reason = prompt('Please provide a reason for rejection:');
+      if (!reason) return;
+      
+      try {
+        const response = await fetch(`/hr/api/hr-reject/${currentSubmissionId}`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` 
+          },
+          body: JSON.stringify({ reason })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+          showSuccessModal('rejected', 'Request Rejected', 'The HR request has been rejected. The employee has been notified.');
+          loadPending();
+        } else {
+          showErrorToast('Error: ' + result.error);
+        }
+      } catch (error) {
+        showErrorToast('Error: ' + error.message);
+      }
+    }
+    
+    function showSuccessModal(type, title, message) {
+      const icon = document.getElementById('successIcon');
+      icon.className = 'success-icon ' + type;
+      icon.innerHTML = type === 'approved' 
+        ? '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>'
+        : '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>';
+      document.getElementById('successTitle').textContent = title;
+      document.getElementById('successMessage').textContent = message;
+      document.getElementById('successModal').classList.add('show');
+    }
+    
+    function closeSuccessModal() {
+      document.getElementById('successModal').classList.remove('show');
+    }
+    
+    function showErrorToast(message) {
+      const toast = document.createElement('div');
+      toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #fee2e2; color: #dc2626; padding: 1rem 1.5rem; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 99999; font-weight: 500;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 5000);
+    }
+    
+    loadPending();
+  </script>
+</body>
+</html>

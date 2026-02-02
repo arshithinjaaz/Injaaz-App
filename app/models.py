@@ -30,6 +30,8 @@ class User(db.Model):
     access_hvac = db.Column(db.Boolean, default=False)  # HVAC&MEP form access
     access_civil = db.Column(db.Boolean, default=False)  # Civil works form access
     access_cleaning = db.Column(db.Boolean, default=False)  # Cleaning form access
+    access_hr = db.Column(db.Boolean, default=False)  # HR module access
+    access_procurement_module = db.Column(db.Boolean, default=False)  # Procurement module access
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     
@@ -60,7 +62,9 @@ class User(db.Model):
         module_map = {
             'hvac_mep': self.access_hvac,
             'civil': self.access_civil,
-            'cleaning': self.access_cleaning
+            'cleaning': self.access_cleaning,
+            'hr': getattr(self, 'access_hr', False),
+            'procurement_module': getattr(self, 'access_procurement_module', False)
         }
         return module_map.get(module, False)
     
@@ -76,6 +80,8 @@ class User(db.Model):
             'access_hvac': self.access_hvac if self.role != 'admin' else True,
             'access_civil': self.access_civil if self.role != 'admin' else True,
             'access_cleaning': self.access_cleaning if self.role != 'admin' else True,
+            'access_hr': getattr(self, 'access_hr', False) if self.role != 'admin' else True,
+            'access_procurement_module': getattr(self, 'access_procurement_module', False) if self.role != 'admin' else True,
             'password_changed': self.password_changed if hasattr(self, 'password_changed') else True,
             'designation': self.designation if hasattr(self, 'designation') else None,
             'default_signature': self.default_signature if hasattr(self, 'default_signature') else None,
@@ -323,3 +329,36 @@ class Session(db.Model):
     
     def __repr__(self):
         return f'<Session {self.token_jti[:8]}... - User {self.user_id}>'
+
+
+class Notification(db.Model):
+    """User notifications for workflow updates"""
+    __tablename__ = 'notifications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    notification_type = db.Column(db.String(50), default='info')  # 'info', 'success', 'warning', 'error', 'hr_approved', 'hr_rejected'
+    submission_id = db.Column(db.String(50), nullable=True)  # Reference to related submission
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    # Relationship
+    user = db.relationship('User', backref=db.backref('notifications', lazy='dynamic', cascade='all, delete-orphan'))
+    
+    def to_dict(self):
+        """Convert to dictionary"""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'title': self.title,
+            'message': self.message,
+            'notification_type': self.notification_type,
+            'submission_id': self.submission_id,
+            'is_read': self.is_read,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+    
+    def __repr__(self):
+        return f'<Notification {self.id} - User {self.user_id}>'

@@ -498,11 +498,40 @@
       image-rendering: crisp-edges;
     }
     
+    /* Signature Container - ensure proper layout */
+    .signature-container {
+      position: relative;
+      background: #fff;
+      overflow: hidden;
+    }
+    
+    /* Signature Action Buttons Container */
+    .signature-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    /* Signature Pad - ensure proper sizing */
+    canvas.signature-pad {
+      height: 120px !important;
+      min-height: 120px !important;
+      max-height: 120px !important;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+    }
+    
     /* Add Saved Signature Button Styles */
     .add-default-signature {
       transition: all 0.2s ease;
       border-radius: 6px !important;
       font-weight: 500 !important;
+      color: white !important;
+      border: none !important;
+      font-size: 0.75rem !important;
+      padding: 4px 10px !important;
     }
     
     .add-default-signature.has-signature {
@@ -1080,16 +1109,29 @@
   </nav>
   
   <div class="container">
-    <h2>Site Inspection Report - Civil{% if is_edit_mode %} - Edit Mode{% endif %}</h2>
-    <p class="text-muted">
-      {% if is_supervisor_edit %}
-      Review the inspector's submission below. You can edit any fields, add new items, add your comments, verify, and sign to approve.
-      {% elif is_edit_mode %}
-      Review and edit the submission below. Signatures cannot be modified.
-      {% else %}
-      Complete the inspection form below
+    <!-- Form Header with Save Draft -->
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+      <div>
+        <h2 class="mb-1">Site Inspection Report - Civil{% if is_edit_mode %} - Edit Mode{% endif %}</h2>
+        <p class="text-muted mb-0">
+          {% if is_supervisor_edit %}
+          Review the inspector's submission below. You can edit any fields, add new items, add your comments, verify, and sign to approve.
+          {% elif is_edit_mode %}
+          Review and edit the submission below. Signatures cannot be modified.
+          {% else %}
+          Complete the inspection form below
+          {% endif %}
+        </p>
+      </div>
+      {% if not is_edit_mode or (submission_data and submission_data.workflow_status == 'draft') %}
+      <button type="button" id="saveDraftBtn" class="btn btn-outline-secondary" style="font-weight: 500; border-radius: 6px; white-space: nowrap;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16" style="vertical-align: -2px;">
+          <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+        </svg>
+        Save Draft
+      </button>
       {% endif %}
-    </p>
+    </div>
 
     {% if is_edit_mode and can_edit == False %}
     <!-- Read-Only Mode Banner -->
@@ -1334,9 +1376,9 @@
                     {% endif %}
                   </span>
                 </div>
-                <canvas id="supervisorSignaturePad" class="signature-pad" style="height: 80px;"></canvas>
+                <canvas id="supervisorSignaturePad" class="signature-pad"></canvas>
                 <input type="hidden" id="supervisorSignatureData" name="supervisor_signature">
-                <div class="d-flex gap-2 mt-1 flex-wrap">
+                <div class="signature-actions">
                   <button type="button" id="clearSupervisor" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                     Clear
@@ -1462,9 +1504,9 @@
                   <label class="form-label small mb-1" style="color: #4b5563;">Signature</label>
                   <span id="opManSignatureHint" class="signature-hint text-success small" style="display: none;">✓ Signed</span>
                 </div>
-                <canvas id="opManSignaturePad" class="signature-pad" style="height: 80px;"></canvas>
+                <canvas id="opManSignaturePad" class="signature-pad"></canvas>
                 <input type="hidden" id="opManSignatureData" name="opMan_signature">
-                <div class="d-flex gap-2 mt-1">
+                <div class="signature-actions">
                   <button type="button" id="clearOp" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                     Clear
@@ -1631,9 +1673,9 @@
                   <label class="form-label small mb-1" style="color: #4b5563;">Signature</label>
                   <span id="bdSignatureHint" class="signature-hint text-success small" style="display: none;">✓ Signed</span>
                 </div>
-                <canvas id="businessDevSignaturePad" class="signature-pad" style="height: 80px;"></canvas>
+                <canvas id="businessDevSignaturePad" class="signature-pad"></canvas>
                 <input type="hidden" id="businessDevSignatureData" name="business_dev_signature">
-                <div class="d-flex gap-2 mt-1">
+                <div class="signature-actions">
                   <button type="button" id="clearBusinessDev" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                     Clear
@@ -1723,9 +1765,9 @@
                   <label class="form-label small mb-1" style="color: #4b5563;">Signature</label>
                   <span id="procurementSignatureHint" class="signature-hint text-success small" style="display: none;">✓ Signed</span>
                 </div>
-                <canvas id="procurementSignaturePad" class="signature-pad" style="height: 80px;"></canvas>
+                <canvas id="procurementSignaturePad" class="signature-pad"></canvas>
                 <input type="hidden" id="procurementSignatureData" name="procurement_signature">
-                <div class="d-flex gap-2 mt-1">
+                <div class="signature-actions">
                   <button type="button" id="clearProcurement" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                     Clear
@@ -1832,9 +1874,9 @@
                   <label class="form-label small mb-1" style="color: #4b5563;">Signature</label>
                   <span id="gmSignatureHint" class="signature-hint text-success small" style="display: none;">✓ Signed</span>
                 </div>
-                <canvas id="generalManagerSignaturePad" class="signature-pad" style="height: 80px;"></canvas>
+                <canvas id="generalManagerSignaturePad" class="signature-pad"></canvas>
                 <input type="hidden" id="generalManagerSignatureData" name="general_manager_signature">
-                <div class="d-flex gap-2 mt-1">
+                <div class="signature-actions">
                   <button type="button" id="clearGeneralManager" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                     Clear
@@ -1947,22 +1989,22 @@
       </div>
 
       <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
-        <button type="button" class="btn btn-outline-secondary" onclick="goToTab(3)">← Previous</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="goToTab(3)">&#8592; Previous</button>
         {% if can_edit != False %}
         <div class="d-flex gap-2">
           {% if user_designation == 'supervisor' or (user and user.role == 'admin') %}
           <button type="button" id="verifiedBtn" class="btn btn-success btn-lg">
-            <span id="verifiedBtnIcon">✓</span> Verify
+            <span id="verifiedBtnIcon">&#10003;</span> Verify
           </button>
-          <span id="verifiedStatus" class="d-none align-self-center" style="color: #059669; font-weight: 600;">✓ Verified</span>
+          <span id="verifiedStatus" class="d-none align-self-center" style="color: #059669; font-weight: 600;">&#10003; Verified</span>
           {% endif %}
           <button type="button" id="uploadImagesBtn" class="btn btn-success btn-lg">
-            <span id="uploadImagesBtnText">📤 Upload Images</span>
-          <span id="uploadImagesBtnSpinner" class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
-        </button>
-        <button type="button" id="submitBtn" class="btn btn-primary btn-lg">
-          <span id="submitBtnText">{% if is_edit_mode %}Update Submission{% else %}📄 Generate Reports{% endif %}</span>
-        </button>
+            <span id="uploadImagesBtnText">Upload Images</span>
+            <span id="uploadImagesBtnSpinner" class="spinner-border spinner-border-sm d-none ms-2" role="status"></span>
+          </button>
+          <button type="button" id="submitBtn" class="btn btn-primary btn-lg">
+            <span id="submitBtnText">{% if is_edit_mode %}Update Submission{% else %}Generate Reports{% endif %}</span>
+          </button>
         </div>
         {% else %}
         <div class="alert alert-info mb-0" style="background: #f0f9ff; border-color: #0ea5e9; padding: 0.75rem 1rem;">
@@ -5683,7 +5725,7 @@
           // Enable submit button and update text
           submitBtn.disabled = false;
           const photoText = uploadedPhotoUrls.length > 0 ? ` (${uploadedPhotoUrls.length} photos)` : '';
-          submitBtnText.textContent = `📄 Generate Reports${photoText}`;
+          submitBtnText.textContent = `Generate Reports${photoText}`;
           
           console.log('✅ Photos uploaded:', uploadedPhotoUrls);
           
@@ -5695,10 +5737,88 @@
           uploadedPhotoUrls = [];
         } finally {
           uploadImagesBtn.disabled = false;
-          uploadImagesBtnText.textContent = '📤 Upload Images';
+          uploadImagesBtnText.textContent = 'Upload Images';
           uploadImagesBtnSpinner.classList.add('d-none');
         }
       });
+
+      // Save as Draft to Server
+      const saveDraftBtn = document.getElementById('saveDraftBtn');
+      if (saveDraftBtn) {
+        saveDraftBtn.addEventListener('click', async function() {
+          const originalText = saveDraftBtn.innerHTML;
+          saveDraftBtn.disabled = true;
+          saveDraftBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+          
+          try {
+            // Collect form data
+            const formData = {
+              project_name: document.getElementById('project_name')?.value || 'Draft',
+              date: document.getElementById('date')?.value || null,
+              area: document.getElementById('area')?.value || '',
+              supervisor_comments: document.getElementById('supervisorComments')?.value || '',
+              photo_urls: uploadedPhotoUrls || [],
+              work_items: getWorkItemsData ? getWorkItemsData() : []
+            };
+            
+            // Get existing draft ID if editing
+            const existingDraftId = new URLSearchParams(window.location.search).get('edit');
+            
+            const payload = {
+              submission_id: existingDraftId && existingDraftId.startsWith('draft_') ? existingDraftId : null,
+              module_type: 'civil',
+              site_name: formData.project_name,
+              visit_date: formData.date,
+              form_data: formData
+            };
+            
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/api/workflow/submissions/save-draft', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+              saveDraftBtn.innerHTML = 'Saved';
+              saveDraftBtn.classList.remove('btn-outline-secondary');
+              saveDraftBtn.classList.add('btn-success');
+              
+              // Update URL if this is a new draft
+              if (result.submission_id && !existingDraftId) {
+                const newUrl = `${window.location.pathname}?edit=${result.submission_id}`;
+                window.history.replaceState({}, '', newUrl);
+              }
+              
+              setTimeout(() => {
+                saveDraftBtn.innerHTML = originalText;
+                saveDraftBtn.classList.remove('btn-success');
+                saveDraftBtn.classList.add('btn-outline-secondary');
+                saveDraftBtn.disabled = false;
+              }, 2000);
+            } else {
+              throw new Error(result.error || 'Failed to save draft');
+            }
+          } catch (error) {
+            console.error('Error saving draft:', error);
+            saveDraftBtn.innerHTML = 'Failed';
+            saveDraftBtn.classList.remove('btn-outline-secondary');
+            saveDraftBtn.classList.add('btn-danger');
+            
+            setTimeout(() => {
+              saveDraftBtn.innerHTML = originalText;
+              saveDraftBtn.classList.remove('btn-danger');
+              saveDraftBtn.classList.add('btn-outline-secondary');
+              saveDraftBtn.disabled = false;
+            }, 2000);
+          }
+        });
+      }
 
       // Submit Handler - Using HVAC method with JSON payload
       submitBtn.addEventListener('click', async () => {
@@ -6112,7 +6232,7 @@
                     const pdfBtn = document.createElement('a');
                     pdfBtn.href = `${modulePrefix}/download/${jobId}/pdf`;
                     pdfBtn.className = 'btn btn-danger';
-                    pdfBtn.innerHTML = '📄 Download PDF';
+                    pdfBtn.innerHTML = 'Download PDF';
                     pdfBtn.target = '_blank';
                     
                     downloadLinksContainer.appendChild(excelBtn);

@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Procurement Module - Injaaz</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="stylesheet" href="/static/mobile_responsive.css">
+  <style>
+    :root { 
+      --primary: #125435; 
+      --primary-light: #1a7a4c; 
+      --purple: #7c3aed;
+      --purple-light: #a78bfa;
+    }
+    body { background: #f1f5f9; min-height: 100vh; }
+    
+    .proc-header {
+      background: linear-gradient(135deg, var(--purple) 0%, #5b21b6 50%, #4c1d95 100%);
+      color: white;
+      padding: 2.5rem 2rem;
+      border-radius: 20px;
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .proc-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 60%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      margin-bottom: 1rem;
+      opacity: 0.9;
+      transition: opacity 0.2s;
+    }
+    .back-btn:hover { color: white; opacity: 1; }
+    
+    /* Module Cards */
+    .module-showcase {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    @media (max-width: 768px) {
+      .module-showcase {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .module-card {
+      background: white;
+      border-radius: 20px;
+      padding: 0;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: block;
+      border: 1px solid #e2e8f0;
+    }
+    .module-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    
+    .module-card-header {
+      padding: 2rem;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .module-card-header::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 150px;
+      height: 150px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+      transform: translate(30%, -30%);
+    }
+    
+    .module-all-materials .module-card-header {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    }
+    .module-property-wise .module-card-header {
+      background: linear-gradient(135deg, #10b981, #047857);
+    }
+    
+    .module-icon {
+      width: 70px;
+      height: 70px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      backdrop-filter: blur(10px);
+    }
+    
+    .module-card-body {
+      padding: 1.5rem 2rem 2rem;
+    }
+    .module-card-body h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+    .module-card-body p {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+    
+    .module-stats {
+      display: flex;
+      gap: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid #f1f5f9;
+    }
+    .module-stat {
+      text-align: center;
+    }
+    .module-stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+    .module-stat-label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .module-arrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--purple);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    
+    /* Quick Actions */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 992px) {
+      .quick-actions { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 576px) {
+      .quick-actions { grid-template-columns: 1fr; }
+    }
+    
+    .quick-action {
+      background: white;
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: block;
+    }
+    .quick-action:hover {
+      border-color: var(--purple);
+      box-shadow: 0 4px 12px rgba(124,58,237,0.15);
+      transform: translateY(-2px);
+    }
+    .quick-action-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 0.75rem;
+      font-size: 1.25rem;
+    }
+    .quick-action h6 {
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0;
+      font-size: 0.9rem;
+    }
+    
+    .icon-add { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+    .icon-import { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+    .icon-export { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+    .icon-property { background: linear-gradient(135deg, #ec4899, #be185d); color: white; }
+    
+    /* Stats Overview */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 992px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    .stat-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+    }
+    .stat-card h3 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .stat-card p {
+      color: #64748b;
+      font-size: 0.85rem;
+      margin: 0;
+    }
+    .stat-materials h3 { color: #3b82f6; }
+    .stat-properties h3 { color: #10b981; }
+    .stat-items h3 { color: #f59e0b; }
+    .stat-value h3 { color: var(--purple); }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <!-- Header -->
+    <div class="proc-header">
+      <a href="/dashboard" class="back-btn">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to Dashboard
+      </a>
+      <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 0.5rem; position: relative;">
+        Procurement Module
+      </h1>
+      <p style="opacity: 0.9; margin: 0; font-size: 1.1rem; position: relative;">
+        Complete inventory management and property-wise material tracking
+      </p>
+    </div>
+    
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+      <div class="stat-card stat-materials">
+        <h3 id="totalMaterials">-</h3>
+        <p>Total Materials</p>
+      </div>
+      <div class="stat-card stat-properties">
+        <h3 id="totalProperties">-</h3>
+        <p>Properties</p>
+      </div>
+      <div class="stat-card stat-items">
+        <h3 id="totalQuantity">-</h3>
+        <p>Total Items</p>
+      </div>
+      <div class="stat-card stat-value">
+        <h3 id="totalValue">-</h3>
+        <p>Total Value (AED)</p>
+      </div>
+    </div>
+    
+    <!-- Main Modules -->
+    <h4 style="font-weight: 600; margin-bottom: 1rem; color: #1e293b;">Inventory Modules</h4>
+    <div class="module-showcase">
+      <!-- All Materials Module -->
+      <a href="/procurement/materials" class="module-card module-all-materials">
+        <div class="module-card-header">
+          <div class="module-icon">📦</div>
+          <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Master Inventory</span>
+        </div>
+        <div class="module-card-body">
+          <h3>All Materials</h3>
+          <p>Complete inventory of all materials across all properties. Search, filter, add, edit and manage your entire material database.</p>
+          <div class="module-stats">
+            <div class="module-stat">
+              <div class="module-stat-value" id="allMaterialsCount">-</div>
+              <div class="module-stat-label">Materials</div>
+            </div>
+            <div class="module-stat">
+              <div class="module-stat-value" id="allCategoriesCount">-</div>
+              <div class="module-stat-label">Categories</div>
+            </div>
+          </div>
+          <div class="mt-3">
+            <span class="module-arrow">
+              View All Materials
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+      </a>
+      
+      <!-- Property-wise Module -->
+      <a href="/procurement/properties" class="module-card module-property-wise">
+        <div class="module-card-header">
+          <div class="module-icon">🏢</div>
+          <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Site Management</span>
+        </div>
+        <div class="module-card-body">
+          <h3>Property-wise Materials</h3>
+          <p>Organize materials by property or site location. Track inventory for each building, project, or location separately.</p>
+          <div class="module-stats">
+            <div class="module-stat">
+              <div class="module-stat-value" id="propertyCount">-</div>
+              <div class="module-stat-label">Properties</div>
+            </div>
+            <div class="module-stat">
+              <div class="module-stat-value" id="assignedMaterials">-</div>
+              <div class="module-stat-label">Assigned</div>
+            </div>
+          </div>
+          <div class="mt-3">
+            <span class="module-arrow" style="color: #059669;">
+              Manage Properties
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+      </a>
+    </div>
+    
+    <!-- Quick Actions -->
+    <h4 style="font-weight: 600; margin-bottom: 1rem; color: #1e293b;">Quick Actions</h4>
+    <div class="quick-actions">
+      <a href="/procurement/add-material" class="quick-action">
+        <div class="quick-action-icon icon-add">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+          </svg>
+        </div>
+        <h6>Add Material</h6>
+      </a>
+      <div class="quick-action" onclick="document.getElementById('excelInput').click()" style="cursor: pointer;">
+        <div class="quick-action-icon icon-import">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+        </div>
+        <h6>Import Excel</h6>
+      </div>
+      <div class="quick-action" onclick="exportExcel()" style="cursor: pointer;">
+        <div class="quick-action-icon icon-export">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+        </div>
+        <h6>Export Excel</h6>
+      </div>
+      <div class="quick-action" onclick="showAddPropertyModal()" style="cursor: pointer;">
+        <div class="quick-action-icon icon-property">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          </svg>
+        </div>
+        <h6>Add Property</h6>
+      </div>
+    </div>
+    
+    <input type="file" id="excelInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
+  </div>
+  
+  <!-- Add Property Modal -->
+  <div class="modal fade" id="addPropertyModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content" style="border-radius: 16px;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #ec4899, #be185d); color: white; border: none; border-radius: 16px 16px 0 0;">
+          <h5 class="modal-title" style="font-weight: 600;">Add New Property</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" style="font-weight: 600;">Property Name *</label>
+            <input type="text" class="form-control" id="propertyName" placeholder="e.g., Tower A, Villa 12, Site B">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-weight: 600;">Address</label>
+            <input type="text" class="form-control" id="propertyAddress" placeholder="Full address (optional)">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-weight: 600;">Description</label>
+            <textarea class="form-control" id="propertyDescription" rows="2" placeholder="Brief description (optional)"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer" style="border: none;">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" style="background: linear-gradient(135deg, #ec4899, #be185d); border: none;" onclick="addProperty()">Add Property</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Excel Import Hint Modal -->
+  <div class="modal fade" id="importHintModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none;">
+          <h5 class="modal-title" style="font-weight: 600;">Excel Import Guide</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem;">
+          <div class="alert alert-info" style="border-radius: 10px; border: none; background: #eff6ff;">
+            <strong>File Format:</strong> Upload <code>.xlsx</code> or <code>.xls</code> files only
+          </div>
+          <h6 style="font-weight: 600; margin: 1rem 0 0.75rem;">Required & Optional Columns:</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+              <thead style="background: #f1f5f9;">
+                <tr><th>Field</th><th>Accepted Column Names</th></tr>
+              </thead>
+              <tbody>
+                <tr style="background: #fef2f2;"><td><strong>Material Name *</strong></td><td><code>Material Name</code>, <code>Material</code>, <code>Name</code>, <code>Item</code></td></tr>
+                <tr><td>Property</td><td><code>Property</code>, <code>Site</code>, <code>Location</code></td></tr>
+                <tr><td>Quantity</td><td><code>Quantity</code>, <code>Qty</code></td></tr>
+                <tr><td>Unit Price</td><td><code>Unit Price</code>, <code>Price</code>, <code>Rate</code></td></tr>
+                <tr><td>Category</td><td><code>Category</code>, <code>Cat</code></td></tr>
+                <tr><td>Supplier</td><td><code>Supplier</code>, <code>Vendor</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer" style="border: none;">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const token = localStorage.getItem('access_token');
+    
+    async function loadStats() {
+      try {
+        // Load materials
+        const matResponse = await fetch('/procurement/api/materials', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const matData = await matResponse.json();
+        
+        // Load properties
+        const propResponse = await fetch('/procurement/api/properties', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const propData = await propResponse.json();
+        
+        if (matData.materials) {
+          const materials = matData.materials;
+          document.getElementById('totalMaterials').textContent = materials.length;
+          document.getElementById('allMaterialsCount').textContent = materials.length;
+          
+          let totalQty = 0, totalValue = 0;
+          const categories = new Set();
+          let assignedCount = 0;
+          
+          materials.forEach(m => {
+            totalQty += parseFloat(m.quantity) || 0;
+            totalValue += parseFloat(m.total_price) || 0;
+            if (m.category) categories.add(m.category);
+            if (m.property && m.property !== 'Unassigned') assignedCount++;
+          });
+          
+          document.getElementById('totalQuantity').textContent = totalQty.toLocaleString();
+          document.getElementById('totalValue').textContent = totalValue.toLocaleString('en-AE', { maximumFractionDigits: 0 });
+          document.getElementById('allCategoriesCount').textContent = categories.size;
+          document.getElementById('assignedMaterials').textContent = assignedCount;
+        }
+        
+        if (propData.properties) {
+          const uniqueProps = propData.properties.filter(p => p.name !== 'Unassigned');
+          document.getElementById('totalProperties').textContent = uniqueProps.length;
+          document.getElementById('propertyCount').textContent = uniqueProps.length;
+        }
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    }
+    
+    function showAddPropertyModal() {
+      const modal = new bootstrap.Modal(document.getElementById('addPropertyModal'));
+      modal.show();
+    }
+    
+    async function addProperty() {
+      const name = document.getElementById('propertyName').value.trim();
+      const address = document.getElementById('propertyAddress').value.trim();
+      const description = document.getElementById('propertyDescription').value.trim();
+      
+      if (!name) {
+        alert('Property name is required');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/procurement/api/properties', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ name, address, description })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          alert('Property added successfully!');
+          bootstrap.Modal.getInstance(document.getElementById('addPropertyModal')).hide();
+          document.getElementById('propertyName').value = '';
+          document.getElementById('propertyAddress').value = '';
+          document.getElementById('propertyDescription').value = '';
+          loadStats();
+        } else {
+          alert('Error: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+    
+    async function importExcel(input) {
+      if (!input.files.length) return;
+      
+      const formData = new FormData();
+      formData.append('file', input.files[0]);
+      
+      try {
+        const response = await fetch('/procurement/api/import-excel', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          alert(`Successfully imported ${result.imported} materials!`);
+          loadStats();
+        } else {
+          alert('Error: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error importing file: ' + error.message);
+      }
+      
+      input.value = '';
+    }
+    
+    function exportExcel() {
+      window.open(`/procurement/api/export-excel`, '_blank');
+    }
+    
+    loadStats();
+  </script>
+</body>
+</html>

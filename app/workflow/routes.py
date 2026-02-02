@@ -230,7 +230,17 @@ def can_edit_submission(user, submission):
     if status == 'closed_by_admin':
         return False
     
+    # Allow any user to edit their own drafts
+    if status == 'draft':
+        is_own_submission = (
+            (hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id) or
+            (submission.user_id == user.id)
+        )
+        if is_own_submission:
+            return True
+    
     # Supervisor can edit their own submissions if:
+    # - Status is draft (user's own draft)
     # - Status is submitted/rejected (initial state)
     # - Status is operations_manager_review but not yet approved (allows updates before review)
     if designation == 'supervisor':
@@ -244,8 +254,8 @@ def can_edit_submission(user, submission):
         if not is_own_submission:
             return False
         
-        # Allow editing if status is submitted/rejected, or if in operations_manager_review but not yet approved
-        if status in ['submitted', 'rejected', None]:
+        # Allow editing if status is draft, submitted, or rejected, or if in operations_manager_review but not yet approved
+        if status in ['draft', 'submitted', 'rejected', None]:
             return True
         if status == 'operations_manager_review' and not submission.operations_manager_approved_at:
             return True
@@ -588,8 +598,19 @@ def get_my_submissions():
             return error_response('Only supervisors can view submitted forms', 
                                 status_code=403, error_code='INVALID_DESIGNATION')
         
-        # Get all submissions by this supervisor
-        submissions = Submission.query.filter_by(supervisor_id=user.id).order_by(Submission.created_at.desc()).all()
+        # Get filter parameter (all, submitted, draft)
+        status_filter = request.args.get('status', 'all')
+        
+        # Build query based on filter
+        query = Submission.query.filter_by(supervisor_id=user.id)
+        
+        if status_filter == 'draft':
+            query = query.filter_by(status='draft')
+        elif status_filter == 'submitted':
+            query = query.filter(Submission.status != 'draft')
+        # 'all' returns everything
+        
+        submissions = query.order_by(Submission.created_at.desc()).all()
         
         submissions_list = []
         for submission in submissions:
@@ -816,6 +837,139 @@ def get_submission_detail(submission_id):
     except Exception as e:
         current_app.logger.error(f"Error getting submission detail: {str(e)}", exc_info=True)
         return error_response('Failed to get submission', status_code=500, error_code='DATABASE_ERROR')
+
+
+@workflow_bp.route('/submissions/save-draft', methods=['POST'])
+@jwt_required()
+def save_draft():
+    """Save a form as draft (for all users)"""
+    try:
+        import uuid
+        from datetime import datetime
+        
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if not user:
+            return error_response('User not found', status_code=404, error_code='NOT_FOUND')
+        
+        data = request.get_json() or {}
+        
+        # Get or create submission_id
+        submission_id = data.get('submission_id') or data.get('draft_id')
+        module_type = data.get('module_type', 'hvac_mep')
+        form_data = data.get('form_data', {})
+        site_name = data.get('site_name') or form_data.get('site_name', 'Draft')
+        visit_date_str = data.get('visit_date') or form_data.get('visit_date')
+        
+        # Parse visit date
+        visit_date = None
+        if visit_date_str:
+            try:
+                visit_date = datetime.strptime(visit_date_str, '%Y-%m-%d').date()
+            except:
+                pass
+        
+        # Check if we're updating an existing draft
+        existing_submission = None
+        if submission_id:
+            existing_submission = Submission.query.filter_by(submission_id=submission_id).first()
+        
+        if existing_submission:
+            # Update existing draft
+            if existing_submission.status != 'draft':
+                return error_response('Cannot update a submitted form as draft. Use edit instead.', 
+                                    status_code=400, error_code='INVALID_STATUS')
+            
+            # Verify ownership
+            if existing_submission.supervisor_id != user.id and user.role != 'admin':
+                return error_response('You can only update your own drafts', 
+                                    status_code=403, error_code='FORBIDDEN')
+            
+            existing_submission.form_data = form_data
+            existing_submission.site_name = site_name
+            existing_submission.visit_date = visit_date
+            existing_submission.updated_at = datetime.utcnow()
+            
+            db.session.commit()
+            
+            current_app.logger.info(f"Updated draft {submission_id} for user {user_id}")
+            
+            return success_response({
+                'message': 'Draft updated successfully',
+                'submission_id': existing_submission.submission_id,
+                'status': 'draft'
+            })
+        else:
+            # Create new draft
+            new_submission_id = f"draft_{uuid.uuid4().hex[:12]}"
+            
+            new_submission = Submission(
+                submission_id=new_submission_id,
+                user_id=user.id,
+                supervisor_id=user.id,  # Even for reviewers, track who created the draft
+                module_type=module_type,
+                site_name=site_name,
+                visit_date=visit_date,
+                status='draft',
+                workflow_status='draft',
+                form_data=form_data,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            
+            db.session.add(new_submission)
+            db.session.commit()
+            
+            current_app.logger.info(f"Created new draft {new_submission_id} for user {user_id}")
+            
+            return success_response({
+                'message': 'Draft saved successfully',
+                'submission_id': new_submission_id,
+                'status': 'draft'
+            })
+            
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error saving draft: {str(e)}", exc_info=True)
+        return error_response('Failed to save draft', status_code=500, error_code='DATABASE_ERROR')
+
+
+@workflow_bp.route('/submissions/draft/<submission_id>', methods=['DELETE'])
+@jwt_required()
+def delete_draft(submission_id):
+    """Delete a draft submission"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if not user:
+            return error_response('User not found', status_code=404, error_code='NOT_FOUND')
+        
+        submission = Submission.query.filter_by(submission_id=submission_id).first()
+        
+        if not submission:
+            return error_response('Draft not found', status_code=404, error_code='NOT_FOUND')
+        
+        if submission.status != 'draft':
+            return error_response('Can only delete drafts', status_code=400, error_code='INVALID_STATUS')
+        
+        # Verify ownership
+        if submission.supervisor_id != user.id and user.role != 'admin':
+            return error_response('You can only delete your own drafts', 
+                                status_code=403, error_code='FORBIDDEN')
+        
+        db.session.delete(submission)
+        db.session.commit()
+        
+        current_app.logger.info(f"Deleted draft {submission_id} for user {user_id}")
+        
+        return success_response({'message': 'Draft deleted successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting draft: {str(e)}", exc_info=True)
+        return error_response('Failed to delete draft', status_code=500, error_code='DATABASE_ERROR')
 
 
 @workflow_bp.route('/submissions/<submission_id>/approve-supervisor', methods=['POST'])
@@ -1956,16 +2110,26 @@ def update_submission(submission_id):
         current_app.logger.info(f"✅ Permission granted for user {user.id} ({user.designation}) to edit submission {submission_id}")
         
         # Check if supervisor is updating their own submission
-        # Allow updates if status is submitted/rejected OR if in operations_manager_review but not yet approved
+        # Allow updates if status is draft/submitted/rejected OR if in operations_manager_review but not yet approved
         is_supervisor_own_update = (
             user.designation == 'supervisor' and 
             hasattr(submission, 'supervisor_id') and 
             submission.supervisor_id == user.id and
             (
-                submission.workflow_status in ['submitted', 'rejected'] or
+                submission.workflow_status in ['draft', 'submitted', 'rejected'] or
                 (submission.workflow_status == 'operations_manager_review' and not submission.operations_manager_approved_at)
             )
         )
+        
+        # Also check if this is ANY user updating their own draft
+        # Check both user_id and supervisor_id since drafts may use either
+        is_own_draft_update = (
+            submission.workflow_status == 'draft' and
+            (submission.user_id == user.id or 
+             (hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id))
+        )
+        
+        current_app.logger.info(f"🔍 Draft check: status={submission.workflow_status}, user_id={submission.user_id}, supervisor_id={getattr(submission, 'supervisor_id', None)}, current_user={user.id}, is_own_draft={is_own_draft_update}")
         
         # Update form_data - accept full form_data or updates
         if 'form_data' in data:
@@ -2005,8 +2169,8 @@ def update_submission(submission_id):
             else:
                 form_data = {}
             
-            # Supervisor own update: merge work_items/items so we keep previously submitted form + updates
-            if is_supervisor_own_update:
+            # Supervisor own update or draft submission: merge work_items/items so we keep previously submitted form + updates
+            if is_supervisor_own_update or is_own_draft_update:
                 if existing_work_items is not None or form_data.get('work_items'):
                     merged_wi = _merge_items_with_photos(
                         existing_work_items or [],
@@ -2077,8 +2241,8 @@ def update_submission(submission_id):
             
             _ensure_items_photos(form_data)
             
-            # If supervisor is updating their own submission, ensure signature is saved
-            if is_supervisor_own_update and isinstance(form_data, dict):
+            # If supervisor is updating their own submission or submitting a draft, ensure signature is saved
+            if (is_supervisor_own_update or is_own_draft_update) and isinstance(form_data, dict):
                 existing_comment = form_data.get('supervisor_comments', '')
                 if existing_comment and '[Form updated by supervisor with new details]' not in existing_comment:
                     form_data['supervisor_comments'] = existing_comment + '\n\n[Form updated by supervisor with new details]'
@@ -2160,19 +2324,26 @@ def update_submission(submission_id):
             except (ValueError, TypeError):
                 pass  # Invalid date, skip
         
-        # If supervisor is updating their own submission, move it to Operations Manager review
+        # If supervisor is updating their own submission or user is submitting their draft,
+        # move it to Operations Manager review
         # This ensures updated forms are sent for review with new changes
-        if is_supervisor_own_update:
-            # Change status to operations_manager_review so it goes to Operations Manager
+        if is_supervisor_own_update or is_own_draft_update:
+            # If this was a draft, also change the main status from 'draft' to 'submitted'
+            if submission.status == 'draft':
+                submission.status = 'submitted'
+                current_app.logger.info(f"✅ Submission {submission_id} status changed from 'draft' to 'submitted'")
+            
+            # Change workflow_status to operations_manager_review so it goes to Operations Manager
             submission.workflow_status = 'operations_manager_review'
+            current_app.logger.info(f"✅ Submission {submission_id} workflow_status changed to 'operations_manager_review'")
         
         submission.updated_at = datetime.utcnow()
         db.session.commit()
         
-        # Regenerate documents if this is an HVAC submission and it's a supervisor updating their own submission
-        # or if it's being updated by a reviewer
+        # Regenerate documents if this is a supervisor updating their own submission,
+        # a user submitting their draft, or if it's being updated by a reviewer
         job_id = None
-        should_regenerate = is_supervisor_own_update or user.designation in ['operations_manager', 'business_development', 'procurement', 'general_manager']
+        should_regenerate = is_supervisor_own_update or is_own_draft_update or user.designation in ['operations_manager', 'business_development', 'procurement', 'general_manager']
         if should_regenerate:
             try:
                 from common.db_utils import create_job_db

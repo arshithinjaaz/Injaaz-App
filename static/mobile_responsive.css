@@ -1,5 +1,245 @@
 /* Mobile Responsive Styles for Injaaz Forms */
 
+/* ========================================
+   DASHBOARD - MOBILE FIXES
+   ======================================== */
+@media (max-width: 768px) {
+  /* Dashboard Header */
+  .dashboard-header {
+    padding: 1rem !important;
+    text-align: center !important;
+  }
+  
+  .dashboard-header h1 {
+    font-size: 1.5rem !important;
+  }
+  
+  .dashboard-header p {
+    font-size: 0.9rem !important;
+  }
+  
+  /* Module Cards Grid */
+  .modules-grid, .dashboard-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+    padding: 0 0.5rem !important;
+  }
+  
+  /* Module Card */
+  .module-card {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 1.25rem !important;
+  }
+  
+  .module-card h3 {
+    font-size: 1.1rem !important;
+  }
+  
+  .module-card p {
+    font-size: 0.85rem !important;
+  }
+  
+  /* Navigation Menu - Mobile */
+  .nav-menu, .sidebar-nav {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: white !important;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1) !important;
+    z-index: 1000 !important;
+    padding: 0.5rem !important;
+    display: flex !important;
+    justify-content: space-around !important;
+  }
+  
+  /* Profile Modal - Mobile */
+  .contact-modal-content.profile-modal-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+  
+  .pro-container {
+    padding: 0 1rem 1.5rem !important;
+  }
+  
+  .pro-hero {
+    margin: 0 -1rem !important;
+    padding: 2rem 1rem 1.5rem !important;
+  }
+  
+  .pro-tabs {
+    margin: 0 -1rem !important;
+    padding: 0.625rem 0.75rem !important;
+    gap: 0.25rem !important;
+  }
+  
+  .pro-tab {
+    padding: 0.5rem 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+  
+  .pro-avatar {
+    width: 80px !important;
+    height: 80px !important;
+    font-size: 1.75rem !important;
+  }
+  
+  .pro-name {
+    font-size: 1.25rem !important;
+  }
+  
+  .pro-info-item {
+    padding: 0.75rem !important;
+    gap: 0.75rem !important;
+  }
+  
+  .pro-info-icon {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 1rem !important;
+  }
+  
+  .pro-info-label {
+    font-size: 0.65rem !important;
+  }
+  
+  .pro-info-value {
+    font-size: 0.875rem !important;
+  }
+  
+  /* Submitted Forms - Mobile */
+  .submission-card {
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .submission-card h4 {
+    font-size: 1rem !important;
+  }
+  
+  .submission-card .btn-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .submission-card .btn {
+    width: 100% !important;
+  }
+  
+  /* Email Module - Mobile */
+  .email-module-container {
+    padding: 1rem !important;
+  }
+  
+  .email-recipients-list {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .email-recipient-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  
+  /* Form Header with Save Draft - Mobile */
+  .d-flex.justify-content-between.align-items-start {
+    flex-direction: column !important;
+    gap: 1rem !important;
+    align-items: stretch !important;
+  }
+  
+  #saveDraftBtn {
+    width: 100% !important;
+    justify-content: center !important;
+    order: -1 !important;
+  }
+  
+  /* Bottom Submit Buttons - Mobile */
+  .col-12.mb-5.mt-4 .d-flex.justify-content-between {
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+  
+  .col-12.mb-5.mt-4 .d-flex.gap-2 {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  
+  .col-12.mb-5.mt-4 .btn {
+    width: 100% !important;
+  }
+  
+  /* Signature Container - Mobile */
+  .signature-container {
+    height: auto !important;
+    min-height: 120px !important;
+  }
+  
+  .signature-actions {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+  
+  .signature-actions .btn {
+    flex: 1 1 auto !important;
+    min-width: 120px !important;
+  }
+  
+  /* Tab Navigation - Mobile */
+  .nav-tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+  
+  .nav-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  .nav-tabs .nav-link {
+    white-space: nowrap !important;
+    font-size: 0.85rem !important;
+    padding: 0.625rem 1rem !important;
+  }
+  
+  /* Item Cards - Mobile */
+  .editable-item-card {
+    padding: 1rem !important;
+  }
+  
+  .editable-item-card .d-flex.justify-content-between {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+  
+  .editable-item-card .d-flex.gap-2 {
+    flex-wrap: wrap !important;
+  }
+  
+  .editable-item-card .btn-sm {
+    width: 100% !important;
+  }
+  
+  /* Thumbs Row - Mobile */
+  .thumbs-row {
+    gap: 4px !important;
+  }
+  
+  .thumbs-row img {
+    width: 60px !important;
+    height: 45px !important;
+  }
+}
+
 /* Base Mobile Improvements */
 @media (max-width: 768px) {
   /* Better touch targets */

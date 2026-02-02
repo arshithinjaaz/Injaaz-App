@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HR Module - Injaaz</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="stylesheet" href="/static/mobile_responsive.css">
+  <style>
+    :root {
+      --primary: #125435;
+      --primary-light: #1a7a4c;
+      --secondary: #6366f1;
+    }
+    
+    .hr-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
+    }
+    
+    .hr-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+      height: 100%;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .hr-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+    }
+    
+    .hr-card-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.75rem;
+      margin-bottom: 1rem;
+    }
+    
+    .hr-card h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #1e293b;
+    }
+    
+    .hr-card p {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    
+    .btn-hr {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      border: none;
+      padding: 0.625rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 500;
+      text-decoration: none;
+      display: inline-block;
+      transition: all 0.2s;
+    }
+    
+    .btn-hr:hover {
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(18,84,53,0.3);
+    }
+    
+    .icon-leave { background: linear-gradient(135deg, #10b981, #059669); }
+    .icon-termination { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .icon-vacation { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .icon-asset { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      margin-bottom: 1rem;
+      opacity: 0.9;
+    }
+    
+    .back-btn:hover {
+      color: white;
+      opacity: 1;
+    }
+    
+    .submission-item {
+      cursor: pointer;
+      transition: all 0.2s;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+    .submission-item:hover {
+      background: #f8fafc;
+    }
+    .submission-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    /* Detail Modal */
+    .detail-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+      z-index: 9999; opacity: 0; visibility: hidden; transition: all 0.3s ease;
+      padding: 1rem;
+    }
+    .detail-overlay.show { opacity: 1; visibility: visible; }
+    .detail-modal {
+      background: white; border-radius: 16px; max-width: 700px; width: 100%;
+      max-height: 90vh; overflow: hidden; transform: scale(0.9); transition: transform 0.3s ease;
+      display: flex; flex-direction: column;
+    }
+    .detail-overlay.show .detail-modal { transform: scale(1); }
+    .detail-header {
+      padding: 1.5rem; border-bottom: 1px solid #e2e8f0;
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .detail-body { padding: 1.5rem; overflow-y: auto; flex: 1; }
+    .detail-close {
+      background: #f1f5f9; border: none; width: 36px; height: 36px;
+      border-radius: 50%; font-size: 1.25rem; cursor: pointer;
+    }
+    .detail-close:hover { background: #e2e8f0; }
+    .detail-row { display: flex; padding: 0.75rem 0; border-bottom: 1px solid #f1f5f9; }
+    .detail-label { width: 40%; font-weight: 600; color: #64748b; font-size: 0.875rem; }
+    .detail-value { width: 60%; color: #1e293b; }
+    .detail-section { margin-bottom: 1.5rem; }
+    .detail-section-title { font-weight: 700; color: #1e293b; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary); }
+    .workflow-timeline { margin-top: 1rem; }
+    .timeline-item { display: flex; padding: 0.75rem 0; position: relative; padding-left: 2rem; }
+    .timeline-item::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: #e2e8f0; }
+    .timeline-item:last-child::before { display: none; }
+    .timeline-dot { position: absolute; left: 0; top: 0.875rem; width: 14px; height: 14px; border-radius: 50%; background: #e2e8f0; border: 2px solid white; box-shadow: 0 0 0 2px #e2e8f0; }
+    .timeline-dot.completed { background: #10b981; box-shadow: 0 0 0 2px #10b981; }
+    .timeline-dot.current { background: #3b82f6; box-shadow: 0 0 0 2px #3b82f6; }
+    .timeline-dot.rejected { background: #ef4444; box-shadow: 0 0 0 2px #ef4444; }
+    .signature-preview { max-width: 200px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; background: #f8fafc; }
+    
+    .status-badge { padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .status-hr_review { background: #fef3c7; color: #b45309; }
+    .status-gm_review { background: #dbeafe; color: #1d4ed8; }
+    .status-approved { background: #d1fae5; color: #047857; }
+    .status-rejected { background: #fee2e2; color: #dc2626; }
+    .status-submitted { background: #e0e7ff; color: #4338ca; }
+    
+    .form-type-badge { padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+    .type-leave { background: #d1fae5; color: #047857; }
+    .type-termination { background: #fee2e2; color: #dc2626; }
+    .type-long_vacation { background: #dbeafe; color: #1d4ed8; }
+    .type-asset { background: #fef3c7; color: #b45309; }
+  </style>
+</head>
+<body style="background: #f1f5f9;">
+  <!-- Detail Modal -->
+  <div class="detail-overlay" id="detailModal" onclick="closeDetailModal(event)">
+    <div class="detail-modal" onclick="event.stopPropagation()">
+      <div class="detail-header">
+        <div>
+          <span class="form-type-badge" id="modalFormType"></span>
+          <h4 style="font-weight: 700; margin: 0.5rem 0 0;" id="modalSubmissionId"></h4>
+        </div>
+        <button class="detail-close" onclick="closeDetailModal()">&times;</button>
+      </div>
+      <div class="detail-body" id="modalBody"></div>
+    </div>
+  </div>
+  <div class="container py-4">
+    <div class="hr-header">
+      <a href="/dashboard" class="back-btn">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to Dashboard
+      </a>
+      <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">HR Module</h1>
+      <p style="opacity: 0.9; margin: 0;">Manage leave requests, terminations, vacations, and assets</p>
+    </div>
+    
+    <!-- Quick Actions for HR Managers and GM (hidden by default, shown based on user permissions) -->
+    <div class="row g-3 mb-4" id="quickActionsRow" style="display: none;">
+      <div class="col-md-6" id="hrReviewCard" style="display: none;">
+        <a href="/hr/pending-review" class="d-block p-4 bg-white rounded-3 text-decoration-none" style="border: 2px solid #f59e0b; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+          <div class="d-flex align-items-center gap-3">
+            <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+              <svg width="24" height="24" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            </div>
+            <div>
+              <h5 style="font-weight: 600; margin: 0; color: #1e293b;">Pending HR Review</h5>
+              <p style="margin: 0; color: #64748b; font-size: 0.875rem;">Review employee requests</p>
+            </div>
+            <span id="pendingBadge" class="badge bg-danger ms-auto" style="display: none;">0</span>
+          </div>
+        </a>
+      </div>
+      <div class="col-md-6" id="gmApprovalCard" style="display: none;">
+        <a href="/hr/gm-approval" class="d-block p-4 bg-white rounded-3 text-decoration-none" style="border: 2px solid #7c3aed; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+          <div class="d-flex align-items-center gap-3">
+            <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #7c3aed, #5b21b6); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+              <svg width="24" height="24" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <div>
+              <h5 style="font-weight: 600; margin: 0; color: #1e293b;">GM Final Approval</h5>
+              <p style="margin: 0; color: #64748b; font-size: 0.875rem;">Requests pending GM signature</p>
+            </div>
+            <span id="gmPendingBadge" class="badge bg-primary ms-auto" style="display: none;">0</span>
+          </div>
+        </a>
+      </div>
+    </div>
+    
+    <h4 style="font-weight: 600; margin-bottom: 1rem;">HR Forms</h4>
+    <div class="row g-4">
+      <!-- Leave Form -->
+      <div class="col-md-6 col-lg-3">
+        <div class="hr-card">
+          <div class="hr-card-icon icon-leave text-white">
+            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <h3>Leave Request</h3>
+          <p>Submit annual leave, sick leave, or emergency leave requests</p>
+          <a href="/hr/leave-form" class="btn-hr">Open Form</a>
+        </div>
+      </div>
+      
+      <!-- Termination Form -->
+      <div class="col-md-6 col-lg-3">
+        <div class="hr-card">
+          <div class="hr-card-icon icon-termination text-white">
+            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+            </svg>
+          </div>
+          <h3>Termination Form</h3>
+          <p>Process employee termination and clearance documentation</p>
+          <a href="/hr/termination-form" class="btn-hr">Open Form</a>
+        </div>
+      </div>
+      
+      <!-- Long Vacation Form -->
+      <div class="col-md-6 col-lg-3">
+        <div class="hr-card">
+          <div class="hr-card-icon icon-vacation text-white">
+            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/>
+            </svg>
+          </div>
+          <h3>Long Vacation</h3>
+          <p>Request extended leave for travel or personal matters</p>
+          <a href="/hr/long-vacation-form" class="btn-hr">Open Form</a>
+        </div>
+      </div>
+      
+      <!-- Asset Form -->
+      <div class="col-md-6 col-lg-3">
+        <div class="hr-card">
+          <div class="hr-card-icon icon-asset text-white">
+            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+          </div>
+          <h3>Asset Register</h3>
+          <p>Register or transfer company assets and equipment</p>
+          <a href="/hr/asset-form" class="btn-hr">Open Form</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Recent Submissions -->
+    <div class="mt-5">
+      <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; color: #1e293b;">Recent Submissions</h2>
+      <div id="submissionsList" class="bg-white rounded-3 p-4" style="box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        <div class="text-center py-4">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 text-muted">Loading submissions...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const token = localStorage.getItem('access_token');
+    let allSubmissions = [];
+    
+    function getStatusLabel(status) {
+      const labels = {
+        'hr_review': 'Pending HR Review',
+        'gm_review': 'Pending GM Approval',
+        'approved': 'Approved',
+        'rejected': 'Rejected',
+        'submitted': 'Submitted'
+      };
+      return labels[status] || status;
+    }
+    
+    function getFormTypeLabel(type) {
+      return type.replace('hr_', '').replace('_', ' ');
+    }
+    
+    function getFormTypeClass(type) {
+      const t = type.replace('hr_', '');
+      return `type-${t}`;
+    }
+    
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Load recent submissions
+    async function loadSubmissions() {
+      try {
+        const response = await fetch('/hr/api/submissions', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const data = await response.json();
+        const container = document.getElementById('submissionsList');
+        
+        if (data.submissions && data.submissions.length > 0) {
+          allSubmissions = data.submissions;
+          container.innerHTML = data.submissions.slice(0, 10).map((s, idx) => `
+            <div class="submission-item d-flex justify-content-between align-items-center p-3" onclick="showDetail(${idx})">
+              <div>
+                <strong>${s.submission_id}</strong>
+                <span class="badge bg-secondary ms-2">${getFormTypeLabel(s.module_type)}</span>
+                <p class="mb-0 text-muted small">${escapeHtml(s.site_name)} - ${new Date(s.created_at).toLocaleDateString()}</p>
+              </div>
+              <span class="status-badge status-${s.workflow_status}">${getStatusLabel(s.workflow_status)}</span>
+            </div>
+          `).join('');
+        } else {
+          container.innerHTML = '<p class="text-center text-muted py-4">No submissions yet. Create your first HR form above.</p>';
+        }
+      } catch (error) {
+        console.error('Error loading submissions:', error);
+        document.getElementById('submissionsList').innerHTML = '<p class="text-center text-danger py-4">Error loading submissions</p>';
+      }
+    }
+    
+    // Load user permissions first, then load pending counts only for allowed endpoints
+    async function loadPendingCounts() {
+      try {
+        // First, get user permissions
+        const permResponse = await fetch('/hr/api/user-permissions', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!permResponse.ok) return;
+        
+        const permData = await permResponse.json();
+        const perms = permData.permissions || {};
+        let hasAnyAccess = false;
+        
+        // Only load HR pending if user has HR review access
+        if (perms.can_review_hr) {
+          hasAnyAccess = true;
+          document.getElementById('hrReviewCard').style.display = 'block';
+          
+          const hrResponse = await fetch('/hr/api/pending-hr-review', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (hrResponse.ok) {
+            const hrData = await hrResponse.json();
+            if (hrData.submissions && hrData.submissions.length > 0) {
+              const badge = document.getElementById('pendingBadge');
+              badge.textContent = hrData.submissions.length;
+              badge.style.display = 'inline';
+            }
+          }
+        }
+        
+        // Only load GM pending if user has GM approval access
+        if (perms.can_approve_gm) {
+          hasAnyAccess = true;
+          document.getElementById('gmApprovalCard').style.display = 'block';
+          
+          const gmResponse = await fetch('/hr/api/pending-gm-approval', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (gmResponse.ok) {
+            const gmData = await gmResponse.json();
+            if (gmData.submissions && gmData.submissions.length > 0) {
+              const gmBadge = document.getElementById('gmPendingBadge');
+              if (gmBadge) {
+                gmBadge.textContent = gmData.submissions.length;
+                gmBadge.style.display = 'inline';
+              }
+            }
+          }
+        }
+        
+        // Show the quick actions row if user has any access
+        if (hasAnyAccess) {
+          document.getElementById('quickActionsRow').style.display = 'flex';
+        }
+      } catch (error) {
+        // Silently ignore errors
+      }
+    }
+    
+    function showDetail(index) {
+      const s = allSubmissions[index];
+      if (!s) return;
+      
+      const formType = s.module_type.replace('hr_', '');
+      document.getElementById('modalFormType').textContent = getFormTypeLabel(s.module_type);
+      document.getElementById('modalFormType').className = `form-type-badge ${getFormTypeClass(s.module_type)}`;
+      document.getElementById('modalSubmissionId').textContent = s.submission_id;
+      
+      let html = '';
+      const fd = s.form_data || {};
+      
+      // Form Details Section
+      html += `<div class="detail-section">
+        <h5 class="detail-section-title">Form Details</h5>`;
+      
+      if (fd.employee_name) html += detailRow('Employee Name', fd.employee_name);
+      if (fd.employee_id) html += detailRow('Employee ID', fd.employee_id);
+      if (fd.department) html += detailRow('Department', formatValue(fd.department));
+      if (fd.position) html += detailRow('Position', fd.position);
+      
+      if (formType === 'leave') {
+        if (fd.leave_type) html += detailRow('Leave Type', formatValue(fd.leave_type));
+        if (fd.start_date) html += detailRow('Start Date', formatDate(fd.start_date));
+        if (fd.end_date) html += detailRow('End Date', formatDate(fd.end_date));
+        if (fd.total_days) html += detailRow('Total Days', fd.total_days);
+        if (fd.reason) html += detailRow('Reason', fd.reason);
+        if (fd.contact_number) html += detailRow('Contact During Leave', fd.contact_number);
+        if (fd.handover_notes) html += detailRow('Handover Notes', fd.handover_notes);
+      }
+      
+      if (formType === 'termination') {
+        if (fd.termination_type) html += detailRow('Termination Type', formatValue(fd.termination_type));
+        if (fd.join_date) html += detailRow('Date of Joining', formatDate(fd.join_date));
+        if (fd.last_working_day) html += detailRow('Last Working Day', formatDate(fd.last_working_day));
+        if (fd.notice_served) html += detailRow('Notice Period', formatValue(fd.notice_served));
+        if (fd.reason) html += detailRow('Reason', fd.reason);
+        if (fd.exit_notes) html += detailRow('Exit Interview Notes', fd.exit_notes);
+      }
+      
+      if (formType === 'long_vacation') {
+        if (fd.start_date) html += detailRow('Vacation Start', formatDate(fd.start_date));
+        if (fd.end_date) html += detailRow('Return Date', formatDate(fd.end_date));
+        if (fd.total_days) html += detailRow('Total Days', fd.total_days);
+        if (fd.destination) html += detailRow('Destination', fd.destination);
+        if (fd.ticket_required) html += detailRow('Flight Ticket', formatValue(fd.ticket_required));
+        if (fd.vacation_phone) html += detailRow('Phone During Vacation', fd.vacation_phone);
+        if (fd.covering_employee) html += detailRow('Covering Employee', fd.covering_employee);
+        if (fd.handover_notes) html += detailRow('Handover Notes', fd.handover_notes);
+      }
+      
+      if (formType === 'asset') {
+        if (fd.asset_form_type) html += detailRow('Form Type', formatValue(fd.asset_form_type));
+        if (fd.form_date) html += detailRow('Date', formatDate(fd.form_date));
+        if (fd.transfer_to_name) html += detailRow('Transfer To', fd.transfer_to_name);
+        if (fd.remarks) html += detailRow('Remarks', fd.remarks);
+        if (fd.assets && fd.assets.length > 0) {
+          html += `<div style="margin-top: 1rem;"><strong>Assets:</strong></div>`;
+          fd.assets.forEach((asset, i) => {
+            html += `<div style="background: #f8fafc; padding: 0.75rem; border-radius: 8px; margin-top: 0.5rem;">
+              <strong>Asset ${i + 1}:</strong> ${escapeHtml(asset.type || 'N/A')}<br>
+              <small>Serial: ${escapeHtml(asset.serial || 'N/A')} | Condition: ${escapeHtml(asset.condition || 'N/A')}</small>
+            </div>`;
+          });
+        }
+      }
+      
+      html += `</div>`;
+      
+      // Workflow Status Section
+      html += `<div class="detail-section">
+        <h5 class="detail-section-title">Workflow Status</h5>
+        <div class="workflow-timeline">`;
+      
+      html += timelineItem('Submitted', fd.submitted_by_name || s.site_name, fd.submitted_at || s.created_at, 'completed');
+      
+      if (fd.hr_reviewed_at) {
+        html += timelineItem('HR Reviewed', fd.hr_reviewed_by_name, fd.hr_reviewed_at, 'completed', fd.hr_comments, fd.hr_signature);
+      } else if (fd.hr_rejected_at) {
+        html += timelineItem('HR Rejected', fd.hr_rejected_by_name, fd.hr_rejected_at, 'rejected', fd.hr_rejection_reason);
+      } else if (s.workflow_status === 'hr_review') {
+        html += timelineItem('HR Review', 'Pending', null, 'current');
+      }
+      
+      if (fd.gm_approved_at) {
+        html += timelineItem('GM Approved', fd.gm_approved_by_name, fd.gm_approved_at, 'completed', fd.gm_comments, fd.gm_signature);
+      } else if (fd.gm_rejected_at) {
+        html += timelineItem('GM Rejected', fd.gm_rejected_by_name, fd.gm_rejected_at, 'rejected', fd.gm_rejection_reason);
+      } else if (s.workflow_status === 'gm_review') {
+        html += timelineItem('GM Approval', 'Pending', null, 'current');
+      }
+      
+      html += `</div></div>`;
+      
+      document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('detailModal').classList.add('show');
+    }
+    
+    function detailRow(label, value) {
+      return `<div class="detail-row">
+        <div class="detail-label">${label}</div>
+        <div class="detail-value">${escapeHtml(value) || '-'}</div>
+      </div>`;
+    }
+    
+    function formatValue(val) {
+      if (!val) return '-';
+      return val.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+    
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      try {
+        return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      } catch { return dateStr; }
+    }
+    
+    function timelineItem(title, by, date, status, comment, signature) {
+      let dateStr = date ? formatDate(date) : '';
+      let html = `<div class="timeline-item">
+        <div class="timeline-dot ${status}"></div>
+        <div style="flex: 1;">
+          <div style="font-weight: 600; color: #1e293b;">${title}</div>
+          <div style="font-size: 0.85rem; color: #64748b;">${escapeHtml(by)}${dateStr ? ' • ' + dateStr : ''}</div>`;
+      
+      if (comment) {
+        html += `<div style="margin-top: 0.5rem; padding: 0.5rem; background: #f8fafc; border-radius: 6px; font-size: 0.85rem;">
+          <strong>Comment:</strong> ${escapeHtml(comment)}
+        </div>`;
+      }
+      
+      if (signature && signature.startsWith('data:image')) {
+        html += `<div style="margin-top: 0.5rem;">
+          <strong style="font-size: 0.85rem;">Signature:</strong><br>
+          <img src="${signature}" class="signature-preview" alt="Signature">
+        </div>`;
+      }
+      
+      html += `</div></div>`;
+      return html;
+    }
+    
+    function closeDetailModal(e) {
+      if (e && e.target !== document.getElementById('detailModal')) return;
+      document.getElementById('detailModal').classList.remove('show');
+    }
+    
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeDetailModal();
+    });
+    
+    loadSubmissions();
+    loadPendingCounts();
+  </script>
+</body>
+</html>

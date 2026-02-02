@@ -699,11 +699,34 @@
       image-rendering: crisp-edges;
     }
     
+    /* Signature Container Wrapper */
+    .signature-container {
+      position: relative;
+      height: 120px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff;
+      overflow: hidden;
+    }
+    
+    /* Signature Action Buttons Container */
+    .signature-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
     /* Add Saved Signature Button Styles */
     .add-default-signature {
       transition: all 0.2s ease;
       border-radius: 6px !important;
       font-weight: 500 !important;
+      color: white !important;
+      border: none !important;
+      font-size: 0.75rem !important;
+      padding: 4px 10px !important;
     }
     
     .add-default-signature.has-signature {
@@ -1036,16 +1059,29 @@
   </nav>
   
   <div class="container">
-    <h2>HVAC & MEP Inspection{% if is_edit_mode %} - Edit Mode{% endif %}</h2>
-    <p class="text-muted mb-4">
-      {% if is_supervisor_edit %}
-      Review the technician's submission below. You can edit any fields, add new items, add your comments, verify, and sign to approve.
-      {% elif is_edit_mode %}
-      Review and edit the submission below. Signatures cannot be modified.
-      {% else %}
-      Complete site visit documentation with photos and signatures
+    <!-- Form Header with Save Draft -->
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+      <div>
+        <h2 class="mb-1">HVAC & MEP Inspection{% if is_edit_mode %} - Edit Mode{% endif %}</h2>
+        <p class="text-muted mb-0">
+          {% if is_supervisor_edit %}
+          Review the technician's submission below. You can edit any fields, add new items, add your comments, verify, and sign to approve.
+          {% elif is_edit_mode %}
+          Review and edit the submission below. Signatures cannot be modified.
+          {% else %}
+          Complete site visit documentation with photos and signatures
+          {% endif %}
+        </p>
+      </div>
+      {% if not is_edit_mode or (submission_data and submission_data.workflow_status == 'draft') %}
+      <button type="button" id="saveDraftBtn" class="btn btn-outline-secondary" style="font-weight: 500; border-radius: 6px; white-space: nowrap;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16" style="vertical-align: -2px;">
+          <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+        </svg>
+        Save Draft
+      </button>
       {% endif %}
-    </p>
+    </div>
 
     {% if is_edit_mode and can_edit == False %}
     <!-- Read-Only Mode Banner -->
@@ -1195,12 +1231,13 @@
                 <!-- Photos -->
                 <div class="col-12">
                   <label class="form-label"><strong>Photos</strong></label>
-                  {% if item.photos and item.photos|length > 0 %}
+                  {% set item_photos = item.photos if item.photos else item.photo_urls %}
+                  {% if item_photos and item_photos|length > 0 %}
                   <div class="photo-count mb-2" style="font-size: 0.85rem;">
-                    📷 {{ item.photos|length }} photo(s) ☁️ Uploaded
+                    {{ item_photos|length }} photo(s) - Uploaded
                   </div>
                   <div class="thumbs-row mb-2" style="display: flex; flex-wrap: wrap; gap: 4px;">
-                    {% for photo in item.photos[:6] %}
+                    {% for photo in item_photos[:6] %}
                       {% set photo_url = photo.url if photo is mapping else photo %}
                       {% if photo_url %}
                       <img src="{{ photo_url }}" alt="Photo {{ loop.index }}" 
@@ -1209,19 +1246,19 @@
                            onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2270%22 height=%2250%22%3E%3Crect width=%2270%22 height=%2250%22 fill=%22%23e5e7eb%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2210%22%3EFailed%3C/text%3E%3C/svg%3E'">
                       {% endif %}
                     {% endfor %}
-                    {% if item.photos|length > 6 %}
-                    <span class="badge bg-secondary" style="margin-left: 8px; align-self: center;">+{{ item.photos|length - 6 }} more</span>
+                    {% if item_photos|length > 6 %}
+                    <span class="badge bg-secondary" style="margin-left: 8px; align-self: center;">+{{ item_photos|length - 6 }} more</span>
                     {% endif %}
                   </div>
                   {% else %}
                   <div class="photo-count mb-2" style="font-size: 0.85rem; color: #6b7280;">
-                    📷 No photos attached
+                    No photos attached
                   </div>
                   {% endif %}
                   
                   <!-- Add more photos button -->
                   <button type="button" class="btn btn-sm btn-outline-primary add-photos-to-item" data-item-index="{{ loop.index0 }}">
-                    📷 Add More Photos
+                    Add More Photos
                   </button>
                 </div>
               </div>
@@ -1392,11 +1429,11 @@
                 <label class="form-label small mb-1" style="color: #4b5563;">Signature 
                   <span id="supervisorSignatureHint" class="text-success" style="display: none;">✓ Signed</span>
                 </label>
-                <div style="height: 80px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+                <div class="signature-container">
                   <canvas id="supervisorSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
                 </div>
                 <input type="hidden" id="supervisorSignatureData" name="supervisor_signature">
-                <div class="d-flex gap-2 mt-1 flex-wrap">
+                <div class="signature-actions">
                   <button type="button" id="clearSupervisor" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                     Clear
@@ -1578,11 +1615,11 @@
               <label class="form-label small mb-1" style="color: #4b5563;">Signature 
                 <span id="omSignatureHint" class="text-success" style="display: none;">✓ Signed</span>
               </label>
-              <div style="height: 80px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+              <div class="signature-container">
                 <canvas id="opManSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
               </div>
               <input type="hidden" id="opManSignatureData" name="opMan_signature">
-              <div class="d-flex gap-2 mt-1 flex-wrap">
+              <div class="signature-actions">
                 <button type="button" id="clearOp" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                   Clear
@@ -1670,11 +1707,11 @@
               <label class="form-label small mb-1" style="color: #4b5563;">Signature 
                 <span id="bdSignatureHint" class="text-success" style="display: none;">✓ Signed</span>
               </label>
-              <div style="height: 80px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+              <div class="signature-container">
                 <canvas id="businessDevSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
               </div>
               <input type="hidden" id="businessDevSignatureData" name="business_dev_signature">
-              <div class="d-flex gap-2 mt-1 flex-wrap">
+              <div class="signature-actions">
                 <button type="button" id="clearBusinessDev" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                   Clear
@@ -1762,11 +1799,11 @@
               <label class="form-label small mb-1" style="color: #4b5563;">Signature 
                 <span id="procurementSignatureHint" class="text-success" style="display: none;">✓ Signed</span>
               </label>
-              <div style="height: 80px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+              <div class="signature-container">
                 <canvas id="procurementSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
               </div>
               <input type="hidden" id="procurementSignatureData" name="procurement_signature">
-              <div class="d-flex gap-2 mt-1 flex-wrap">
+              <div class="signature-actions">
                 <button type="button" id="clearProcurement" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                   Clear
@@ -1871,11 +1908,11 @@
               <label class="form-label small mb-1" style="color: #4b5563;">Signature 
                 <span id="gmSignatureHint" class="text-success" style="display: none;">✓ Signed</span>
               </label>
-              <div style="height: 80px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; position: relative;">
+              <div class="signature-container">
                 <canvas id="generalManagerSignaturePad" class="signature-pad" style="width: 100%; height: 100%; display: block;"></canvas>
               </div>
               <input type="hidden" id="generalManagerSignatureData" name="general_manager_signature">
-              <div class="d-flex gap-2 mt-1 flex-wrap">
+              <div class="signature-actions">
                 <button type="button" id="clearGeneralManager" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                   Clear
@@ -1993,12 +2030,12 @@
             <div class="d-flex gap-2">
               {% if user_designation == 'supervisor' or (user and user.role == 'admin') %}
               <button type="button" id="verifiedBtn" class="btn btn-success px-4 py-2 shadow-sm" style="font-weight: 700; border-radius: 8px;">
-                <span id="verifiedBtnIcon">✓</span> Verify
+                <span id="verifiedBtnIcon">&#10003;</span> Verify
               </button>
-              <span id="verifiedStatus" class="d-none align-self-center" style="color: #059669; font-weight: 600;">✓ Verified</span>
+              <span id="verifiedStatus" class="d-none align-self-center" style="color: #059669; font-weight: 600;">&#10003; Verified</span>
               {% endif %}
               <button type="button" id="submitAllBtn" class="btn btn-success px-5 py-2 shadow-sm" style="font-weight: 700; letter-spacing: 0.5px; border-radius: 8px;">
-                {% if is_edit_mode %}✓ UPDATE SUBMISSION{% else %}🚀 SUBMIT INSPECTION{% endif %}
+                {% if is_edit_mode %}UPDATE SUBMISSION{% else %}SUBMIT INSPECTION{% endif %}
               </button>
             </div>
             {% else %}
@@ -3364,7 +3401,7 @@
                   pdfBtn.download = results.pdf_filename || 'hvac_report.pdf';
                   pdfBtn.className = 'btn btn-success me-2 mt-2';
                   pdfBtn.style.cssText = 'text-decoration: none; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; display: inline-block; font-weight: 600;';
-                  pdfBtn.textContent = '📥 Download PDF Report';
+                  pdfBtn.textContent = 'Download PDF Report';
                   downloadLinks.appendChild(pdfBtn);
                 }
                 
@@ -3697,12 +3734,14 @@
           // Safety check: If user is supervisor and supervisor_id matches, it's always their own submission
           {% if user_designation == 'supervisor' %}
           let isOwnSubmission = supervisorOwnsSubmission || 
+                               workflowStatus === 'draft' ||
                                workflowStatus === 'submitted' || 
                                workflowStatus === 'rejected' || 
                                !workflowStatus;
           {% else %}
           let isOwnSubmission = (
             (submissionSupervisorId && currentUserId && submissionSupervisorId === currentUserId) ||
+            workflowStatus === 'draft' ||
             workflowStatus === 'submitted' || 
             workflowStatus === 'rejected' || 
             !workflowStatus
@@ -3722,8 +3761,10 @@
           }
           
           if (isOwnSubmission) {
-            // Supervisor is updating their own submitted/rejected form - just update, don't approve
+            // Supervisor is updating their own submitted/rejected/draft form - just update, don't approve
             console.log('✅ Supervisor updating their own submission - using workflow update endpoint');
+            console.log('📋 Submission ID:', submissionId);
+            console.log('📋 Workflow status before update:', workflowStatus);
             
             // Re-capture signature right before submitting to ensure we have the latest
             // Check canvas first (if supervisor signed on canvas, use that)
@@ -3772,10 +3813,13 @@
             
             if (!updateRes.ok) {
               const txt = await updateRes.text();
+              console.error('❌ Update request failed:', updateRes.status, txt);
               throw new Error('Update failed: ' + updateRes.status + ' ' + txt);
             }
             
             const updateJson = await updateRes.json();
+            console.log('✅ Update response:', updateJson);
+            console.log('📋 New workflow status:', updateJson?.data?.submission?.workflow_status || updateJson?.submission?.workflow_status);
             
             if (updateJson.success) {
               // Check if documents are being regenerated
@@ -4366,14 +4410,104 @@
           }
           {% endif %}
         } catch (err) {
-          console.error('❌ Submission failed:', err);
+          console.error('Submission failed:', err);
           loadingOverlay.style.display = 'none';
-          statusBox.innerHTML = `<div class="alert alert-danger">❌ {% if is_edit_mode %}Update{% else %}Submission{% endif %} failed: ${err.message}</div>`;
+          statusBox.innerHTML = `<div class="alert alert-danger">{% if is_edit_mode %}Update{% else %}Submission{% endif %} failed: ${err.message}</div>`;
         }
       }
 
       if (submitAllBtn) {
         submitAllBtn.addEventListener('click', submitAll);
+      }
+      
+      // Save as Draft to Server
+      const saveDraftBtn = document.getElementById('saveDraftBtn');
+      if (saveDraftBtn) {
+        saveDraftBtn.addEventListener('click', async function() {
+          const originalText = saveDraftBtn.innerHTML;
+          saveDraftBtn.disabled = true;
+          saveDraftBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+          
+          try {
+            // Collect form data
+            const formData = {
+              site_name: document.getElementById('site_name')?.value || 'Draft',
+              visit_date: document.getElementById('visit_date')?.value || null,
+              items: items.map(it => ({
+                asset: it.asset,
+                system: it.system,
+                description: it.description,
+                quantity: it.quantity || '1',
+                brand: it.brand || '',
+                specification: it.specification || '',
+                comments: it.comments || '',
+                photo_urls: it.photoUrls || it.photo_urls || []
+              })),
+              supervisor_comments: document.getElementById('supervisorComments')?.value || '',
+              tech_signature: pads.techPad && !pads.techPad.isEmpty() ? pads.techPad.toDataURL() : null,
+              supervisor_signature: pads.supervisorPad && !pads.supervisorPad.isEmpty() ? pads.supervisorPad.toDataURL() : null
+            };
+            
+            // Get existing draft ID if editing
+            const existingDraftId = new URLSearchParams(window.location.search).get('edit');
+            
+            const payload = {
+              submission_id: existingDraftId && existingDraftId.startsWith('draft_') ? existingDraftId : null,
+              module_type: 'hvac_mep',
+              site_name: formData.site_name,
+              visit_date: formData.visit_date,
+              form_data: formData
+            };
+            
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/api/workflow/submissions/save-draft', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+              saveDraftBtn.innerHTML = 'Saved';
+              saveDraftBtn.classList.remove('btn-outline-secondary');
+              saveDraftBtn.classList.add('btn-success');
+              
+              // Update URL if this is a new draft
+              if (result.submission_id && !existingDraftId) {
+                const newUrl = `${window.location.pathname}?edit=${result.submission_id}`;
+                window.history.replaceState({}, '', newUrl);
+              }
+              
+              // Clear local draft since we saved to server
+              localStorage.removeItem('hvac_mep_draft');
+              
+              setTimeout(() => {
+                saveDraftBtn.innerHTML = originalText;
+                saveDraftBtn.classList.remove('btn-success');
+                saveDraftBtn.classList.add('btn-outline-secondary');
+                saveDraftBtn.disabled = false;
+              }, 2000);
+            } else {
+              throw new Error(result.error || 'Failed to save draft');
+            }
+          } catch (error) {
+            console.error('Error saving draft:', error);
+            saveDraftBtn.innerHTML = 'Failed';
+            saveDraftBtn.classList.remove('btn-outline-secondary');
+            saveDraftBtn.classList.add('btn-danger');
+            
+            setTimeout(() => {
+              saveDraftBtn.innerHTML = originalText;
+              saveDraftBtn.classList.remove('btn-danger');
+              saveDraftBtn.classList.add('btn-outline-secondary');
+              saveDraftBtn.disabled = false;
+            }, 2000);
+          }
+        });
       }
 
       // Tab Navigation Function

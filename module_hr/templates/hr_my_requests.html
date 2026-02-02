@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My HR Requests - Injaaz</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="stylesheet" href="/static/mobile_responsive.css">
+  <style>
+    :root { --primary: #125435; --primary-light: #1a7a4c; }
+    body { background: #f1f5f9; }
+    .page-header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; }
+    .back-link { color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; opacity: 0.9; }
+    .back-link:hover { color: white; opacity: 1; }
+    .form-card { background: white; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; transition: all 0.2s; margin-bottom: 1rem; }
+    .form-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .btn-form { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 500; text-decoration: none; font-size: 0.9rem; }
+    .btn-form:hover { color: white; }
+    .status-badge { padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .status-hr_review { background: #fef3c7; color: #b45309; }
+    .status-gm_review { background: #dbeafe; color: #1d4ed8; }
+    .status-approved { background: #d1fae5; color: #047857; }
+    .status-rejected { background: #fee2e2; color: #dc2626; }
+    .status-submitted { background: #e0e7ff; color: #4338ca; }
+    .request-card { background: white; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
+    .form-type-badge { padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+    .type-leave { background: #d1fae5; color: #047857; }
+    .type-termination { background: #fee2e2; color: #dc2626; }
+    .type-long_vacation { background: #dbeafe; color: #1d4ed8; }
+    .type-asset { background: #fef3c7; color: #b45309; }
+    
+    .request-card { cursor: pointer; transition: all 0.2s; }
+    .request-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); border-color: var(--primary); }
+    
+    /* Detail Modal Styles */
+    .detail-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+      z-index: 9999; opacity: 0; visibility: hidden; transition: all 0.3s ease;
+      padding: 1rem;
+    }
+    .detail-overlay.show { opacity: 1; visibility: visible; }
+    .detail-modal {
+      background: white; border-radius: 16px; max-width: 700px; width: 100%;
+      max-height: 90vh; overflow: hidden; transform: scale(0.9); transition: transform 0.3s ease;
+      display: flex; flex-direction: column;
+    }
+    .detail-overlay.show .detail-modal { transform: scale(1); }
+    .detail-header {
+      padding: 1.5rem; border-bottom: 1px solid #e2e8f0;
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .detail-body { padding: 1.5rem; overflow-y: auto; flex: 1; }
+    .detail-close {
+      background: #f1f5f9; border: none; width: 36px; height: 36px;
+      border-radius: 50%; font-size: 1.25rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .detail-close:hover { background: #e2e8f0; }
+    .detail-row { display: flex; padding: 0.75rem 0; border-bottom: 1px solid #f1f5f9; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { width: 40%; font-weight: 600; color: #64748b; font-size: 0.875rem; }
+    .detail-value { width: 60%; color: #1e293b; }
+    .detail-section { margin-bottom: 1.5rem; }
+    .detail-section-title {
+      font-weight: 700; color: #1e293b; margin-bottom: 1rem;
+      padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary);
+      font-size: 1rem;
+    }
+    .workflow-timeline { margin-top: 1rem; }
+    .timeline-item {
+      display: flex; padding: 0.75rem 0; position: relative;
+      padding-left: 2rem;
+    }
+    .timeline-item::before {
+      content: ''; position: absolute; left: 6px; top: 0; bottom: 0;
+      width: 2px; background: #e2e8f0;
+    }
+    .timeline-item:last-child::before { display: none; }
+    .timeline-dot {
+      position: absolute; left: 0; top: 0.875rem;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #e2e8f0; border: 2px solid white; box-shadow: 0 0 0 2px #e2e8f0;
+    }
+    .timeline-dot.completed { background: #10b981; box-shadow: 0 0 0 2px #10b981; }
+    .timeline-dot.current { background: #3b82f6; box-shadow: 0 0 0 2px #3b82f6; }
+    .timeline-dot.rejected { background: #ef4444; box-shadow: 0 0 0 2px #ef4444; }
+    .signature-preview { max-width: 200px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; background: #f8fafc; }
+  </style>
+</head>
+<body>
+  <!-- Detail Modal -->
+  <div class="detail-overlay" id="detailModal" onclick="closeDetailModal(event)">
+    <div class="detail-modal" onclick="event.stopPropagation()">
+      <div class="detail-header">
+        <div>
+          <span class="form-type-badge" id="modalFormType"></span>
+          <h4 style="font-weight: 700; margin: 0.5rem 0 0;" id="modalSubmissionId"></h4>
+        </div>
+        <button class="detail-close" onclick="closeDetailModal()">&times;</button>
+      </div>
+      <div class="detail-body" id="modalBody">
+        <!-- Content loaded dynamically -->
+      </div>
+    </div>
+  </div>
+  <div class="container py-4">
+    <div class="page-header">
+      <a href="/dashboard" class="back-link">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Back to Dashboard
+      </a>
+      <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem;">My HR Requests</h1>
+      <p style="opacity: 0.9; margin: 0;">Submit and track your HR forms</p>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3">
+        <a href="/hr/leave-form" class="form-card d-block text-decoration-none h-100">
+          <div class="text-center">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📅</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0;">Leave Request</h6>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-md-3">
+        <a href="/hr/long-vacation-form" class="form-card d-block text-decoration-none h-100">
+          <div class="text-center">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">✈️</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0;">Long Vacation</h6>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-md-3">
+        <a href="/hr/termination-form" class="form-card d-block text-decoration-none h-100">
+          <div class="text-center">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0;">Termination</h6>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-md-3">
+        <a href="/hr/asset-form" class="form-card d-block text-decoration-none h-100">
+          <div class="text-center">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">💼</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0;">Asset Form</h6>
+          </div>
+        </a>
+      </div>
+    </div>
+    
+    <!-- My Requests -->
+    <h4 style="font-weight: 600; margin-bottom: 1rem;">My Submitted Requests</h4>
+    <div id="requestsList">
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+        <p class="mt-2 text-muted">Loading your requests...</p>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const token = localStorage.getItem('access_token');
+    let allSubmissions = [];
+    
+    function getStatusLabel(status) {
+      const labels = {
+        'hr_review': 'Pending HR Review',
+        'gm_review': 'Pending GM Approval',
+        'approved': 'Approved',
+        'rejected': 'Rejected',
+        'submitted': 'Submitted'
+      };
+      return labels[status] || status;
+    }
+    
+    function getFormTypeLabel(type) {
+      return type.replace('hr_', '').replace('_', ' ');
+    }
+    
+    function getFormTypeClass(type) {
+      const t = type.replace('hr_', '');
+      return `type-${t}`;
+    }
+    
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    async function loadRequests() {
+      try {
+        const response = await fetch('/hr/api/my-submissions', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        
+        const container = document.getElementById('requestsList');
+        
+        if (data.submissions && data.submissions.length > 0) {
+          allSubmissions = data.submissions;
+          container.innerHTML = data.submissions.map((s, idx) => `
+            <div class="request-card" onclick="showDetail(${idx})">
+              <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                  <span class="form-type-badge ${getFormTypeClass(s.module_type)}">${getFormTypeLabel(s.module_type)}</span>
+                  <h5 style="font-weight: 600; margin: 0.5rem 0 0.25rem;">${s.submission_id}</h5>
+                  <p class="text-muted mb-0" style="font-size: 0.875rem;">
+                    Submitted: ${new Date(s.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+                <span class="status-badge status-${s.workflow_status}">${getStatusLabel(s.workflow_status)}</span>
+              </div>
+              ${s.form_data?.employee_name ? `<p class="mt-2 mb-0"><strong>Employee:</strong> ${escapeHtml(s.form_data.employee_name)}</p>` : ''}
+            </div>
+          `).join('');
+        } else {
+          container.innerHTML = `
+            <div class="text-center py-5 bg-white rounded-3">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+              <h5>No requests yet</h5>
+              <p class="text-muted">Use the forms above to submit your first HR request</p>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('requestsList').innerHTML = '<div class="alert alert-danger">Error loading requests</div>';
+      }
+    }
+    
+    function showDetail(index) {
+      const s = allSubmissions[index];
+      if (!s) return;
+      
+      const formType = s.module_type.replace('hr_', '');
+      document.getElementById('modalFormType').textContent = getFormTypeLabel(s.module_type);
+      document.getElementById('modalFormType').className = `form-type-badge ${getFormTypeClass(s.module_type)}`;
+      document.getElementById('modalSubmissionId').textContent = s.submission_id;
+      
+      let html = '';
+      const fd = s.form_data || {};
+      
+      // Form Details Section
+      html += `<div class="detail-section">
+        <h5 class="detail-section-title">Form Details</h5>`;
+      
+      // Common fields
+      if (fd.employee_name) html += detailRow('Employee Name', fd.employee_name);
+      if (fd.employee_id) html += detailRow('Employee ID', fd.employee_id);
+      if (fd.department) html += detailRow('Department', formatValue(fd.department));
+      if (fd.position) html += detailRow('Position', fd.position);
+      
+      // Leave form specific
+      if (formType === 'leave') {
+        if (fd.leave_type) html += detailRow('Leave Type', formatValue(fd.leave_type));
+        if (fd.start_date) html += detailRow('Start Date', formatDate(fd.start_date));
+        if (fd.end_date) html += detailRow('End Date', formatDate(fd.end_date));
+        if (fd.total_days) html += detailRow('Total Days', fd.total_days);
+        if (fd.reason) html += detailRow('Reason', fd.reason);
+        if (fd.contact_number) html += detailRow('Contact During Leave', fd.contact_number);
+        if (fd.handover_notes) html += detailRow('Handover Notes', fd.handover_notes);
+      }
+      
+      // Termination form specific
+      if (formType === 'termination') {
+        if (fd.termination_type) html += detailRow('Termination Type', formatValue(fd.termination_type));
+        if (fd.join_date) html += detailRow('Date of Joining', formatDate(fd.join_date));
+        if (fd.last_working_day) html += detailRow('Last Working Day', formatDate(fd.last_working_day));
+        if (fd.notice_served) html += detailRow('Notice Period', formatValue(fd.notice_served));
+        if (fd.reason) html += detailRow('Reason', fd.reason);
+        if (fd.exit_notes) html += detailRow('Exit Interview Notes', fd.exit_notes);
+        if (fd.settlement_notes) html += detailRow('Settlement Notes', fd.settlement_notes);
+        
+        // Clearance checklist
+        html += `<div style="margin-top: 1rem;"><strong>Clearance Checklist:</strong></div>`;
+        html += `<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">`;
+        html += clearanceItem('ID Card', fd.clearance_id_card);
+        html += clearanceItem('Laptop', fd.clearance_laptop);
+        html += clearanceItem('Phone', fd.clearance_phone);
+        html += clearanceItem('Keys', fd.clearance_keys);
+        html += clearanceItem('Documents', fd.clearance_documents);
+        html += clearanceItem('Accounts', fd.clearance_accounts);
+        html += `</div>`;
+      }
+      
+      // Long vacation form specific
+      if (formType === 'long_vacation') {
+        if (fd.start_date) html += detailRow('Vacation Start', formatDate(fd.start_date));
+        if (fd.end_date) html += detailRow('Return Date', formatDate(fd.end_date));
+        if (fd.total_days) html += detailRow('Total Days', fd.total_days);
+        if (fd.destination) html += detailRow('Destination', fd.destination);
+        if (fd.ticket_required) html += detailRow('Flight Ticket', formatValue(fd.ticket_required));
+        if (fd.ticket_allowance) html += detailRow('Ticket Allowance', formatValue(fd.ticket_allowance));
+        if (fd.vacation_phone) html += detailRow('Phone During Vacation', fd.vacation_phone);
+        if (fd.emergency_contact_name) html += detailRow('Emergency Contact', fd.emergency_contact_name);
+        if (fd.emergency_contact_phone) html += detailRow('Emergency Phone', fd.emergency_contact_phone);
+        if (fd.covering_employee) html += detailRow('Covering Employee', fd.covering_employee);
+        if (fd.handover_notes) html += detailRow('Handover Notes', fd.handover_notes);
+      }
+      
+      // Asset form specific
+      if (formType === 'asset') {
+        if (fd.asset_form_type) html += detailRow('Form Type', formatValue(fd.asset_form_type));
+        if (fd.form_date) html += detailRow('Date', formatDate(fd.form_date));
+        if (fd.transfer_to_name) html += detailRow('Transfer To', fd.transfer_to_name);
+        if (fd.remarks) html += detailRow('Remarks', fd.remarks);
+        
+        // Assets list
+        if (fd.assets && fd.assets.length > 0) {
+          html += `<div style="margin-top: 1rem;"><strong>Assets:</strong></div>`;
+          fd.assets.forEach((asset, i) => {
+            html += `<div style="background: #f8fafc; padding: 0.75rem; border-radius: 8px; margin-top: 0.5rem;">
+              <strong>Asset ${i + 1}:</strong> ${escapeHtml(asset.type || 'N/A')}<br>
+              <small>Serial: ${escapeHtml(asset.serial || 'N/A')} | Brand: ${escapeHtml(asset.brand || 'N/A')} | Condition: ${escapeHtml(asset.condition || 'N/A')}</small>
+            </div>`;
+          });
+        }
+      }
+      
+      html += `</div>`;
+      
+      // Workflow Status Section
+      html += `<div class="detail-section">
+        <h5 class="detail-section-title">Workflow Status</h5>
+        <div class="workflow-timeline">`;
+      
+      // Submission
+      html += timelineItem('Submitted', fd.submitted_by_name || 'You', fd.submitted_at, 'completed');
+      
+      // HR Review
+      if (fd.hr_reviewed_at) {
+        html += timelineItem('HR Reviewed', fd.hr_reviewed_by_name, fd.hr_reviewed_at, 'completed', fd.hr_comments, fd.hr_signature);
+      } else if (fd.hr_rejected_at) {
+        html += timelineItem('HR Rejected', fd.hr_rejected_by_name, fd.hr_rejected_at, 'rejected', fd.hr_rejection_reason);
+      } else if (s.workflow_status === 'hr_review') {
+        html += timelineItem('HR Review', 'Pending', null, 'current');
+      }
+      
+      // GM Review
+      if (fd.gm_approved_at) {
+        html += timelineItem('GM Approved', fd.gm_approved_by_name, fd.gm_approved_at, 'completed', fd.gm_comments, fd.gm_signature);
+      } else if (fd.gm_rejected_at) {
+        html += timelineItem('GM Rejected', fd.gm_rejected_by_name, fd.gm_rejected_at, 'rejected', fd.gm_rejection_reason);
+      } else if (s.workflow_status === 'gm_review') {
+        html += timelineItem('GM Approval', 'Pending', null, 'current');
+      }
+      
+      html += `</div></div>`;
+      
+      document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('detailModal').classList.add('show');
+    }
+    
+    function detailRow(label, value) {
+      return `<div class="detail-row">
+        <div class="detail-label">${label}</div>
+        <div class="detail-value">${escapeHtml(value) || '-'}</div>
+      </div>`;
+    }
+    
+    function formatValue(val) {
+      if (!val) return '-';
+      return val.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+    
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      try {
+        return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      } catch { return dateStr; }
+    }
+    
+    function clearanceItem(label, checked) {
+      const icon = checked ? '✓' : '✗';
+      const color = checked ? '#10b981' : '#ef4444';
+      return `<span style="background: ${checked ? '#d1fae5' : '#fee2e2'}; color: ${color}; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+        ${icon} ${label}
+      </span>`;
+    }
+    
+    function timelineItem(title, by, date, status, comment, signature) {
+      let dateStr = date ? formatDate(date) : '';
+      let html = `<div class="timeline-item">
+        <div class="timeline-dot ${status}"></div>
+        <div style="flex: 1;">
+          <div style="font-weight: 600; color: #1e293b;">${title}</div>
+          <div style="font-size: 0.85rem; color: #64748b;">${by}${dateStr ? ' • ' + dateStr : ''}</div>`;
+      
+      if (comment) {
+        html += `<div style="margin-top: 0.5rem; padding: 0.5rem; background: #f8fafc; border-radius: 6px; font-size: 0.85rem;">
+          <strong>Comment:</strong> ${escapeHtml(comment)}
+        </div>`;
+      }
+      
+      if (signature && signature.startsWith('data:image')) {
+        html += `<div style="margin-top: 0.5rem;">
+          <strong style="font-size: 0.85rem;">Signature:</strong><br>
+          <img src="${signature}" class="signature-preview" alt="Signature">
+        </div>`;
+      }
+      
+      html += `</div></div>`;
+      return html;
+    }
+    
+    function closeDetailModal(e) {
+      if (e && e.target !== document.getElementById('detailModal')) return;
+      document.getElementById('detailModal').classList.remove('show');
+    }
+    
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeDetailModal();
+    });
+    
+    loadRequests();
+  </script>
+</body>
+</html>

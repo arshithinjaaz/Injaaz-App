@@ -15,6 +15,102 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Token refresh state - prevents multiple simultaneous refresh attempts
+let isRefreshing = false;
+let refreshPromise = null;
+
+// Helper function to refresh access token using refresh token
+async function refreshAccessToken() {
+  // If already refreshing, wait for the existing refresh to complete
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+  
+  isRefreshing = true;
+  
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (!refreshToken) {
+        return null;
+      }
+      
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${refreshToken}`
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 422) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+        }
+        return null;
+      }
+      
+      const data = await response.json();
+      if (data.access_token) {
+        localStorage.setItem('access_token', data.access_token);
+        return data.access_token;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+  
+  return refreshPromise;
+}
+
+// Helper function to make authenticated fetch with automatic token refresh
+async function authenticatedFetch(url, options = {}) {
+  let token = localStorage.getItem('access_token');
+  if (!token) {
+    return { ok: false, status: 401 };
+  }
+  
+  // Make initial request
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  // If 401, try to refresh token and retry once
+  if (response.status === 401) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      // Retry with new token
+      return fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Authorization': `Bearer ${newToken}`
+        }
+      });
+    } else {
+      // Refresh failed, redirect to login
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+      return { ok: false, status: 401 };
+    }
+  }
+  
+  return response;
+}
+
 // ===========================================
 // User & Authentication Functions
 // ===========================================
@@ -197,6 +293,22 @@ function updateModuleVisibility(user) {
     const isBD = user.designation === 'business_development';
     bdEmailMenuItem.style.display = isBD ? 'inline-block' : 'none';
   }
+
+  // Check HR Module access
+  const hrCard = document.getElementById('module-hr');
+  if (hrCard) {
+    const hasHrAccess = isAdmin || user.access_hr === true;
+    hrCard.style.display = hasHrAccess ? 'block' : 'none';
+    hrCard.style.visibility = hasHrAccess ? 'visible' : 'hidden';
+  }
+
+  // Check Procurement Module access
+  const procurementCard = document.getElementById('module-procurement');
+  if (procurementCard) {
+    const hasProcurementAccess = isAdmin || user.access_procurement_module === true;
+    procurementCard.style.display = hasProcurementAccess ? 'block' : 'none';
+    procurementCard.style.visibility = hasProcurementAccess ? 'visible' : 'hidden';
+  }
   
   // Update grid layout based on visible modules
   const modulesGrid = document.getElementById('modulesGrid');
@@ -290,21 +402,21 @@ function updateModuleGridLayout() {
 // Workflow Functions
 // ===========================================
 
+// Flag to prevent duplicate calls
+let submittedFormsLoading = false;
+
 // Load submitted forms count for supervisors
 async function loadSubmittedFormsCount(user) {
   if (!user || user.designation !== 'supervisor') return;
   
+  // Prevent duplicate simultaneous calls
+  if (submittedFormsLoading) return;
+  submittedFormsLoading = true;
+  
   try {
-    const token = localStorage.getItem('access_token');
-    if (!token) return;
+    const response = await authenticatedFetch('/api/workflow/submissions/my-submissions');
     
-    const response = await fetch('/api/workflow/submissions/my-submissions', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (!response.ok) return;
+    if (!response || !response.ok) return;
     
     const data = await response.json();
     const submissions = data.submissions || [];
@@ -333,6 +445,8 @@ async function loadSubmittedFormsCount(user) {
     
   } catch (error) {
     console.error('Error loading submitted forms count:', error);
+  } finally {
+    submittedFormsLoading = false;
   }
 }
 
@@ -559,6 +673,8 @@ function displayProfileData(user) {
     if (user.role === 'admin' || user.access_hvac) modules.push('HVAC & MEP');
     if (user.role === 'admin' || user.access_civil) modules.push('Civil Works');
     if (user.role === 'admin' || user.access_cleaning) modules.push('Cleaning');
+    if (user.role === 'admin' || user.access_hr) modules.push('HR');
+    if (user.role === 'admin' || user.access_procurement_module) modules.push('Procurement');
     return modules.length > 0 ? modules.join(', ') : 'None';
   };
 
@@ -600,6 +716,8 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
   if (user.role === 'admin' || user.access_hvac) modules.push({ name: 'HVAC & MEP', icon: '🔧', color: '#3b82f6' });
   if (user.role === 'admin' || user.access_civil) modules.push({ name: 'Civil Works', icon: '🏢', color: '#8b5cf6' });
   if (user.role === 'admin' || user.access_cleaning) modules.push({ name: 'Cleaning', icon: '🧹', color: '#10b981' });
+  if (user.role === 'admin' || user.access_hr) modules.push({ name: 'HR', icon: '👤', color: '#f59e0b' });
+  if (user.role === 'admin' || user.access_procurement_module) modules.push({ name: 'Procurement', icon: '📦', color: '#7c3aed' });
   
   const moduleBadges = modules.length > 0 
     ? modules.map(m => `<span class="pro-module-badge" style="--badge-color: ${m.color}">${m.icon} ${m.name}</span>`).join('')
@@ -607,19 +725,22 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
 
   return `
     <style>
-      /* Modern Profile Modal Styles */
+      /* Modern Profile Modal Styles - Enhanced */
       .pro-container {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        width: 100%;
         max-width: 100%;
+        padding: 0 1.25rem 1.25rem;
+        box-sizing: border-box;
       }
       
       /* Hero Section */
       .pro-hero {
         position: relative;
-        padding: 2.5rem 1.5rem 1.5rem;
+        padding: 2rem 1.5rem 1.5rem;
         background: linear-gradient(135deg, #0f4a2a 0%, #1a6b3d 50%, #22885a 100%);
         border-radius: 0;
-        margin: -1.75rem -1.75rem 0;
+        margin: 0 -1.25rem;
         overflow: hidden;
       }
       
@@ -641,8 +762,8 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       }
       
       .pro-avatar {
-        width: 88px;
-        height: 88px;
+        width: 85px;
+        height: 85px;
         border-radius: 50%;
         background: rgba(255,255,255,0.15);
         backdrop-filter: blur(10px);
@@ -650,10 +771,10 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 2rem;
+        font-size: 1.85rem;
         font-weight: 700;
         color: white;
-        margin-bottom: 1rem;
+        margin-bottom: 0.875rem;
         box-shadow: 0 8px 32px rgba(0,0,0,0.2);
         position: relative;
       }
@@ -661,18 +782,18 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       .pro-avatar::after {
         content: '';
         position: absolute;
-        bottom: 4px;
-        right: 4px;
+        bottom: 2px;
+        right: 2px;
         width: 16px;
         height: 16px;
         background: ${user.is_active ? '#22c55e' : '#ef4444'};
-        border: 3px solid white;
+        border: 2px solid white;
         border-radius: 50%;
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       }
       
       .pro-name {
-        font-size: 1.5rem;
+        font-size: 1.35rem;
         font-weight: 700;
         color: white;
         margin: 0 0 0.5rem;
@@ -682,36 +803,36 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       .pro-role-badge {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.4rem;
         background: rgba(255,255,255,0.15);
         backdrop-filter: blur(10px);
-        padding: 0.5rem 1rem;
+        padding: 0.45rem 1rem;
         border-radius: 100px;
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         font-weight: 500;
         color: rgba(255,255,255,0.95);
         border: 1px solid rgba(255,255,255,0.2);
       }
       
       .pro-role-badge svg {
-        width: 14px;
-        height: 14px;
+        width: 13px;
+        height: 13px;
         opacity: 0.8;
       }
       
       /* Tabs */
       .pro-tabs {
         display: flex;
-        gap: 0.25rem;
-        padding: 0.75rem 1rem;
+        gap: 0.375rem;
+        padding: 0.625rem 1rem;
         background: #f8fafc;
         border-bottom: 1px solid #e2e8f0;
-        margin: 0 -1.75rem;
+        margin: 0 -1.25rem;
       }
       
       .pro-tab {
         flex: 1;
-        padding: 0.625rem 0.75rem;
+        padding: 0.6rem 0.75rem;
         border: none;
         background: transparent;
         font-size: 0.8rem;
@@ -723,7 +844,7 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0.375rem;
+        gap: 0.35rem;
       }
       
       .pro-tab:hover {
@@ -738,14 +859,14 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       }
       
       .pro-tab svg {
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
       }
       
       /* Tab Content */
       .pro-tab-content {
         display: none;
-        padding: 1.25rem 0;
+        padding: 1rem 0;
         animation: fadeIn 0.3s ease;
       }
       
@@ -768,8 +889,8 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       .pro-info-item {
         display: flex;
         align-items: center;
-        gap: 1rem;
-        padding: 0.875rem 1rem;
+        gap: 0.875rem;
+        padding: 0.75rem 0.875rem;
         background: #f8fafc;
         border-radius: 12px;
         border: 1px solid #e2e8f0;
@@ -812,14 +933,12 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
         font-size: 0.95rem;
         font-weight: 600;
         color: #1e293b;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        word-break: break-word;
       }
       
       /* Module Badges */
       .pro-modules-wrap {
-        padding: 1rem;
+        padding: 0.875rem;
         background: #f8fafc;
         border-radius: 12px;
         border: 1px solid #e2e8f0;
@@ -831,7 +950,7 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
         color: #94a3b8;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.625rem;
       }
       
       .pro-modules-list {
@@ -843,8 +962,8 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       .pro-module-badge {
         display: inline-flex;
         align-items: center;
-        gap: 0.375rem;
-        padding: 0.5rem 0.875rem;
+        gap: 0.3rem;
+        padding: 0.45rem 0.75rem;
         background: white;
         border: 1px solid #e2e8f0;
         border-radius: 100px;
@@ -861,19 +980,38 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       
       .pro-no-access {
         color: #94a3b8;
-        font-size: 0.875rem;
+        font-size: 0.8rem;
         font-style: italic;
+      }
+      
+      /* Footer / Member Since */
+      .pro-footer, .pro-member-since {
+        text-align: center;
+        padding: 0.875rem 0 0.5rem;
+        margin-top: 0.875rem;
+        font-size: 0.8rem;
+        color: #94a3b8;
+        border-top: 1px solid #e2e8f0;
+      }
+      
+      .pro-member-since strong {
+        color: #64748b;
+      }
+      
+      .pro-footer-text {
+        font-size: 0.8rem;
+        color: #94a3b8;
       }
       
       /* Security Section */
       .pro-security-card {
-        padding: 1rem;
-        border-radius: 12px;
+        padding: 0.875rem;
+        border-radius: 10px;
         border: 1px solid;
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.625rem;
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: 0.875rem;
       }
       
       .pro-security-card.success {
@@ -887,13 +1025,13 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       }
       
       .pro-security-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.25rem;
+        font-size: 1.1rem;
         flex-shrink: 0;
       }
       
@@ -909,17 +1047,18 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       
       .pro-security-content {
         flex: 1;
+        min-width: 0;
       }
       
       .pro-security-title {
-        font-size: 0.95rem;
+        font-size: 0.875rem;
         font-weight: 600;
         color: #1e293b;
         margin-bottom: 0.125rem;
       }
       
       .pro-security-desc {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         color: #64748b;
       }
       
@@ -931,11 +1070,11 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 0.5rem;
-        padding: 0.625rem 1.25rem;
-        font-size: 0.875rem;
+        gap: 0.375rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
         font-weight: 600;
-        border-radius: 10px;
+        border-radius: 8px;
         border: none;
         cursor: pointer;
         transition: all 0.2s ease;
@@ -963,8 +1102,8 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       }
       
       .pro-btn-sm {
-        padding: 0.5rem 1rem;
-        font-size: 0.8rem;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
       }
       
       .pro-btn-danger {
@@ -992,65 +1131,201 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       /* Signature Section */
       .pro-sig-section {
         background: #f8fafc;
-        border-radius: 12px;
+        border-radius: 10px;
         border: 1px solid #e2e8f0;
         overflow: hidden;
       }
       
       .pro-sig-header {
-        padding: 1rem;
+        padding: 0.875rem;
         border-bottom: 1px solid #e2e8f0;
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 0.625rem;
       }
       
       .pro-sig-header-icon {
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         background: linear-gradient(135deg, #125435 0%, #1a7a4d 100%);
         border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-size: 1rem;
+        font-size: 0.9rem;
       }
       
       .pro-sig-header-text h4 {
         margin: 0;
-        font-size: 0.95rem;
+        font-size: 0.875rem;
         font-weight: 600;
         color: #1e293b;
       }
       
       .pro-sig-header-text p {
         margin: 0;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: #64748b;
       }
       
       .pro-sig-body {
-        padding: 1rem;
+        padding: 0.875rem;
       }
       
       .pro-sig-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+        gap: 0.75rem;
       }
       
+      /* Mobile Responsive - Profile Modal */
       @media (max-width: 480px) {
         .pro-sig-grid {
           grid-template-columns: 1fr;
+        }
+        
+        .pro-container {
+          padding: 0 1rem 1.5rem;
+        }
+        
+        .pro-hero {
+          margin: 0 -1rem;
+          padding: 2rem 1rem 1.5rem;
+        }
+        
+        .pro-avatar {
+          width: 70px;
+          height: 70px;
+          font-size: 1.5rem;
+        }
+        
+        .pro-avatar::after {
+          width: 14px;
+          height: 14px;
+        }
+        
+        .pro-name {
+          font-size: 1.2rem;
+        }
+        
+        .pro-role-badge {
+          font-size: 0.7rem;
+          padding: 0.375rem 0.75rem;
+        }
+        
+        .pro-tabs {
+          margin: 0 -1rem;
+          padding: 0.625rem 0.5rem;
+          gap: 0.25rem;
+        }
+        
+        .pro-tab {
+          padding: 0.5rem 0.375rem;
+          font-size: 0.7rem;
+          gap: 0.25rem;
+        }
+        
+        .pro-tab svg {
+          width: 12px;
+          height: 12px;
+        }
+        
+        .pro-tab-content {
+          padding: 1rem 0;
+        }
+        
+        .pro-info-list {
+          gap: 0.625rem;
+        }
+        
+        .pro-info-item {
+          padding: 0.625rem 0.75rem;
+          gap: 0.625rem;
+        }
+        
+        .pro-info-icon {
+          width: 36px;
+          height: 36px;
+          font-size: 0.95rem;
+          border-radius: 8px;
+        }
+        
+        .pro-info-label {
+          font-size: 0.625rem;
+        }
+        
+        .pro-info-value {
+          font-size: 0.85rem;
+        }
+        
+        .pro-modules-wrap {
+          padding: 0.75rem;
+        }
+        
+        .pro-modules-title {
+          font-size: 0.625rem;
+          margin-bottom: 0.5rem;
+        }
+        
+        .pro-module-badge {
+          padding: 0.375rem 0.625rem;
+          font-size: 0.7rem;
+        }
+        
+        .pro-security-card {
+          padding: 0.625rem;
+          gap: 0.625rem;
+        }
+        
+        .pro-security-icon {
+          width: 32px;
+          height: 32px;
+          font-size: 0.95rem;
+        }
+        
+        .pro-security-title {
+          font-size: 0.8rem;
+        }
+        
+        .pro-security-desc {
+          font-size: 0.7rem;
+        }
+        
+        .pro-btn {
+          padding: 0.375rem 0.75rem;
+          font-size: 0.7rem;
+        }
+        
+        .pro-sig-header {
+          padding: 0.625rem;
+        }
+        
+        .pro-sig-body {
+          padding: 0.625rem;
+        }
+        
+        .pro-sig-preview {
+          min-height: 70px;
+        }
+        
+        .pro-sig-comment {
+          min-height: 70px;
+          padding: 0.625rem;
+          font-size: 0.75rem;
+        }
+        
+        .pro-member-since {
+          font-size: 0.75rem;
+          padding: 0.75rem 0 0.25rem;
         }
       }
       
       .pro-sig-preview {
         background: white;
         border: 2px dashed #cbd5e1;
-        border-radius: 12px;
-        min-height: 100px;
+        border-radius: 10px;
+        min-height: 80px;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1073,7 +1348,7 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       
       .pro-sig-preview img {
         max-width: 90%;
-        max-height: 90px;
+        max-height: 70px;
         object-fit: contain;
       }
       
@@ -1083,24 +1358,24 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       }
       
       .pro-sig-empty-icon {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
+        font-size: 1.5rem;
+        margin-bottom: 0.375rem;
         opacity: 0.5;
       }
       
       .pro-sig-empty-text {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         font-weight: 500;
       }
       
       .pro-sig-comment {
         width: 100%;
-        min-height: 100px;
+        min-height: 80px;
         border: 2px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 0.875rem;
+        border-radius: 10px;
+        padding: 0.75rem;
         font-family: inherit;
-        font-size: 0.875rem;
+        font-size: 0.8rem;
         resize: none;
         transition: all 0.2s ease;
         background: white;
@@ -1117,7 +1392,7 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       }
       
       .pro-sig-footer {
-        padding: 1rem;
+        padding: 0.875rem;
         border-top: 1px solid #e2e8f0;
         display: flex;
         justify-content: flex-end;
@@ -1231,9 +1506,11 @@ function getProfileCardHTML(user, getInitials, getDesignationDisplay, getRoleDis
       /* Member Since */
       .pro-member-since {
         text-align: center;
-        padding: 1rem;
+        padding: 1.25rem;
+        margin-top: 0.5rem;
         color: #64748b;
-        font-size: 0.8rem;
+        font-size: 0.9rem;
+        border-top: 1px solid #e2e8f0;
       }
       
       .pro-member-since strong {
@@ -1828,57 +2105,62 @@ async function handleLogout() {
 // ===========================================
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Ensure modules section is visible on load
-  const modulesSection = document.getElementById('modules');
-  if (modulesSection) {
-    modulesSection.style.display = 'block';
-    modulesSection.style.visibility = 'visible';
-    modulesSection.style.opacity = '1';
-  }
+  // Check if we're on the dashboard page (has modulesGrid or modules section)
+  const isDashboardPage = document.getElementById('modulesGrid') || document.getElementById('modules');
   
-  const modulesGrid = document.getElementById('modulesGrid');
-  if (modulesGrid) {
-    modulesGrid.style.display = 'grid';
-    modulesGrid.style.visibility = 'visible';
-  }
-  
-  loadUserWelcome();
-  
-  // Check immediately if user data exists
-  const userStr = localStorage.getItem('user');
-  if (userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      checkAndShowAdminMenu(user);
-      updateModuleVisibility(user);
-      if (typeof loadPendingCount === 'function') {
-        loadPendingCount(user);
-      }
-    } catch (e) {
-      console.error('Error parsing user from localStorage:', e);
+  // Ensure modules section is visible on load (dashboard only)
+  if (isDashboardPage) {
+    const modulesSection = document.getElementById('modules');
+    if (modulesSection) {
+      modulesSection.style.display = 'block';
+      modulesSection.style.visibility = 'visible';
+      modulesSection.style.opacity = '1';
     }
-  } else {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+    
+    const modulesGrid = document.getElementById('modulesGrid');
+    if (modulesGrid) {
+      modulesGrid.style.display = 'grid';
+      modulesGrid.style.visibility = 'visible';
+    }
+    
+    loadUserWelcome();
+    
+    // Check immediately if user data exists
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        checkAndShowAdminMenu(user);
+        updateModuleVisibility(user);
+        if (typeof loadPendingCount === 'function') {
+          loadPendingCount(user);
         }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user));
-          checkAndShowAdminMenu(data.user);
-          updateModuleVisibility(data.user);
-          if (typeof loadPendingCount === 'function') {
-            loadPendingCount(data.user);
+      } catch (e) {
+        console.error('Error parsing user from localStorage:', e);
+      }
+    } else {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
-        }
-      })
-      .catch(error => {
-        console.error('Failed to fetch user data:', error);
-      });
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.user) {
+            localStorage.setItem('user', JSON.stringify(data.user));
+            checkAndShowAdminMenu(data.user);
+            updateModuleVisibility(data.user);
+            if (typeof loadPendingCount === 'function') {
+              loadPendingCount(data.user);
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Failed to fetch user data:', error);
+        });
+      }
     }
   }
   
@@ -1944,16 +2226,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  // Load pending count for badge
-  const userDataForNotifications = localStorage.getItem('user');
-  if (userDataForNotifications) {
-    try {
-      const userData = JSON.parse(userDataForNotifications);
-      if (typeof loadPendingCount === 'function') {
-        loadPendingCount(userData);
+  // Load pending count for badge (only on dashboard)
+  if (isDashboardPage) {
+    const userDataForNotifications = localStorage.getItem('user');
+    if (userDataForNotifications) {
+      try {
+        const userData = JSON.parse(userDataForNotifications);
+        if (typeof loadPendingCount === 'function') {
+          loadPendingCount(userData);
+        }
+      } catch (e) {
+        console.error('Error parsing user data for notifications:', e);
       }
-    } catch (e) {
-      console.error('Error parsing user data for notifications:', e);
     }
   }
   
@@ -1998,4 +2282,167 @@ document.addEventListener('DOMContentLoaded', function() {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', handleLogout);
   }
+  
+  // Initialize notifications
+  initNotifications();
 });
+
+// ===========================================
+// Notification System
+// ===========================================
+
+function initNotifications() {
+  const notificationBtn = document.getElementById('notificationBtn');
+  const notificationDropdown = document.getElementById('notificationDropdown');
+  const markAllReadBtn = document.getElementById('markAllRead');
+  
+  if (!notificationBtn || !notificationDropdown) return;
+  
+  // Toggle dropdown
+  notificationBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    notificationDropdown.classList.toggle('show');
+    if (notificationDropdown.classList.contains('show')) {
+      loadNotifications();
+    }
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!notificationDropdown.contains(e.target) && !notificationBtn.contains(e.target)) {
+      notificationDropdown.classList.remove('show');
+    }
+  });
+  
+  // Mark all as read
+  if (markAllReadBtn) {
+    markAllReadBtn.addEventListener('click', async function() {
+      try {
+        const token = localStorage.getItem('access_token');
+        await fetch('/hr/api/notifications/mark-all-read', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        loadNotifications();
+        updateNotificationBadge(0);
+      } catch (error) {
+        console.error('Error marking all as read:', error);
+      }
+    });
+  }
+  
+  // Load initial notification count
+  loadNotificationCount();
+  
+  // Poll for new notifications every 30 seconds
+  setInterval(loadNotificationCount, 30000);
+}
+
+async function loadNotificationCount() {
+  const badge = document.getElementById('notificationBadge');
+  if (!badge) return;
+  
+  try {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    
+    const response = await fetch('/hr/api/notifications/unread-count', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      updateNotificationBadge(data.unread_count || 0);
+    }
+  } catch (error) {
+    console.error('Error loading notification count:', error);
+  }
+}
+
+function updateNotificationBadge(count) {
+  const badge = document.getElementById('notificationBadge');
+  if (!badge) return;
+  
+  if (count > 0) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function loadNotifications() {
+  const notificationList = document.getElementById('notificationList');
+  if (!notificationList) return;
+  
+  try {
+    const token = localStorage.getItem('access_token');
+    const response = await fetch('/hr/api/notifications', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!response.ok) throw new Error('Failed to load notifications');
+    
+    const data = await response.json();
+    
+    if (data.notifications && data.notifications.length > 0) {
+      notificationList.innerHTML = data.notifications.map(n => {
+        const iconClass = n.notification_type.includes('approved') ? 'approved' : 
+                          n.notification_type.includes('rejected') ? 'rejected' : 'info';
+        const iconEmoji = n.notification_type.includes('approved') ? '✓' : 
+                          n.notification_type.includes('rejected') ? '✕' : 'ℹ';
+        const timeAgo = getTimeAgo(new Date(n.created_at));
+        
+        return `
+          <div class="notification-item ${n.is_read ? '' : 'unread'}" onclick="markNotificationRead(${n.id}, '${n.submission_id || ''}')">
+            <div class="notification-icon ${iconClass}">${iconEmoji}</div>
+            <div class="notification-content">
+              <div class="notification-title">${escapeHtml(n.title)}</div>
+              <div class="notification-message">${escapeHtml(n.message)}</div>
+              <div class="notification-time">${timeAgo}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      updateNotificationBadge(data.unread_count || 0);
+    } else {
+      notificationList.innerHTML = '<div class="notification-empty">No notifications yet</div>';
+    }
+  } catch (error) {
+    console.error('Error loading notifications:', error);
+    notificationList.innerHTML = '<div class="notification-empty">Error loading notifications</div>';
+  }
+}
+
+async function markNotificationRead(id, submissionId) {
+  try {
+    const token = localStorage.getItem('access_token');
+    await fetch(`/hr/api/notifications/${id}/read`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    // Refresh notifications
+    loadNotifications();
+    loadNotificationCount();
+    
+    // Navigate to submission if available
+    if (submissionId) {
+      window.location.href = '/hr/my-requests';
+    }
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+  }
+}
+
+function getTimeAgo(date) {
+  const now = new Date();
+  const seconds = Math.floor((now - date) / 1000);
+  
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hr ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)} day${Math.floor(seconds / 86400) > 1 ? 's' : ''} ago`;
+  return date.toLocaleDateString();
+}
