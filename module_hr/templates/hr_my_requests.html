@@ -24,11 +24,16 @@
     .status-rejected { background: #fee2e2; color: #dc2626; }
     .status-submitted { background: #e0e7ff; color: #4338ca; }
     .request-card { background: white; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
-    .form-type-badge { padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
-    .type-leave { background: #d1fae5; color: #047857; }
+    .form-type-badge { padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; background: #e5e7eb; color: #374151; }
+    .type-leave, .type-leave_application { background: #d1fae5; color: #047857; }
     .type-termination { background: #fee2e2; color: #dc2626; }
     .type-long_vacation { background: #dbeafe; color: #1d4ed8; }
     .type-asset { background: #fef3c7; color: #b45309; }
+    .type-commencement, .type-duty_resumption, .type-passport_release, .type-visa_renewal { background: #dbeafe; color: #1d4ed8; }
+    .type-contract_renewal, .type-performance_evaluation, .type-staff_appraisal { background: #e0e7ff; color: #4338ca; }
+    .type-grievance { background: #fee2e2; color: #dc2626; }
+    .type-interview_assessment { background: #fef3c7; color: #b45309; }
+    .type-station_clearance { background: #d1fae5; color: #047857; }
     
     .request-card { cursor: pointer; transition: all 0.2s; }
     .request-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); border-color: var(--primary); }
@@ -115,37 +120,93 @@
       <p style="opacity: 0.9; margin: 0;">Submit and track your HR forms</p>
     </div>
     
-    <!-- Quick Actions -->
+    <!-- Quick Actions - HR Forms from HR Documents -->
     <div class="row g-3 mb-4">
-      <div class="col-6 col-md-3">
-        <a href="/hr/leave-form" class="form-card d-block text-decoration-none h-100">
+      <div class="col-6 col-md-4 col-lg-2">
+        <a href="/hr/leave-application-form" class="form-card d-block text-decoration-none h-100">
           <div class="text-center">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📅</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0;">Leave Request</h6>
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📅</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Leave Application</h6>
           </div>
         </a>
       </div>
-      <div class="col-6 col-md-3">
-        <a href="/hr/long-vacation-form" class="form-card d-block text-decoration-none h-100">
+      <div class="col-6 col-md-4 col-lg-2">
+        <a href="/hr/commencement-form" class="form-card d-block text-decoration-none h-100">
           <div class="text-center">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">✈️</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0;">Long Vacation</h6>
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📋</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Commencement</h6>
           </div>
         </a>
       </div>
-      <div class="col-6 col-md-3">
-        <a href="/hr/termination-form" class="form-card d-block text-decoration-none h-100">
+      <div class="col-6 col-md-4 col-lg-2">
+        <a href="/hr/duty-resumption-form" class="form-card d-block text-decoration-none h-100">
           <div class="text-center">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0;">Termination</h6>
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">↩️</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Duty Resumption</h6>
           </div>
         </a>
       </div>
-      <div class="col-6 col-md-3">
-        <a href="/hr/asset-form" class="form-card d-block text-decoration-none h-100">
+      <div class="col-6 col-md-4 col-lg-2">
+        <a href="/hr/contract-renewal-form" class="form-card d-block text-decoration-none h-100">
           <div class="text-center">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">💼</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0;">Asset Form</h6>
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📄</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Contract Renewal</h6>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <a href="/hr/performance-evaluation-form" class="form-card d-block text-decoration-none h-100">
+          <div class="text-center">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📊</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Performance</h6>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <a href="/hr/grievance-form" class="form-card d-block text-decoration-none h-100">
+          <div class="text-center">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚠️</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Grievance</h6>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <a href="/hr/interview-assessment-form" class="form-card d-block text-decoration-none h-100">
+          <div class="text-center">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">👤</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Interview</h6>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <a href="/hr/passport-release-form" class="form-card d-block text-decoration-none h-100">
+          <div class="text-center">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🛂</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Passport</h6>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <a href="/hr/staff-appraisal-form" class="form-card d-block text-decoration-none h-100">
+          <div class="text-center">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⭐</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Staff Appraisal</h6>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <a href="/hr/station-clearance-form" class="form-card d-block text-decoration-none h-100">
+          <div class="text-center">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">✓</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Station Clearance</h6>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <a href="/hr/visa-renewal-form" class="form-card d-block text-decoration-none h-100">
+          <div class="text-center">
+            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🛃</div>
+            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Visa Renewal</h6>
           </div>
         </a>
       </div>
@@ -177,7 +238,7 @@
     }
     
     function getFormTypeLabel(type) {
-      return type.replace('hr_', '').replace('_', ' ');
+      return type.replace('hr_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
     
     function getFormTypeClass(type) {
@@ -322,6 +383,25 @@
         }
       }
       
+      // Generic display for new HR Document forms (leave_application, commencement, duty_resumption, etc.)
+      const handledTypes = ['leave', 'termination', 'long_vacation', 'asset'];
+      const commonKeys = ['employee_name', 'employee_id', 'department', 'position'];
+      if (!handledTypes.includes(formType)) {
+        const skipKeys = ['submitted_by_id', 'submitted_by_name', 'submitted_at', 'form_type'];
+        const isInternal = (k) => skipKeys.some(p => k.startsWith(p)) || k.startsWith('hr_') || k.startsWith('gm_') || commonKeys.includes(k);
+        for (const [key, value] of Object.entries(fd)) {
+          if (isInternal(key) || value === '' || value === null || value === undefined) continue;
+          if (Array.isArray(value) || (typeof value === 'object' && value !== null && !(value instanceof String))) continue;
+          const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          if (key.includes('signature') && typeof value === 'string' && value.startsWith('data:image')) {
+            html += detailRow(label, '<img src="' + value + '" style="max-width:180px;border:1px solid #e2e8f0;border-radius:6px;padding:4px;" alt="Signature">', true);
+            continue;
+          }
+          const displayVal = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? formatDate(value) : value;
+          html += detailRow(label, displayVal);
+        }
+      }
+      
       html += `</div>`;
       
       // Workflow Status Section
@@ -356,10 +436,11 @@
       document.getElementById('detailModal').classList.add('show');
     }
     
-    function detailRow(label, value) {
+    function detailRow(label, value, isRaw) {
+      const val = isRaw ? value : (escapeHtml(value) || '-');
       return `<div class="detail-row">
         <div class="detail-label">${label}</div>
-        <div class="detail-value">${escapeHtml(value) || '-'}</div>
+        <div class="detail-value">${val || '-'}</div>
       </div>`;
     }
     

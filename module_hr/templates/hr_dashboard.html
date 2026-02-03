@@ -159,11 +159,16 @@
     .status-rejected { background: #fee2e2; color: #dc2626; }
     .status-submitted { background: #e0e7ff; color: #4338ca; }
     
-    .form-type-badge { padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
-    .type-leave { background: #d1fae5; color: #047857; }
+    .form-type-badge { padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; background: #e5e7eb; color: #374151; }
+    .type-leave, .type-leave_application { background: #d1fae5; color: #047857; }
     .type-termination { background: #fee2e2; color: #dc2626; }
     .type-long_vacation { background: #dbeafe; color: #1d4ed8; }
     .type-asset { background: #fef3c7; color: #b45309; }
+    .type-commencement, .type-duty_resumption, .type-passport_release, .type-visa_renewal { background: #dbeafe; color: #1d4ed8; }
+    .type-contract_renewal, .type-performance_evaluation, .type-staff_appraisal { background: #e0e7ff; color: #4338ca; }
+    .type-grievance { background: #fee2e2; color: #dc2626; }
+    .type-interview_assessment { background: #fef3c7; color: #b45309; }
+    .type-station_clearance { background: #d1fae5; color: #047857; }
   </style>
 </head>
 <body style="background: #f1f5f9;">
@@ -189,7 +194,7 @@
         Back to Dashboard
       </a>
       <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">HR Module</h1>
-      <p style="opacity: 0.9; margin: 0;">Manage leave requests, terminations, vacations, and assets</p>
+      <p style="opacity: 0.9; margin: 0;">Manage HR forms from HR Documents - leave, commencement, visa, clearance & more</p>
     </div>
     
     <!-- Quick Actions for HR Managers and GM (hidden by default, shown based on user permissions) -->
@@ -224,61 +229,94 @@
       </div>
     </div>
     
-    <h4 style="font-weight: 600; margin-bottom: 1rem;">HR Forms</h4>
+    <h4 style="font-weight: 600; margin-bottom: 1rem;">HR Forms (from HR Documents)</h4>
     <div class="row g-4">
-      <!-- Leave Form -->
-      <div class="col-md-6 col-lg-3">
+      <div class="col-md-6 col-lg-4">
         <div class="hr-card">
-          <div class="hr-card-icon icon-leave text-white">
-            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-          </div>
-          <h3>Leave Request</h3>
-          <p>Submit annual leave, sick leave, or emergency leave requests</p>
-          <a href="/hr/leave-form" class="btn-hr">Open Form</a>
+          <div class="hr-card-icon icon-leave text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+          <h3>Leave Application</h3>
+          <p>Submit leave application (annual, sick, emergency)</p>
+          <a href="/hr/leave-application-form" class="btn-hr">Open Form</a>
         </div>
       </div>
-      
-      <!-- Termination Form -->
-      <div class="col-md-6 col-lg-3">
+      <div class="col-md-6 col-lg-4">
         <div class="hr-card">
-          <div class="hr-card-icon icon-termination text-white">
-            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-            </svg>
-          </div>
-          <h3>Termination Form</h3>
-          <p>Process employee termination and clearance documentation</p>
-          <a href="/hr/termination-form" class="btn-hr">Open Form</a>
+          <div class="hr-card-icon icon-leave text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+          <h3>Commencement Form</h3>
+          <p>Complete within 5 days of joining - personal & bank details</p>
+          <a href="/hr/commencement-form" class="btn-hr">Open Form</a>
         </div>
       </div>
-      
-      <!-- Long Vacation Form -->
-      <div class="col-md-6 col-lg-3">
+      <div class="col-md-6 col-lg-4">
         <div class="hr-card">
-          <div class="hr-card-icon icon-vacation text-white">
-            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/>
-            </svg>
-          </div>
-          <h3>Long Vacation</h3>
-          <p>Request extended leave for travel or personal matters</p>
-          <a href="/hr/long-vacation-form" class="btn-hr">Open Form</a>
+          <div class="hr-card-icon icon-vacation text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg></div>
+          <h3>Duty Resumption</h3>
+          <p>Resumption of duty after leave</p>
+          <a href="/hr/duty-resumption-form" class="btn-hr">Open Form</a>
         </div>
       </div>
-      
-      <!-- Asset Form -->
-      <div class="col-md-6 col-lg-3">
+      <div class="col-md-6 col-lg-4">
         <div class="hr-card">
-          <div class="hr-card-icon icon-asset text-white">
-            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-          </div>
-          <h3>Asset Register</h3>
-          <p>Register or transfer company assets and equipment</p>
-          <a href="/hr/asset-form" class="btn-hr">Open Form</a>
+          <div class="hr-card-icon icon-asset text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+          <h3>Contract Renewal Assessment</h3>
+          <p>Employee contract renewal evaluation</p>
+          <a href="/hr/contract-renewal-form" class="btn-hr">Open Form</a>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="hr-card">
+          <div class="hr-card-icon icon-leave text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
+          <h3>Performance Evaluation</h3>
+          <p>Employee performance evaluation form</p>
+          <a href="/hr/performance-evaluation-form" class="btn-hr">Open Form</a>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="hr-card">
+          <div class="hr-card-icon icon-termination text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div>
+          <h3>Grievance / Disciplinary</h3>
+          <p>Employee grievance or disciplinary action</p>
+          <a href="/hr/grievance-form" class="btn-hr">Open Form</a>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="hr-card">
+          <div class="hr-card-icon icon-vacation text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>
+          <h3>Interview Assessment</h3>
+          <p>Candidate interview assessment</p>
+          <a href="/hr/interview-assessment-form" class="btn-hr">Open Form</a>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="hr-card">
+          <div class="hr-card-icon icon-asset text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/></svg></div>
+          <h3>Passport Release & Submission</h3>
+          <p>Passport release or requisition for safekeeping</p>
+          <a href="/hr/passport-release-form" class="btn-hr">Open Form</a>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="hr-card">
+          <div class="hr-card-icon icon-leave text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg></div>
+          <h3>Staff Appraisal</h3>
+          <p>Staff appraisal form</p>
+          <a href="/hr/staff-appraisal-form" class="btn-hr">Open Form</a>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="hr-card">
+          <div class="hr-card-icon icon-termination text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></div>
+          <h3>Station Clearance</h3>
+          <p>Exit formalities for transferring employees</p>
+          <a href="/hr/station-clearance-form" class="btn-hr">Open Form</a>
+        </div>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <div class="hr-card">
+          <div class="hr-card-icon icon-asset text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg></div>
+          <h3>Visa Renewal</h3>
+          <p>Visa renewal or cancellation confirmation</p>
+          <a href="/hr/visa-renewal-form" class="btn-hr">Open Form</a>
         </div>
       </div>
     </div>
@@ -311,7 +349,7 @@
     }
     
     function getFormTypeLabel(type) {
-      return type.replace('hr_', '').replace('_', ' ');
+      return type.replace('hr_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
     
     function getFormTypeClass(type) {
@@ -484,6 +522,24 @@
         }
       }
       
+      const handledTypes = ['leave', 'termination', 'long_vacation', 'asset'];
+      const commonKeys = ['employee_name', 'employee_id', 'department', 'position'];
+      if (!handledTypes.includes(formType)) {
+        const skipKeys = ['submitted_by_id', 'submitted_by_name', 'submitted_at', 'form_type'];
+        const isInternal = (k) => skipKeys.some(p => k.startsWith(p)) || k.startsWith('hr_') || k.startsWith('gm_') || commonKeys.includes(k);
+        for (const [key, value] of Object.entries(fd)) {
+          if (isInternal(key) || value === '' || value === null || value === undefined) continue;
+          if (Array.isArray(value) || (typeof value === 'object' && value !== null && !(value instanceof String))) continue;
+          const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          if (key.includes('signature') && typeof value === 'string' && value.startsWith('data:image')) {
+            html += detailRow(label, '<img src="' + value + '" style="max-width:180px;border:1px solid #e2e8f0;border-radius:6px;padding:4px;" alt="Signature">', true);
+            continue;
+          }
+          const displayVal = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? formatDate(value) : value;
+          html += detailRow(label, displayVal);
+        }
+      }
+      
       html += `</div>`;
       
       // Workflow Status Section
@@ -515,10 +571,11 @@
       document.getElementById('detailModal').classList.add('show');
     }
     
-    function detailRow(label, value) {
+    function detailRow(label, value, isRaw) {
+      const val = isRaw ? value : (escapeHtml(value) || '-');
       return `<div class="detail-row">
         <div class="detail-label">${label}</div>
-        <div class="detail-value">${escapeHtml(value) || '-'}</div>
+        <div class="detail-value">${val || '-'}</div>
       </div>`;
     }
     

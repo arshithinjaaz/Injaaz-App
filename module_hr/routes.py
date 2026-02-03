@@ -5,7 +5,7 @@ Workflow: User submits → HR reviews/signs → GM final approval
 """
 import uuid
 from datetime import datetime
-from flask import Blueprint, render_template, request, jsonify, current_app
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import db, User, Submission, Notification
 
@@ -32,12 +32,19 @@ def create_notification(user_id, title, message, notification_type='info', submi
 
 
 def get_form_type_display(module_type):
-    """Convert module type to display name"""
+    """Convert module type to display name - Based on HR Documents folder"""
     type_map = {
-        'hr_leave': 'Leave Request',
-        'hr_termination': 'Termination Form',
-        'hr_long_vacation': 'Long Vacation Request',
-        'hr_asset': 'Asset Transfer/Register'
+        'hr_leave_application': 'Leave Application',
+        'hr_commencement': 'Commencement Form',
+        'hr_duty_resumption': 'Duty Resumption',
+        'hr_contract_renewal': 'Contract Renewal Assessment',
+        'hr_performance_evaluation': 'Performance Evaluation',
+        'hr_grievance': 'Grievance/Disciplinary',
+        'hr_interview_assessment': 'Interview Assessment',
+        'hr_passport_release': 'Passport Release & Submission',
+        'hr_staff_appraisal': 'Staff Appraisal',
+        'hr_station_clearance': 'Station Clearance',
+        'hr_visa_renewal': 'Visa Renewal',
     }
     return type_map.get(module_type, 'HR Form')
 
@@ -56,44 +63,114 @@ def my_requests():
     return render_template('hr_my_requests.html', user=user)
 
 
-@hr_bp.route('/leave-form')
+@hr_bp.route('/leave-application-form')
 @jwt_required()
-def leave_form():
-    """Leave Request Form - Available to ALL users"""
+def leave_application_form():
+    """Leave Application Form - From HR Documents"""
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_leave_form.html', user=user)
+    return render_template('hr_leave_application_form.html', user=user)
 
 
-@hr_bp.route('/termination-form')
+@hr_bp.route('/commencement-form')
 @jwt_required()
-def termination_form():
-    """Termination Form - Available to ALL users"""
+def commencement_form():
+    """Commencement Form - From HR Documents"""
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_termination_form.html', user=user)
+    return render_template('hr_commencement_form.html', user=user)
 
 
-@hr_bp.route('/long-vacation-form')
+@hr_bp.route('/duty-resumption-form')
 @jwt_required()
-def long_vacation_form():
-    """Long Vacation Form - Available to ALL users"""
+def duty_resumption_form():
+    """Duty Resumption Form - From HR Documents"""
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_long_vacation_form.html', user=user)
+    return render_template('hr_duty_resumption_form.html', user=user)
 
 
-@hr_bp.route('/asset-form')
+@hr_bp.route('/contract-renewal-form')
 @jwt_required()
-def asset_form():
-    """Asset Transfer & Register Form - Available to ALL users"""
+def contract_renewal_form():
+    """Contract Renewal Assessment - From HR Documents"""
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_asset_form.html', user=user)
+    return render_template('hr_contract_renewal_form.html', user=user)
+
+
+@hr_bp.route('/performance-evaluation-form')
+@jwt_required()
+def performance_evaluation_form():
+    """Performance Evaluation Form - From HR Documents"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return render_template('hr_performance_evaluation_form.html', user=user)
+
+
+@hr_bp.route('/grievance-form')
+@jwt_required()
+def grievance_form():
+    """Grievance/Disciplinary Form - From HR Documents"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return render_template('hr_grievance_form.html', user=user)
+
+
+@hr_bp.route('/interview-assessment-form')
+@jwt_required()
+def interview_assessment_form():
+    """Interview Assessment Form - From HR Documents"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return render_template('hr_interview_assessment_form.html', user=user)
+
+
+@hr_bp.route('/passport-release-form')
+@jwt_required()
+def passport_release_form():
+    """Passport Release & Submission Form - From HR Documents"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return render_template('hr_passport_release_form.html', user=user)
+
+
+@hr_bp.route('/staff-appraisal-form')
+@jwt_required()
+def staff_appraisal_form():
+    """Staff Appraisal Form - From HR Documents"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return render_template('hr_staff_appraisal_form.html', user=user)
+
+
+@hr_bp.route('/station-clearance-form')
+@jwt_required()
+def station_clearance_form():
+    """Station Clearance Form - From HR Documents"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return render_template('hr_station_clearance_form.html', user=user)
+
+
+@hr_bp.route('/visa-renewal-form')
+@jwt_required()
+def visa_renewal_form():
+    """Visa Renewal Form - From HR Documents"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return render_template('hr_visa_renewal_form.html', user=user)
 
 
 # ============================================
@@ -103,14 +180,14 @@ def asset_form():
 @hr_bp.route('/')
 @jwt_required()
 def hr_dashboard():
-    """HR Module Dashboard - For HR managers"""
+    """HR Module - HR managers see dashboard; others see My Requests"""
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
     
-    # HR dashboard is for HR managers and admin
+    # HR dashboard is for HR managers and admin; others go to My Requests
     if user.role != 'admin' and not getattr(user, 'access_hr', False):
-        return jsonify({'error': 'Access denied to HR module'}), 403
+        return redirect('/hr/my-requests')
     
     return render_template('hr_dashboard.html', user=user)
 

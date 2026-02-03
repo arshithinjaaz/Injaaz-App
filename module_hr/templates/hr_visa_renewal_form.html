@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visa Renewal Form - INJAAZ</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/hr-forms.css">
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <style>
+    .doc-letter { font-size: 0.9rem; line-height: 1.55; }
+    .doc-letter-options { display: flex; flex-direction: column; gap: 0.5rem; padding-left: 1rem; }
+    .doc-letter-options label { display: block; margin: 0; }
+    .doc-letter-note { color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.75rem; }
+    .success-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; }
+    .success-overlay.show { opacity: 1; visibility: visible; }
+    .doc-footer { text-align: center; margin-top: 1rem; font-weight: 700; color: var(--primary); font-size: 1rem; }
+  </style>
+</head>
+<body class="hr-form-page">
+  <div class="success-overlay" id="successModal">
+    <div class="success-modal">
+      <div style="width:64px;height:64px;background:linear-gradient(135deg,#10b981,#059669);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;"><svg width="32" height="32" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+      <h2 style="font-size:1.35rem;font-weight:700;color:#1e293b;">Form Submitted!</h2>
+      <p class="text-muted" style="margin:0.5rem 0;">Visa renewal form sent to HR.</p>
+      <div id="submissionId" style="background:#f1f5f9;padding:0.5rem 1rem;border-radius:8px;font-family:monospace;font-size:0.85rem;margin:1rem 0;"></div>
+      <button class="btn hr-form-submit" onclick="window.location.href='/hr/my-requests'">View My Requests</button>
+    </div>
+  </div>
+
+  <div class="hr-form-wrapper"><div class="container-fluid py-4">
+    <a href="/hr/" class="back-link"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Back to HR Module</a>
+    
+    <div class="doc-form">
+      <div class="doc-header">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="doc-logo">
+        <h1 class="doc-title">Visa Renewal Form</h1>
+      </div>
+
+      <form id="hrForm">
+        <div class="doc-letter">
+          <p><strong>Date:</strong> <input type="date" name="form_date" required class="form-control" style="width:160px;"></p>
+          <p><strong>To:</strong> HR Department,</p>
+          <p>I, <input type="text" name="employee_name" required placeholder="Employee Name" class="form-control" style="width:200px;"> with ID number <input type="text" name="employee_id" required placeholder="ID" class="form-control" style="width:90px;"> employed by <input type="text" name="employer" value="INJAAZ" class="form-control" style="width:140px;"> in the position <input type="text" name="position" required placeholder="Position" class="form-control" style="width:200px;"> have completed <input type="text" name="years_completed" required placeholder="e.g. 2" class="form-control" style="width:70px;"> years.</p>
+          <p>I would like to confirm my decision to,</p>
+          <p class="doc-letter-options">
+            <label><input type="radio" name="decision" value="continue" required> 1. Continue my employment with the company for the next 2 years and willing to have my visa renewed.</label>
+            <label><input type="radio" name="decision" value="discontinue"> 2. Discontinue my service and require visa cancellation.</label>
+          </p>
+          <p class="doc-letter-note">Note: In case I do not continue my service, I will be liable to cover any additional charges covered by the company.</p>
+          <p><strong>Signature of Employee:</strong></p>
+          <div class="signature-block">
+            <div class="sig-canvas-wrap">
+              <span class="sig-label">Sign</span>
+              <canvas id="signaturePad" class="signature-pad" width="100%" height="120"></canvas>
+              <button type="button" class="btn btn-clear-signature" onclick="signaturePad.clear()">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="doc-footer">INJAAZ LLC</div>
+
+        <div class="mt-3 text-center">
+          <button type="submit" class="btn btn-lg hr-form-submit">Submit Visa Renewal Form</button>
+        </div>
+      </form>
+    </div>
+  </div></div>
+
+  <script>
+    document.querySelector('[name="form_date"]').value = new Date().toISOString().split('T')[0];
+    const canvas = document.getElementById('signaturePad');
+    const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+    function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); const w = document.getElementById('signaturePad').parentElement?.offsetWidth || 360; canvas.width = w * ratio; canvas.height = 120 * ratio; canvas.getContext('2d').scale(ratio, ratio); signaturePad.clear(); }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    document.getElementById('hrForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target).entries());
+      data.form_type = 'visa_renewal';
+      data.employee_signature = signaturePad.isEmpty() ? '' : signaturePad.toDataURL('image/png');
+      try {
+        const res = await fetch('/hr/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }, body: JSON.stringify(data) });
+        const result = await res.json();
+        if (result.success) { document.getElementById('submissionId').textContent = result.submission_id; document.getElementById('successModal').classList.add('show'); }
+        else { alert('Error: ' + result.error); }
+      } catch (err) { alert('Error: ' + err.message); }
+    });
+  </script>
+</body>
+</html>

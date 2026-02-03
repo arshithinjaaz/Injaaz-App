@@ -1,0 +1,659 @@
+/* HR Forms - Modern Stunning UI */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --primary: #0d9488;
+  --primary-dark: #0f766e;
+  --primary-light: #14b8a6;
+  --primary-glow: rgba(20, 184, 166, 0.4);
+  --accent: #06b6d4;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-muted: #f8fafc;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --radius: 16px;
+  --radius-lg: 20px;
+  --radius-sm: 10px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 40px rgba(20, 184, 166, 0.15);
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.hr-form-page {
+  min-height: 100vh;
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text);
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(20, 184, 166, 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(6, 182, 212, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 0% 80%, rgba(20, 184, 166, 0.06), transparent),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  -webkit-font-smoothing: antialiased;
+}
+
+.hr-form-wrapper {
+  width: 100%;
+  padding: 1.5rem 2rem;
+}
+
+.hr-form-wrapper .container-fluid {
+  max-width: 100%;
+  padding: 0 1.5rem;
+}
+
+.doc-form {
+  max-width: 1450px;
+  margin: 0 auto;
+  background: var(--surface);
+  padding: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  overflow-x: auto;
+  animation: formFadeIn 0.5s ease-out;
+}
+
+@keyframes formFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header - Bold gradient, heading left, logo right */
+.doc-header {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-auto-rows: auto;
+  gap: 0.25rem 1.5rem;
+  align-items: center;
+  text-align: left;
+  padding: 1.75rem 2rem;
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 50%, #134e4a 100%);
+  overflow: hidden;
+}
+
+.doc-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.5;
+}
+
+.doc-header .doc-logo {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1 / -1;
+  align-self: center;
+  justify-self: end;
+  height: 72px;
+  width: auto;
+  margin: 0;
+  object-fit: contain;
+  filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.doc-header .doc-title {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: white;
+  margin: 0;
+  letter-spacing: -0.03em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.doc-company {
+  position: relative;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0.5rem 0 0;
+  font-weight: 500;
+}
+
+.doc-intro {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0.5rem 0;
+}
+
+/* Intro text on dark header - high contrast */
+.doc-header .doc-intro {
+  grid-column: 1;
+  color: rgba(255, 255, 255, 0.95);
+  max-width: 560px;
+  margin: 0.5rem 0 0;
+  font-weight: 500;
+}
+
+.doc-header .doc-company {
+  grid-column: 1;
+  margin: 0.25rem 0 0;
+}
+
+/* Form content area */
+.doc-form form {
+  padding: 1.5rem 2.5rem;
+}
+
+.doc-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.doc-form-grid.form-single {
+  grid-template-columns: 1fr;
+}
+
+.doc-form-col {
+  min-width: 0;
+  overflow-wrap: break-word;
+  overflow-x: hidden;
+}
+.doc-form-col table {
+  width: 100%;
+}
+.doc-form-col .hr-only {
+  overflow: visible;
+}
+.doc-form-col .hr-only p {
+  margin-bottom: 0.5rem;
+}
+.doc-form-col .hr-only p:last-child {
+  margin-bottom: 0;
+}
+
+/* Section titles - modern pill style */
+.doc-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin: 0 0 0.65rem;
+  padding: 0.4rem 0.85rem;
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%);
+  border-radius: var(--radius-full);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.doc-section-title::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--primary);
+  border-radius: 50%;
+}
+
+/* Tables - clean card style */
+.doc-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+  background: var(--surface-muted);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+}
+
+.doc-table td {
+  padding: 0.6rem 0.9rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-light);
+  transition: background var(--transition);
+}
+
+.doc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.doc-table tr:hover td {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.doc-table .label {
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.8);
+  width: 20%;
+  min-width: 90px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  font-size: 0.85rem;
+}
+
+.doc-table input,
+.doc-table select,
+.doc-table textarea {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  border-radius: var(--radius-sm);
+  background: white;
+  transition: all var(--transition);
+  min-height: 38px;
+}
+.doc-table textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.doc-table input:focus,
+.doc-table select:focus,
+.doc-table textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
+}
+
+.doc-table input::placeholder,
+.doc-table textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Ensure helper/note text has sufficient contrast */
+.doc-form .text-muted {
+  color: var(--text-secondary) !important;
+}
+.doc-form .small {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+.doc-note {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0;
+}
+.radio-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0.5rem 0 0;
+  cursor: pointer;
+}
+.doc-table-pairs .label { width: 18%; min-width: 100px; }
+.doc-table-pairs td:has(input):not(.label),
+.doc-table-pairs td:has(select):not(.label) {
+  width: 32%;
+  min-width: 0;
+}
+
+.doc-section {
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%);
+  color: var(--primary-dark);
+  padding: 0.6rem 1rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* Footer */
+.doc-footer {
+  margin: 1.5rem 0 0;
+  padding: 0.85rem 1.25rem;
+  background: var(--surface-muted);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  font-weight: 500;
+}
+
+/* Signature pad - expanded for comfortable signing */
+.signature-pad {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: white;
+  touch-action: none;
+  min-width: 280px;
+  width: 100%;
+  max-width: 100%;
+  min-height: 120px;
+  box-sizing: border-box;
+  transition: all var(--transition);
+}
+
+.signature-pad:hover,
+.signature-pad:focus {
+  border-color: var(--primary);
+  background: rgba(20, 184, 166, 0.02);
+}
+
+/* Signature block - compact aligned layout */
+.signature-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  width: 100%;
+}
+.signature-block .sig-canvas-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 1;
+  width: 100%;
+  max-width: 100%;
+}
+.signature-block .sig-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+.signature-block .sig-date-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+.signature-block .sig-date-wrap .sig-label {
+  white-space: nowrap;
+}
+.signature-block .sig-date-wrap input {
+  width: 140px;
+  padding: 0.5rem 0.65rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.35rem;
+}
+
+/* Clear signature button - consistent modern style */
+.btn-clear-signature {
+  padding: 0.4rem 0.9rem !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: var(--primary-dark) !important;
+  background: rgba(20, 184, 166, 0.08) !important;
+  border: 1.5px solid var(--primary) !important;
+  border-radius: var(--radius-sm) !important;
+  transition: all var(--transition) !important;
+}
+.btn-clear-signature:hover {
+  background: rgba(20, 184, 166, 0.15) !important;
+  color: var(--primary-dark) !important;
+  border-color: var(--primary-dark) !important;
+}
+
+/* Back link - pill button style */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1.25rem;
+  color: var(--primary-dark);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
+}
+
+.back-link:hover {
+  background: white;
+  color: var(--primary);
+  border-color: var(--primary);
+  box-shadow: var(--shadow);
+}
+
+/* HR-only sections */
+.hr-only {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  color: #92400e;
+  font-size: 0.85rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid #fde68a;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+.hr-only p {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+.hr-only .form-control, .hr-only textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.hr-only label:not(:has(input[type="radio"])) { display: block; margin-bottom: 0.25rem; }
+.hr-only .text-break { word-wrap: break-word; overflow-wrap: break-word; }
+
+/* Submit button - stunning CTA */
+.hr-form-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 2.5rem !important;
+  font-family: inherit !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  color: white !important;
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important;
+  border: none !important;
+  border-radius: var(--radius-full) !important;
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4) !important;
+  cursor: pointer;
+  transition: all var(--transition) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.hr-form-submit::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.hr-form-submit:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 25px rgba(13, 148, 136, 0.45) !important;
+  color: white !important;
+}
+
+.hr-form-submit:hover::before {
+  opacity: 1;
+}
+
+.hr-form-submit:active {
+  transform: translateY(0) !important;
+}
+
+/* Leave options - modern chip grid */
+.leave-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+.leave-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: white;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.leave-options label:hover {
+  border-color: var(--primary);
+  background: rgba(20, 184, 166, 0.04);
+}
+
+.leave-options input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.leave-options label:has(input:checked) {
+  border-color: var(--primary);
+  background: rgba(20, 184, 166, 0.08);
+  font-weight: 600;
+}
+
+/* Success overlay - glass morphism */
+.success-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.success-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.success-modal {
+  background: white !important;
+  border-radius: var(--radius-lg) !important;
+  padding: 2.5rem !important;
+  text-align: center;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+  transform: scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.success-overlay.show .success-modal {
+  transform: scale(1);
+}
+
+/* Letter-style inline fields (Visa etc) */
+.doc-letter .form-control,
+.doc-letter .fill-in {
+  display: inline-block;
+  min-width: 60px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  vertical-align: baseline;
+  transition: all var(--transition);
+}
+.doc-letter .form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.15);
+}
+.doc-letter p {
+  margin: 0.5rem 0;
+  line-height: 1.7;
+}
+.doc-letter .fill-label {
+  display: inline;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .doc-form-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .leave-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .hr-form-wrapper {
+    padding: 1rem;
+  }
+  .doc-form form,
+  .doc-footer {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+  .doc-title {
+    font-size: 1.4rem;
+  }
+  .doc-header {
+    padding: 1.75rem 1.5rem;
+    grid-template-columns: 1fr;
+  }
+  .doc-header .doc-logo {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+    margin-top: 1rem;
+  }
+  .signature-pad {
+    min-width: 100%;
+  }
+  .signature-block .sig-canvas-wrap {
+    min-width: 100%;
+  }
+}
+
+@media (min-width: 1400px) {
+  .doc-form {
+    max-width: 1450px;
+  }
+}

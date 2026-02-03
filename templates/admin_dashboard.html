@@ -93,9 +93,11 @@
     }
     
     .container {
+      width: 100%;
       max-width: 1600px;
       margin: 0 auto;
-      padding: 2rem;
+      padding: 1.5rem 2rem;
+      box-sizing: border-box;
     }
     
     .page-header {
@@ -120,12 +122,18 @@
       padding: 2rem;
       box-shadow: 0 2px 10px rgba(0,0,0,0.05);
       margin-bottom: 2rem;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      box-sizing: border-box;
     }
     
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
       margin-bottom: 1.5rem;
     }
     
@@ -135,10 +143,20 @@
       color: var(--text-dark);
     }
     
+    .table-scroll-wrapper {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-top: 1rem;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+
     .users-table {
       width: 100%;
+      min-width: 900px;
       border-collapse: collapse;
-      margin-top: 1rem;
     }
     
     .users-table th,
@@ -202,9 +220,8 @@
     .access-badges {
       display: flex;
       gap: 0.5rem;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       align-items: center;
-      white-space: nowrap;
     }
     
     .access-badge {
@@ -231,7 +248,9 @@
     
     .action-buttons {
       display: flex;
+      flex-wrap: wrap;
       gap: 0.5rem;
+      align-items: center;
     }
     
     .btn-sm {
@@ -240,45 +259,51 @@
     }
     
     .btn-reset {
-      background: var(--warning);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
       color: white;
     }
     
     .btn-reset:hover {
-      background: #d97706;
+      background: var(--primary-dark);
+      color: white;
     }
     
     .btn-toggle {
-      background: var(--info);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
       color: white;
     }
     
     .btn-toggle:hover {
-      background: #2563eb;
+      background: var(--primary-dark);
+      color: white;
     }
     
     .btn-access {
-      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
       color: white;
     }
     
     .btn-access:hover {
       background: var(--primary-dark);
+      color: white;
     }
 
     .btn-danger {
-      background: var(--danger);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
       color: white;
     }
 
     .btn-danger:hover {
-      background: #dc2626;
+      background: var(--primary-dark);
+      color: white;
     }
 
     .documents-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
       margin-bottom: 1rem;
     }
 
@@ -435,6 +460,7 @@
 
     .documents-table {
       width: 100%;
+      min-width: 1000px;
       border-collapse: collapse;
       margin-top: 1rem;
     }
@@ -582,7 +608,8 @@
     }
 
     .dashboard-filter {
-      min-width: 200px;
+      min-width: 140px;
+      max-width: 100%;
       padding: 0.5rem 0.75rem;
       border: 1px solid #e5e7eb;
       border-radius: 8px;
@@ -730,6 +757,24 @@
       color: var(--text-light);
     }
     
+    @media (max-width: 1200px) {
+      .container {
+        padding: 1.25rem 1.5rem !important;
+      }
+      
+      .users-section {
+        padding: 1.5rem !important;
+      }
+      
+      .dashboard-filter {
+        min-width: 120px !important;
+      }
+      
+      .users-table {
+        min-width: 800px !important;
+      }
+    }
+    
     @media (max-width: 768px) {
       .navbar {
         padding: 0.75rem 1rem !important;
@@ -769,6 +814,7 @@
       
       .container {
         padding: 1rem !important;
+        width: 100% !important;
       }
       
       .page-title {
@@ -781,27 +827,50 @@
       
       .users-section {
         padding: 1.25rem !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+      }
+      
+      .section-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+      }
+      
+      .section-controls {
+        width: 100% !important;
+        justify-content: flex-start !important;
+      }
+      
+      .dashboard-filter {
+        min-width: 100% !important;
       }
       
       .section-title {
         font-size: 1.25rem !important;
       }
       
-      .users-table,
-      .documents-table {
-        font-size: 0.8rem !important;
-        display: block !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
+      .table-scroll-wrapper {
+        margin-left: -0.25rem !important;
+        margin-right: -0.25rem !important;
+        border-radius: 6px !important;
+        border-left: none !important;
+        border-right: none !important;
       }
       
-      .users-table thead,
-      .users-table tbody,
-      .users-table tr,
-      .documents-table thead,
-      .documents-table tbody,
-      .documents-table tr {
-        display: block !important;
+      .users-table {
+        font-size: 0.8rem !important;
+        min-width: 700px !important;
+      }
+      
+      .documents-table {
+        font-size: 0.8rem !important;
+        min-width: 750px !important;
+      }
+      
+      .documents-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.75rem !important;
       }
       
       .users-table th,
@@ -809,22 +878,11 @@
       .documents-table th,
       .documents-table td {
         padding: 0.75rem 0.5rem !important;
-        display: block !important;
-        text-align: left !important;
-        border-bottom: 1px solid #e5e7eb !important;
       }
       
-      .users-table th,
-      .documents-table th {
-        display: none !important;
-      }
-      
-      .users-table td:before,
-      .documents-table td:before {
-        content: attr(data-label) ": " !important;
-        font-weight: 600 !important;
-        display: inline-block !important;
-        width: 40% !important;
+      .action-buttons .btn-sm {
+        padding: 0.35rem 0.5rem !important;
+        font-size: 0.8rem !important;
       }
 
       .download-links {
@@ -834,16 +892,6 @@
       .btn-download {
         width: 100% !important;
         justify-content: center !important;
-      }
-      
-      .action-buttons {
-        flex-direction: column !important;
-        gap: 0.5rem !important;
-      }
-      
-      .btn-sm {
-        width: 100% !important;
-        margin: 0 !important;
       }
       
       .modal {
@@ -864,16 +912,35 @@
         font-size: 0.8rem !important;
       }
       
+      .container {
+        padding: 0.75rem 1rem !important;
+      }
+      
       .page-title {
         font-size: 1.35rem !important;
       }
       
+      .page-subtitle {
+        font-size: 0.85rem !important;
+      }
+      
       .users-section {
         padding: 1rem !important;
+        border-radius: 8px !important;
       }
       
       .users-table,
       .documents-table {
+        font-size: 0.75rem !important;
+        min-width: 600px !important;
+      }
+      
+      .section-title {
+        font-size: 1.1rem !important;
+      }
+      
+      .action-buttons .btn-sm {
+        padding: 0.3rem 0.4rem !important;
         font-size: 0.75rem !important;
       }
     }
@@ -1180,7 +1247,7 @@
       opacity: 0.5;
     }
     .btn-activity {
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
       color: white;
       border: none;
       display: inline-flex;
@@ -1188,9 +1255,10 @@
       gap: 4px;
     }
     .btn-activity:hover {
-      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      background: var(--primary-dark);
+      color: white;
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+      box-shadow: 0 2px 8px rgba(18, 84, 53, 0.3);
     }
   </style>
 
@@ -1367,6 +1435,7 @@
       }
 
       let html = `
+        <div class="table-scroll-wrapper">
         <table class="users-table">
           <thead>
             <tr>
@@ -1442,6 +1511,7 @@
       html += `
           </tbody>
         </table>
+        </div>
       `;
 
       container.innerHTML = html;
@@ -1894,6 +1964,7 @@
       }
 
       let html = `
+        <div class="table-scroll-wrapper">
         <table class="documents-table">
           <thead>
             <tr>
@@ -2019,6 +2090,7 @@
       html += `
           </tbody>
         </table>
+        </div>
       `;
 
       container.innerHTML = html;

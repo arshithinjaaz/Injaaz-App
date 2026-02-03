@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Station Clearance Form - INJAAZ</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/hr-forms.css">
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <style>
+    .success-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; }
+    .success-overlay.show { opacity: 1; visibility: visible; }
+  </style>
+</head>
+<body class="hr-form-page">
+  <div class="success-overlay" id="successModal">
+    <div class="success-modal">
+      <div style="width:64px;height:64px;background:linear-gradient(135deg,#10b981,#059669);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;"><svg width="32" height="32" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+      <h2 style="font-size:1.35rem;font-weight:700;color:#1e293b;">Form Submitted!</h2>
+      <p class="text-muted" style="margin:0.5rem 0;">Station clearance form sent to HR.</p>
+      <div id="submissionId" style="background:#f1f5f9;padding:0.5rem 1rem;border-radius:8px;font-family:monospace;font-size:0.85rem;margin:1rem 0;"></div>
+      <button class="btn hr-form-submit" onclick="window.location.href='/hr/my-requests'">View My Requests</button>
+    </div>
+  </div>
+
+  <div class="hr-form-wrapper"><div class="container-fluid py-4">
+    <a href="/hr/" class="back-link"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Back to HR Module</a>
+    
+    <div class="doc-form">
+      <div class="doc-header">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="doc-logo">
+        <h1 class="doc-title">Station Clearance Form</h1>
+        <p class="doc-intro">The following departments must ensure that all exit formalities have been conducted for transferring employees.</p>
+      </div>
+
+      <form id="hrForm">
+        <table class="doc-table">
+          <tr><td class="label" style="width:20%;">Employee Name</td><td><input type="text" name="employee_name" required></td><td></td><td></td><td class="label">Employee ID</td><td><input type="text" name="employee_id" required></td></tr>
+          <tr><td class="label">Employment Date</td><td><input type="date" name="employment_date" required></td><td></td><td></td><td class="label">Position</td><td><input type="text" name="position" required></td></tr>
+          <tr><td class="label">Department</td><td><input type="text" name="department" required></td><td></td><td></td><td class="label">Section</td><td><input type="text" name="section"></td></tr>
+          <tr><td class="label">Type of Departure:</td><td>
+            <select name="type_of_departure" required>
+              <option value="">Select</option>
+              <option value="transfer">Transfer</option>
+              <option value="resignation">Resignation</option>
+              <option value="termination">Termination</option>
+              <option value="end_of_contract">End of Contract</option>
+            </select>
+          </td><td></td><td></td><td class="label">Last Working Date</td><td><input type="date" name="last_working_date" required></td></tr>
+        </table>
+
+        <table class="doc-table">
+          <tr><td colspan="4" class="doc-section">EMPLOYEE'S DEPARTMENT / SECTION</td><td>DATE</td><td>SIGNATURE</td></tr>
+          <tr><td></td><td>Has completed / handed over all tasks on hand</td><td colspan="2"><label><input type="checkbox" name="tasks_handed_over"> Completed</label></td><td><input type="date" name="dept_date_1"></td><td></td></tr>
+          <tr><td></td><td>Has handed over all original working documents</td><td colspan="2"><label><input type="checkbox" name="documents_handed_over"> Completed</label></td><td><input type="date" name="dept_date_2"></td><td></td></tr>
+          <tr><td></td><td>Has handed over all normal & Electronic files</td><td colspan="2"><label><input type="checkbox" name="files_handed_over"> Completed</label></td><td><input type="date" name="dept_date_3"></td><td></td></tr>
+          <tr><td></td><td>Keys Returned</td><td colspan="2"><label><input type="checkbox" name="keys_returned"> Completed</label></td><td><input type="date" name="dept_date_4"></td><td></td></tr>
+          <tr><td></td><td>Toolbox Returned</td><td colspan="2"><label><input type="checkbox" name="toolbox_returned"> Completed</label></td><td><input type="date" name="dept_date_5"></td><td></td></tr>
+          <tr><td></td><td>Access card</td><td colspan="2"><label><input type="checkbox" name="access_card_returned"> Completed</label></td><td><input type="date" name="dept_date_6"></td><td></td></tr>
+          <tr><td></td><td>Others:</td><td colspan="2"><input type="text" name="dept_others"></td><td></td><td></td></tr>
+        </table>
+
+        <table class="doc-table">
+          <tr><td colspan="6" class="doc-section">INFORMATION TECHNOLOGY DEPARTMENT</td></tr>
+          <tr><td></td><td>E-mail Account Cancelled</td><td colspan="2"><label><input type="checkbox" name="email_cancelled"> Completed</label></td><td></td><td></td></tr>
+          <tr><td></td><td>Has returned all software / hardware materials</td><td colspan="2"><label><input type="checkbox" name="software_hardware_returned"> Completed</label></td><td></td><td></td></tr>
+          <tr><td></td><td>Laptop Returned</td><td colspan="2"><label><input type="checkbox" name="laptop_returned"> Completed</label></td><td></td><td></td></tr>
+          <tr><td></td><td>Others:</td><td colspan="4"><input type="text" name="it_others"></td></tr>
+        </table>
+
+        <table class="doc-table">
+          <tr><td colspan="6" class="doc-section">HUMAN RESOURCES & ADMINISTRATION</td></tr>
+          <tr><td></td><td>Employee file Shifted to Exit folder</td><td colspan="2"><label><input type="checkbox" name="file_shifted"> Completed</label></td><td></td><td></td></tr>
+          <tr><td></td><td>Payment of outstanding dues (Salary)</td><td colspan="2"><label><input type="checkbox" name="dues_paid"> Completed</label></td><td></td><td></td></tr>
+          <tr><td></td><td>Medical Card Returned</td><td colspan="2"><label><input type="checkbox" name="medical_card_returned"> Completed</label></td><td></td><td></td></tr>
+          <tr><td></td><td>Others:</td><td colspan="4"><input type="text" name="hr_others"></td></tr>
+        </table>
+
+        <table class="doc-table">
+          <tr><td colspan="6" class="doc-section">FINANCE DEPARTMENT</td></tr>
+          <tr><td></td><td>EOS Benefits Transfer</td><td colspan="2"><label><input type="checkbox" name="eos_transfer"> Completed</label></td><td></td><td></td></tr>
+          <tr><td></td><td>Others:</td><td colspan="4"><input type="text" name="finance_others"></td></tr>
+        </table>
+
+        <table class="doc-table">
+          <tr><td class="label">Remarks</td><td colspan="5"><textarea name="remarks" rows="2"></textarea></td></tr>
+          <tr><td class="label">Employee Signature</td><td colspan="5">
+            <div class="signature-block">
+              <div class="sig-canvas-wrap">
+                <span class="sig-label">Sign</span>
+                <canvas id="signaturePad" class="signature-pad" width="100%" height="120"></canvas>
+                <button type="button" class="btn btn-clear-signature" onclick="signaturePad.clear()">Clear</button>
+              </div>
+            </div>
+          </td></tr>
+          <tr><td class="label hr-only">Human Resources Manager</td><td colspan="5" class="hr-only"><em>For HR approval workflow</em></td></tr>
+        </table>
+
+        <div class="mt-3 text-center">
+          <button type="submit" class="btn btn-lg hr-form-submit">Submit Station Clearance</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('signaturePad');
+    const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+    function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); const w = document.getElementById('signaturePad').parentElement?.offsetWidth || 320; canvas.width = w * ratio; canvas.height = 120 * ratio; canvas.getContext('2d').scale(ratio, ratio); signaturePad.clear(); }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    document.getElementById('hrForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target).entries());
+      data.form_type = 'station_clearance';
+      data.employee_signature = signaturePad.isEmpty() ? '' : signaturePad.toDataURL('image/png');
+      try {
+        const res = await fetch('/hr/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }, body: JSON.stringify(data) });
+        const result = await res.json();
+        if (result.success) { document.getElementById('submissionId').textContent = result.submission_id; document.getElementById('successModal').classList.add('show'); }
+        else { alert('Error: ' + result.error); }
+      } catch (err) { alert('Error: ' + err.message); }
+    });
+  </script>
+</body>
+</html>

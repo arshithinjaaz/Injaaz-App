@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leave Application Form - INJAAZ</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/hr-forms.css">
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <style>
+    .success-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; }
+    .success-overlay.show { opacity: 1; visibility: visible; }
+  </style>
+</head>
+<body class="hr-form-page">
+  <div class="success-overlay" id="successModal">
+    <div class="success-modal">
+      <div style="width:64px;height:64px;background:linear-gradient(135deg,#10b981,#059669);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;"><svg width="32" height="32" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
+      <h2 style="font-size:1.35rem;font-weight:700;color:#1e293b;">Form Submitted!</h2>
+      <p class="text-muted" style="margin:0.5rem 0;">Your leave application has been sent to HR for review.</p>
+      <div id="submissionId" style="background:#f1f5f9;padding:0.5rem 1rem;border-radius:8px;font-family:monospace;font-size:0.85rem;margin:1rem 0;"></div>
+      <button class="btn hr-form-submit" onclick="window.location.href='/hr/my-requests'">View My Requests</button>
+    </div>
+  </div>
+
+  <div class="hr-form-wrapper">
+    <div class="container-fluid py-4">
+      <a href="/hr/" class="back-link"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Back to HR Module</a>
+
+      <div class="doc-form">
+        <div class="doc-header">
+          <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="doc-logo">
+          <h1 class="doc-title">Leave Application Form</h1>
+          <p class="doc-company">P.O.Box 3456 Ajman, UAE | Tel: 067116815 | www.injaaz.ae</p>
+          <p class="doc-company">Registered under trade license name INJAAZ LLC</p>
+        </div>
+
+        <form id="hrForm">
+          <div class="doc-form-grid">
+            <div class="doc-form-col">
+              <div class="doc-section-title">Employee Details</div>
+              <table class="doc-table">
+                <tr><td class="label">Name:</td><td><input type="text" name="employee_name" required></td></tr>
+                <tr><td class="label">Job Title:</td><td><input type="text" name="job_title" required></td></tr>
+                <tr><td class="label">Employee ID:</td><td><input type="text" name="employee_id" required></td></tr>
+                <tr><td class="label">Date of Joining:</td><td><input type="date" name="date_of_joining" required></td></tr>
+                <tr><td class="label">Last Leave Date:</td><td><input type="date" name="last_leave_date"></td></tr>
+                <tr><td class="label">Today's Date:</td><td><input type="date" name="today_date" required></td></tr>
+                <tr><td class="label">Department:</td><td><input type="text" name="department" required></td></tr>
+                <tr><td class="label">Mobile No.:</td><td><input type="tel" name="mobile_no" required></td></tr>
+              </table>
+            </div>
+            <div class="doc-form-col">
+              <div class="doc-section-title">Details of Leave</div>
+              <table class="doc-table">
+                <tr><td colspan="2" class="doc-section">Type of Leave</td></tr>
+                <tr><td class="label">Type (check one):</td><td><input type="number" name="number_of_days" required min="1" placeholder="No. of days" style="width:90px;display:inline-block;"></td></tr>
+                <tr><td colspan="2">
+                  <div class="leave-options">
+                    <label><input type="radio" name="leave_type" value="annual" required> Annual Leave</label>
+                    <label><input type="radio" name="leave_type" value="ot_compensatory"> OT Compensatory Off</label>
+                    <label><input type="radio" name="leave_type" value="examination"> Examination Leave (UAE Nationals)</label>
+                    <label><input type="radio" name="leave_type" value="study"> Study Leave</label>
+                    <label><input type="radio" name="leave_type" value="sick"> Sick Leave</label>
+                    <label><input type="radio" name="leave_type" value="compassionate"> Compassionate Leave</label>
+                    <label><input type="radio" name="leave_type" value="unpaid"> Unpaid Leave</label>
+                    <label><input type="radio" name="leave_type" value="hajj"> Hajj Leave</label>
+                    <label style="grid-column:1/-1"><input type="radio" name="leave_type" value="other"> Other (Specify): <input type="text" name="leave_type_other" placeholder="Specify" style="width:140px;display:inline-block;margin-left:0.5rem;"></label>
+                  </div>
+                </td></tr>
+                <tr><td class="label">Total No. of Days Requested:</td><td><input type="number" name="total_days_requested" required min="1"></td></tr>
+                <tr><td class="label">First Day of leave:</td><td><input type="date" name="first_day_of_leave" required></td></tr>
+                <tr><td class="label">Last Day of Leave:</td><td><input type="date" name="last_day_of_leave" required></td></tr>
+                <tr><td class="label">Date returning to work:</td><td><input type="date" name="date_returning_to_work" required></td></tr>
+                <tr><td class="label">Leave Salary Advance:</td><td><label><input type="radio" name="salary_advance" value="yes" required> YES</label> &nbsp; <label><input type="radio" name="salary_advance" value="no"> NO</label></td></tr>
+                <tr><td class="label">Telephone (reachable):</td><td><input type="tel" name="telephone_reachable" required placeholder="e.g. +971..."></td></tr>
+                <tr><td class="label">Replacement Name:</td><td><input type="text" name="replacement_name" placeholder="Person covering"></td></tr>
+                <tr><td class="label">Employee Signature</td><td>
+                  <div class="signature-block">
+                    <div class="sig-canvas-wrap">
+                      <span class="sig-label">Sign</span>
+                      <canvas id="signaturePad" class="signature-pad" width="100%" height="120"></canvas>
+                      <button type="button" class="btn btn-clear-signature" onclick="signaturePad.clear()">Clear</button>
+                    </div>
+                  </div>
+                </td></tr>
+                <tr><td class="label">Manager Signature:</td><td class="hr-only"><em>For Manager approval</em></td></tr>
+                <tr><td colspan="2" class="doc-section">For Human Resources Only</td></tr>
+                <tr><td class="label">Checked by HR:</td><td class="hr-only"><em>YES / NO</em></td></tr>
+                <tr><td class="label">HR Comments:</td><td class="hr-only"><em>HR use only</em></td></tr>
+                <tr><td class="label">Balance C/F:</td><td class="hr-only"></td></tr>
+                <tr><td class="label">Contract Year:</td><td class="hr-only"></td></tr>
+                <tr><td class="label">Paid:</td><td class="hr-only"></td></tr>
+                <tr><td class="label">Unpaid:</td><td class="hr-only"></td></tr>
+                <tr><td class="label">HR Signature:</td><td class="hr-only"></td></tr>
+              </table>
+            </div>
+          </div>
+
+          <div class="doc-footer">
+            <span>DOC NO: HR-FRM-007</span>
+            <span>DATE: <span id="docDate"></span></span>
+            <span>ISSUE: 00</span>
+            <span>REVISION: 00</span>
+          </div>
+
+          <div class="text-center mt-3">
+            <button type="submit" class="btn btn-lg hr-form-submit">Submit Leave Application</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.querySelector('[name="today_date"]').value = new Date().toISOString().split('T')[0];
+    document.getElementById('docDate').textContent = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    const canvas = document.getElementById('signaturePad');
+    const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+    function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); const w = canvas.offsetWidth || 280; canvas.width = w * ratio; canvas.height = 120 * ratio; canvas.getContext('2d').scale(ratio, ratio); signaturePad.clear(); }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    document.querySelectorAll('[name="first_day_of_leave"], [name="last_day_of_leave"], [name="number_of_days"], [name="total_days_requested"]').forEach(el => {
+      el.addEventListener('change', function() {
+        const first = document.querySelector('[name="first_day_of_leave"]').value;
+        const last = document.querySelector('[name="last_day_of_leave"]').value;
+        const num = document.querySelector('[name="number_of_days"]');
+        const total = document.querySelector('[name="total_days_requested"]');
+        if (first && last) {
+          const d1 = new Date(first), d2 = new Date(last);
+          const days = Math.ceil((d2 - d1) / (1000*60*60*24)) + 1;
+          if (days > 0) { num.value = days; total.value = days; }
+        }
+      });
+    });
+
+    document.getElementById('hrForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData.entries());
+      data.form_type = 'leave_application';
+      data.employee_signature = signaturePad.isEmpty() ? '' : signaturePad.toDataURL('image/png');
+      if (data.leave_type !== 'other') delete data.leave_type_other;
+      try {
+        const res = await fetch('/hr/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }, body: JSON.stringify(data) });
+        const result = await res.json();
+        if (result.success) { document.getElementById('submissionId').textContent = result.submission_id; document.getElementById('successModal').classList.add('show'); }
+        else { alert('Error: ' + result.error); }
+      } catch (err) { alert('Error: ' + err.message); }
+    });
+  </script>
+</body>
+</html>
