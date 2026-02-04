@@ -2394,7 +2394,7 @@ async function loadNotifications() {
         const timeAgo = getTimeAgo(new Date(n.created_at));
         
         return `
-          <div class="notification-item ${n.is_read ? '' : 'unread'}" onclick="markNotificationRead(${n.id}, '${n.submission_id || ''}')">
+          <div class="notification-item ${n.is_read ? '' : 'unread'}" onclick="markNotificationRead(${n.id}, '${(n.submission_id || '').replace(/'/g, "\\'")}', '${(n.notification_type || '').replace(/'/g, "\\'")}')">
             <div class="notification-icon ${iconClass}">${iconEmoji}</div>
             <div class="notification-content">
               <div class="notification-title">${escapeHtml(n.title)}</div>
@@ -2415,7 +2415,7 @@ async function loadNotifications() {
   }
 }
 
-async function markNotificationRead(id, submissionId) {
+async function markNotificationRead(id, submissionId, notificationType) {
   try {
     const token = localStorage.getItem('access_token');
     await fetch(`/hr/api/notifications/${id}/read`, {
@@ -2427,9 +2427,10 @@ async function markNotificationRead(id, submissionId) {
     loadNotifications();
     loadNotificationCount();
     
-    // Navigate to submission if available
+    // Navigate based on notification type when submission exists
     if (submissionId) {
-      window.location.href = '/hr/my-requests';
+      const url = (notificationType === 'gm_approval_pending') ? '/hr/gm-approval' : '/hr/';
+      window.location.href = url;
     }
   } catch (error) {
     console.error('Error marking notification as read:', error);

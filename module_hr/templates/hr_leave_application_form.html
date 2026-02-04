@@ -31,8 +31,6 @@
         <div class="doc-header">
           <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="doc-logo">
           <h1 class="doc-title">Leave Application Form</h1>
-          <p class="doc-company">P.O.Box 3456 Ajman, UAE | Tel: 067116815 | www.injaaz.ae</p>
-          <p class="doc-company">Registered under trade license name INJAAZ LLC</p>
         </div>
 
         <form id="hrForm">
@@ -84,15 +82,39 @@
                     </div>
                   </div>
                 </td></tr>
-                <tr><td class="label">Manager Signature:</td><td class="hr-only"><em>For Manager approval</em></td></tr>
+                <tr><td class="label">GM Signature</td><td class="gm-only">
+                  {% if is_gm %}
+                  <div class="signature-block">
+                    <div class="sig-canvas-wrap">
+                      <span class="sig-label">GM sign</span>
+                      <canvas id="gmSignaturePad" class="signature-pad" width="100%" height="120"></canvas>
+                      <button type="button" class="btn btn-clear-signature" onclick="gmSignaturePad.clear()">Clear</button>
+                    </div>
+                  </div>
+                  {% else %}
+                  <em class="text-muted">For GM approval workflow</em>
+                  {% endif %}
+                </td></tr>
                 <tr><td colspan="2" class="doc-section">For Human Resources Only</td></tr>
-                <tr><td class="label">Checked by HR:</td><td class="hr-only"><em>YES / NO</em></td></tr>
-                <tr><td class="label">HR Comments:</td><td class="hr-only"><em>HR use only</em></td></tr>
-                <tr><td class="label">Balance C/F:</td><td class="hr-only"></td></tr>
-                <tr><td class="label">Contract Year:</td><td class="hr-only"></td></tr>
-                <tr><td class="label">Paid:</td><td class="hr-only"></td></tr>
-                <tr><td class="label">Unpaid:</td><td class="hr-only"></td></tr>
-                <tr><td class="label">HR Signature:</td><td class="hr-only"></td></tr>
+                <tr><td class="label">Checked by HR</td><td class="hr-only"><input type="text" name="hr_checked" placeholder="YES / NO" class="form-control" {% if not is_hr %}readonly{% endif %}></td></tr>
+                <tr><td class="label">HR Comments</td><td class="hr-only"><textarea name="hr_comments" rows="2" class="form-control" {% if not is_hr %}readonly{% endif %} placeholder="HR use only"></textarea></td></tr>
+                <tr><td class="label">Balance C/F</td><td class="hr-only"><input type="text" name="hr_balance_cf" class="form-control" {% if not is_hr %}readonly{% endif %}></td></tr>
+                <tr><td class="label">Contract Year</td><td class="hr-only"><input type="text" name="hr_contract_year" class="form-control" {% if not is_hr %}readonly{% endif %}></td></tr>
+                <tr><td class="label">Paid</td><td class="hr-only"><input type="text" name="hr_paid" class="form-control" {% if not is_hr %}readonly{% endif %}></td></tr>
+                <tr><td class="label">Unpaid</td><td class="hr-only"><input type="text" name="hr_unpaid" class="form-control" {% if not is_hr %}readonly{% endif %}></td></tr>
+                <tr><td class="label">HR Signature</td><td class="hr-only">
+                  {% if is_hr %}
+                  <div class="signature-block">
+                    <div class="sig-canvas-wrap">
+                      <span class="sig-label">HR sign</span>
+                      <canvas id="hrSignaturePad" class="signature-pad" width="100%" height="120"></canvas>
+                      <button type="button" class="btn btn-clear-signature" onclick="hrSignaturePad.clear()">Clear</button>
+                    </div>
+                  </div>
+                  {% else %}
+                  <em class="text-muted">For HR approval workflow</em>
+                  {% endif %}
+                </td></tr>
               </table>
             </div>
           </div>
@@ -118,7 +140,20 @@
 
     const canvas = document.getElementById('signaturePad');
     const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
-    function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); const w = canvas.offsetWidth || 280; canvas.width = w * ratio; canvas.height = 120 * ratio; canvas.getContext('2d').scale(ratio, ratio); signaturePad.clear(); }
+    let gmSignaturePad = null, hrSignaturePad = null;
+    const gmCanvas = document.getElementById('gmSignaturePad');
+    if (gmCanvas) { gmSignaturePad = new SignaturePad(gmCanvas, { backgroundColor: 'rgb(255, 255, 255)' }); }
+    const hrCanvas = document.getElementById('hrSignaturePad');
+    if (hrCanvas) { hrSignaturePad = new SignaturePad(hrCanvas, { backgroundColor: 'rgb(255, 255, 255)' }); }
+    function resizeCanvas() {
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const w = canvas.offsetWidth || 280;
+      canvas.width = w * ratio; canvas.height = 120 * ratio;
+      canvas.getContext('2d').scale(ratio, ratio);
+      signaturePad.clear();
+      if (gmSignaturePad && gmCanvas) { gmCanvas.width = gmCanvas.offsetWidth * ratio; gmCanvas.height = 120 * ratio; gmCanvas.getContext('2d').scale(ratio, ratio); gmSignaturePad.clear(); }
+      if (hrSignaturePad && hrCanvas) { hrCanvas.width = hrCanvas.offsetWidth * ratio; hrCanvas.height = 120 * ratio; hrCanvas.getContext('2d').scale(ratio, ratio); hrSignaturePad.clear(); }
+    }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
@@ -142,6 +177,8 @@
       const data = Object.fromEntries(formData.entries());
       data.form_type = 'leave_application';
       data.employee_signature = signaturePad.isEmpty() ? '' : signaturePad.toDataURL('image/png');
+      if (gmSignaturePad) data.gm_signature = gmSignaturePad.isEmpty() ? '' : gmSignaturePad.toDataURL('image/png');
+      if (hrSignaturePad) data.hr_signature = hrSignaturePad.isEmpty() ? '' : hrSignaturePad.toDataURL('image/png');
       if (data.leave_type !== 'other') delete data.leave_type_other;
       try {
         const res = await fetch('/hr/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }, body: JSON.stringify(data) });

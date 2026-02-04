@@ -31,7 +31,6 @@
       <div class="doc-header">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="doc-logo">
         <h1 class="doc-title">EMPLOYEE PERFORMANCE EVALUATION FORM</h1>
-        <p class="doc-intro">To be filled by Supervisor/HOD/Manager: | To be filled by the Performance Evaluator:</p>
       </div>
 
       <form id="hrForm">
@@ -95,11 +94,12 @@
         </table>
 
         <table class="doc-table hr-only">
-          <tr><td class="label" style="width:35%;">CONCERN INCHARGE, ENGINEER, MANAGER NAME:</td><td><input type="text" name="concern_incharge_name" placeholder="For Manager use"></td></tr>
-          <tr><td class="label">INCHARGE, ENGINEER, MANAGER COMMENTS & RECOMMENDATIONS:</td><td><textarea name="incharge_comments" rows="2"></textarea></td></tr>
-          <tr><td class="label">GENERAL MANAGER REMARKS/COMMENTS:</td><td><textarea name="gm_remarks" rows="2"></textarea></td></tr>
+          <tr><td class="label" style="width:35%;">CONCERN INCHARGE, ENGINEER, MANAGER NAME:</td><td><input type="text" name="concern_incharge_name" placeholder="For Manager use" {% if not is_hr %}readonly{% endif %}></td></tr>
+          <tr><td class="label">INCHARGE, ENGINEER, MANAGER COMMENTS & RECOMMENDATIONS:</td><td><textarea name="incharge_comments" rows="2" {% if not is_hr %}readonly{% endif %}></textarea></td></tr>
+          <tr><td class="label">GENERAL MANAGER REMARKS/COMMENTS:</td><td><textarea name="gm_remarks" rows="2" {% if not is_gm %}readonly{% endif %} placeholder="For GM use"></textarea></td></tr>
+          <tr><td class="label">GM Signature:</td><td>{% if is_gm %}<div class="signature-block"><div class="sig-canvas-wrap"><canvas id="gmSignaturePad" class="signature-pad" width="100%" height="100"></canvas><button type="button" class="btn btn-clear-signature" onclick="gmSignaturePad && gmSignaturePad.clear()">Clear</button></div></div>{% else %}<em class="text-muted">For GM approval workflow</em>{% endif %}</td></tr>
           <tr><td class="label">for HR - Use only:</td><td></td></tr>
-          <tr><td class="label">HR remarks/comments: HR Name & Signature:</td><td><textarea name="hr_remarks" rows="1"></textarea></td></tr>
+          <tr><td class="label">HR remarks/comments: HR Name & Signature:</td><td>{% if is_hr %}<textarea name="hr_remarks" rows="1"></textarea><div class="signature-block mt-2"><div class="sig-canvas-wrap"><canvas id="hrSignaturePad" class="signature-pad" width="100%" height="100"></canvas><button type="button" class="btn btn-clear-signature" onclick="hrSignaturePad && hrSignaturePad.clear()">Clear</button></div></div>{% else %}<em class="text-muted">For HR approval workflow</em>{% endif %}</td></tr>
         </table>
 
         <div class="mt-3 text-center">
@@ -116,6 +116,9 @@
     const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
     const empCanvas = document.getElementById('empSignaturePad');
     const empSignaturePad = new SignaturePad(empCanvas, { backgroundColor: 'rgb(255, 255, 255)' });
+    let gmSignaturePad = null, hrSignaturePad = null;
+    const gmC = document.getElementById('gmSignaturePad'); if (gmC) gmSignaturePad = new SignaturePad(gmC, { backgroundColor: 'rgb(255, 255, 255)' });
+    const hrC = document.getElementById('hrSignaturePad'); if (hrC) hrSignaturePad = new SignaturePad(hrC, { backgroundColor: 'rgb(255, 255, 255)' });
     function resizeCanvas() {
       const ratio = Math.max(window.devicePixelRatio || 1, 1);
       const wrap1 = empCanvas.closest('.sig-canvas-wrap');
@@ -126,6 +129,8 @@
         c.getContext('2d').scale(ratio, ratio);
       });
       signaturePad.clear(); empSignaturePad.clear();
+      if (gmSignaturePad && gmC) { gmC.width = (gmC.closest('.sig-canvas-wrap')?.offsetWidth || 300) * ratio; gmC.height = 100 * ratio; gmC.getContext('2d').scale(ratio, ratio); gmSignaturePad.clear(); }
+      if (hrSignaturePad && hrC) { hrC.width = (hrC.closest('.sig-canvas-wrap')?.offsetWidth || 300) * ratio; hrC.height = 100 * ratio; hrC.getContext('2d').scale(ratio, ratio); hrSignaturePad.clear(); }
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -145,6 +150,8 @@
       data.form_type = 'performance_evaluation';
       data.evaluator_signature = signaturePad.isEmpty() ? '' : signaturePad.toDataURL('image/png');
       data.employee_signature = empSignaturePad.isEmpty() ? '' : empSignaturePad.toDataURL('image/png');
+      if (gmSignaturePad) data.gm_signature = gmSignaturePad.isEmpty() ? '' : gmSignaturePad.toDataURL('image/png');
+      if (hrSignaturePad) data.hr_signature = hrSignaturePad.isEmpty() ? '' : hrSignaturePad.toDataURL('image/png');
       try {
         const res = await fetch('/hr/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }, body: JSON.stringify(data) });
         const result = await res.json();

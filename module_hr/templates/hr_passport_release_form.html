@@ -30,8 +30,6 @@
       <div class="doc-header">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="doc-logo">
         <h1 class="doc-title">Passport Release / Submission Form</h1>
-        <p class="doc-company">P.O.Box: 3456 Ajman, UAE | Tel: 067116815 | www.injaaz.ae</p>
-        <p class="doc-company">Registered under trade license name INJAAZ LLC</p>
       </div>
 
       <form id="hrForm">
@@ -72,8 +70,8 @@
         <div id="safekeepingSection" style="display:none;">
           <div class="doc-section-title">Requisition for Safekeeping</div>
           <table class="doc-table">
-            <tr><td class="label">Approved by Line Manager</td><td class="hr-only"><em>For Manager</em></td></tr>
-            <tr><td class="label">HR Signature</td><td class="hr-only"><em>For HR</em></td></tr>
+            <tr><td class="label">GM Signature</td><td class="gm-only">{% if is_gm %}<div class="signature-block"><div class="sig-canvas-wrap"><span class="sig-label">GM sign</span><canvas id="gmSignaturePad" class="signature-pad" width="100%" height="120"></canvas><button type="button" class="btn btn-clear-signature" onclick="gmSignaturePad && gmSignaturePad.clear()">Clear</button></div></div>{% else %}<em class="text-muted">For GM approval workflow</em>{% endif %}</td></tr>
+            <tr><td class="label">HR Signature</td><td class="hr-only">{% if is_hr %}<div class="signature-block"><div class="sig-canvas-wrap"><span class="sig-label">HR sign</span><canvas id="hrSignaturePad" class="signature-pad" width="100%" height="120"></canvas><button type="button" class="btn btn-clear-signature" onclick="hrSignaturePad && hrSignaturePad.clear()">Clear</button></div></div>{% else %}<em class="text-muted">For HR approval workflow</em>{% endif %}</td></tr>
           </table>
         </div>
           </div>
@@ -105,7 +103,10 @@
 
     const canvas = document.getElementById('signaturePad');
     const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
-    function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); const w = document.getElementById('signaturePad').offsetWidth || 320; canvas.width = w * ratio; canvas.height = 120 * ratio; canvas.getContext('2d').scale(ratio, ratio); signaturePad.clear(); }
+    let gmSignaturePad = null, hrSignaturePad = null;
+    const gmC = document.getElementById('gmSignaturePad'); if (gmC) gmSignaturePad = new SignaturePad(gmC, { backgroundColor: 'rgb(255, 255, 255)' });
+    const hrC = document.getElementById('hrSignaturePad'); if (hrC) hrSignaturePad = new SignaturePad(hrC, { backgroundColor: 'rgb(255, 255, 255)' });
+    function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); const w = document.getElementById('signaturePad').offsetWidth || 320; canvas.width = w * ratio; canvas.height = 120 * ratio; canvas.getContext('2d').scale(ratio, ratio); signaturePad.clear(); if (gmSignaturePad && gmC) { gmC.width = gmC.offsetWidth * ratio; gmC.height = 120 * ratio; gmC.getContext('2d').scale(ratio, ratio); gmSignaturePad.clear(); } if (hrSignaturePad && hrC) { hrC.width = hrC.offsetWidth * ratio; hrC.height = 120 * ratio; hrC.getContext('2d').scale(ratio, ratio); hrSignaturePad.clear(); } }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
@@ -114,6 +115,8 @@
       const data = Object.fromEntries(new FormData(e.target).entries());
       data.form_type = 'passport_release';
       data.employee_signature = signaturePad.isEmpty() ? '' : signaturePad.toDataURL('image/png');
+      if (gmSignaturePad) data.gm_signature = gmSignaturePad.isEmpty() ? '' : gmSignaturePad.toDataURL('image/png');
+      if (hrSignaturePad) data.hr_signature = hrSignaturePad.isEmpty() ? '' : hrSignaturePad.toDataURL('image/png');
       if (data.passport_form_type === 'safekeeping') { data.purpose_of_release = ''; data.release_date = ''; }
       try {
         const res = await fetch('/hr/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }, body: JSON.stringify(data) });

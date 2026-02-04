@@ -30,7 +30,6 @@
       <div class="doc-header">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="doc-logo">
         <h1 class="doc-title">Employee grievance/disciplinary action form</h1>
-        <p class="doc-intro">The purpose of the Grievance/Disciplinary form is to establish a method whereby grievances and disciplinary actions can be documented and addressed in a fair and consistent manner.</p>
       </div>
 
       <form id="hrForm">
@@ -80,23 +79,27 @@
         <div class="hr-only p-3 rounded mt-3">
           <p class="mb-2"><strong>For Engineer, QHSE & Head of department (HOD) use.</strong></p>
           <p class="small mb-2">The Engineer, QHSE or HOD handling the employee grievance needs to state the actions or recommendations taken.</p>
-          <div class="mb-2"><label>Statement of 2nd party been taken & attached?</label> <label><input type="radio" name="statement_2nd_party" value="yes"> Yes</label> <label><input type="radio" name="statement_2nd_party" value="no"> No</label> <label><input type="radio" name="statement_2nd_party" value="na"> N/A</label></div>
-          <p class="mb-0">Signature of Engineer/QHSE/HOD: <em>For approval workflow</em></p>
+          <div class="mb-2"><label>Statement of 2nd party been taken & attached?</label> <label><input type="radio" name="statement_2nd_party" value="yes" {% if not is_hr %}disabled{% endif %}> Yes</label> <label><input type="radio" name="statement_2nd_party" value="no" {% if not is_hr %}disabled{% endif %}> No</label> <label><input type="radio" name="statement_2nd_party" value="na" {% if not is_hr %}disabled{% endif %}> N/A</label></div>
+          <p class="mb-0">Signature of Engineer/QHSE/HOD: <em>For HR approval workflow</em></p>
         </div>
 
         <div class="hr-only p-3 rounded mt-2">
           <p class="mb-2"><strong>For HR use only.</strong></p>
-          <div class="mb-2"><label>Statement of one or both parties attached/verified?</label> <input type="text" name="hr_statement_verified" placeholder="one party / both" class="form-control d-inline-block" style="width:160px;"></div>
-          <div class="mb-2">Is it first complaint or recurring issue? <label><input type="radio" name="hr_first_recurring" value="1st"> 1st</label> <label><input type="radio" name="hr_first_recurring" value="recurring"> Recurring</label></div>
+          <div class="mb-2"><label>Statement of one or both parties attached/verified?</label> <input type="text" name="hr_statement_verified" placeholder="one party / both" class="form-control d-inline-block" style="width:160px;" {% if not is_hr %}readonly{% endif %}></div>
+          <div class="mb-2">Is it first complaint or recurring issue? <label><input type="radio" name="hr_first_recurring" value="1st" {% if not is_hr %}disabled{% endif %}> 1st</label> <label><input type="radio" name="hr_first_recurring" value="recurring" {% if not is_hr %}disabled{% endif %}> Recurring</label></div>
           <p class="mb-2 small text-break">If recurring: Verbal warning / Official warning # (1,2,3) / other</p>
-          <div class="mb-2"><label>HR remarks</label><textarea name="hr_remarks" rows="2" class="form-control w-100"></textarea></div>
-          <p class="mb-0">HR signature: <em>For approval workflow</em></p>
+          <div class="mb-2"><label>HR remarks</label><textarea name="hr_remarks" rows="2" class="form-control w-100" {% if not is_hr %}readonly{% endif %}></textarea></div>
+          {% if is_hr %}
+          <div class="mb-2"><label>HR signature</label><div class="signature-block"><div class="sig-canvas-wrap"><canvas id="hrSignaturePad" class="signature-pad" width="100%" height="120"></canvas><button type="button" class="btn btn-clear-signature" onclick="hrSignaturePad && hrSignaturePad.clear()">Clear</button></div></div></div>
+          {% else %}<p class="mb-0">HR signature: <em>For HR approval workflow</em></p>{% endif %}
         </div>
 
         <div class="hr-only p-3 rounded mt-2">
           <p class="mb-2"><strong>For GM use only.</strong></p>
-          <div class="mb-2"><label>GM remarks</label><textarea name="gm_remarks" rows="2" class="form-control w-100"></textarea></div>
-          <p class="mb-0">GM Signature: <em>For approval workflow</em></p>
+          <div class="mb-2"><label>GM remarks</label><textarea name="gm_remarks" rows="2" class="form-control w-100" {% if not is_gm %}readonly{% endif %}></textarea></div>
+          {% if is_gm %}
+          <div class="mb-2"><label>GM signature</label><div class="signature-block"><div class="sig-canvas-wrap"><canvas id="gmSignaturePad" class="signature-pad" width="100%" height="120"></canvas><button type="button" class="btn btn-clear-signature" onclick="gmSignaturePad && gmSignaturePad.clear()">Clear</button></div></div></div>
+          {% else %}<p class="mb-0">GM Signature: <em>For GM approval workflow</em></p>{% endif %}
         </div>
 
           </div>
@@ -110,7 +113,10 @@
   <script>
     const canvas = document.getElementById('signaturePad');
     const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
-    function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); const w = document.getElementById('signaturePad').offsetWidth || 280; canvas.width = w * ratio; canvas.height = 120 * ratio; canvas.getContext('2d').scale(ratio, ratio); signaturePad.clear(); }
+    let gmSignaturePad = null, hrSignaturePad = null;
+    const gmC = document.getElementById('gmSignaturePad'); if (gmC) gmSignaturePad = new SignaturePad(gmC, { backgroundColor: 'rgb(255, 255, 255)' });
+    const hrC = document.getElementById('hrSignaturePad'); if (hrC) hrSignaturePad = new SignaturePad(hrC, { backgroundColor: 'rgb(255, 255, 255)' });
+    function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); const w = document.getElementById('signaturePad').offsetWidth || 280; canvas.width = w * ratio; canvas.height = 120 * ratio; canvas.getContext('2d').scale(ratio, ratio); signaturePad.clear(); if (gmSignaturePad && gmC) { gmC.width = gmC.offsetWidth * ratio; gmC.height = 120 * ratio; gmC.getContext('2d').scale(ratio, ratio); gmSignaturePad.clear(); } if (hrSignaturePad && hrC) { hrC.width = hrC.offsetWidth * ratio; hrC.height = 120 * ratio; hrC.getContext('2d').scale(ratio, ratio); hrSignaturePad.clear(); } }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
@@ -120,6 +126,8 @@
       data.form_type = 'grievance';
       data.employee_name = data.complainant_name;
       data.complainant_signature = signaturePad.isEmpty() ? '' : signaturePad.toDataURL('image/png');
+      if (gmSignaturePad) data.gm_signature = gmSignaturePad.isEmpty() ? '' : gmSignaturePad.toDataURL('image/png');
+      if (hrSignaturePad) data.hr_signature = hrSignaturePad.isEmpty() ? '' : hrSignaturePad.toDataURL('image/png');
       try {
         const res = await fetch('/hr/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }, body: JSON.stringify(data) });
         const result = await res.json();

@@ -3,20 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My HR Requests - Injaaz</title>
+  <title>HR Module - Injaaz</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/dashboard.css">
   <link rel="stylesheet" href="/static/mobile_responsive.css">
   <style>
     :root { --primary: #125435; --primary-light: #1a7a4c; }
     body { background: #f1f5f9; }
-    .page-header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; }
-    .back-link { color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; opacity: 0.9; }
-    .back-link:hover { color: white; opacity: 1; }
-    .form-card { background: white; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; transition: all 0.2s; margin-bottom: 1rem; }
-    .form-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-    .btn-form { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 500; text-decoration: none; font-size: 0.9rem; }
-    .btn-form:hover { color: white; }
+    .hr-header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem; color: var(--primary) !important;
+      background: rgba(255,255,255,0.95); text-decoration: none; font-weight: 600;
+      padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.2s;
+    }
+    .back-btn:hover { color: var(--primary) !important; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateX(-2px); }
+    .hr-card { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.08); transition: all 0.3s ease; height: 100%; border: 1px solid #e2e8f0; }
+    .hr-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.12); }
+    .hr-card-icon { width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1rem; }
+    .hr-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: #1e293b; }
+    .hr-card p { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }
+    .btn-hr { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; border: none; padding: 0.625rem 1.25rem; border-radius: 8px; font-weight: 500; text-decoration: none; display: inline-block; transition: all 0.2s; }
+    .btn-hr:hover { color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(18,84,53,0.3); }
+    .icon-leave { background: linear-gradient(135deg, #10b981, #059669); }
+    .icon-termination { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .icon-vacation { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .icon-asset { background: linear-gradient(135deg, #f59e0b, #d97706); }
     .status-badge { padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
     .status-hr_review { background: #fef3c7; color: #b45309; }
     .status-gm_review { background: #dbeafe; color: #1d4ed8; }
@@ -111,110 +123,32 @@
     </div>
   </div>
   <div class="container py-4">
-    <div class="page-header">
-      <a href="/dashboard" class="back-link">
-        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        Back to Dashboard
+    <div class="hr-header">
+      <a href="/hr/" class="back-btn">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Back to HR Module
       </a>
-      <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem;">My HR Requests</h1>
-      <p style="opacity: 0.9; margin: 0;">Submit and track your HR forms</p>
+      <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">HR Module</h1>
+      <p style="opacity: 0.9; margin: 0;">Manage HR forms from HR Documents - leave, commencement, visa, clearance & more</p>
     </div>
     
-    <!-- Quick Actions - HR Forms from HR Documents -->
-    <div class="row g-3 mb-4">
-      <div class="col-6 col-md-4 col-lg-2">
-        <a href="/hr/leave-application-form" class="form-card d-block text-decoration-none h-100">
-          <div class="text-center">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📅</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Leave Application</h6>
-          </div>
-        </a>
-      </div>
-      <div class="col-6 col-md-4 col-lg-2">
-        <a href="/hr/commencement-form" class="form-card d-block text-decoration-none h-100">
-          <div class="text-center">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📋</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Commencement</h6>
-          </div>
-        </a>
-      </div>
-      <div class="col-6 col-md-4 col-lg-2">
-        <a href="/hr/duty-resumption-form" class="form-card d-block text-decoration-none h-100">
-          <div class="text-center">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">↩️</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Duty Resumption</h6>
-          </div>
-        </a>
-      </div>
-      <div class="col-6 col-md-4 col-lg-2">
-        <a href="/hr/contract-renewal-form" class="form-card d-block text-decoration-none h-100">
-          <div class="text-center">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📄</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Contract Renewal</h6>
-          </div>
-        </a>
-      </div>
-      <div class="col-6 col-md-4 col-lg-2">
-        <a href="/hr/performance-evaluation-form" class="form-card d-block text-decoration-none h-100">
-          <div class="text-center">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📊</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Performance</h6>
-          </div>
-        </a>
-      </div>
-      <div class="col-6 col-md-4 col-lg-2">
-        <a href="/hr/grievance-form" class="form-card d-block text-decoration-none h-100">
-          <div class="text-center">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚠️</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Grievance</h6>
-          </div>
-        </a>
-      </div>
-      <div class="col-6 col-md-4 col-lg-2">
-        <a href="/hr/interview-assessment-form" class="form-card d-block text-decoration-none h-100">
-          <div class="text-center">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">👤</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Interview</h6>
-          </div>
-        </a>
-      </div>
-      <div class="col-6 col-md-4 col-lg-2">
-        <a href="/hr/passport-release-form" class="form-card d-block text-decoration-none h-100">
-          <div class="text-center">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🛂</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Passport</h6>
-          </div>
-        </a>
-      </div>
-      <div class="col-6 col-md-4 col-lg-2">
-        <a href="/hr/staff-appraisal-form" class="form-card d-block text-decoration-none h-100">
-          <div class="text-center">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⭐</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Staff Appraisal</h6>
-          </div>
-        </a>
-      </div>
-      <div class="col-6 col-md-4 col-lg-2">
-        <a href="/hr/station-clearance-form" class="form-card d-block text-decoration-none h-100">
-          <div class="text-center">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">✓</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Station Clearance</h6>
-          </div>
-        </a>
-      </div>
-      <div class="col-6 col-md-4 col-lg-2">
-        <a href="/hr/visa-renewal-form" class="form-card d-block text-decoration-none h-100">
-          <div class="text-center">
-            <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🛃</div>
-            <h6 style="font-weight: 600; color: #1e293b; margin: 0; font-size: 0.85rem;">Visa Renewal</h6>
-          </div>
-        </a>
-      </div>
+    <h4 style="font-weight: 600; margin-bottom: 1rem;">HR Forms (from HR Documents)</h4>
+    <div class="row g-4 mb-5">
+      <div class="col-md-6 col-lg-4"><div class="hr-card"><div class="hr-card-icon icon-leave text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><h3>Leave Application</h3><p>Submit leave application (annual, sick, emergency)</p><a href="/hr/leave-application-form" class="btn-hr">Open Form</a></div></div>
+      <div class="col-md-6 col-lg-4"><div class="hr-card"><div class="hr-card-icon icon-leave text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><h3>Commencement Form</h3><p>Complete within 5 days of joining - personal & bank details</p><a href="/hr/commencement-form" class="btn-hr">Open Form</a></div></div>
+      <div class="col-md-6 col-lg-4"><div class="hr-card"><div class="hr-card-icon icon-vacation text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg></div><h3>Duty Resumption</h3><p>Resumption of duty after leave</p><a href="/hr/duty-resumption-form" class="btn-hr">Open Form</a></div></div>
+      <div class="col-md-6 col-lg-4"><div class="hr-card"><div class="hr-card-icon icon-asset text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div><h3>Contract Renewal Assessment</h3><p>Employee contract renewal evaluation</p><a href="/hr/contract-renewal-form" class="btn-hr">Open Form</a></div></div>
+      <div class="col-md-6 col-lg-4"><div class="hr-card"><div class="hr-card-icon icon-leave text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div><h3>Performance Evaluation</h3><p>Employee performance evaluation form</p><a href="/hr/performance-evaluation-form" class="btn-hr">Open Form</a></div></div>
+      <div class="col-md-6 col-lg-4"><div class="hr-card"><div class="hr-card-icon icon-termination text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div><h3>Grievance / Disciplinary</h3><p>Employee grievance or disciplinary action</p><a href="/hr/grievance-form" class="btn-hr">Open Form</a></div></div>
+      <div class="col-md-6 col-lg-4"><div class="hr-card"><div class="hr-card-icon icon-vacation text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div><h3>Interview Assessment</h3><p>Candidate interview assessment</p><a href="/hr/interview-assessment-form" class="btn-hr">Open Form</a></div></div>
+      <div class="col-md-6 col-lg-4"><div class="hr-card"><div class="hr-card-icon icon-asset text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/></svg></div><h3>Passport Release & Submission</h3><p>Passport release or requisition for safekeeping</p><a href="/hr/passport-release-form" class="btn-hr">Open Form</a></div></div>
+      <div class="col-md-6 col-lg-4"><div class="hr-card"><div class="hr-card-icon icon-leave text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg></div><h3>Staff Appraisal</h3><p>Staff appraisal form</p><a href="/hr/staff-appraisal-form" class="btn-hr">Open Form</a></div></div>
+      <div class="col-md-6 col-lg-4"><div class="hr-card"><div class="hr-card-icon icon-termination text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></div><h3>Station Clearance</h3><p>Exit formalities for transferring employees</p><a href="/hr/station-clearance-form" class="btn-hr">Open Form</a></div></div>
+      <div class="col-md-6 col-lg-4"><div class="hr-card"><div class="hr-card-icon icon-asset text-white"><svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg></div><h3>Visa Renewal</h3><p>Visa renewal or cancellation confirmation</p><a href="/hr/visa-renewal-form" class="btn-hr">Open Form</a></div></div>
     </div>
     
-    <!-- My Requests -->
-    <h4 style="font-weight: 600; margin-bottom: 1rem;">My Submitted Requests</h4>
-    <div id="requestsList">
+    <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; color: #1e293b;">My Submitted Requests</h2>
+    <div id="requestsList" class="bg-white rounded-3 p-4" style="box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
       <div class="text-center py-5">
         <div class="spinner-border text-primary"></div>
         <p class="mt-2 text-muted">Loading your requests...</p>

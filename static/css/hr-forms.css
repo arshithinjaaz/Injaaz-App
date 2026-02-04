@@ -79,10 +79,10 @@ body.hr-form-page {
   display: grid;
   grid-template-columns: 1fr auto;
   grid-auto-rows: auto;
-  gap: 0.25rem 1.5rem;
+  gap: 0.25rem 2rem;
   align-items: center;
   text-align: left;
-  padding: 1.75rem 2rem;
+  padding: 2rem 2.5rem;
   background: linear-gradient(135deg, #0d9488 0%, #0f766e 50%, #134e4a 100%);
   overflow: hidden;
 }
@@ -119,7 +119,9 @@ body.hr-form-page {
   font-weight: 800;
   color: white;
   margin: 0;
-  letter-spacing: -0.03em;
+  letter-spacing: 0.04em;
+  word-spacing: 0.08em;
+  line-height: 1.3;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -441,8 +443,9 @@ body.hr-form-page {
   box-shadow: var(--shadow);
 }
 
-/* HR-only sections */
-.hr-only {
+/* HR-only and GM-only sections (approval workflow fields) */
+.hr-only,
+.gm-only {
   background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
   color: #92400e;
   font-size: 0.85rem;
@@ -452,16 +455,20 @@ body.hr-form-page {
   overflow-wrap: break-word;
   word-wrap: break-word;
 }
-.hr-only p {
+.hr-only p,
+.gm-only p {
   margin-bottom: 0.5rem;
   line-height: 1.5;
 }
-.hr-only .form-control, .hr-only textarea {
+.hr-only .form-control, .hr-only textarea,
+.gm-only .form-control, .gm-only textarea {
   max-width: 100%;
   box-sizing: border-box;
 }
-.hr-only label:not(:has(input[type="radio"])) { display: block; margin-bottom: 0.25rem; }
-.hr-only .text-break { word-wrap: break-word; overflow-wrap: break-word; }
+.hr-only label:not(:has(input[type="radio"])),
+.gm-only label:not(:has(input[type="radio"])) { display: block; margin-bottom: 0.25rem; }
+.hr-only .text-break,
+.gm-only .text-break { word-wrap: break-word; overflow-wrap: break-word; }
 
 /* Submit button - stunning CTA */
 .hr-form-submit {
@@ -635,7 +642,7 @@ body.hr-form-page {
     font-size: 1.4rem;
   }
   .doc-header {
-    padding: 1.75rem 1.5rem;
+    padding: 1.5rem 1.5rem;
     grid-template-columns: 1fr;
   }
   .doc-header .doc-logo {

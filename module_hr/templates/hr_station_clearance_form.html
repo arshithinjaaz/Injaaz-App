@@ -30,7 +30,6 @@
       <div class="doc-header">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="doc-logo">
         <h1 class="doc-title">Station Clearance Form</h1>
-        <p class="doc-intro">The following departments must ensure that all exit formalities have been conducted for transferring employees.</p>
       </div>
 
       <form id="hrForm">
@@ -93,7 +92,7 @@
               </div>
             </div>
           </td></tr>
-          <tr><td class="label hr-only">Human Resources Manager</td><td colspan="5" class="hr-only"><em>For HR approval workflow</em></td></tr>
+          <tr><td class="label hr-only">Human Resources Manager (HR Signature)</td><td colspan="5" class="hr-only">{% if is_hr %}<div class="signature-block"><div class="sig-canvas-wrap"><span class="sig-label">HR sign</span><canvas id="hrSignaturePad" class="signature-pad" width="100%" height="120"></canvas><button type="button" class="btn btn-clear-signature" onclick="hrSignaturePad && hrSignaturePad.clear()">Clear</button></div></div>{% else %}<em class="text-muted">For HR approval workflow</em>{% endif %}</td></tr>
         </table>
 
         <div class="mt-3 text-center">
@@ -106,7 +105,9 @@
   <script>
     const canvas = document.getElementById('signaturePad');
     const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
-    function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); const w = document.getElementById('signaturePad').parentElement?.offsetWidth || 320; canvas.width = w * ratio; canvas.height = 120 * ratio; canvas.getContext('2d').scale(ratio, ratio); signaturePad.clear(); }
+    let hrSignaturePad = null;
+    const hrC = document.getElementById('hrSignaturePad'); if (hrC) hrSignaturePad = new SignaturePad(hrC, { backgroundColor: 'rgb(255, 255, 255)' });
+    function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); const w = document.getElementById('signaturePad').parentElement?.offsetWidth || 320; canvas.width = w * ratio; canvas.height = 120 * ratio; canvas.getContext('2d').scale(ratio, ratio); signaturePad.clear(); if (hrSignaturePad && hrC) { hrC.width = hrC.closest('.sig-canvas-wrap')?.offsetWidth * ratio || 320 * ratio; hrC.height = 120 * ratio; hrC.getContext('2d').scale(ratio, ratio); hrSignaturePad.clear(); } }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
@@ -115,6 +116,7 @@
       const data = Object.fromEntries(new FormData(e.target).entries());
       data.form_type = 'station_clearance';
       data.employee_signature = signaturePad.isEmpty() ? '' : signaturePad.toDataURL('image/png');
+      if (hrSignaturePad) data.hr_signature = hrSignaturePad.isEmpty() ? '' : hrSignaturePad.toDataURL('image/png');
       try {
         const res = await fetch('/hr/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }, body: JSON.stringify(data) });
         const result = await res.json();

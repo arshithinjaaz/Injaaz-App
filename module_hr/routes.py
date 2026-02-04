@@ -18,6 +18,13 @@ def get_current_user():
     return User.query.get(user_id)
 
 
+def _hr_form_context(user):
+    """Build context for HR form templates (is_hr, is_gm for field enablement)"""
+    is_hr = user.role == 'admin' or getattr(user, 'access_hr', False) or user.designation == 'hr_manager'
+    is_gm = user.role == 'admin' or user.designation == 'general_manager'
+    return {'is_hr': is_hr, 'is_gm': is_gm}
+
+
 def create_notification(user_id, title, message, notification_type='info', submission_id=None):
     """Create a notification for a user"""
     notification = Notification(
@@ -70,7 +77,8 @@ def leave_application_form():
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_leave_application_form.html', user=user)
+    ctx = _hr_form_context(user)
+    return render_template('hr_leave_application_form.html', user=user, **ctx)
 
 
 @hr_bp.route('/commencement-form')
@@ -80,7 +88,8 @@ def commencement_form():
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_commencement_form.html', user=user)
+    ctx = _hr_form_context(user)
+    return render_template('hr_commencement_form.html', user=user, **ctx)
 
 
 @hr_bp.route('/duty-resumption-form')
@@ -90,7 +99,8 @@ def duty_resumption_form():
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_duty_resumption_form.html', user=user)
+    ctx = _hr_form_context(user)
+    return render_template('hr_duty_resumption_form.html', user=user, **ctx)
 
 
 @hr_bp.route('/contract-renewal-form')
@@ -100,7 +110,8 @@ def contract_renewal_form():
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_contract_renewal_form.html', user=user)
+    ctx = _hr_form_context(user)
+    return render_template('hr_contract_renewal_form.html', user=user, **ctx)
 
 
 @hr_bp.route('/performance-evaluation-form')
@@ -110,7 +121,8 @@ def performance_evaluation_form():
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_performance_evaluation_form.html', user=user)
+    ctx = _hr_form_context(user)
+    return render_template('hr_performance_evaluation_form.html', user=user, **ctx)
 
 
 @hr_bp.route('/grievance-form')
@@ -120,7 +132,8 @@ def grievance_form():
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_grievance_form.html', user=user)
+    ctx = _hr_form_context(user)
+    return render_template('hr_grievance_form.html', user=user, **ctx)
 
 
 @hr_bp.route('/interview-assessment-form')
@@ -130,7 +143,8 @@ def interview_assessment_form():
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_interview_assessment_form.html', user=user)
+    ctx = _hr_form_context(user)
+    return render_template('hr_interview_assessment_form.html', user=user, **ctx)
 
 
 @hr_bp.route('/passport-release-form')
@@ -140,7 +154,8 @@ def passport_release_form():
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_passport_release_form.html', user=user)
+    ctx = _hr_form_context(user)
+    return render_template('hr_passport_release_form.html', user=user, **ctx)
 
 
 @hr_bp.route('/staff-appraisal-form')
@@ -150,7 +165,8 @@ def staff_appraisal_form():
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_staff_appraisal_form.html', user=user)
+    ctx = _hr_form_context(user)
+    return render_template('hr_staff_appraisal_form.html', user=user, **ctx)
 
 
 @hr_bp.route('/station-clearance-form')
@@ -160,7 +176,8 @@ def station_clearance_form():
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_station_clearance_form.html', user=user)
+    ctx = _hr_form_context(user)
+    return render_template('hr_station_clearance_form.html', user=user, **ctx)
 
 
 @hr_bp.route('/visa-renewal-form')
@@ -170,7 +187,8 @@ def visa_renewal_form():
     user = get_current_user()
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    return render_template('hr_visa_renewal_form.html', user=user)
+    ctx = _hr_form_context(user)
+    return render_template('hr_visa_renewal_form.html', user=user, **ctx)
 
 
 # ============================================
@@ -185,8 +203,10 @@ def hr_dashboard():
     if not user:
         return jsonify({'error': 'User not found'}), 404
     
-    # HR dashboard is for HR managers and admin; others go to My Requests
-    if user.role != 'admin' and not getattr(user, 'access_hr', False):
+    # HR dashboard is for HR managers, GM, and admin; others go to My Requests
+    is_hr = getattr(user, 'access_hr', False) or user.designation == 'hr_manager'
+    is_gm = user.designation == 'general_manager'
+    if user.role != 'admin' and not is_hr and not is_gm:
         return redirect('/hr/my-requests')
     
     return render_template('hr_dashboard.html', user=user)
@@ -263,6 +283,28 @@ def submit_hr_form():
     )
     
     db.session.add(submission)
+    db.session.commit()
+    
+    # Notify HR users about new submission
+    form_type_display = get_form_type_display(f'hr_{form_type}')
+    employee_name = data.get('employee_name') or data.get('complainant_name') or data.get('candidate_name') or user.full_name or 'Employee'
+    hr_users = User.query.filter(
+        db.or_(
+            User.role == 'admin',
+            User.access_hr == True,
+            User.designation == 'hr_manager'
+        ),
+        User.id != user.id,
+        User.is_active == True
+    ).all()
+    for hr_user in hr_users:
+        create_notification(
+            user_id=hr_user.id,
+            title='New HR Request',
+            message=f'{employee_name} submitted {form_type_display} ({submission_id})',
+            notification_type='info',
+            submission_id=submission_id
+        )
     db.session.commit()
     
     return jsonify({
@@ -382,6 +424,39 @@ def get_pending_gm_approval():
     })
 
 
+@hr_bp.route('/api/approved-hr-submissions')
+@jwt_required()
+def get_approved_hr_submissions():
+    """Get HR submissions that have been fully approved (workflow_status=approved)"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    # HR and GM can see approved submissions
+    is_hr = getattr(user, 'access_hr', False) or user.designation == 'hr_manager'
+    is_gm = user.designation == 'general_manager'
+    if user.role != 'admin' and not is_hr and not is_gm:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    submissions = Submission.query.filter(
+        Submission.module_type.like('hr_%'),
+        Submission.workflow_status == 'approved'
+    ).order_by(Submission.updated_at.desc()).limit(100).all()
+    
+    result = []
+    for s in submissions:
+        data = s.to_dict()
+        submitter = User.query.get(s.user_id)
+        if submitter:
+            data['submitter_name'] = submitter.full_name or submitter.username
+        result.append(data)
+    
+    return jsonify({
+        'success': True,
+        'submissions': result
+    })
+
+
 @hr_bp.route('/api/hr-approve/<submission_id>', methods=['POST'])
 @jwt_required()
 def hr_approve(submission_id):
@@ -411,13 +486,37 @@ def hr_approve(submission_id):
     form_data['hr_reviewed_at'] = datetime.now().isoformat()
     form_data['hr_comments'] = data.get('comments', '')
     form_data['hr_signature'] = data.get('signature', '')
+    # Merge form-specific HR fields (e.g. leave_application: hr_checked, hr_balance_cf, etc.)
+    for k, v in (data.get('form_data_hr') or {}).items():
+        form_data[k] = v
     
     submission.form_data = form_data
     submission.workflow_status = 'gm_review'  # Forward to GM
+    submission.status = 'submitted'
     submission.operations_manager_id = user.id
     submission.operations_manager_approved_at = datetime.now()
     submission.operations_manager_comments = data.get('comments', '')
     
+    db.session.commit()
+    
+    # Notify GM users about new request pending their approval
+    form_type_display = get_form_type_display(submission.module_type)
+    employee_name = form_data.get('employee_name') or form_data.get('complainant_name') or form_data.get('requester') or 'Employee'
+    gm_users = User.query.filter(
+        db.or_(
+            User.role == 'admin',
+            User.designation == 'general_manager'
+        ),
+        User.is_active == True
+    ).all()
+    for gm_user in gm_users:
+        create_notification(
+            user_id=gm_user.id,
+            title='HR Request Pending Your Approval',
+            message=f'{form_type_display} for {employee_name} ({submission_id}) – approved by HR, awaiting your final approval.',
+            notification_type='gm_approval_pending',
+            submission_id=submission_id
+        )
     db.session.commit()
     
     return jsonify({
