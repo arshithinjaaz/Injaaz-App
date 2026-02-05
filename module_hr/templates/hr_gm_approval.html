@@ -86,7 +86,6 @@
     }
     .gm-qa-icon.purple { background: linear-gradient(145deg, #8b5cf6, #7c3aed); box-shadow: 0 4px 12px rgba(124,58,237,0.35); }
     .gm-qa-icon.green { background: linear-gradient(145deg, #34d399, #10b981); box-shadow: 0 4px 12px rgba(16,185,129,0.35); }
-    .approved-list-item:hover { background: #f0fdf4; }
   </style>
 </head>
 <body>
@@ -121,20 +120,17 @@
         </div>
       </div>
       <div class="col-lg-6">
-        <div class="gm-qa-card gm-green d-flex flex-column p-4 bg-white rounded-3 h-100 gm-approved-card" style="box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-          <div class="d-flex align-items-center gap-3 mb-3">
+        <a href="/hr/approved-forms" class="gm-qa-card gm-green d-block p-4 bg-white rounded-3 h-100 text-decoration-none" style="box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
+          <div class="d-flex align-items-center gap-3">
             <div class="gm-qa-icon green text-white">
               <svg width="24" height="24" fill="none" stroke="white" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
-            <div>
+            <div class="flex-grow-1">
               <h5 style="font-size: 1.05rem; font-weight: 700; margin: 0 0 0.2rem 0; color: #1e293b; letter-spacing: -0.01em;">Approved Forms</h5>
-              <p style="margin: 0; color: #64748b; font-size: 0.82rem;">HR requests fully approved</p>
+              <p style="margin: 0; color: #64748b; font-size: 0.82rem;">HR requests fully approved – click to view</p>
             </div>
           </div>
-          <div id="approvedFormsList" class="approved-forms-list" style="flex: 1; min-height: 0; overflow-y: auto; max-height: 130px; font-size: 0.85rem;">
-            <div class="text-center py-3 text-muted small">Loading...</div>
-          </div>
-        </div>
+        </a>
       </div>
     </div>
   </div>
@@ -169,6 +165,8 @@
           </div>
         </div>
         <div class="modal-footer">
+          <a id="printBtnGm" href="#" target="_blank" class="btn btn-outline-light" style="margin-right: auto;">🖨️ Print (HR Document)</a>
+          <a id="docxBtnGm" href="#" class="btn btn-outline-light" style="display: none;">📄 Download DOCX</a>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-reject" onclick="rejectRequest()">Reject</button>
           <button type="button" class="btn btn-approve" onclick="approveRequest()">Give Final Approval</button>
@@ -315,6 +313,14 @@
     
     function openApproval(submissionId, submission) {
       currentSubmissionId = submissionId;
+      const printBtn = document.getElementById('printBtnGm');
+      if (printBtn) printBtn.href = '/hr/print/' + encodeURIComponent(submissionId);
+      const docxBtn = document.getElementById('docxBtnGm');
+      if (docxBtn) {
+        const supportsDocx = (submission.module_type || submission.form_type) === 'hr_commencement';
+        docxBtn.style.display = supportsDocx ? 'inline-block' : 'none';
+        docxBtn.href = supportsDocx ? ('/hr/download-docx/' + encodeURIComponent(submissionId)) : '#';
+      }
       
       const formData = submission.form_data || {};
       
@@ -359,7 +365,6 @@
           bootstrap.Modal.getInstance(document.getElementById('approvalModal')).hide();
           showSuccessModal('approved', 'Request Approved!', 'The HR request has been approved. Notifications have been sent to the employee and HR.');
           loadPending();
-          loadApprovedForms();
         } else {
           showErrorToast('Error: ' + result.error);
         }
@@ -420,94 +425,7 @@
       setTimeout(() => toast.remove(), 5000);
     }
     
-    let approvedSubmissionsList = [];
-    
-    async function loadApprovedForms() {
-      try {
-        const response = await fetch('/hr/api/approved-hr-submissions', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const listEl = document.getElementById('approvedFormsList');
-        if (!listEl) return;
-        if (!response.ok) {
-          listEl.innerHTML = '<p class="text-muted small mb-0">Unable to load</p>';
-          return;
-        }
-        const data = await response.json();
-        if (data.submissions && data.submissions.length > 0) {
-          approvedSubmissionsList = data.submissions;
-          listEl.innerHTML = data.submissions.map((s, i) => `
-            <div class="d-flex justify-content-between align-items-center py-2 px-0 border-bottom approved-list-item" style="border-bottom: 1px solid #f1f5f9 !important; cursor: pointer; transition: all 0.2s; border-radius: 6px; padding-left: 0.5rem !important; padding-right: 0.5rem !important;" onclick="viewApprovedSubmission(${i})">
-              <div class="flex-grow-1 min-w-0">
-                <span class="text-dark fw-semibold small">${escapeHtml(s.submission_id)}</span>
-                <p class="mb-0 text-muted" style="font-size: 0.75rem;">${escapeHtml((s.form_data && s.form_data.employee_name) || s.submitter_name || '—')}</p>
-              </div>
-              <span class="ms-2" style="font-size: 0.7rem; font-weight: 700; padding: 0.3rem 0.65rem; border-radius: 20px; background: linear-gradient(135deg,#34d399,#10b981); color: white;">Approved</span>
-            </div>
-          `).join('');
-        } else {
-          approvedSubmissionsList = [];
-          listEl.innerHTML = '<p class="text-muted small mb-0 py-2">No approved forms yet</p>';
-        }
-      } catch (e) {
-        const listEl = document.getElementById('approvedFormsList');
-        if (listEl) listEl.innerHTML = '<p class="text-muted small mb-0">Unable to load</p>';
-      }
-    }
-    
-    function viewApprovedSubmission(index) {
-      const submission = approvedSubmissionsList[index];
-      if (!submission) return;
-      const formType = (submission.module_type || '').replace('hr_', '');
-      const formData = submission.form_data || {};
-      const formHtml = renderFormAsFilled(formType, formData, submission.submission_id);
-      const fd = formData;
-      let workflowHtml = '<div class="detail-section"><h5 class="detail-section-title" style="font-size: 1rem; color: #7c3aed;">Approval Timeline</h5><div class="workflow-timeline">';
-      workflowHtml += buildTimelineItem('Submitted', fd.submitted_by_name || submission.submitter_name, fd.submitted_at || submission.created_at, 'completed');
-      if (fd.hr_reviewed_at) workflowHtml += buildTimelineItem('HR Reviewed', fd.hr_reviewed_by_name, fd.hr_reviewed_at, 'completed', fd.hr_comments, fd.hr_signature);
-      if (fd.gm_approved_at) workflowHtml += buildTimelineItem('GM Approved', fd.gm_approved_by_name, fd.gm_approved_at, 'completed', fd.gm_comments, fd.gm_signature);
-      workflowHtml += '</div></div>';
-      function buildTimelineItem(title, by, date, status, comment, signature) {
-        let d = date ? fmtDate(date) : '';
-        let h = '<div class="timeline-item"><div class="timeline-dot ' + status + '"></div><div style="flex:1;"><div style="font-weight:600;color:#1e293b;">' + title + '</div><div style="font-size:0.85rem;color:#64748b;">' + escapeHtml(by || '-') + (d ? ' \u2022 ' + d : '') + '</div>';
-        if (comment) h += '<div style="margin-top:0.5rem;padding:0.5rem;background:#f8fafc;border-radius:6px;font-size:0.85rem;"><strong>Comment:</strong> ' + escapeHtml(comment) + '</div>';
-        if (signature && signature.startsWith('data:image')) h += '<div style="margin-top:0.5rem;"><strong style="font-size:0.85rem;">Signature:</strong><br><img src="' + signature + '" style="max-width:180px;border:1px solid #e2e8f0;border-radius:6px;padding:4px;" alt="Signature"></div>';
-        return h + '</div></div>';
-      }
-      const div = document.createElement('div');
-      div.className = 'modal fade';
-      div.setAttribute('tabindex', '-1');
-      div.innerHTML = '<div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content" style="border-radius:20px; overflow:hidden; box-shadow: 0 24px 48px rgba(0,0,0,0.18);">' +
-        '<div class="modal-header" style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); color:white; border:none; padding:1.25rem 1.5rem;">' +
-        '<span class="form-type-badge" style="background:rgba(255,255,255,0.2); color:white;">' + escapeHtml(getFormTypeLabel(submission.module_type)) + '</span> ' +
-        '<h5 class="modal-title" style="color:white; font-weight:700; margin:0.35rem 0 0;">' + escapeHtml(submission.submission_id) + ' <span style="font-weight:500; opacity:0.9;">(Approved)</span></h5>' +
-        '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button></div>' +
-        '<div class="modal-body p-0"><div class="detail-tabs" style="display:flex; gap:0; border-bottom:2px solid #e2e8f0; background:#f8fafc;">' +
-        '<div class="detail-tab active" data-tab="form" onclick="window.switchApprovedModalTab(this,\'form\')">Form</div>' +
-        '<div class="detail-tab" data-tab="workflow" onclick="window.switchApprovedModalTab(this,\'workflow\')">Workflow</div></div>' +
-        '<div id="approvedModalFormPane" class="detail-tab-pane active" style="display:block; padding:1.5rem; overflow-y:auto; max-height:60vh; background:linear-gradient(180deg,#fafbfc 0%,#fff 100%);">' +
-        '<div style="background:white; border-radius:12px; padding:1.5rem; border:1px solid #e2e8f0;">' + formHtml + '</div></div>' +
-        '<div id="approvedModalWorkflowPane" class="detail-tab-pane" style="display:none; padding:1.5rem; overflow-y:auto; max-height:60vh;">' + workflowHtml + '</div></div></div></div>';
-      document.body.appendChild(div);
-      window.switchApprovedModalTab = function(btn, tab) {
-        const mod = btn.closest('.modal');
-        if (!mod) return;
-        mod.querySelectorAll('.detail-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-        const formPane = mod.querySelector('#approvedModalFormPane');
-        const workflowPane = mod.querySelector('#approvedModalWorkflowPane');
-        if (formPane) formPane.style.display = tab === 'form' ? 'block' : 'none';
-        if (workflowPane) workflowPane.style.display = tab === 'workflow' ? 'block' : 'none';
-      };
-      const style = document.createElement('style');
-      style.textContent = '.detail-tab{ padding:1rem 1.5rem; font-weight:600; font-size:0.9rem; cursor:pointer; color:#64748b; border-bottom:3px solid transparent; transition:all 0.2s; } .detail-tab:hover{ color:#7c3aed; } .detail-tab.active{ color:#7c3aed; border-bottom-color:#7c3aed; background:white; } .detail-section-title{ font-weight:700; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:2px solid #7c3aed; } .workflow-timeline{ margin-top:1rem; } .timeline-item{ display:flex; padding:0.75rem 0; position:relative; padding-left:2rem; } .timeline-item::before{ content:\'\'; position:absolute; left:6px; top:0; bottom:0; width:2px; background:#e2e8f0; } .timeline-item:last-child::before{ display:none; } .timeline-dot{ position:absolute; left:0; top:0.875rem; width:14px; height:14px; border-radius:50%; background:#e2e8f0; border:2px solid white; box-shadow:0 0 0 2px #e2e8f0; } .timeline-dot.completed{ background:#10b981; box-shadow:0 0 0 2px #10b981; }';
-      div.appendChild(style);
-      const m = new bootstrap.Modal(div);
-      m.show();
-      div.addEventListener('hidden.bs.modal', () => { div.remove(); delete window.switchApprovedModalTab; });
-    }
-    
     loadPending();
-    loadApprovedForms();
   </script>
 </body>
 </html>

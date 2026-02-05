@@ -5,9 +5,12 @@ Workflow: User submits → HR reviews/signs → GM final approval
 """
 import uuid
 from datetime import datetime
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import db, User, Submission, Notification
+
+from .print_utils import render_form_for_print
+from .docx_service import generate_hr_docx
 
 hr_bp = Blueprint('hr', __name__, template_folder='templates')
 
@@ -228,6 +231,20 @@ def pending_review():
     return render_template('hr_pending_review.html', user=user)
 
 
+@hr_bp.route('/approved-forms')
+@jwt_required()
+def approved_forms():
+    """Approved HR Forms - List page (HR managers, GM, admin)"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    is_hr = getattr(user, 'access_hr', False) or user.designation == 'hr_manager'
+    is_gm = user.designation == 'general_manager'
+    if user.role != 'admin' and not is_hr and not is_gm:
+        return jsonify({'error': 'Access denied'}), 403
+    return render_template('hr_approved_forms.html', user=user)
+
+
 @hr_bp.route('/gm-approval')
 @jwt_required()
 def gm_approval():
@@ -241,6 +258,74 @@ def gm_approval():
         return jsonify({'error': 'Access denied'}), 403
     
     return render_template('hr_gm_approval.html', user=user)
+
+
+@hr_bp.route('/print/<submission_id>')
+@jwt_required()
+def hr_print(submission_id):
+    """Print view - form in HR Document format (for HR and GM only)"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    is_hr = getattr(user, 'access_hr', False) or user.designation == 'hr_manager'
+    is_gm = user.designation == 'general_manager'
+    if user.role != 'admin' and not is_hr and not is_gm:
+        return jsonify({'error': 'Access denied'}), 403
+
+    submission = Submission.query.filter_by(submission_id=submission_id).first()
+    if not submission or not submission.module_type.startswith('hr_'):
+        return jsonify({'error': 'Submission not found'}), 404
+
+    form_data = submission.form_data or {}
+    form_title = get_form_type_display(submission.module_type)
+    form_html = render_form_for_print(submission.module_type, form_data, submission_id)
+
+    # Document footer (matches HR document reference - HR-FRM-007 for Leave)
+    form_type = (submission.module_type or '').replace('hr_', '')
+    doc_no = 'HR-FRM-007' if form_type in ('leave_application', 'leave') else None
+    doc_date = submission.created_at.strftime('%d/%m/%Y') if submission.created_at else datetime.now().strftime('%d/%m/%Y')
+
+    return render_template(
+        'hr_print.html',
+        submission_id=submission_id,
+        form_title=form_title,
+        form_html=form_html,
+        doc_no=doc_no,
+        doc_date=doc_date
+    )
+
+
+@hr_bp.route('/download-docx/<submission_id>')
+@jwt_required()
+def hr_download_docx(submission_id):
+    """Download filled HR document (DOCX) - matches shared HR Documents templates"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    is_hr = getattr(user, 'access_hr', False) or user.designation == 'hr_manager'
+    is_gm = user.designation == 'general_manager'
+    if user.role != 'admin' and not is_hr and not is_gm:
+        return jsonify({'error': 'Access denied'}), 403
+
+    submission = Submission.query.filter_by(submission_id=submission_id).first()
+    if not submission or not submission.module_type.startswith('hr_'):
+        return jsonify({'error': 'Submission not found'}), 404
+
+    try:
+        from io import BytesIO
+        from module_hr.docx_service import fit_docx_to_one_page
+        buf = BytesIO()
+        if not generate_hr_docx(submission, buf):
+            return jsonify({'error': 'DOCX download not available for this form type'}), 404
+        buf = fit_docx_to_one_page(buf)
+        form_title = get_form_type_display(submission.module_type).replace(' ', '_')
+        filename = f"{form_title}_{submission_id}.docx"
+        return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document', as_attachment=True, download_name=filename)
+    except FileNotFoundError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        current_app.logger.exception('DOCX generation failed')
+        return jsonify({'error': f'Failed to generate document: {str(e)}'}), 500
 
 
 # ============================================

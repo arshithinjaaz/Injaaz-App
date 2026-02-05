@@ -135,6 +135,8 @@
           </div>
         </div>
         <div class="modal-footer">
+          <a id="printBtnPending" href="#" target="_blank" class="btn btn-outline-secondary" style="margin-right: auto;">🖨️ Print (HR Document)</a>
+          <a id="docxBtnPending" href="#" class="btn btn-outline-secondary" style="display: none;">📄 Download DOCX</a>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-reject" onclick="rejectRequest()">Reject</button>
           <button type="button" class="btn btn-approve" onclick="approveRequest()">Approve & Forward to GM</button>
@@ -420,6 +422,14 @@
     function openReview(submissionId, submission) {
       currentSubmissionId = submissionId;
       currentFormType = submission.module_type || submission.form_type;
+      const printBtn = document.getElementById('printBtnPending');
+      if (printBtn) printBtn.href = '/hr/print/' + encodeURIComponent(submissionId);
+      const docxBtn = document.getElementById('docxBtnPending');
+      if (docxBtn) {
+        const supportsDocx = (submission.module_type || submission.form_type) === 'hr_commencement';
+        docxBtn.style.display = supportsDocx ? 'inline-block' : 'none';
+        docxBtn.href = supportsDocx ? ('/hr/download-docx/' + encodeURIComponent(submissionId)) : '#';
+      }
       
       const details = document.getElementById('requestDetails');
       const formData = submission.form_data || {};

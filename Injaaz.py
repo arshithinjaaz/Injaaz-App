@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 from datetime import datetime
-from flask import Flask, send_from_directory, abort, render_template, jsonify, request
+from flask import Flask, send_from_directory, abort, render_template, jsonify, request, redirect
 from concurrent.futures import ThreadPoolExecutor
 from werkzeug.exceptions import HTTPException
 from flask_jwt_extended import JWTManager
@@ -612,6 +612,10 @@ def create_app():
         if hasattr(app, 'csrf') and app.csrf:
             app.csrf.exempt(hr_bp)
         app.register_blueprint(hr_bp, url_prefix='/hr')
+        # So /hr (no trailing slash) works: redirect to /hr/
+        @app.route('/hr')
+        def redirect_hr_to_slash():
+            return redirect('/hr/', code=302)
         logger.info("✅ Registered HR blueprint at /hr")
     else:
         logger.warning("⚠️  HR blueprint not available - check imports")

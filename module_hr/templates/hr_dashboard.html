@@ -224,7 +224,11 @@
           <span class="form-type-badge" id="modalFormType"></span>
           <h4 id="modalSubmissionId"></h4>
         </div>
-        <button class="detail-close" onclick="closeDetailModal()" aria-label="Close">&times;</button>
+        <div class="d-flex align-items-center gap-2">
+          <a id="modalPrintBtn" href="#" target="_blank" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.5);">🖨️ Print (HR Document)</a>
+          <a id="modalDocxBtn" href="#" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.5); display: none;">📄 Download DOCX</a>
+          <button class="detail-close" onclick="closeDetailModal()" aria-label="Close">&times;</button>
+        </div>
       </div>
       <div class="detail-body">
         <div class="detail-tabs">
@@ -281,20 +285,17 @@
         </div>
       </div>
       <div class="col-lg-6" id="approvedFormsCol" style="display: none;">
-        <div class="qa-card qa-green d-flex flex-column p-4 quick-action-card bg-white">
-          <div class="d-flex align-items-center gap-3 mb-3">
+        <a href="/hr/approved-forms" class="qa-card qa-green d-block p-4 bg-white text-decoration-none">
+          <div class="d-flex align-items-center gap-3">
             <div class="qa-icon text-white">
               <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
-            <div>
+            <div class="flex-grow-1">
               <h3 style="font-size: 1.05rem; font-weight: 700; margin: 0 0 0.2rem 0; color: #1e293b; letter-spacing: -0.01em;">Approved Forms</h3>
-              <p style="margin: 0; color: #64748b; font-size: 0.82rem;">HR requests fully approved</p>
+              <p style="margin: 0; color: #64748b; font-size: 0.82rem;">HR requests fully approved – click to view</p>
             </div>
           </div>
-          <div id="approvedFormsList" class="approved-forms-list" style="max-height: 130px; font-size: 0.85rem;">
-            <div class="text-center py-2 text-muted small">Loading...</div>
-          </div>
-        </div>
+        </a>
       </div>
     </div>
     
@@ -405,7 +406,6 @@
   <script>
     const token = localStorage.getItem('access_token');
     let allSubmissions = [];
-    let approvedSubmissions = [];
     
     function getStatusLabel(status) {
       const labels = {
@@ -522,72 +522,9 @@
           const gmCol = document.getElementById('gmApprovalCol');
           if (gmCol) gmCol.style.display = 'block';
           document.getElementById('approvedFormsCol').style.display = 'block';
-          loadApprovedForms();
         }
       } catch (error) {
         // Silently ignore errors
-      }
-    }
-    
-    async function loadApprovedForms() {
-      try {
-        const response = await fetch('/hr/api/approved-hr-submissions', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const listEl = document.getElementById('approvedFormsList');
-        if (!listEl) return;
-        if (!response.ok) {
-          listEl.innerHTML = '<p class="text-muted small mb-0">Unable to load</p>';
-          return;
-        }
-        const data = await response.json();
-        if (data.submissions && data.submissions.length > 0) {
-          approvedSubmissions = data.submissions;
-          listEl.innerHTML = data.submissions.map(s => `
-            <div class="d-flex justify-content-between align-items-center py-2 px-0 border-bottom approved-item" style="border-bottom: 1px solid #f1f5f9 !important; transition: background 0.2s;">
-              <div class="flex-grow-1 min-w-0">
-                <a href="#" onclick="event.preventDefault(); showDetailBySubmissionId('${escapeHtml(s.submission_id)}');" class="text-decoration-none text-dark fw-semibold small">${escapeHtml(s.submission_id)}</a>
-                <p class="mb-0 text-muted" style="font-size: 0.75rem;">${escapeHtml((s.form_data && s.form_data.employee_name) || s.submitter_name || '—')}</p>
-              </div>
-              <span class="qa-badge ms-2" style="background: linear-gradient(135deg,#34d399,#10b981); color: white;">Approved</span>
-            </div>
-          `).join('');
-        } else {
-          listEl.innerHTML = '<p class="text-muted small mb-0 py-2">No approved forms yet</p>';
-        }
-      } catch (e) {
-        const listEl = document.getElementById('approvedFormsList');
-        if (listEl) listEl.innerHTML = '<p class="text-muted small mb-0">Unable to load</p>';
-      }
-    }
-    
-    function showDetailBySubmissionId(submissionId) {
-      let idx = approvedSubmissions.findIndex(s => s.submission_id === submissionId);
-      if (idx >= 0) {
-        const temp = allSubmissions;
-        allSubmissions = approvedSubmissions;
-        showDetail(idx);
-        allSubmissions = temp;
-        return;
-      }
-      idx = allSubmissions.findIndex(s => s.submission_id === submissionId);
-      if (idx >= 0) showDetail(idx);
-      else {
-        fetch('/hr/api/approved-hr-submissions', { headers: { 'Authorization': `Bearer ${token}` } })
-          .then(r => r.json())
-          .then(data => {
-            if (data.submissions) {
-              approvedSubmissions = data.submissions;
-              const i = approvedSubmissions.findIndex(s => s.submission_id === submissionId);
-              if (i >= 0) {
-                const temp = allSubmissions;
-                allSubmissions = approvedSubmissions;
-                showDetail(i);
-                allSubmissions = temp;
-              } else alert('Submission not found.');
-            }
-          })
-          .catch(() => alert('Could not load submission.'));
       }
     }
     
@@ -600,6 +537,15 @@
     function showDetail(index) {
       const s = allSubmissions[index];
       if (!s) return;
+      
+      const printBtn = document.getElementById('modalPrintBtn');
+      if (printBtn) printBtn.href = '/hr/print/' + encodeURIComponent(s.submission_id);
+      const docxBtn = document.getElementById('modalDocxBtn');
+      if (docxBtn) {
+        const supportsDocx = s.module_type === 'hr_commencement';
+        docxBtn.style.display = supportsDocx ? 'inline-block' : 'none';
+        docxBtn.href = supportsDocx ? ('/hr/download-docx/' + encodeURIComponent(s.submission_id)) : '#';
+      }
       
       const formType = s.module_type.replace('hr_', '');
       document.getElementById('modalFormType').textContent = getFormTypeLabel(s.module_type);
@@ -711,7 +657,7 @@
       
       document.getElementById('modalFormPane').innerHTML = formHtml;
       document.getElementById('modalWorkflowPane').innerHTML = workflowHtml;
-      switchDetailTab('form');
+      switchDetailTab('workflow'); // Don't show form by default; user clicks Form tab to view it
       document.getElementById('detailModal').classList.add('show');
     }
     
