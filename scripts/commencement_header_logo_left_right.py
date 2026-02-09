@@ -12,7 +12,23 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from docx import Document
 from docx.shared import Pt, Cm
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+
+
+def set_cell_margins(cell, **kwargs):
+    """Set table cell margins. Values in twentieths of a point (dxa). Use 0 for minimal gap."""
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    tcMar = OxmlElement("w:tcMar")
+    for m in ("top", "start", "bottom", "end"):
+        if m in kwargs:
+            node = OxmlElement(f"w:{m}")
+            node.set(qn("w:w"), str(kwargs[m]))
+            node.set(qn("w:type"), "dxa")
+            tcMar.append(node)
+    tcPr.append(tcMar)
 
 
 def add_header_table_to_commencement(doc_path, logo_path=None, backup=True):
@@ -34,6 +50,20 @@ def add_header_table_to_commencement(doc_path, logo_path=None, backup=True):
     doc = Document(doc_path)
     body = doc._element.body
 
+    # Find intro text BEFORE modifying document structure
+    intro_text = None
+    intro_para_element = None
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if text.startswith("To complete the administrative aspect"):
+            intro_text = text
+            intro_para_element = para._element
+            break
+    
+    # If not found, use default text
+    if not intro_text:
+        intro_text = "To complete the administrative aspect of your Employment please complete this form within 5 days of joining and fax it back to AH or email it to joana@ajmanholding.ae"
+
     # If there's already a header table (e.g. from a previous run with broken image), remove it
     had_existing_table = False
     first = body[0] if len(body) else None
@@ -46,47 +76,87 @@ def add_header_table_to_commencement(doc_path, logo_path=None, backup=True):
     # Build header table IN THE SAME DOC so the logo is embedded in this docx package
     table = doc.add_table(rows=1, cols=2)
     table.autofit = False
-    # Left column wide enough for "Commencement Form" on one line; right column for logo at right end
+    # Cell widths matching reference: left cell wider (~13.5cm), right cell narrower (~3cm for logo)
     try:
-        table.rows[0].cells[0].width = Cm(6.5)
-        table.rows[0].cells[1].width = Cm(11)
+        table.rows[0].cells[0].width = Cm(13.5)  # Wider for headline + intro text
+        table.rows[0].cells[1].width = Cm(3.5)  # Narrower for logo
     except Exception:
         pass
     FORM_FONT = "Calibri"
-    # Left cell: "Commencement Form" on one line (bold, single line)
+    # Left cell: "Commencement Form" + intro text (matching reference format)
     left_cell = table.rows[0].cells[0]
     left_cell.text = ""
+    
+    # First paragraph: "Commencement Form" (bold, ~14pt, space_after=0)
     p_left = left_cell.paragraphs[0]
     p_left.alignment = WD_ALIGN_PARAGRAPH.LEFT
     p_left.paragraph_format.keep_together = True
+    p_left.paragraph_format.space_after = Pt(0)
     run = p_left.add_run("Commencement Form")
     run.bold = True
-    run.font.size = Pt(16)
+    run.font.size = Pt(14)  # Match reference (~279400 twentieths = ~14pt)
     run.font.name = FORM_FONT
+    
+    # Second paragraph: intro text (matching reference format)
+    p_intro = left_cell.add_paragraph()
+    p_intro.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    p_intro.paragraph_format.space_before = Pt(0)
+    p_intro.paragraph_format.space_after = Pt(12)  # Match reference (25400 twentieths = ~12pt)
+    run_intro = p_intro.add_run(intro_text)
+    run_intro.font.name = FORM_FONT
+    run_intro.font.size = Pt(11)  # Standard body text size
     # Right cell: logo flush right (paragraph right-aligned, wide cell)
     right_cell = table.rows[0].cells[1]
     for p in right_cell.paragraphs:
         p.clear()
     p_right = right_cell.paragraphs[0]
     p_right.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    p_right.paragraph_format.space_after = Pt(0)
     run_right = p_right.add_run()
     run_right.add_picture(logo_path, width=Cm(1.8))
+
+    # Minimise vertical gap: small top/bottom margins on header cells
+    set_cell_margins(left_cell, top=60, bottom=0)
+    set_cell_margins(right_cell, top=60, bottom=0)
+    
+    # Minimize table row height - set row height to "at least" a small value
+    try:
+        tr = table.rows[0]._tr
+        trPr = tr.get_or_add_trPr()
+        trHeight = OxmlElement("w:trHeight")
+        trHeight.set(qn("w:val"), "240")  # ~12pt minimum height
+        trHeight.set(qn("w:hRule"), "atLeast")
+        trPr.append(trHeight)
+    except Exception:
+        pass
+
     tbl_element = table._tbl
 
     # Table was appended at end; move it to the beginning
     body.remove(tbl_element)
     body.insert(0, tbl_element)
 
-    # On first run (no existing table): remove old header paragraphs (7 paras: empty/INJAAZ/Commencement/empty)
+    # On first run (no existing table): remove old header paragraphs and intro text paragraph
     if not had_existing_table:
         to_remove = []
+        # Remove old header paragraphs (empty/INJAAZ/Commencement/empty)
         for i in range(1, min(8, len(body))):
             child = body[i]
             tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
             if tag == "p":
                 to_remove.append(child)
+        # Also remove the intro text paragraph if we found it (it's now in the table)
+        if intro_para_element is not None and intro_para_element in body:
+            to_remove.append(intro_para_element)
         for el in to_remove:
-            body.remove(el)
+            if el in body:
+                body.remove(el)
+
+    # Ensure first paragraph after table has minimal spacing (matching reference format)
+    if doc.paragraphs:
+        # First paragraph after table should have space_after matching reference (~12pt)
+        doc.paragraphs[0].paragraph_format.space_before = Pt(0)
+        # Keep default spacing for content paragraphs
 
     doc.save(doc_path)
     print("Header updated: heading left, logo right. Saved:", doc_path)
