@@ -104,6 +104,68 @@ def _fmt_date(v):
         return str(v)
 
 
+def _build_generic_context(form_data, date_keys=None):
+    """Build docxtpl context from form_data: all keys, dates formatted. date_keys = set of keys to format as date."""
+    fd = form_data or {}
+    date_keys = date_keys or set()
+    if not date_keys:
+        for k, v in fd.items():
+            if v and ('date' in k.lower() or 'day' in k.lower() or 'start' in k.lower() or 'end' in k.lower() or 'joining' in k.lower() or 'returning' in k.lower() or 'release' in k.lower() or 'incident' in k.lower() or 'employment' in k.lower() or 'last_working' in k.lower() or 'form_date' in k.lower() or ('evaluation' in k.lower() and 'date' in k)):
+                date_keys.add(k)
+    skip = {'form_type', 'employee_signature', 'evaluator_signature', 'gm_signature', 'hr_signature', 'complainant_signature'}
+    ctx = {}
+    for k, v in fd.items():
+        if k in skip:
+            continue
+        if k in date_keys or (v and isinstance(v, str) and len(v) >= 8 and v[:4].isdigit() and '-' in v):
+            ctx[k] = _fmt_date(v)
+        else:
+            ctx[k] = v if v not in (None, '') else '-'
+    return ctx
+
+
+def _add_signatures_to_context(tpl, ctx, form_data, signature_pairs):
+    """signature_pairs = [(ctx_key, form_data_key), ...]. Returns tmp_paths."""
+    tmp_paths = []
+    for ctx_key, data_key in signature_pairs:
+        img, path = _signature_to_inline_image(tpl, (form_data or {}).get(data_key))
+        if path:
+            tmp_paths.append(path)
+        ctx[ctx_key] = img if img else '(Signed in original)'
+    return tmp_paths
+
+
+def _generate_filled_docx_generic(form_type, form_data, output_path_or_stream, submission_id=None,
+                                   context_extra=None, signature_pairs=None):
+    """Load template, build context (generic + extra), add signatures, render, save."""
+    template_path = _get_template_path(form_type)
+    if not template_path:
+        raise FileNotFoundError(f'Template not found for {form_type}')
+    DocxTemplate, _, _ = _get_docxtpl()
+    tpl = DocxTemplate(template_path)
+    ctx = _build_generic_context(form_data)
+    if context_extra:
+        ctx.update(context_extra)
+    if submission_id:
+        ctx['submission_id'] = submission_id
+    tmp_paths = []
+    if signature_pairs:
+        tmp_paths = _add_signatures_to_context(tpl, ctx, form_data, signature_pairs)
+    tpl.render(ctx)
+    try:
+        if hasattr(output_path_or_stream, 'write'):
+            tpl.save(output_path_or_stream)
+        else:
+            tpl.save(output_path_or_stream)
+    finally:
+        for p in tmp_paths:
+            try:
+                if os.path.exists(p):
+                    os.unlink(p)
+            except OSError:
+                pass
+
+
 def _signature_to_inline_image(tpl, data_url, width_mm=22, height_mm=10):
     """Convert base64 data URL signature to InlineImage for docxtpl.
     Returns (InlineImage, tmp_path) so caller can delete tmp_path after render/save.
@@ -304,6 +366,28 @@ def generate_hr_docx(submission, output_path_or_stream):
         generate_performance_evaluation_docx(form_data, output_path_or_stream, submission.submission_id)
         return True, True
 
+    # Generic filled DOCX for all other forms that have placeholders in template
+    FILLED_FORM_SIGNATURES = {
+        'leave_application': [('employee_signature', 'employee_signature')],
+        'leave': [('employee_signature', 'employee_signature')],
+        'duty_resumption': [('employee_signature', 'employee_signature')],
+        'passport_release': [('employee_signature', 'employee_signature')],
+        'grievance': [('complainant_signature', 'complainant_signature')],
+        'interview_assessment': [],
+        'staff_appraisal': [('employee_signature', 'employee_signature')],
+        'station_clearance': [('employee_signature', 'employee_signature')],
+        'visa_renewal': [('employee_signature', 'employee_signature')],
+        'contract_renewal': [('evaluator_signature', 'evaluator_signature')],
+    }
+    if form_type in FILLED_FORM_SIGNATURES:
+        try:
+            _generate_filled_docx_generic(
+                form_type, form_data, output_path_or_stream, submission_id=submission.submission_id,
+                signature_pairs=FILLED_FORM_SIGNATURES[form_type]
+            )
+            return True, True
+        except Exception:
+            pass
     template_path = _get_template_path(form_type)
     if not template_path:
         return False, False
