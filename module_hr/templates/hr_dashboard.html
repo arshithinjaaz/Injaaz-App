@@ -542,7 +542,7 @@
       if (printBtn) printBtn.href = '/hr/print/' + encodeURIComponent(s.submission_id);
       const docxBtn = document.getElementById('modalDocxBtn');
       if (docxBtn) {
-        const supportsDocx = s.module_type === 'hr_commencement';
+        const supportsDocx = (s.module_type || '').startsWith('hr_');
         docxBtn.style.display = supportsDocx ? 'inline-block' : 'none';
         docxBtn.href = supportsDocx ? ('/hr/download-docx/' + encodeURIComponent(s.submission_id)) : '#';
       }

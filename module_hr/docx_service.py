@@ -77,11 +77,16 @@ def _get_template_path(form_type):
         'duty_resumption': 'Duty Resumption Form - INJAAZ.DOCX',
         'passport_release': 'Passport Release & Submission Form - INJAAZ.DOCX',
         'grievance': 'Employee grievance disciplinary action-form.docx',
+        'performance_evaluation': 'Employee Performance Evaluation Form - INJAAZ.DOCX',
+        'interview_assessment': 'Interview Assessment Form - INJAAZ.DOCX',
+        'staff_appraisal': 'Staff Appraisal Form - INJAAZ.DOCX',
+        'station_clearance': 'Station Clearance Form - INJAAZ.DOCX',
+        'visa_renewal': 'Visa Renewal Form - INJAAZ.DOCX',
+        'contract_renewal': 'Employee Contract Renewal Assessment Form Word.docx',
     }
     name = templates.get(form_type)
     if not name:
         return None
-    # Prefer shared document in HR Documents/ (e.g. Commencement Form - INJAAZ.DOCX) so UI data fills your file
     for base in (folder, templates_sub):
         path = os.path.join(base, name)
         if os.path.isfile(path):
@@ -165,6 +170,87 @@ def _add_commencement_signatures(tpl, ctx, form_data):
     return tmp_paths
 
 
+def _build_performance_evaluation_context(form_data):
+    """Build docxtpl context from Performance Evaluation form UI data."""
+    fd = form_data or {}
+    ctx = {
+        'employee_name': fd.get('employee_name') or '-',
+        'employee_id': fd.get('employee_id') or '-',
+        'department': fd.get('department') or '-',
+        'designation': fd.get('designation') or '-',
+        'date_of_evaluation': _fmt_date(fd.get('date_of_evaluation')),
+        'date_of_joining': _fmt_date(fd.get('date_of_joining')),
+        'evaluation_done_by': fd.get('evaluation_done_by') or '-',
+        'score_01': fd.get('score_01') or '-',
+        'score_02': fd.get('score_02') or '-',
+        'score_03': fd.get('score_03') or '-',
+        'score_04': fd.get('score_04') or '-',
+        'score_05': fd.get('score_05') or '-',
+        'score_06': fd.get('score_06') or '-',
+        'score_07': fd.get('score_07') or '-',
+        'score_08': fd.get('score_08') or '-',
+        'score_09': fd.get('score_09') or '-',
+        'score_10': fd.get('score_10') or '-',
+        'overall_score': fd.get('overall_score') or '-',
+        'evaluator_name': fd.get('evaluator_name') or '-',
+        'evaluator_designation': fd.get('evaluator_designation') or '-',
+        'evaluator_observation': fd.get('evaluator_observation') or '-',
+        'area_of_concern': fd.get('area_of_concern') or '-',
+        'training_required': fd.get('training_required') or '-',
+        'employee_comments': fd.get('employee_comments') or '-',
+        'employee_sign_date': _fmt_date(fd.get('employee_sign_date')),
+        'evaluator_sign_date': _fmt_date(fd.get('evaluator_sign_date')),
+        'concern_incharge_name': fd.get('concern_incharge_name') or '-',
+        'incharge_comments': fd.get('incharge_comments') or '-',
+        'gm_remarks': fd.get('gm_remarks') or '-',
+        'hr_remarks': fd.get('hr_remarks') or '-',
+    }
+    return ctx
+
+
+def _add_performance_evaluation_signatures(tpl, ctx, form_data):
+    """Add signature InlineImages to context. Returns list of temp file paths to delete after save."""
+    fd = form_data or {}
+    tmp_paths = []
+    for key, data_key in [
+        ('employee_signature', 'employee_signature'),
+        ('evaluator_signature', 'evaluator_signature'),
+    ]:
+        img, path = _signature_to_inline_image(tpl, fd.get(data_key))
+        if path:
+            tmp_paths.append(path)
+        ctx[key] = img if img else '(Signed in original)'
+    return tmp_paths
+
+
+def generate_performance_evaluation_docx(form_data, output_path_or_stream, submission_id=None):
+    """Generate filled Performance Evaluation DOCX from UI form data."""
+    template_path = _get_template_path('performance_evaluation')
+    if not template_path:
+        raise FileNotFoundError('Performance Evaluation template not found')
+
+    DocxTemplate, _, _ = _get_docxtpl()
+    tpl = DocxTemplate(template_path)
+    ctx = _build_performance_evaluation_context(form_data)
+    tmp_paths = _add_performance_evaluation_signatures(tpl, ctx, form_data)
+    if submission_id:
+        ctx['submission_id'] = submission_id
+
+    tpl.render(ctx)
+    try:
+        if hasattr(output_path_or_stream, 'write'):
+            tpl.save(output_path_or_stream)
+        else:
+            tpl.save(output_path_or_stream)
+    finally:
+        for p in tmp_paths:
+            try:
+                if os.path.exists(p):
+                    os.unlink(p)
+            except OSError:
+                pass
+
+
 def generate_commencement_docx(form_data, output_path_or_stream, submission_id=None):
     """
     Generate filled Commencement Form DOCX from UI form data.
@@ -203,25 +289,34 @@ def generate_commencement_docx(form_data, output_path_or_stream, submission_id=N
 
 def generate_hr_docx(submission, output_path_or_stream):
     """
-    Generate filled HR DOCX from submission. Dispatches by form type.
-    Returns True if generated, False if form type has no DOCX template.
+    Generate HR DOCX from submission. Filled for commencement and performance_evaluation;
+    template copy for other forms.
+    Returns (True, filled=True) if generated with data, (True, filled=False) if template only,
+    (False, False) if no template.
     """
     form_type = (submission.module_type or '').replace('hr_', '')
     form_data = submission.form_data or {}
 
-    if form_type in ('commencement',):
+    if form_type == 'commencement':
         generate_commencement_docx(form_data, output_path_or_stream, submission.submission_id)
-        return True
+        return True, True
+    if form_type == 'performance_evaluation':
+        generate_performance_evaluation_docx(form_data, output_path_or_stream, submission.submission_id)
+        return True, True
 
-    # Add other form types here (leave_application, duty_resumption, etc.)
-    # once templates have placeholders added
-    return False
+    template_path = _get_template_path(form_type)
+    if not template_path:
+        return False, False
+    with open(template_path, 'rb') as f:
+        output_path_or_stream.write(f.read())
+    return True, False
 
 
 def get_supported_docx_forms():
     """Return list of form types that support DOCX download."""
-    supported = []
-    for ft in ('commencement', 'leave_application', 'leave', 'duty_resumption', 'passport_release', 'grievance'):
-        if _get_template_path(ft):
-            supported.append(ft)
-    return supported
+    form_types = (
+        'commencement', 'leave_application', 'leave', 'duty_resumption', 'passport_release',
+        'grievance', 'performance_evaluation', 'interview_assessment', 'staff_appraisal',
+        'station_clearance', 'visa_renewal', 'contract_renewal',
+    )
+    return [ft for ft in form_types if _get_template_path(ft)]

@@ -317,7 +317,8 @@
       if (printBtn) printBtn.href = '/hr/print/' + encodeURIComponent(submissionId);
       const docxBtn = document.getElementById('docxBtnGm');
       if (docxBtn) {
-        const supportsDocx = (submission.module_type || submission.form_type) === 'hr_commencement';
+        const mt = submission.module_type || submission.form_type || '';
+        const supportsDocx = mt.startsWith('hr_');
         docxBtn.style.display = supportsDocx ? 'inline-block' : 'none';
         docxBtn.href = supportsDocx ? ('/hr/download-docx/' + encodeURIComponent(submissionId)) : '#';
       }

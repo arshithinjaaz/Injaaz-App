@@ -87,24 +87,24 @@ def add_header_table_to_commencement(doc_path, logo_path=None, backup=True):
     left_cell = table.rows[0].cells[0]
     left_cell.text = ""
     
-    # First paragraph: "Commencement Form" (bold, ~14pt, space_after=0)
+    # First paragraph: "Commencement Form" (bold, larger headline)
     p_left = left_cell.paragraphs[0]
     p_left.alignment = WD_ALIGN_PARAGRAPH.LEFT
     p_left.paragraph_format.keep_together = True
     p_left.paragraph_format.space_after = Pt(0)
     run = p_left.add_run("Commencement Form")
     run.bold = True
-    run.font.size = Pt(14)  # Match reference (~279400 twentieths = ~14pt)
+    run.font.size = Pt(20)  # Larger headline
     run.font.name = FORM_FONT
     
-    # Second paragraph: intro text (matching reference format)
+    # Second paragraph: intro text (smaller subheading)
     p_intro = left_cell.add_paragraph()
     p_intro.alignment = WD_ALIGN_PARAGRAPH.LEFT
     p_intro.paragraph_format.space_before = Pt(0)
-    p_intro.paragraph_format.space_after = Pt(12)  # Match reference (25400 twentieths = ~12pt)
+    p_intro.paragraph_format.space_after = Pt(12)
     run_intro = p_intro.add_run(intro_text)
     run_intro.font.name = FORM_FONT
-    run_intro.font.size = Pt(11)  # Standard body text size
+    run_intro.font.size = Pt(9)  # Smaller subheading
     # Right cell: logo flush right (paragraph right-aligned, wide cell)
     right_cell = table.rows[0].cells[1]
     for p in right_cell.paragraphs:

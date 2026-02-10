@@ -189,7 +189,7 @@
         '</div>' +
         '<div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">' +
         '<a href="/hr/print/' + encodeURIComponent(s.submission_id) + '" target="_blank" class="btn btn-sm btn-outline-light">🖨️ Print (HR Document)</a>' +
-        (s.module_type === 'hr_commencement' ? '<a href="/hr/download-docx/' + encodeURIComponent(s.submission_id) + '" class="btn btn-sm btn-outline-light">📄 Download DOCX</a>' : '') +
+        ((s.module_type && s.module_type.startsWith('hr_')) ? '<a href="/hr/download-docx/' + encodeURIComponent(s.submission_id) + '" class="btn btn-sm btn-outline-light">📄 Download DOCX</a>' : '') +
         '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>' +
         '</div></div>' +
         '<div class="modal-body p-0"><div class="detail-tabs" style="display:flex; gap:0; border-bottom:2px solid #e2e8f0; background:#f8fafc;">' +
