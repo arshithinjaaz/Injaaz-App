@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Access Denied - Injaaz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <title>Access Denied - Injaaz Application</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -20,11 +21,17 @@
     .container {
       background: white;
       border-radius: 12px;
-      padding: 3rem;
+      padding: 2rem 1.5rem;
       max-width: 500px;
       width: 100%;
       box-shadow: 0 10px 40px rgba(0,0,0,0.1);
       text-align: center;
+    }
+    @media (max-width: 480px) {
+      body { padding: 1rem; }
+      .container { padding: 1.5rem 1rem; }
+      h1 { font-size: 1.5rem; }
+      .btn { width: 100%; display: block; min-height: 48px; }
     }
     .icon {
       font-size: 4rem;

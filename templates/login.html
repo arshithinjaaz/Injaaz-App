@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-    <title>Login - Injaaz Site Visit App</title>
+    <title>Login - Injaaz Application</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
     <style>
@@ -137,8 +137,20 @@
         }
         
         @media (max-width: 480px) {
+            body {
+                padding: 0 !important;
+                align-items: stretch !important;
+            }
+            
             .login-container {
-                padding: 1.5rem 1.25rem !important;
+                padding: 2rem max(1.25rem, env(safe-area-inset-left)) max(2rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-right)) !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+                border-radius: 0 !important;
+                min-height: 100vh !important;
+                justify-content: center !important;
+                display: flex !important;
+                flex-direction: column !important;
             }
             
             .logo img {
@@ -148,6 +160,16 @@
             
             h1 {
                 font-size: 22px !important;
+            }
+            
+            .btn-login {
+                margin-top: 1rem !important;
+                min-height: 52px !important;
+                -webkit-tap-highlight-color: rgba(255,255,255,0.2) !important;
+            }
+            
+            .btn-login:active {
+                transform: scale(0.98) !important;
             }
         }
         
@@ -200,6 +222,15 @@
             color: #125435;
             font-size: 14px;
         }
+        
+        /* Mobile-first: safe areas for notched phones */
+        @supports (padding: env(safe-area-inset-top)) {
+            .login-container {
+                padding-left: max(1.5rem, env(safe-area-inset-left)) !important;
+                padding-right: max(1.5rem, env(safe-area-inset-right)) !important;
+                padding-bottom: max(2rem, env(safe-area-inset-bottom)) !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -209,7 +240,7 @@
         </div>
         
         <h1>Welcome</h1>
-        <p class="subtitle">Sign in to continue to Injaaz</p>
+        <p class="subtitle">Sign in to continue to Injaaz Application</p>
         
         <div id="error-message" class="error-message"></div>
         <div id="success-message" class="success-message"></div>
@@ -318,5 +349,6 @@
             }
         });
     </script>
+    <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
 </body>
 </html>

@@ -90,7 +90,11 @@ SESSION_COOKIE_SAMESITE = "Lax"
 # SQLALCHEMY
 SQLALCHEMY_DATABASE_URI = DATABASE_URL
 SQLALCHEMY_TRACK_MODIFICATIONS = False
+# SQLite does not support pool_size, max_overflow, pool_timeout - use minimal options
+_use_sqlite = DATABASE_URL and 'sqlite' in DATABASE_URL.lower()
 SQLALCHEMY_ENGINE_OPTIONS = {
+    'echo': False,                   # Don't log all SQL queries (set to True for debugging)
+} if _use_sqlite else {
     'pool_pre_ping': True,           # Check connections before using
     'pool_recycle': 300,             # Recycle connections every 5 minutes
     'pool_size': 5,                  # Number of connections to maintain (reduced for free tier)

@@ -15,6 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   
   <style>
     * {
@@ -1200,7 +1201,7 @@
     <div class="nav-container">
       <a href="/" class="logo">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
-        <span id="welcome-text">Injaaz</span>
+        <span id="welcome-text">Injaaz Application</span>
       </a>
       <div class="nav-right">
         <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
@@ -1633,7 +1634,7 @@
           // Update welcome text
           const welcomeText = document.getElementById('welcome-text');
           if (welcomeText) {
-            welcomeText.textContent = `Injaaz welcomes, ${displayName}!`;
+            welcomeText.textContent = `Welcome, ${displayName}!`;
           }
         } else {
           // Try to fetch user from API if not in localStorage
@@ -1651,7 +1652,7 @@
                 const displayName = data.user.full_name || data.user.username;
                 const welcomeText = document.getElementById('welcome-text');
                 if (welcomeText) {
-                  welcomeText.textContent = `Injaaz welcomes, ${displayName}!`;
+                  welcomeText.textContent = `Welcome, ${displayName}!`;
                 }
               }
             })

@@ -162,7 +162,7 @@ def create_app():
             # For page render routes, redirect to login
             from flask import redirect, url_for
             return redirect(url_for('login_page')), 302
-        elif request.path.startswith('/api/'):
+        elif request.path.startswith('/api/') or '/api/' in request.path:
             return jsonify({"success": False, "error": "Authentication required"}), 401
         # For other HTML pages, redirect to login
         from flask import redirect, url_for
@@ -176,7 +176,7 @@ def create_app():
         if request.path in page_render_routes:
             from flask import redirect, url_for
             return redirect(url_for('login_page')), 302
-        elif request.path.startswith('/api/'):
+        elif request.path.startswith('/api/') or '/api/' in request.path:
             return jsonify({"success": False, "error": "Invalid token"}), 401
         from flask import redirect, url_for
         return redirect(url_for('login_page')), 302
@@ -189,7 +189,7 @@ def create_app():
         if request.path in page_render_routes:
             from flask import redirect, url_for
             return redirect(url_for('login_page')), 302
-        elif request.path.startswith('/api/'):
+        elif request.path.startswith('/api/') or '/api/' in request.path:
             return jsonify({"success": False, "error": "Token has expired"}), 401
         from flask import redirect, url_for
         return redirect(url_for('login_page')), 302

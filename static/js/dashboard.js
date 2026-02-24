@@ -125,7 +125,7 @@ function loadUserWelcome() {
       
       const welcomeText = document.getElementById('welcome-text');
       if (welcomeText) {
-        welcomeText.textContent = `Injaaz welcomes, ${displayName}!`;
+        welcomeText.textContent = `Welcome, ${displayName}!`;
       }
       
       checkAndShowAdminMenu(user);
@@ -148,7 +148,7 @@ function loadUserWelcome() {
             const displayName = data.user.full_name || data.user.username;
             const welcomeText = document.getElementById('welcome-text');
             if (welcomeText) {
-              welcomeText.textContent = `Injaaz welcomes, ${displayName}!`;
+              welcomeText.textContent = `Welcome, ${displayName}!`;
             }
             
             checkAndShowAdminMenu(data.user);
@@ -2191,7 +2191,14 @@ document.addEventListener('DOMContentLoaded', function() {
       openContactModal();
     });
   }
-  
+  const footerContactLink = document.getElementById('footerContactLink');
+  if (footerContactLink) {
+    footerContactLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      openContactModal();
+    });
+  }
+
   // Close modal when clicking outside
   const contactModal = document.getElementById('contactModal');
   if (contactModal) {
@@ -2318,13 +2325,13 @@ function initNotifications() {
   if (markAllReadBtn) {
     markAllReadBtn.addEventListener('click', async function() {
       try {
-        const token = localStorage.getItem('access_token');
-        await fetch('/hr/api/notifications/mark-all-read', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
+        const response = await authenticatedFetch('/hr/api/notifications/mark-all-read', {
+          method: 'POST'
         });
-        loadNotifications();
-        updateNotificationBadge(0);
+        if (response.ok) {
+          loadNotifications();
+          updateNotificationBadge(0);
+        }
       } catch (error) {
         console.error('Error marking all as read:', error);
       }
@@ -2346,10 +2353,7 @@ async function loadNotificationCount() {
     const token = localStorage.getItem('access_token');
     if (!token) return;
     
-    const response = await fetch('/hr/api/notifications/unread-count', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
+    const response = await authenticatedFetch('/hr/api/notifications/unread-count');
     if (response.ok) {
       const data = await response.json();
       updateNotificationBadge(data.unread_count || 0);
@@ -2377,10 +2381,9 @@ async function loadNotifications() {
   
   try {
     const token = localStorage.getItem('access_token');
-    const response = await fetch('/hr/api/notifications', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    if (!token) return;
     
+    const response = await authenticatedFetch('/hr/api/notifications');
     if (!response.ok) throw new Error('Failed to load notifications');
     
     const data = await response.json();
@@ -2417,10 +2420,8 @@ async function loadNotifications() {
 
 async function markNotificationRead(id, submissionId, notificationType) {
   try {
-    const token = localStorage.getItem('access_token');
-    await fetch(`/hr/api/notifications/${id}/read`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` }
+    await authenticatedFetch(`/hr/api/notifications/${id}/read`, {
+      method: 'POST'
     });
     
     // Refresh notifications

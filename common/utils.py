@@ -8,6 +8,26 @@ from werkzeug.utils import secure_filename
 
 logger = logging.getLogger(__name__)
 
+
+def is_path_safe_for_directory(base_dir, file_path):
+    """
+    Verify that the resolved file_path is inside base_dir (prevents path traversal).
+    
+    Args:
+        base_dir: Base directory that file_path must be under
+        file_path: Path to validate (may contain .. or symlinks)
+    
+    Returns:
+        bool: True if file_path resolves to a path under base_dir, False otherwise
+    """
+    try:
+        base_real = os.path.realpath(os.path.abspath(base_dir))
+        path_real = os.path.realpath(os.path.abspath(file_path))
+        # Ensure path_real is under base_real (commonpath trick works for containment)
+        return os.path.commonpath([base_real, path_real]) == base_real
+    except (ValueError, OSError):
+        return False
+
 # Try importing fcntl for file locking (Unix only)
 try:
     import fcntl

@@ -25,7 +25,9 @@ FORMS = [
         ("Last Day of Leave", "last_day_of_leave"), ("Date returning to work", "date_returning_to_work"),
         ("Telephone (reachable)", "telephone_reachable"), ("Replacement Name", "replacement_name"),
         ("leave_type", "leave_type"), ("number_of_days", "number_of_days"),
+        ("Employee Signature", "employee_signature"), ("GM Signature", "gm_signature"),
         ("Checked by HR", "hr_checked"), ("HR Comments", "hr_comments"), ("Balance C/F", "hr_balance_cf"),
+        ("HR Signature", "hr_signature"),
         ("Contract Year", "hr_contract_year"), ("Paid", "hr_paid"), ("Unpaid", "hr_unpaid"),
     ]),
     ("Duty Resumption Form - INJAAZ.DOCX", [
@@ -33,12 +35,16 @@ FORMS = [
         ("Job Title", "job_title"), ("Company", "company"), ("Leave Started", "leave_started"),
         ("Leave Ended", "leave_ended"), ("Planned Resumption", "planned_resumption_date"),
         ("Actual Resumption", "actual_resumption_date"), ("Note", "note"),
+        ("Employee Signature", "employee_signature"), ("GM Signature", "gm_signature"),
         ("Line Manager Remarks", "line_manager_remarks"), ("sign_date", "sign_date"),
+        ("HR Signature", "hr_signature"),
     ]),
     ("Passport Release & Submission Form - INJAAZ.DOCX", [
         ("Requester", "requester"), ("Employee Name", "employee_name"), ("Employee ID", "employee_id"),
         ("Job Title", "job_title"), ("Project", "project"), ("Date", "form_date"),
         ("Purpose of Release", "purpose_of_release"), ("Release Date", "release_date"),
+        ("Employee Signature", "employee_signature"), ("GM Signature", "gm_signature"),
+        ("HR Signature", "hr_signature"),
     ]),
     ("Employee grievance disciplinary action-form.docx", [
         ("Employee name:", "complainant_name"), ("Employee ID #:", "complainant_id"),
@@ -46,8 +52,11 @@ FORMS = [
         ("Shift / time:", "shift_time"), ("Employee contact #:", "complainant_contact"),
         ("Employee name:", "second_party_name"), ("Staff ID number:", "second_party_id"),
         ("Department:", "second_party_department"), ("Place of Incident:", "place_of_incident"),
+        ("Employee contact #:", "second_party_contact"),
         ("complaint_description", "complaint_description"), ("Witnesses", "witnesses"),
         ("Who was informed", "who_informed"), ("Attachment", "attachment"),
+        ("Signature of complainant", "complainant_signature"),
+        ("HR signature", "hr_signature"), ("GM signature", "gm_signature"),
         ("hr_remarks", "hr_remarks"), ("gm_remarks", "gm_remarks"),
     ]),
     ("Interview Assessment Form - INJAAZ.DOCX", [
@@ -63,6 +72,9 @@ FORMS = [
         ("rating_technical", "rating_technical"), ("rating_training", "rating_training"),
         ("rating_experience", "rating_experience"), ("rating_overall", "rating_overall"),
         ("overall_assessment", "overall_assessment"), ("eligibility", "eligibility"),
+        ("HR Signature", "hr_signature"), ("GM Signature", "gm_signature"),
+        ("HR Comments", "hr_comments"), ("GM Comments", "gm_comments"),
+        ("HR Remarks", "hr_remarks"), ("GM Remarks", "gm_remarks"),
     ]),
     ("Staff Appraisal Form - INJAAZ.DOCX", [
         ("Name:", "employee_name"), ("Employee ID:", "employee_id"), ("Department:", "department"),
@@ -77,6 +89,10 @@ FORMS = [
         ("rating_adaptability", "rating_adaptability"), ("comments_adaptability", "comments_adaptability"),
         ("rating_leadership", "rating_leadership"), ("comments_leadership", "comments_leadership"),
         ("Total Score:", "total_score"), ("employee_strengths", "employee_strengths"),
+        ("Employee Signature:", "employee_signature"),
+        ("HR Signature", "hr_signature"), ("GM Signature", "gm_signature"),
+        ("HR Comments", "hr_comments"), ("GM Comments", "gm_comments"),
+        ("HR Remarks", "hr_remarks"), ("GM Remarks", "gm_remarks"),
     ]),
     ("Station Clearance Form - INJAAZ.DOCX", [
         ("Employee Name", "employee_name"), ("Employee ID", "employee_id"),
@@ -91,12 +107,16 @@ FORMS = [
         ("it_others", "it_others"), ("file_shifted", "file_shifted"), ("dues_paid", "dues_paid"),
         ("medical_card_returned", "medical_card_returned"), ("hr_others", "hr_others"),
         ("eos_transfer", "eos_transfer"), ("finance_others", "finance_others"),
-        ("Remarks", "remarks"),
+        ("Remarks", "remarks"), ("Employee Signature", "employee_signature"),
+        ("HR Signature", "hr_signature"), ("Human Resources Manager", "hr_signature"),
     ]),
     ("Visa Renewal Form - INJAAZ.DOCX", [
         ("form_date", "form_date"), ("employee_name", "employee_name"), ("employee_id", "employee_id"),
         ("employer", "employer"), ("position", "position"), ("years_completed", "years_completed"),
-        ("decision", "decision"),
+        ("decision", "decision"), ("Signature of Employee", "employee_signature"),
+        ("HR Signature", "hr_signature"), ("GM Signature", "gm_signature"),
+        ("HR Comments", "hr_comments"), ("GM Comments", "gm_comments"),
+        ("HR Remarks", "hr_remarks"), ("GM Remarks", "gm_remarks"),
     ]),
     ("Employee Contract Renewal Assessment Form Word.docx", [
         ("Employee Name:", "employee_name"), ("Date Of Evaluation:", "date_of_evaluation"),
@@ -106,9 +126,16 @@ FORMS = [
         ("rating_01", "rating_01"), ("rating_02", "rating_02"), ("rating_03", "rating_03"),
         ("rating_04", "rating_04"), ("strength", "strength"), ("areas_for_improvement", "areas_for_improvement"),
         ("OVERALL SCORE:", "overall_score"), ("recommendation", "recommendation"),
-        ("evaluator_date", "evaluator_date"),
+        ("Evaluator's Signature", "evaluator_signature"), ("evaluator_date", "evaluator_date"),
+        ("HR Signature", "hr_signature"), ("GM Signature", "gm_signature"),
+        ("HR Comments", "hr_comments"), ("GM Comments", "gm_comments"),
+        ("HR Remarks", "hr_remarks"), ("GM Remarks", "gm_remarks"),
     ]),
 ]
+
+# First table with 1 row and 2 cols is our standard header (headline + logo) - skip when injecting
+def _is_header_table(table):
+    return len(table.rows) == 1 and len(table.rows[0].cells) == 2
 
 
 def inject_by_labels(doc_path, label_placeholders, backup=True):
@@ -124,9 +151,14 @@ def inject_by_labels(doc_path, label_placeholders, backup=True):
         backup_path = os.path.join(backup_dir, name.replace(".docx", " (before placeholders).docx").replace(".DOCX", " (before placeholders).docx"))
         shutil.copy2(doc_path, backup_path)
     doc = Document(doc_path)
+    # Skip first table if it is our standard header (1 row x 2 cols) so we don't put placeholders in header
+    tables_start = 0
+    if doc.tables and _is_header_table(doc.tables[0]):
+        tables_start = 1
     # Build list of (ti, ri, ci, label) for each cell that matches a label, in document order
     label_cells = []
-    for ti, table in enumerate(doc.tables):
+    for ti in range(tables_start, len(doc.tables)):
+        table = doc.tables[ti]
         for ri, row in enumerate(table.rows):
             cells = row.cells
             for ci in range(len(cells) - 1):
@@ -142,7 +174,16 @@ def inject_by_labels(doc_path, label_placeholders, backup=True):
             key = (ti, ri, ci)
             if key in used or cell_label != label:
                 continue
-            doc.tables[ti].rows[ri].cells[ci + 1].text = "{{ %s }}" % placeholder
+            label_cell = doc.tables[ti].rows[ri].cells[ci]
+            value_cell = doc.tables[ti].rows[ri].cells[ci + 1]
+            placeholder_text = "{{ %s }}" % placeholder
+            # Merged cells: value_cell may be same object as label_cell - preserve label
+            if value_cell is label_cell:
+                current = (label_cell.text or "").strip().replace(placeholder_text, "").strip()
+                if placeholder_text not in (label_cell.text or ""):
+                    label_cell.text = (current or label) + " " + placeholder_text
+            else:
+                value_cell.text = placeholder_text
             used.add(key)
             break
     doc.save(doc_path)
@@ -157,7 +198,7 @@ def main():
             continue
         print("Injecting:", filename)
         inject_by_labels(path, label_placeholders, backup=True)
-    print("Done. Run apply_hr_header_all_forms.py if you need to re-apply headers.")
+    print("Done. Headers should already be applied (run apply_hr_header_all_forms.py first if you edited raw DOCX).")
 
 
 if __name__ == "__main__":

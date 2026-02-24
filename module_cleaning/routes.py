@@ -9,7 +9,8 @@ from common.utils import (
     random_id, 
     save_uploaded_file,
     save_uploaded_file_cloud,
-    upload_base64_to_cloud
+    upload_base64_to_cloud,
+    is_path_safe_for_directory
 )
 from common.db_utils import (
     create_submission_db,
@@ -52,6 +53,9 @@ def download_generated_cleaning(filename):
     """Serve generated files as download attachments for cleaning module."""
     GENERATED_DIR = current_app.config['GENERATED_DIR']
     safe_path = os.path.join(GENERATED_DIR, filename)
+    if not is_path_safe_for_directory(GENERATED_DIR, safe_path):
+        logger.warning(f"Path traversal attempt blocked: {filename}")
+        return "Forbidden", 403
     if not os.path.exists(safe_path):
         logger.warning(f"File not found: {filename}")
         return "File not found", 404
@@ -133,6 +137,10 @@ def download_file(job_id, file_type):
             local_filename = unquote(full_path.lstrip('/').replace('generated/', ''))
             local_path = os.path.join(GENERATED_DIR, local_filename)
             
+            if not is_path_safe_for_directory(GENERATED_DIR, local_path):
+                logger.warning(f"Path traversal attempt blocked: {local_path}")
+                return error_response("Invalid file path", status_code=403, error_code='FORBIDDEN')
+            
             logger.info(f"Local URL detected, serving from filesystem: {local_path}")
             
             if not os.path.exists(local_path):
@@ -175,6 +183,10 @@ def download_file(job_id, file_type):
             
             local_filename = unquote(file_url.lstrip('/').replace('generated/', ''))
             local_path = os.path.join(GENERATED_DIR, local_filename)
+            
+            if not is_path_safe_for_directory(GENERATED_DIR, local_path):
+                logger.warning(f"Path traversal attempt blocked: {local_path}")
+                return error_response("Invalid file path", status_code=403, error_code='FORBIDDEN')
             
             logger.info(f"Relative URL detected, serving from filesystem: {local_path}")
             

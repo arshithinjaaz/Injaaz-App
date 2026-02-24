@@ -4,9 +4,12 @@ Uses docxtpl to fill placeholders in HR Documents (e.g. Commencement Form - INJA
 """
 import os
 import base64
+import logging
 import tempfile
 from datetime import datetime
 from io import BytesIO
+
+logger = logging.getLogger(__name__)
 
 
 def fit_docx_to_one_page(source_stream):
@@ -104,6 +107,40 @@ def _fmt_date(v):
         return str(v)
 
 
+def _normalize_form_data_for_docx(form_data, form_type):
+    """
+    Apply field aliases so UI form field names map to DOCX template placeholders.
+    Both forms (leave_application and leave) use the same Leave Application template.
+    """
+    fd = dict(form_data or {})
+    if form_type in ('leave', 'leave_application'):
+        # hr_leave_form uses different names; map to template placeholders
+        if fd.get('start_date') and not fd.get('first_day_of_leave'):
+            fd['first_day_of_leave'] = fd['start_date']
+        if fd.get('end_date') and not fd.get('last_day_of_leave'):
+            fd['last_day_of_leave'] = fd['end_date']
+        if fd.get('total_days') is not None and fd.get('total_days') != '' and not fd.get('total_days_requested'):
+            fd['total_days_requested'] = fd['total_days']
+        if fd.get('contact_number') and not fd.get('telephone_reachable'):
+            fd['telephone_reachable'] = fd['contact_number']
+        if not fd.get('today_date') and (fd.get('submitted_at') or fd.get('first_day_of_leave')):
+            from datetime import datetime
+            try:
+                fd['today_date'] = datetime.now().strftime('%Y-%m-%d')
+            except Exception:
+                pass
+    # Checkbox values: "on" -> "Completed" for station clearance and similar
+    checkbox_keys = {
+        'tasks_handed_over', 'documents_handed_over', 'files_handed_over', 'keys_returned',
+        'toolbox_returned', 'access_card_returned', 'email_cancelled', 'software_hardware_returned',
+        'laptop_returned', 'file_shifted', 'dues_paid', 'medical_card_returned', 'eos_transfer',
+    }
+    for k in checkbox_keys:
+        if k in fd and fd[k] == 'on':
+            fd[k] = 'Completed'
+    return fd
+
+
 def _build_generic_context(form_data, date_keys=None):
     """Build docxtpl context from form_data: all keys, dates formatted. date_keys = set of keys to format as date."""
     fd = form_data or {}
@@ -121,6 +158,11 @@ def _build_generic_context(form_data, date_keys=None):
             ctx[k] = _fmt_date(v)
         else:
             ctx[k] = v if v not in (None, '') else '-'
+    # Alias workflow HR/GM fields so both placeholder names work in templates
+    ctx['hr_remarks'] = ctx.get('hr_remarks') or ctx.get('hr_comments') or '-'
+    ctx['gm_remarks'] = ctx.get('gm_remarks') or ctx.get('gm_comments') or '-'
+    ctx['hr_comments'] = ctx.get('hr_comments') or ctx.get('hr_remarks') or '-'
+    ctx['gm_comments'] = ctx.get('gm_comments') or ctx.get('gm_remarks') or '-'
     return ctx
 
 
@@ -143,14 +185,15 @@ def _generate_filled_docx_generic(form_type, form_data, output_path_or_stream, s
         raise FileNotFoundError(f'Template not found for {form_type}')
     DocxTemplate, _, _ = _get_docxtpl()
     tpl = DocxTemplate(template_path)
-    ctx = _build_generic_context(form_data)
+    fd = _normalize_form_data_for_docx(form_data, form_type)
+    ctx = _build_generic_context(fd)
     if context_extra:
         ctx.update(context_extra)
     if submission_id:
         ctx['submission_id'] = submission_id
     tmp_paths = []
     if signature_pairs:
-        tmp_paths = _add_signatures_to_context(tpl, ctx, form_data, signature_pairs)
+        tmp_paths = _add_signatures_to_context(tpl, ctx, form_data, signature_pairs)  # use original for signatures
     tpl.render(ctx)
     try:
         if hasattr(output_path_or_stream, 'write'):
@@ -264,8 +307,8 @@ def _build_performance_evaluation_context(form_data):
         'evaluator_sign_date': _fmt_date(fd.get('evaluator_sign_date')),
         'concern_incharge_name': fd.get('concern_incharge_name') or '-',
         'incharge_comments': fd.get('incharge_comments') or '-',
-        'gm_remarks': fd.get('gm_remarks') or '-',
-        'hr_remarks': fd.get('hr_remarks') or '-',
+        'gm_remarks': fd.get('gm_remarks') or fd.get('gm_comments') or '-',
+        'hr_remarks': fd.get('hr_remarks') or fd.get('hr_comments') or '-',
     }
     return ctx
 
@@ -277,6 +320,8 @@ def _add_performance_evaluation_signatures(tpl, ctx, form_data):
     for key, data_key in [
         ('employee_signature', 'employee_signature'),
         ('evaluator_signature', 'evaluator_signature'),
+        ('hr_signature', 'hr_signature'),
+        ('gm_signature', 'gm_signature'),
     ]:
         img, path = _signature_to_inline_image(tpl, fd.get(data_key))
         if path:
@@ -366,18 +411,18 @@ def generate_hr_docx(submission, output_path_or_stream):
         generate_performance_evaluation_docx(form_data, output_path_or_stream, submission.submission_id)
         return True, True
 
-    # Generic filled DOCX for all other forms that have placeholders in template
+    # Generic filled DOCX for all other forms. Include HR/GM signature so print copy shows approval.
     FILLED_FORM_SIGNATURES = {
-        'leave_application': [('employee_signature', 'employee_signature')],
-        'leave': [('employee_signature', 'employee_signature')],
-        'duty_resumption': [('employee_signature', 'employee_signature')],
-        'passport_release': [('employee_signature', 'employee_signature')],
-        'grievance': [('complainant_signature', 'complainant_signature')],
-        'interview_assessment': [],
-        'staff_appraisal': [('employee_signature', 'employee_signature')],
-        'station_clearance': [('employee_signature', 'employee_signature')],
-        'visa_renewal': [('employee_signature', 'employee_signature')],
-        'contract_renewal': [('evaluator_signature', 'evaluator_signature')],
+        'leave_application': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
+        'leave': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
+        'duty_resumption': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
+        'passport_release': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
+        'grievance': [('complainant_signature', 'complainant_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
+        'interview_assessment': [('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
+        'staff_appraisal': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
+        'station_clearance': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature')],
+        'visa_renewal': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
+        'contract_renewal': [('evaluator_signature', 'evaluator_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
     }
     if form_type in FILLED_FORM_SIGNATURES:
         try:
@@ -386,8 +431,12 @@ def generate_hr_docx(submission, output_path_or_stream):
                 signature_pairs=FILLED_FORM_SIGNATURES[form_type]
             )
             return True, True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.exception(
+                "Failed to generate filled DOCX for %s (submission %s): %s",
+                form_type, getattr(submission, 'submission_id', '?'), e
+            )
+            raise
     template_path = _get_template_path(form_type)
     if not template_path:
         return False, False

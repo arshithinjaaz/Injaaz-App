@@ -168,11 +168,13 @@ function showInstallButton() {
           animation: fadeOut 0.3s ease forwards;
         }
         
-        /* Mobile optimizations */
+        /* Mobile optimizations - bottom-right to avoid overlapping nav/menu */
         @media (max-width: 768px) {
           #pwa-install-btn {
-            top: 70px !important;
-            right: 10px !important;
+            top: auto !important;
+            bottom: max(20px, env(safe-area-inset-bottom)) !important;
+            right: max(15px, env(safe-area-inset-right)) !important;
+            left: auto !important;
             padding: 10px 16px !important;
             font-size: 13px !important;
             border-radius: 10px !important;
@@ -187,8 +189,8 @@ function showInstallButton() {
         /* Small mobile screens */
         @media (max-width: 480px) {
           #pwa-install-btn {
-            top: 60px !important;
-            right: 8px !important;
+            bottom: max(16px, env(safe-area-inset-bottom)) !important;
+            right: max(12px, env(safe-area-inset-right)) !important;
             padding: 8px 14px !important;
             font-size: 12px !important;
           }

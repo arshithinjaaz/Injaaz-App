@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-  <title>Pending Reviews - Injaaz</title>
+  <title>Pending Reviews - Injaaz Application</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   
   <!-- PWA Meta Tags -->
@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
   
   <style>
@@ -286,7 +287,7 @@
       <a href="/dashboard" class="logo">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
         <div class="logo-text">
-          <h1>Injaaz</h1>
+          <h1>Injaaz Application</h1>
         </div>
       </a>
       <button onclick="window.location.href='/dashboard'" class="action-button">
@@ -493,5 +494,6 @@
     // Load on page load
     document.addEventListener('DOMContentLoaded', loadPendingReviews);
   </script>
+  <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
 </body>
 </html>

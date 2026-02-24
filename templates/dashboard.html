@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-  <title>Injaaz - Site Reporting Platform</title>
-  <meta name="description" content="Professional site visit inspection and reporting platform for HVAC, Civil, and Cleaning services">
+  <title>Injaaz Application - All Operations. One Platform.</title>
+  <meta name="description" content="Injaaz Application - All Operations. One Platform. Inspections, HR forms, and store keeping for your office.">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   
   <!-- PWA Meta Tags -->
@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Injaaz">
+  <meta name="apple-mobile-web-app-title" content="Injaaz Application">
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
@@ -25,14 +25,18 @@
   
   <!-- External Stylesheets -->
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 </head>
 <body>
   <nav class="nav" id="nav">
     <div class="nav-container">
-      <a href="/" class="logo">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
-        <span id="welcome-text">Injaaz</span>
+      <a href="/" class="logo" aria-label="Injaaz Home">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz">
+        <div class="logo-text">
+          <span class="logo-brand">Injaaz</span>
+          <span id="welcome-text" class="nav-welcome">Injaaz Application</span>
+        </div>
       </a>
       <div class="nav-right">
         <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
@@ -99,15 +103,15 @@
   <div class="hero">
     <div class="hero-content">
       <div class="hero-text">
-        <h1 class="hero-title">Professional Site Reporting</h1>
+        <h1 class="hero-title">All Operations. One Platform.</h1>
         <p class="hero-subtitle">
-          Streamline your inspection workflows with intelligent reporting, 
-          real-time collaboration, and automated documentation.
+          Inspections, HR forms, and store keeping—streamlined in one place for your office.
         </p>
       </div>
 
       <!-- Main Dashboard - Clean (no pending reviews shown here) -->
       <section class="modules-section" id="modules">
+        <h2 class="modules-section-label">Modules</h2>
         <div class="modules-grid" id="modulesGrid">
           <!-- Submitted Forms Module Card (shown first for supervisors) -->
           <a href="/workflow/submitted-forms" class="module-card" id="module-submitted-forms" style="display: none;">
@@ -214,7 +218,14 @@
   </div>
 
   <footer class="footer">
-    <p>© 2026 Injaaz • Professional Site Reporting Platform</p>
+    <div class="footer-inner">
+      <div class="footer-brand">Injaaz</div>
+      <nav class="footer-links">
+        <a href="/about">About</a>
+        <a href="#" id="footerContactLink">Contact</a>
+      </nav>
+      <p class="footer-copy">© 2026 Injaaz Application</p>
+    </div>
   </footer>
 
   <!-- Profile Modal -->
@@ -323,6 +334,7 @@
   </div>
 
   <!-- External Scripts -->
+  <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
   <script src="{{ url_for('static', filename='signature_pad.umd.min.js') }}"></script>
   <script src="{{ url_for('static', filename='api-client.js') }}"></script>
   <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>

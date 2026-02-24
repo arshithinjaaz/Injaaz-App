@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Injaaz HVAC">
+  <meta name="apple-mobile-web-app-title" content="Injaaz Application">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
   <script src="{{ url_for('static', filename='pwa-install.js') }}" defer></script>
@@ -1045,7 +1045,7 @@
     <div class="navbar-container">
       <a class="navbar-brand" href="/dashboard">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz">
-        <span>Injaaz</span>
+        <span>Injaaz Application</span>
       </a>
       <div class="module-badge">HVAC & MEP</div>
       <div class="navbar-nav">
@@ -1111,7 +1111,7 @@
           <button class="nav-link" id="tab-2-link" data-bs-toggle="tab" data-bs-target="#tab-2" type="button" role="tab">2. Work Items</button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab">3. Sign-off & Submit</button>
+          <button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab"><span class="tab-label-full">3. Sign-off & Submit</span><span class="tab-label-short">3. Sign-off</span></button>
         </li>
       </ul>
 
@@ -5767,6 +5767,13 @@
             if (formData) {
               if (formData.supervisor_comments) supervisorCommentsOM = formData.supervisor_comments;
               if (formData.supervisor_signature) supervisorSigOM = formData.supervisor_signature;
+              if (!supervisorSigOM && formData.supervisor_signature_url) supervisorSigOM = formData.supervisor_signature_url;
+              // Check nested formData.data (HVAC structure)
+              if ((!supervisorCommentsOM || !supervisorSigOM) && formData.data && typeof formData.data === 'object') {
+                if (!supervisorCommentsOM && formData.data.supervisor_comments) supervisorCommentsOM = formData.data.supervisor_comments;
+                if (!supervisorSigOM && formData.data.supervisor_signature) supervisorSigOM = formData.data.supervisor_signature;
+                if (!supervisorSigOM && formData.data.supervisor_signature_url) supervisorSigOM = formData.data.supervisor_signature_url;
+              }
             }
             
             if ((!supervisorCommentsOM || !supervisorSigOM) && submissionData && submissionData.form_data) {
@@ -5777,11 +5784,21 @@
               if (checkFormData) {
                 if (!supervisorCommentsOM && checkFormData.supervisor_comments) supervisorCommentsOM = checkFormData.supervisor_comments;
                 if (!supervisorSigOM && checkFormData.supervisor_signature) supervisorSigOM = checkFormData.supervisor_signature;
+                if (!supervisorSigOM && checkFormData.supervisor_signature_url) supervisorSigOM = checkFormData.supervisor_signature_url;
+                // Check nested checkFormData.data
+                if ((!supervisorCommentsOM || !supervisorSigOM) && checkFormData.data && typeof checkFormData.data === 'object') {
+                  if (!supervisorCommentsOM && checkFormData.data.supervisor_comments) supervisorCommentsOM = checkFormData.data.supervisor_comments;
+                  if (!supervisorSigOM && checkFormData.data.supervisor_signature) supervisorSigOM = checkFormData.data.supervisor_signature;
+                  if (!supervisorSigOM && checkFormData.data.supervisor_signature_url) supervisorSigOM = checkFormData.data.supervisor_signature_url;
+                }
               }
             }
             
             if (!supervisorCommentsOM && submissionData && submissionData.supervisor_comments) {
               supervisorCommentsOM = submissionData.supervisor_comments;
+            }
+            if (!supervisorSigOM && submissionData && submissionData.supervisor_signature) {
+              supervisorSigOM = submissionData.supervisor_signature;
             }
             
             console.log('🔍 OM - Final supervisor data:');
@@ -6010,6 +6027,12 @@
             if (formData) {
               if (formData.supervisor_comments) supervisorCommentsBD = formData.supervisor_comments;
               if (formData.supervisor_signature) supervisorSigBD = formData.supervisor_signature;
+              if (!supervisorSigBD && formData.supervisor_signature_url) supervisorSigBD = formData.supervisor_signature_url;
+              if ((!supervisorCommentsBD || !supervisorSigBD) && formData.data && typeof formData.data === 'object') {
+                if (!supervisorCommentsBD && formData.data.supervisor_comments) supervisorCommentsBD = formData.data.supervisor_comments;
+                if (!supervisorSigBD && formData.data.supervisor_signature) supervisorSigBD = formData.data.supervisor_signature;
+                if (!supervisorSigBD && formData.data.supervisor_signature_url) supervisorSigBD = formData.data.supervisor_signature_url;
+              }
             }
             
             // Check submissionData.form_data
@@ -6021,6 +6044,12 @@
               if (checkFormData) {
                 if (!supervisorCommentsBD && checkFormData.supervisor_comments) supervisorCommentsBD = checkFormData.supervisor_comments;
                 if (!supervisorSigBD && checkFormData.supervisor_signature) supervisorSigBD = checkFormData.supervisor_signature;
+                if (!supervisorSigBD && checkFormData.supervisor_signature_url) supervisorSigBD = checkFormData.supervisor_signature_url;
+                if ((!supervisorCommentsBD || !supervisorSigBD) && checkFormData.data && typeof checkFormData.data === 'object') {
+                  if (!supervisorCommentsBD && checkFormData.data.supervisor_comments) supervisorCommentsBD = checkFormData.data.supervisor_comments;
+                  if (!supervisorSigBD && checkFormData.data.supervisor_signature) supervisorSigBD = checkFormData.data.supervisor_signature;
+                  if (!supervisorSigBD && checkFormData.data.supervisor_signature_url) supervisorSigBD = checkFormData.data.supervisor_signature_url;
+                }
               }
             }
             
@@ -6505,6 +6534,12 @@
           if (formData) {
             if (formData.supervisor_comments) supervisorCommentsProc = formData.supervisor_comments;
             if (formData.supervisor_signature) supervisorSigProc = formData.supervisor_signature;
+            if (!supervisorSigProc && formData.supervisor_signature_url) supervisorSigProc = formData.supervisor_signature_url;
+            if ((!supervisorCommentsProc || !supervisorSigProc) && formData.data && typeof formData.data === 'object') {
+              if (!supervisorCommentsProc && formData.data.supervisor_comments) supervisorCommentsProc = formData.data.supervisor_comments;
+              if (!supervisorSigProc && formData.data.supervisor_signature) supervisorSigProc = formData.data.supervisor_signature;
+              if (!supervisorSigProc && formData.data.supervisor_signature_url) supervisorSigProc = formData.data.supervisor_signature_url;
+            }
           }
           
           // Check submissionData.form_data
@@ -6516,6 +6551,12 @@
             if (checkFormData) {
               if (!supervisorCommentsProc && checkFormData.supervisor_comments) supervisorCommentsProc = checkFormData.supervisor_comments;
               if (!supervisorSigProc && checkFormData.supervisor_signature) supervisorSigProc = checkFormData.supervisor_signature;
+              if (!supervisorSigProc && checkFormData.supervisor_signature_url) supervisorSigProc = checkFormData.supervisor_signature_url;
+              if ((!supervisorCommentsProc || !supervisorSigProc) && checkFormData.data && typeof checkFormData.data === 'object') {
+                if (!supervisorCommentsProc && checkFormData.data.supervisor_comments) supervisorCommentsProc = checkFormData.data.supervisor_comments;
+                if (!supervisorSigProc && checkFormData.data.supervisor_signature) supervisorSigProc = checkFormData.data.supervisor_signature;
+                if (!supervisorSigProc && checkFormData.data.supervisor_signature_url) supervisorSigProc = checkFormData.data.supervisor_signature_url;
+              }
             }
           }
           
@@ -6817,6 +6858,12 @@
           if (formData) {
             if (formData.supervisor_comments) supervisorCommentsAdmin = formData.supervisor_comments;
             if (formData.supervisor_signature) supervisorSigAdmin = formData.supervisor_signature;
+            if (!supervisorSigAdmin && formData.supervisor_signature_url) supervisorSigAdmin = formData.supervisor_signature_url;
+            if ((!supervisorCommentsAdmin || !supervisorSigAdmin) && formData.data && typeof formData.data === 'object') {
+              if (!supervisorCommentsAdmin && formData.data.supervisor_comments) supervisorCommentsAdmin = formData.data.supervisor_comments;
+              if (!supervisorSigAdmin && formData.data.supervisor_signature) supervisorSigAdmin = formData.data.supervisor_signature;
+              if (!supervisorSigAdmin && formData.data.supervisor_signature_url) supervisorSigAdmin = formData.data.supervisor_signature_url;
+            }
           }
           
           if ((!supervisorCommentsAdmin || !supervisorSigAdmin) && submissionData && submissionData.form_data) {
@@ -6827,6 +6874,12 @@
             if (checkFormData) {
               if (!supervisorCommentsAdmin && checkFormData.supervisor_comments) supervisorCommentsAdmin = checkFormData.supervisor_comments;
               if (!supervisorSigAdmin && checkFormData.supervisor_signature) supervisorSigAdmin = checkFormData.supervisor_signature;
+              if (!supervisorSigAdmin && checkFormData.supervisor_signature_url) supervisorSigAdmin = checkFormData.supervisor_signature_url;
+              if ((!supervisorCommentsAdmin || !supervisorSigAdmin) && checkFormData.data && typeof checkFormData.data === 'object') {
+                if (!supervisorCommentsAdmin && checkFormData.data.supervisor_comments) supervisorCommentsAdmin = checkFormData.data.supervisor_comments;
+                if (!supervisorSigAdmin && checkFormData.data.supervisor_signature) supervisorSigAdmin = checkFormData.data.supervisor_signature;
+                if (!supervisorSigAdmin && checkFormData.data.supervisor_signature_url) supervisorSigAdmin = checkFormData.data.supervisor_signature_url;
+              }
             }
           }
           
@@ -7052,6 +7105,12 @@
           if (formData) {
             if (formData.supervisor_comments) supervisorCommentsGM = formData.supervisor_comments;
             if (formData.supervisor_signature) supervisorSigGM = formData.supervisor_signature;
+            if (!supervisorSigGM && formData.supervisor_signature_url) supervisorSigGM = formData.supervisor_signature_url;
+            if ((!supervisorCommentsGM || !supervisorSigGM) && formData.data && typeof formData.data === 'object') {
+              if (!supervisorCommentsGM && formData.data.supervisor_comments) supervisorCommentsGM = formData.data.supervisor_comments;
+              if (!supervisorSigGM && formData.data.supervisor_signature) supervisorSigGM = formData.data.supervisor_signature;
+              if (!supervisorSigGM && formData.data.supervisor_signature_url) supervisorSigGM = formData.data.supervisor_signature_url;
+            }
           }
           
           if ((!supervisorCommentsGM || !supervisorSigGM) && submissionData && submissionData.form_data) {
@@ -7062,6 +7121,12 @@
             if (checkFormData) {
               if (!supervisorCommentsGM && checkFormData.supervisor_comments) supervisorCommentsGM = checkFormData.supervisor_comments;
               if (!supervisorSigGM && checkFormData.supervisor_signature) supervisorSigGM = checkFormData.supervisor_signature;
+              if (!supervisorSigGM && checkFormData.supervisor_signature_url) supervisorSigGM = checkFormData.supervisor_signature_url;
+              if ((!supervisorCommentsGM || !supervisorSigGM) && checkFormData.data && typeof checkFormData.data === 'object') {
+                if (!supervisorCommentsGM && checkFormData.data.supervisor_comments) supervisorCommentsGM = checkFormData.data.supervisor_comments;
+                if (!supervisorSigGM && checkFormData.data.supervisor_signature) supervisorSigGM = checkFormData.data.supervisor_signature;
+                if (!supervisorSigGM && checkFormData.data.supervisor_signature_url) supervisorSigGM = checkFormData.data.supervisor_signature_url;
+              }
             }
           }
           

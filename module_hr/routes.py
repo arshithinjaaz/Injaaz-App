@@ -10,7 +10,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import db, User, Submission, Notification
 
 from .print_utils import render_form_for_print
-from .docx_service import generate_hr_docx
+from .docx_service import generate_hr_docx, get_supported_docx_forms
 
 hr_bp = Blueprint('hr', __name__, template_folder='templates')
 
@@ -212,7 +212,7 @@ def hr_dashboard():
     if user.role != 'admin' and not is_hr and not is_gm:
         return redirect('/hr/my-requests')
     
-    return render_template('hr_dashboard.html', user=user)
+    return render_template('hr_dashboard.html', user=user, supported_docx_forms=get_supported_docx_forms())
 
 
 @hr_bp.route('/pending-review')
@@ -228,7 +228,7 @@ def pending_review():
     if user.role != 'admin' and not is_hr:
         return jsonify({'error': 'Access denied'}), 403
     
-    return render_template('hr_pending_review.html', user=user)
+    return render_template('hr_pending_review.html', user=user, supported_docx_forms=get_supported_docx_forms())
 
 
 @hr_bp.route('/approved-forms')
@@ -242,7 +242,7 @@ def approved_forms():
     is_gm = user.designation == 'general_manager'
     if user.role != 'admin' and not is_hr and not is_gm:
         return jsonify({'error': 'Access denied'}), 403
-    return render_template('hr_approved_forms.html', user=user)
+    return render_template('hr_approved_forms.html', user=user, supported_docx_forms=get_supported_docx_forms())
 
 
 @hr_bp.route('/gm-approval')
@@ -257,7 +257,7 @@ def gm_approval():
     if user.role != 'admin' and user.designation != 'general_manager':
         return jsonify({'error': 'Access denied'}), 403
     
-    return render_template('hr_gm_approval.html', user=user)
+    return render_template('hr_gm_approval.html', user=user, supported_docx_forms=get_supported_docx_forms())
 
 
 @hr_bp.route('/print/<submission_id>')

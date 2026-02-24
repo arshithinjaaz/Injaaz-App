@@ -1,7 +1,7 @@
 {
   "name": "injaaz-app",
   "version": "1.0.0",
-  "description": "Injaaz Professional Site Reporting - Native Mobile App",
+  "description": "Injaaz Application - All Operations. One Platform. - Native Mobile App",
   "main": "index.js",
   "scripts": {
     "build": "echo 'Build your Flask app'",

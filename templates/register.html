@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-    <title>Register - Injaaz Site Visit App</title>
+    <title>Register - Injaaz Application</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
     <style>
@@ -227,7 +227,7 @@
         </div>
         
         <h1>Create Account</h1>
-        <p class="subtitle">Sign up to get started with Injaaz</p>
+        <p class="subtitle">Sign up to get started with Injaaz Application</p>
         
         <div id="error-message" class="error-message"></div>
         <div id="success-message" class="success-message"></div>
@@ -347,5 +347,6 @@
             }
         });
     </script>
+    <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
 </body>
 </html>

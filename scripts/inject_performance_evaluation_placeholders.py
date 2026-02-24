@@ -51,12 +51,12 @@ def inject(doc_path, backup=True):
     t3.rows[7].cells[1].text = "{{ evaluator_signature }}"
     t3.rows[7].cells[4].text = "{{ evaluator_sign_date }}"
 
-    # Table 4: Manager / GM / HR
+    # Table 4: Manager / GM / HR (include HR/GM comments + signatures for print copy)
     t4 = doc.tables[4]
     t4.rows[0].cells[1].text = "{{ concern_incharge_name }}"
     t4.rows[1].cells[1].text = "{{ incharge_comments }}"
-    t4.rows[2].cells[1].text = "{{ gm_remarks }}"
-    t4.rows[4].cells[1].text = "{{ hr_remarks }}"
+    t4.rows[2].cells[1].text = "{{ gm_remarks }}\n\n{{ gm_signature }}"
+    t4.rows[4].cells[1].text = "{{ hr_remarks }}\n\n{{ hr_signature }}"
 
     doc.save(doc_path)
     print("Placeholders injected. Saved:", doc_path)

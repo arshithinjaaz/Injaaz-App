@@ -20,6 +20,7 @@ from common.utils import (
     save_uploaded_file,
     save_uploaded_file_cloud,
     upload_base64_to_cloud,
+    is_path_safe_for_directory,
 )
 from common.error_responses import error_response, success_response
 from common.db_utils import (
@@ -284,6 +285,20 @@ def index():
                     form_data = json.loads(form_data)
                 except:
                     form_data = {}
+            
+            # Merge Supervisor data from nested form_data.data if not already present
+            # This ensures OM and other reviewers can see supervisor signature/comments
+            if not form_data.get('supervisor_signature') and not form_data.get('supervisor_signature_url'):
+                if isinstance(submission.form_data, dict):
+                    nested_data = submission.form_data.get('data') if isinstance(submission.form_data.get('data'), dict) else {}
+                    if nested_data and (nested_data.get('supervisor_signature') or nested_data.get('supervisor_signature_url')):
+                        form_data['supervisor_signature'] = nested_data.get('supervisor_signature') or nested_data.get('supervisor_signature_url')
+                        logger.info(f"✅ Found Supervisor signature in nested form_data.data structure")
+            if not form_data.get('supervisor_comments') and isinstance(submission.form_data, dict):
+                nested_data = submission.form_data.get('data') if isinstance(submission.form_data.get('data'), dict) else {}
+                if nested_data and nested_data.get('supervisor_comments'):
+                    form_data['supervisor_comments'] = nested_data.get('supervisor_comments')
+                    logger.info(f"✅ Found Supervisor comments in nested form_data.data structure")
             
             # Merge Operations Manager comments from model field into form_data if not already present
             # This ensures BD and other reviewers can see OM comments even if not in form_data
@@ -874,6 +889,10 @@ def download_file(job_id, file_type):
             local_filename = unquote(full_path.lstrip('/').replace('generated/', ''))
             local_path = os.path.join(GENERATED_DIR, local_filename)
             
+            if not is_path_safe_for_directory(GENERATED_DIR, local_path):
+                logger.warning(f"Path traversal attempt blocked: {local_path}")
+                return error_response("Invalid file path", status_code=403, error_code='FORBIDDEN')
+            
             logger.debug(f"Local URL detected, serving from filesystem: {local_path}")
             
             if not os.path.exists(local_path):
@@ -928,6 +947,10 @@ def download_file(job_id, file_type):
             # Remove leading slash and 'generated/' if present
             local_filename = file_url.lstrip('/').replace('generated/', '')
             local_path = os.path.join(GENERATED_DIR, local_filename)
+            
+            if not is_path_safe_for_directory(GENERATED_DIR, local_path):
+                logger.warning(f"Path traversal attempt blocked: {local_path}")
+                return error_response("Invalid file path", status_code=403, error_code='FORBIDDEN')
             
             if not os.path.exists(local_path):
                 return error_response("File not found locally", status_code=404, error_code='NOT_FOUND')
