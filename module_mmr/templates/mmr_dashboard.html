@@ -1,0 +1,1080 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <title>Report Generation – Injaaz</title>
+  <link rel="icon" type="image/png" href="/static/logo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/mobile_responsive.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary:       #125435;
+      --primary-light: #1a7a4d;
+      --primary-dark:  #0d3d24;
+      --accent:        #E8F5E9;
+      --accent2:       #c8e6c9;
+      --text:          #1a1a1a;
+      --text-muted:    #6b6b6b;
+      --bg:            #f5f7f5;
+      --white:         #ffffff;
+      --border:        #e5e7eb;
+      --success:       #10b981;
+      --danger:        #ef4444;
+      --warning:       #f59e0b;
+      --info:          #3b82f6;
+      --radius:        10px;
+      --shadow:        0 2px 12px rgba(0,0,0,.07);
+    }
+
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── Navbar ── */
+    .navbar {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: #fff; padding: 1rem 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,.15);
+    }
+    .navbar-inner {
+      max-width: 1600px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .navbar-brand {
+      display: flex; align-items: center; gap: .75rem;
+      text-decoration: none; color: #fff; font-size: 1.3rem; font-weight: 700;
+    }
+    .navbar-brand img { height: 36px; }
+    .nav-actions { display: flex; gap: .75rem; }
+    .btn {
+      padding: .55rem 1.1rem; border: none; border-radius: 7px;
+      font-size: .9rem; font-weight: 500; cursor: pointer;
+      transition: all .2s; text-decoration: none;
+      display: inline-flex; align-items: center; gap: .4rem;
+    }
+    .btn-white  { background: #fff; color: var(--primary); }
+    .btn-white:hover { background: var(--accent); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-light); }
+    .btn-outline {
+      background: transparent; color: var(--primary);
+      border: 1.5px solid var(--primary);
+    }
+    .btn-outline:hover { background: var(--accent); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover { filter: brightness(1.1); }
+    .btn-danger  { background: var(--danger); color: #fff; }
+    .btn-danger:hover  { filter: brightness(1.1); }
+    .btn-warning { background: var(--warning); color: #fff; }
+    .btn-warning:hover { filter: brightness(1.1); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-sm { padding: .35rem .75rem; font-size: .8rem; }
+
+    /* ── Page shell ── */
+    .page { max-width: 1600px; margin: 0 auto; padding: 1.5rem 2rem; }
+
+    /* ── Upload zone ── */
+    .upload-zone {
+      background: var(--white); border-radius: var(--radius);
+      border: 2.5px dashed var(--primary-light);
+      padding: 3rem 2rem; text-align: center;
+      cursor: pointer; transition: all .2s;
+      box-shadow: var(--shadow); margin-bottom: 2rem;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      background: var(--accent); border-color: var(--primary);
+    }
+    .upload-icon { font-size: 3rem; margin-bottom: .75rem; }
+    .upload-zone h3 { font-size: 1.15rem; font-weight: 600; color: var(--primary); margin-bottom: .4rem; }
+    .upload-zone p  { color: var(--text-muted); font-size: .9rem; }
+    #fileInput { display: none; }
+    .upload-progress {
+      display: none; margin-top: 1rem; height: 6px;
+      background: var(--accent2); border-radius: 99px; overflow: hidden;
+    }
+    .upload-progress-bar {
+      height: 100%; width: 0; background: var(--primary);
+      border-radius: 99px; transition: width .3s;
+    }
+
+    /* ── Alert ── */
+    .alert {
+      padding: .9rem 1.2rem; border-radius: 8px; margin-bottom: 1.5rem;
+      display: flex; align-items: center; gap: .6rem; font-size: .9rem;
+    }
+    .alert-success { background: #d1fae5; color: #065f46; border-left: 4px solid var(--success); }
+    .alert-danger   { background: #fee2e2; color: #991b1b; border-left: 4px solid var(--danger); }
+    .alert-info     { background: #dbeafe; color: #1e3a8a; border-left: 4px solid var(--info); }
+
+    /* ── Section card ── */
+    .card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 1.5rem; margin-bottom: 1.5rem;
+    }
+    .card-title {
+      font-size: 1.05rem; font-weight: 700; color: var(--primary);
+      margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem;
+    }
+
+    /* ── Summary cards ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .kpi {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 1.1rem 1.2rem;
+      text-align: center; border-top: 3px solid var(--primary);
+    }
+    .kpi-value { font-size: 2rem; font-weight: 700; color: var(--primary); line-height: 1; }
+    .kpi-label { font-size: .78rem; color: var(--text-muted); margin-top: .35rem; text-transform: uppercase; letter-spacing: .4px; }
+    .kpi.accent { border-top-color: var(--info); }
+    .kpi.accent .kpi-value { color: var(--info); }
+    .kpi.warn   { border-top-color: var(--warning); }
+    .kpi.warn   .kpi-value { color: var(--warning); }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      display: flex; flex-wrap: wrap; gap: .75rem; align-items: center;
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .filter-bar label { font-size: .8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+    .filter-select {
+      padding: .45rem .75rem; border: 1.5px solid var(--border);
+      border-radius: 7px; font-size: .85rem; color: var(--text);
+      background: var(--white); cursor: pointer; transition: border .2s;
+      min-width: 140px;
+    }
+    .filter-select:focus { outline: none; border-color: var(--primary); }
+    .filter-reset {
+      margin-left: auto; background: transparent; color: var(--primary);
+      border: 1.5px solid var(--primary); border-radius: 7px;
+      padding: .4rem .9rem; font-size: .82rem; cursor: pointer;
+    }
+    .filter-reset:hover { background: var(--accent); }
+
+    /* ── Charts grid ── */
+    .charts-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+    .charts-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+    .chart-card   { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.2rem; }
+    .chart-label  { font-size: .9rem; font-weight: 600; color: var(--primary); margin-bottom: .75rem; text-align: center; }
+    .chart-wrap   { position: relative; }
+
+    /* ── Table ── */
+    .table-controls {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: .75rem; margin-bottom: .75rem;
+    }
+    .search-box {
+      padding: .45rem .8rem; border: 1.5px solid var(--border);
+      border-radius: 7px; font-size: .85rem; width: 280px; max-width: 100%;
+    }
+    .search-box:focus { outline: none; border-color: var(--primary); }
+    .table-scroll { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+    table.data-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+    table.data-table thead th {
+      background: var(--primary); color: #fff;
+      padding: .75rem 1rem; font-size: .8rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .4px;
+      cursor: pointer; user-select: none; white-space: nowrap;
+    }
+    table.data-table thead th:hover { background: var(--primary-light); }
+    table.data-table thead th .sort-arrow { font-size: .7rem; opacity: .6; margin-left: .3rem; }
+    table.data-table tbody tr:nth-child(even) { background: var(--accent); }
+    table.data-table tbody tr:hover { background: #d0f0dd; }
+    table.data-table tbody td {
+      padding: .6rem 1rem; font-size: .85rem;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    .badge-status {
+      padding: .2rem .6rem; border-radius: 12px; font-size: .75rem; font-weight: 600;
+    }
+    .badge-pending  { background: #fef3c7; color: #92400e; }
+    .badge-completed{ background: #d1fae5; color: #065f46; }
+    .badge-closed   { background: #e5e7eb; color: #374151; }
+    .badge-open     { background: #dbeafe; color: #1e40af; }
+    .badge-p1 { background: #fee2e2; color: #991b1b; }
+    .badge-p2 { background: #fef3c7; color: #92400e; }
+    .badge-p3 { background: #dbeafe; color: #1e40af; }
+    .pagination {
+      display: flex; align-items: center; gap: .5rem; margin-top: 1rem;
+      justify-content: flex-end; flex-wrap: wrap;
+    }
+    .pagination button {
+      padding: .35rem .7rem; border: 1.5px solid var(--border);
+      border-radius: 6px; cursor: pointer; font-size: .82rem;
+      background: var(--white); transition: all .15s;
+    }
+    .pagination button.active,
+    .pagination button:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .page-info { font-size: .82rem; color: var(--text-muted); }
+
+    /* ── Email panel ── */
+    .email-section { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .form-group    { margin-bottom: 1rem; }
+    .form-label    { font-size: .83rem; font-weight: 600; color: var(--text); display: block; margin-bottom: .4rem; }
+    .form-input, .form-textarea {
+      width: 100%; padding: .55rem .8rem;
+      border: 1.5px solid var(--border); border-radius: 7px;
+      font-size: .88rem; font-family: inherit; color: var(--text);
+      transition: border .2s;
+    }
+    .form-input:focus, .form-textarea:focus { outline: none; border-color: var(--primary); }
+    .form-input.input-error { border-color: #e53e3e; background: #fff5f5; }
+    .field-error { font-size: .75rem; color: #e53e3e; margin-top: .25rem; min-height: 1rem; }
+    .form-textarea { min-height: 120px; resize: vertical; }
+    .schedule-row {
+      display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+      padding: 1rem; background: var(--accent); border-radius: 8px;
+      margin-top: .5rem;
+    }
+    .toggle-wrap { display: flex; align-items: center; gap: .5rem; }
+    .toggle { position: relative; width: 42px; height: 22px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; background: #ccc;
+      border-radius: 22px; cursor: pointer; transition: .3s;
+    }
+    .slider::before {
+      content: ''; position: absolute; height: 16px; width: 16px;
+      left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .3s;
+    }
+    input:checked + .slider { background: var(--primary); }
+    input:checked + .slider::before { transform: translateX(20px); }
+    .time-input {
+      padding: .45rem .7rem; border: 1.5px solid var(--border);
+      border-radius: 7px; font-size: .88rem; width: 90px;
+    }
+    .time-input:focus { outline: none; border-color: var(--primary); }
+
+    /* ── Hidden ── */
+    .hidden { display: none !important; }
+
+    /* ── Toast ── */
+    #toast-container {
+      position: fixed; top: 1.25rem; right: 1.25rem; z-index: 9999;
+      display: flex; flex-direction: column; gap: .5rem;
+    }
+    .toast {
+      padding: .85rem 1.25rem; border-radius: 8px; font-size: .88rem;
+      font-weight: 500; color: #fff; min-width: 240px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.15);
+      animation: slideIn .25s ease-out;
+    }
+    .toast-success { background: var(--success); }
+    .toast-error   { background: var(--danger); }
+    .toast-info    { background: var(--info); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .charts-row, .charts-row-3, .email-section { grid-template-columns: 1fr; }
+      .page { padding: 1rem; }
+    }
+    @media (max-width: 768px) {
+      .navbar { padding: .75rem 1rem; }
+      .navbar-inner { flex-wrap: wrap; gap: 0.5rem; }
+      .navbar-brand { font-size: 1.05rem; }
+      .navbar-brand img { height: 28px; }
+      .nav-actions { 
+        width: 100%; 
+        justify-content: flex-end; 
+        gap: 0.5rem;
+      }
+      .nav-actions .btn {
+        font-size: 0.8rem;
+        padding: 0.45rem 0.75rem;
+      }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+      .card { padding: 1rem; }
+      .card-title { font-size: 0.95rem; }
+      .upload-zone { padding: 2rem 1rem; }
+      .upload-zone h3 { font-size: 1rem; }
+      .upload-zone p { font-size: 0.8rem; }
+      .schedule-row { flex-direction: column; align-items: stretch; }
+    }
+    @media (max-width: 480px) {
+      .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+      .kpi { padding: 0.875rem; }
+      .kpi .kpi-val { font-size: 1.5rem; }
+      .kpi .kpi-label { font-size: 0.7rem; }
+      .navbar-brand { font-size: 0.9rem; gap: 0.5rem; }
+      .navbar-brand img { height: 24px; }
+      .page { padding: 0.75rem; }
+      .form-input, .form-textarea { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/admin/dashboard" class="navbar-brand">
+      <img src="/static/logo.png" alt="Injaaz">
+      Report Generation
+    </a>
+    <div class="nav-actions">
+      <button class="btn btn-white btn-sm" id="btnDownloadReport" onclick="downloadReport()" disabled>
+        📥 Download Report
+      </button>
+      <a href="/admin/dashboard" class="btn btn-white btn-sm">← Admin</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+  <!-- Alert -->
+  <div id="alertBox"></div>
+
+  <!-- Upload Zone -->
+  <div class="upload-zone" id="uploadZone"
+       ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)"
+       onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">📊</div>
+    <h3>Upload MMR Excel File</h3>
+    <p>Drag &amp; drop your <strong>Reactive Work Order</strong> Excel here, or click to browse</p>
+    <p style="margin-top:.4rem;font-size:.78rem;color:#aaa;">Supports .xlsx · .xls</p>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="onFileSelected(event)">
+    <div class="upload-progress" id="uploadProgress">
+      <div class="upload-progress-bar" id="uploadProgressBar"></div>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD (hidden until data loads) ── -->
+  <div id="dashboardSection" class="hidden">
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar" id="filterBar">
+      <label>Client</label>
+      <select class="filter-select" id="fClient" onchange="applyFilters()"><option value="">All</option></select>
+      <label>Contract</label>
+      <select class="filter-select" id="fContract" onchange="applyFilters()"><option value="">All</option></select>
+      <label>Service Group</label>
+      <select class="filter-select" id="fServiceGroup" onchange="applyFilters()"><option value="">All</option></select>
+      <label>Space</label>
+      <select class="filter-select" id="fSpace" onchange="applyFilters()"><option value="">All</option></select>
+      <label>Status</label>
+      <select class="filter-select" id="fStatus" onchange="applyFilters()"><option value="">All</option></select>
+      <label>Priority</label>
+      <select class="filter-select" id="fPriority" onchange="applyFilters()"><option value="">All</option></select>
+      <button class="filter-reset" onclick="resetFilters()">✕ Reset</button>
+    </div>
+
+    <!-- Charts row 1: Client + Contract -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-label">📋 Work Orders by Client</div>
+        <div class="chart-wrap" style="height:260px">
+          <canvas id="chartClient"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-label">📁 Work Orders by Contract</div>
+        <div class="chart-wrap" style="height:260px">
+          <canvas id="chartContract"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts row 2: Service Group + Space + Status -->
+    <div class="charts-row-3">
+      <div class="chart-card">
+        <div class="chart-label">🔧 By Service Group</div>
+        <div class="chart-wrap" style="height:260px">
+          <canvas id="chartServiceGroup"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-label">💰 Chargeable vs Non-Chargeable</div>
+        <div class="chart-wrap" style="height:260px">
+          <canvas id="chartSpace"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-label">⚡ Work Orders by Priority</div>
+        <div class="chart-wrap" style="height:260px">
+          <canvas id="chartPriority"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Work Orders Table -->
+    <div class="card">
+      <div class="card-title">📋 Work Orders Detail</div>
+      <div class="table-controls">
+        <input class="search-box" id="searchBox" placeholder="🔍 Search work orders…"
+               oninput="applyFilters()">
+        <span class="page-info" id="tableInfo"></span>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table" id="dataTable">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="paginationBar"></div>
+    </div>
+
+    <!-- Email Panel -->
+    <div class="card" id="emailCard">
+      <div class="card-title">📧 Email Report</div>
+      <div class="email-section">
+        <!-- Compose -->
+        <div>
+          <div class="form-group">
+            <label class="form-label">
+              To <span style="color:red">*</span>
+              <span style="font-weight:400;color:var(--text-muted);font-size:.75rem;margin-left:.4rem;">(@injaaz.ae only)</span>
+            </label>
+            <input class="form-input" id="emailTo" type="text"
+                   placeholder="name@injaaz.ae, name2@injaaz.ae"
+                   oninput="validateEmailField(this)">
+            <div class="field-error" id="emailToError"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              CC
+              <span style="font-weight:400;color:var(--text-muted);font-size:.75rem;margin-left:.4rem;">(@injaaz.ae only)</span>
+            </label>
+            <input class="form-input" id="emailCc" type="text"
+                   placeholder="name@injaaz.ae"
+                   oninput="validateEmailField(this)">
+            <div class="field-error" id="emailCcError"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subject</label>
+            <input class="form-input" id="emailSubject" type="text">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Body</label>
+            <textarea class="form-textarea" id="emailBody"></textarea>
+          </div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+            <button class="btn btn-success" id="btnSendEmail" onclick="sendEmailNow()">
+              ✉️ Send Email Now
+            </button>
+            <button class="btn btn-outline" onclick="saveEmailConfig()">
+              💾 Save Config
+            </button>
+          </div>
+        </div>
+
+        <!-- Schedule -->
+        <div>
+          <div class="card-title" style="margin-bottom:.75rem">⏰ Daily Schedule</div>
+          <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem">
+            Automatically send the report every day at the configured time (using the last uploaded Excel file).
+          </p>
+          <div class="schedule-row">
+            <div class="toggle-wrap">
+              <label class="toggle">
+                <input type="checkbox" id="scheduleEnabled" onchange="onScheduleToggle()">
+                <span class="slider"></span>
+              </label>
+              <span style="font-size:.88rem;font-weight:600">Enable daily schedule</span>
+            </div>
+            <label style="font-size:.85rem;font-weight:600">Send at:</label>
+            <input class="time-input" type="number" id="scheduleHour"
+                   min="0" max="23" placeholder="10" value="10">
+            <span style="font-weight:700">:</span>
+            <input class="time-input" type="number" id="scheduleMinute"
+                   min="0" max="59" placeholder="00" value="0">
+            <span style="font-size:.78rem;color:var(--text-muted)">(24h, GST)</span>
+          </div>
+          <div style="margin-top:1rem">
+            <button class="btn btn-primary btn-sm" onclick="saveSchedule()">
+              ✔ Save Schedule
+            </button>
+            <span id="scheduleStatus" style="margin-left:.75rem;font-size:.83rem;color:var(--text-muted)"></span>
+          </div>
+          <div style="margin-top:1.5rem;padding:1rem;background:var(--accent);border-radius:8px">
+            <p style="font-size:.82rem;font-weight:600;color:var(--primary);margin-bottom:.4rem">ℹ️ Note</p>
+            <p style="font-size:.82rem;color:var(--text-muted)">
+              The scheduled email uses the <em>last uploaded</em> Excel file.
+              Upload a fresh file and re-save to refresh the data.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /dashboardSection -->
+</div><!-- /page -->
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// State
+// ════════════════════════════════════════════════════════════════
+let allRows = [];
+let filteredRows = [];
+let currentPage = 1;
+const PAGE_SIZE = 20;
+let sortCol = null;
+let sortDir = 1;
+
+const COLS = ['WorkOrder No','Reported Date','Priority','Work Description',
+              'Client','Reported By','Service Group','Assigned Date',
+              'Work Start Date','Closed By','Status','Contract','BaseUnit','Space'];
+
+const CHART_COLORS = [
+  '#125435','#1a7a4d','#2E7D32','#388E3C','#43A047',
+  '#4CAF50','#66BB6A','#81C784','#A5D6A7','#C8E6C9',
+  '#33691E','#558B2F','#689F38','#7CB342','#8BC34A',
+];
+
+let charts = {};
+let dashboardData = null;
+
+// ════════════════════════════════════════════════════════════════
+// Auth helper
+// ════════════════════════════════════════════════════════════════
+async function getToken() {
+  let token = localStorage.getItem('access_token');
+  if (!token) return null;
+  return token;
+}
+
+async function authFetch(url, opts = {}) {
+  let token = await getToken();
+  const headers = { ...(opts.headers || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const resp = await fetch(url, { ...opts, headers });
+  if (resp.status === 401) {
+    // Try refresh
+    const refresh = localStorage.getItem('refresh_token');
+    if (refresh) {
+      const r = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${refresh}` }
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.access_token) {
+          localStorage.setItem('access_token', d.access_token);
+          headers['Authorization'] = `Bearer ${d.access_token}`;
+          return fetch(url, { ...opts, headers });
+        }
+      }
+    }
+    window.location.href = '/login';
+  }
+  return resp;
+}
+
+// ════════════════════════════════════════════════════════════════
+// Toast
+// ════════════════════════════════════════════════════════════════
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ════════════════════════════════════════════════════════════════
+// Upload handlers
+// ════════════════════════════════════════════════════════════════
+function onDragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag-over'); }
+function onDragLeave()  { document.getElementById('uploadZone').classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) uploadFile(file);
+}
+function onFileSelected(e) { if (e.target.files[0]) uploadFile(e.target.files[0]); }
+
+async function uploadFile(file) {
+  const prog = document.getElementById('uploadProgress');
+  const bar  = document.getElementById('uploadProgressBar');
+  prog.style.display = 'block'; bar.style.width = '30%';
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try {
+    bar.style.width = '60%';
+    const resp = await authFetch('/admin/mmr/api/upload', { method: 'POST', body: fd });
+    bar.style.width = '100%';
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Upload failed');
+    allRows = data.rows;
+    dashboardData = data.dashboard;
+    renderDashboard(dashboardData);
+    filterRows();
+    toast(`✅ Loaded ${data.total} work orders`, 'success');
+    document.getElementById('btnDownloadReport').disabled = false;
+    document.getElementById('dashboardSection').classList.remove('hidden');
+    document.getElementById('uploadZone').style.borderColor = 'var(--success)';
+  } catch(err) {
+    setAlert(err.message, 'danger');
+    toast(err.message, 'error');
+  } finally {
+    setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0'; }, 600);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// Dashboard render
+// ════════════════════════════════════════════════════════════════
+function renderDashboard(d) {
+  renderKPIs(d);
+  populateFilters(d.filters);
+  renderAllCharts(d);
+  buildTableHeader();
+}
+
+function renderKPIs(d) {
+  const priorities = d.by_priority || {};
+  const statuses   = d.by_status   || {};
+  let pending = 0;
+  for (const [k, v] of Object.entries(statuses)) {
+    if (k.toLowerCase().includes('pend')) pending += v;
+  }
+  const p1 = priorities['P1'] || 0;
+  const p2 = priorities['P2'] || 0;
+  const p3 = priorities['P3'] || 0;
+  const contracts = Object.keys(d.by_contract || {}).length;
+  const clients   = Object.keys(d.by_client  || {}).length;
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi"><div class="kpi-value">${d.total}</div><div class="kpi-label">Total Work Orders</div></div>
+    <div class="kpi warn"><div class="kpi-value">${pending}</div><div class="kpi-label">Pending</div></div>
+    <div class="kpi accent"><div class="kpi-value">${p1}</div><div class="kpi-label">Priority P1 (Urgent)</div></div>
+    <div class="kpi"><div class="kpi-value">${p2 || '–'}</div><div class="kpi-label">Priority P2</div></div>
+    <div class="kpi"><div class="kpi-value">${p3}</div><div class="kpi-label">Priority P3</div></div>
+    <div class="kpi"><div class="kpi-value">${clients}</div><div class="kpi-label">Clients</div></div>
+    <div class="kpi"><div class="kpi-value">${contracts}</div><div class="kpi-label">Contracts</div></div>
+  `;
+}
+
+function populateFilters(filters) {
+  const map = {
+    fClient: filters.clients, fContract: filters.contracts,
+    fServiceGroup: filters.service_groups, fSpace: filters.spaces,
+    fStatus: filters.statuses, fPriority: filters.priorities,
+  };
+  for (const [id, vals] of Object.entries(map)) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">All</option>';
+    (vals || []).forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v; opt.textContent = v;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// Charts
+// ════════════════════════════════════════════════════════════════
+function renderAllCharts(d) {
+  destroyCharts();
+  renderBarChart('chartClient', d.by_client, 'vertical');
+  renderBarChart('chartContract', d.by_contract, 'horizontal');
+  renderBarChart('chartServiceGroup', d.by_service_group, 'horizontal');
+  renderPieChart('chartSpace', d.by_space);
+  renderPieChart('chartPriority', d.by_priority, true);
+}
+
+function destroyCharts() {
+  for (const c of Object.values(charts)) { try { c.destroy(); } catch(e){} }
+  charts = {};
+}
+
+function renderBarChart(id, dataObj, direction = 'vertical') {
+  if (!dataObj) return;
+  const labels = Object.keys(dataObj);
+  const values = Object.values(dataObj);
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  const horizontal = direction === 'horizontal';
+  charts[id] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: CHART_COLORS.slice(0, labels.length),
+                   borderRadius: 5, borderSkipped: false }],
+    },
+    options: {
+      indexAxis: horizontal ? 'y' : 'x',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+                 tooltip: { callbacks: { label: c => ` ${c.parsed[horizontal ? 'x' : 'y']} WOs` } } },
+      scales: {
+        x: { grid: { display: !horizontal }, ticks: { font: { size: 10 } } },
+        y: { grid: { display: horizontal  }, ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+function renderPieChart(id, dataObj, isDoughnut = false) {
+  if (!dataObj) return;
+  const labels = Object.keys(dataObj);
+  const values = Object.values(dataObj);
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, {
+    type: isDoughnut ? 'doughnut' : 'pie',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: CHART_COLORS.slice(0, labels.length),
+                   hoverOffset: 8 }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+      },
+    },
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+// Filters & table
+// ════════════════════════════════════════════════════════════════
+function getFilters() {
+  return {
+    client:       document.getElementById('fClient').value,
+    contract:     document.getElementById('fContract').value,
+    serviceGroup: document.getElementById('fServiceGroup').value,
+    space:        document.getElementById('fSpace').value,
+    status:       document.getElementById('fStatus').value,
+    priority:     document.getElementById('fPriority').value,
+    search:       document.getElementById('searchBox').value.toLowerCase().trim(),
+  };
+}
+
+function resetFilters() {
+  ['fClient','fContract','fServiceGroup','fSpace','fStatus','fPriority']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('searchBox').value = '';
+  applyFilters();
+}
+
+function applyFilters() {
+  const f = getFilters();
+  filteredRows = allRows.filter(row => {
+    if (f.client       && row['Client']        !== f.client)       return false;
+    if (f.contract     && row['Contract']       !== f.contract)     return false;
+    if (f.serviceGroup && row['Service Group']  !== f.serviceGroup) return false;
+    if (f.space        && row['Space']          !== f.space)        return false;
+    if (f.status       && row['Status']         !== f.status)       return false;
+    if (f.priority     && row['Priority']       !== f.priority)     return false;
+    if (f.search) {
+      const hay = Object.values(row).join(' ').toLowerCase();
+      if (!hay.includes(f.search)) return false;
+    }
+    return true;
+  });
+
+  // Update charts with filtered data
+  if (filteredRows.length < allRows.length && dashboardData) {
+    updateChartsFromRows(filteredRows);
+  } else if (dashboardData) {
+    renderAllCharts(dashboardData);
+  }
+
+  // Update KPIs
+  updateKPIs(filteredRows);
+
+  currentPage = 1;
+  renderTable();
+}
+
+function updateKPIs(rows) {
+  const total = rows.length;
+  let pending = 0, p1 = 0, p2 = 0, p3 = 0;
+  const clientSet = new Set(), contractSet = new Set();
+  rows.forEach(r => {
+    if ((r['Status'] || '').toLowerCase().includes('pend')) pending++;
+    if (r['Priority'] === 'P1') p1++;
+    if (r['Priority'] === 'P2') p2++;
+    if (r['Priority'] === 'P3') p3++;
+    if (r['Client'])   clientSet.add(r['Client']);
+    if (r['Contract']) contractSet.add(r['Contract']);
+  });
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi"><div class="kpi-value">${total}</div><div class="kpi-label">Work Orders (filtered)</div></div>
+    <div class="kpi warn"><div class="kpi-value">${pending}</div><div class="kpi-label">Pending</div></div>
+    <div class="kpi accent"><div class="kpi-value">${p1}</div><div class="kpi-label">Priority P1</div></div>
+    <div class="kpi"><div class="kpi-value">${p2 || '–'}</div><div class="kpi-label">Priority P2</div></div>
+    <div class="kpi"><div class="kpi-value">${p3}</div><div class="kpi-label">Priority P3</div></div>
+    <div class="kpi"><div class="kpi-value">${clientSet.size}</div><div class="kpi-label">Clients</div></div>
+    <div class="kpi"><div class="kpi-value">${contractSet.size}</div><div class="kpi-label">Contracts</div></div>
+  `;
+}
+
+function updateChartsFromRows(rows) {
+  const agg = (col) => {
+    const m = {};
+    rows.forEach(r => { const v = r[col] || 'Unknown'; m[v] = (m[v] || 0) + 1; });
+    return m;
+  };
+  destroyCharts();
+  renderBarChart('chartClient',       agg('Client'),        'vertical');
+  renderBarChart('chartContract',     agg('Contract'),      'horizontal');
+  renderBarChart('chartServiceGroup', agg('Service Group'), 'horizontal');
+  renderPieChart('chartSpace',        agg('Space'));
+  renderPieChart('chartPriority',     agg('Priority'), true);
+}
+
+function filterRows() { filteredRows = [...allRows]; renderTable(); }
+
+// ────────────────────────────────────────────────────────────────
+// Table
+// ────────────────────────────────────────────────────────────────
+function buildTableHeader() {
+  const head = document.getElementById('tableHead');
+  head.innerHTML = `<tr>${COLS.map((c, i) =>
+    `<th onclick="sortTable(${i})">${c} <span class="sort-arrow">↕</span></th>`
+  ).join('')}</tr>`;
+}
+
+function sortTable(colIdx) {
+  const col = COLS[colIdx];
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  filteredRows.sort((a, b) => {
+    const va = a[col] || '', vb = b[col] || '';
+    return va < vb ? -sortDir : va > vb ? sortDir : 0;
+  });
+  renderTable();
+}
+
+function renderTable() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page  = filteredRows.slice(start, start + PAGE_SIZE);
+  const body  = document.getElementById('tableBody');
+  const info  = document.getElementById('tableInfo');
+  info.textContent = `Showing ${start + 1}–${Math.min(start + PAGE_SIZE, filteredRows.length)} of ${filteredRows.length}`;
+
+  body.innerHTML = page.map(row => `<tr>${COLS.map(c => {
+    const val = row[c] || '';
+    if (c === 'Status')   return `<td><span class="badge-status ${badgeStatus(val)}">${val || '–'}</span></td>`;
+    if (c === 'Priority') return `<td><span class="badge-status ${badgePriority(val)}">${val || '–'}</span></td>`;
+    if (c === 'Work Description') return `<td style="max-width:250px;white-space:normal;font-size:.8rem">${escHtml(val)}</td>`;
+    return `<td>${escHtml(val)}</td>`;
+  }).join('')}</tr>`).join('');
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const total = Math.ceil(filteredRows.length / PAGE_SIZE);
+  const bar = document.getElementById('paginationBar');
+  if (total <= 1) { bar.innerHTML = ''; return; }
+  let html = '';
+  if (currentPage > 1) html += `<button onclick="goPage(${currentPage - 1})">‹</button>`;
+  const start = Math.max(1, currentPage - 2);
+  const end   = Math.min(total, currentPage + 2);
+  for (let p = start; p <= end; p++)
+    html += `<button class="${p === currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`;
+  if (currentPage < total) html += `<button onclick="goPage(${currentPage + 1})">›</button>`;
+  bar.innerHTML = html;
+}
+function goPage(p) { currentPage = p; renderTable(); window.scrollTo(0, document.getElementById('dataTable').offsetTop - 80); }
+
+function badgeStatus(s) {
+  s = (s || '').toLowerCase();
+  if (s.includes('pend'))   return 'badge-pending';
+  if (s.includes('comp'))   return 'badge-completed';
+  if (s.includes('clos'))   return 'badge-closed';
+  return 'badge-open';
+}
+function badgePriority(p) {
+  if (p === 'P1') return 'badge-p1';
+  if (p === 'P2') return 'badge-p2';
+  if (p === 'P3') return 'badge-p3';
+  return '';
+}
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════════════════════════════════
+// Download
+// ════════════════════════════════════════════════════════════════
+async function downloadReport() {
+  toast('Generating Excel report…', 'info');
+  try {
+    const token = await getToken();
+    const resp = await authFetch('/admin/mmr/api/download-report');
+    if (!resp.ok) { const d = await resp.json(); throw new Error(d.error); }
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `MMR_Report_${new Date().toISOString().slice(0,10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Report downloaded!', 'success');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// Email
+// ════════════════════════════════════════════════════════════════
+async function loadEmailConfig() {
+  try {
+    const resp = await authFetch('/admin/mmr/api/email-config');
+    if (!resp.ok) return;
+    const cfg = await resp.json();
+    document.getElementById('emailTo').value       = cfg.to      || '';
+    document.getElementById('emailCc').value       = cfg.cc      || '';
+    document.getElementById('emailSubject').value  = cfg.subject || 'MMR Daily Work Order Report';
+    document.getElementById('emailBody').value     = cfg.body    || '';
+    document.getElementById('scheduleEnabled').checked = !!cfg.schedule_enabled;
+    document.getElementById('scheduleHour').value   = cfg.schedule_hour   ?? 10;
+    document.getElementById('scheduleMinute').value = cfg.schedule_minute ?? 0;
+    updateScheduleStatus(cfg);
+  } catch(e) { console.warn('Could not load email config', e); }
+}
+
+async function saveEmailConfig() {
+  const payload = {
+    to:      document.getElementById('emailTo').value,
+    cc:      document.getElementById('emailCc').value,
+    subject: document.getElementById('emailSubject').value,
+    body:    document.getElementById('emailBody').value,
+  };
+  const resp = await authFetch('/admin/mmr/api/email-config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (resp.ok) toast('Email config saved', 'success');
+  else toast('Failed to save config', 'error');
+}
+
+const ALLOWED_DOMAIN = 'injaaz.ae';
+
+function validateEmailField(input) {
+  const errorEl = document.getElementById(input.id + 'Error');
+  if (!input.value.trim()) { input.classList.remove('input-error'); if (errorEl) errorEl.textContent = ''; return true; }
+  const emails = input.value.split(',').map(e => e.trim()).filter(Boolean);
+  const bad = emails.filter(e => !e.toLowerCase().endsWith('@' + ALLOWED_DOMAIN));
+  if (bad.length) {
+    input.classList.add('input-error');
+    if (errorEl) errorEl.textContent = `Only @${ALLOWED_DOMAIN} addresses allowed. Invalid: ${bad.join(', ')}`;
+    return false;
+  }
+  input.classList.remove('input-error');
+  if (errorEl) errorEl.textContent = '';
+  return true;
+}
+
+function validateAllEmailFields() {
+  const toOk = validateEmailField(document.getElementById('emailTo'));
+  const ccEl = document.getElementById('emailCc');
+  const ccOk = ccEl.value.trim() ? validateEmailField(ccEl) : true;
+  return toOk && ccOk;
+}
+
+async function sendEmailNow() {
+  const to = document.getElementById('emailTo').value.trim();
+  if (!to) { toast('Please enter at least one recipient', 'error'); return; }
+  if (!validateAllEmailFields()) { toast('Fix the email address errors before sending', 'error'); return; }
+
+  const btn = document.getElementById('btnSendEmail');
+  btn.disabled = true; btn.textContent = 'Sending…';
+
+  const payload = {
+    to,
+    cc:      document.getElementById('emailCc').value,
+    subject: document.getElementById('emailSubject').value,
+    body:    document.getElementById('emailBody').value,
+  };
+  try {
+    const resp = await authFetch('/admin/mmr/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (resp.ok) toast('✅ ' + (data.message || 'Email sent successfully'), 'success');
+    else toast('❌ ' + (data.error || 'Email failed'), 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '✉️ Send Email Now';
+  }
+}
+
+async function saveSchedule() {
+  if (!validateAllEmailFields()) { toast('Fix the email address errors before saving', 'error'); return; }
+  const payload = {
+    schedule_enabled: document.getElementById('scheduleEnabled').checked,
+    schedule_hour:    parseInt(document.getElementById('scheduleHour').value)   || 10,
+    schedule_minute:  parseInt(document.getElementById('scheduleMinute').value) || 0,
+    // Also persist compose fields
+    to:      document.getElementById('emailTo').value,
+    cc:      document.getElementById('emailCc').value,
+    subject: document.getElementById('emailSubject').value,
+    body:    document.getElementById('emailBody').value,
+  };
+  const resp = await authFetch('/admin/mmr/api/email-config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await resp.json();
+  if (resp.ok) {
+    toast('Schedule saved', 'success');
+    updateScheduleStatus(payload);
+  } else {
+    toast('Failed: ' + (data.error || 'unknown'), 'error');
+  }
+}
+
+function onScheduleToggle() {
+  const el = document.getElementById('scheduleEnabled');
+  document.getElementById('scheduleStatus').textContent =
+    el.checked ? '' : 'Scheduling is disabled';
+}
+
+function updateScheduleStatus(cfg) {
+  const el = document.getElementById('scheduleStatus');
+  if (cfg.schedule_enabled) {
+    const h = String(cfg.schedule_hour   ?? 10).padStart(2, '0');
+    const m = String(cfg.schedule_minute ??  0).padStart(2, '0');
+    el.textContent = `✅ Active – daily at ${h}:${m}`;
+    el.style.color = 'var(--success)';
+  } else {
+    el.textContent = 'Disabled';
+    el.style.color = 'var(--text-muted)';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// Alert
+// ════════════════════════════════════════════════════════════════
+function setAlert(msg, type = 'info') {
+  document.getElementById('alertBox').innerHTML =
+    `<div class="alert alert-${type}"><span>⚠️</span> ${msg}</div>`;
+  setTimeout(() => document.getElementById('alertBox').innerHTML = '', 6000);
+}
+
+// ════════════════════════════════════════════════════════════════
+// Init
+// ════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  loadEmailConfig();
+});
+</script>
+</body>
+</html>

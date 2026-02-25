@@ -190,6 +190,10 @@ function checkAndShowAdminMenu(user) {
       adminMenuItem.style.display = 'list-item';
       console.log('Admin menu item shown');
     }
+    const reportGenMenuItem = document.getElementById('report-gen-menu-item');
+    if (reportGenMenuItem) {
+      reportGenMenuItem.style.display = 'list-item';
+    }
   }
   
   const workflowDesignations = ['operations_manager', 'business_development', 'procurement', 'general_manager'];
@@ -2253,36 +2257,37 @@ document.addEventListener('DOMContentLoaded', function() {
   const navMenu = document.querySelector('.nav-menu');
   const mobileOverlay = document.getElementById('mobileOverlay');
   
-  if (mobileMenuToggle) {
+  function closeMobileMenu() {
+    if (mobileMenuToggle) mobileMenuToggle.classList.remove('active');
+    if (navMenu) navMenu.classList.remove('active');
+    if (mobileOverlay) mobileOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  
+  if (mobileMenuToggle && navMenu) {
     mobileMenuToggle.addEventListener('click', function() {
-      mobileMenuToggle.classList.toggle('active');
-      navMenu.classList.toggle('active');
-      mobileOverlay.classList.toggle('active');
-      document.body.style.overflow = navMenu.classList.contains('active') ? 'hidden' : '';
+      const isOpen = navMenu.classList.contains('active');
+      if (isOpen) {
+        closeMobileMenu();
+      } else {
+        mobileMenuToggle.classList.add('active');
+        navMenu.classList.add('active');
+        if (mobileOverlay) mobileOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
     });
   }
   
   if (mobileOverlay) {
-    mobileOverlay.addEventListener('click', function() {
-      mobileMenuToggle.classList.remove('active');
-      navMenu.classList.remove('active');
-      mobileOverlay.classList.remove('active');
-      document.body.style.overflow = '';
-    });
+    mobileOverlay.addEventListener('click', closeMobileMenu);
   }
   
   // Close mobile menu when clicking on a link
-  const navLinks = document.querySelectorAll('.nav-menu a');
-  navLinks.forEach(link => {
-    link.addEventListener('click', function() {
-      if (window.innerWidth <= 768) {
-        mobileMenuToggle.classList.remove('active');
-        navMenu.classList.remove('active');
-        mobileOverlay.classList.remove('active');
-        document.body.style.overflow = '';
-      }
+  if (navMenu) {
+    navMenu.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', closeMobileMenu);
     });
-  });
+  }
   
   // Logout functionality
   const logoutBtn = document.getElementById('logoutBtn');

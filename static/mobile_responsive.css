@@ -43,20 +43,14 @@
     min-height: 64px !important;
   }
   
-  a, button, .btn, .logout-btn {
+  .main-content a,
+  .main-content button,
+  .main-content .btn,
+  form button,
+  form .btn,
+  .footer a {
     min-height: 44px !important;
     min-width: 44px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
-  
-  /* Dashboard slide-out nav links: full width, block layout */
-  .nav .nav-menu a {
-    display: block !important;
-    min-width: 100% !important;
-    justify-content: flex-start !important;
-    padding-left: 2rem !important;
   }
   
   .module-card {
@@ -129,6 +123,11 @@
   /* Nav - cleaner mobile look */
   .nav, .navbar {
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06) !important;
+  }
+  
+  /* Modules section label - larger for readability */
+  .modules-section-label {
+    font-size: 0.8rem !important;
   }
   
   /* Sidebar nav (forms) - bottom bar on mobile. Dashboard .nav-menu uses slide-out from dashboard.css */
@@ -427,10 +426,17 @@
 
 /* Base Mobile Improvements */
 @media (max-width: 768px) {
-  /* Better touch targets */
-  .btn, .form-control, .form-select, .form-check-input {
+  /* Better touch targets (forms and content only) */
+  .form-control, .form-select, .form-check-input {
     min-height: 44px;
     font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .main-content .btn,
+  form .btn,
+  .container .btn {
+    min-height: 44px;
+    font-size: 16px;
   }
   
   /* Container adjustments */
@@ -531,8 +537,10 @@
     max-width: 100% !important;
   }
   
-  /* Buttons - Mobile Optimized */
-  .btn {
+  /* Buttons - Mobile Optimized (only inside main content, not nav) */
+  .main-content .btn,
+  form .btn,
+  .container .btn {
     padding: 0.875rem 1.5rem !important;
     font-size: 1rem !important;
     width: 100% !important;
@@ -544,19 +552,22 @@
     -webkit-tap-highlight-color: rgba(18, 84, 53, 0.2) !important;
   }
   
-  .btn-lg {
+  .main-content .btn-lg,
+  form .btn-lg {
     padding: 1rem 1.5rem !important;
     font-size: 1.1rem !important;
     min-height: 52px !important;
   }
   
-  .btn-sm {
+  .main-content .btn-sm,
+  form .btn-sm {
     padding: 0.625rem 1rem !important;
     font-size: 0.9rem !important;
     min-height: 44px !important;
   }
   
-  .btn-group {
+  .main-content .btn-group,
+  form .btn-group {
     display: flex !important;
     flex-direction: column !important;
     gap: 0.5rem !important;
@@ -938,8 +949,10 @@
     text-overflow: ellipsis !important;
   }
   
-  /* Buttons even more prominent */
-  .btn {
+  /* Buttons even more prominent (content area only) */
+  .main-content .btn,
+  form .btn,
+  .container .btn {
     font-size: 1.05rem !important;
     padding: 1rem 1.5rem !important;
     min-height: 52px !important;
@@ -976,8 +989,12 @@
 
 /* Touch-specific improvements */
 @media (hover: none) and (pointer: coarse) {
-  /* Larger tap targets for touch devices */
-  .btn, button, a, .nav-btn {
+  /* Larger tap targets for touch devices (content area only) */
+  .main-content .btn,
+  .main-content button,
+  .main-content a,
+  form .btn,
+  form button {
     min-height: 44px !important;
     min-width: 44px !important;
   }
@@ -1012,7 +1029,7 @@
   }
   
   /* Better touch feedback */
-  .btn:active,
+  .main-content .btn:active,
   .nav-btn:active {
     opacity: 0.8 !important;
     transform: scale(0.98) !important;
@@ -1051,7 +1068,8 @@
     padding-bottom: max(1rem, env(safe-area-inset-bottom)) !important;
   }
   
-  .btn {
+  .main-content .btn,
+  form .btn {
     margin-bottom: max(0.5rem, env(safe-area-inset-bottom)) !important;
   }
 }

@@ -96,6 +96,15 @@ except Exception as e:
     logger.exception("Could not import module_procurement.routes.procurement_bp: %s", e)
     procurement_module_bp = None
 
+# MMR (Report Generation) Module
+mmr_bp = None
+try:
+    from module_mmr.routes import mmr_bp  # noqa: F401
+    logger.info("Imported module_mmr.routes.mmr_bp")
+except Exception as e:
+    logger.exception("Could not import module_mmr.routes.mmr_bp: %s", e)
+    mmr_bp = None
+
 # Ensure required directories exist at startup
 os.makedirs(GENERATED_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -629,6 +638,21 @@ def create_app():
     else:
         logger.warning("⚠️  Procurement blueprint not available - check imports")
     
+    # Register MMR blueprint
+    if mmr_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(mmr_bp)
+        app.register_blueprint(mmr_bp)
+        logger.info("✅ Registered MMR blueprint at /admin/mmr")
+        # Start APScheduler for daily report emails
+        try:
+            from module_mmr.scheduler import init_scheduler as init_mmr_scheduler
+            init_mmr_scheduler(app)
+        except Exception as sched_err:
+            logger.warning(f"⚠️  MMR scheduler not started: {sched_err}")
+    else:
+        logger.warning("⚠️  MMR blueprint not available")
+
     # Register reports API blueprint for on-demand regeneration
     try:
         from app.reports_api import reports_bp
