@@ -46,7 +46,7 @@ _UPLOAD_FILE  = 'mmr_latest.xlsx'
 _DEFAULT_CONFIG = {
     'to': '',
     'cc': '',
-    'subject': 'MMR Daily Work Order Report',
+    'subject': 'Daily Report on Resolved and Pending Complaints for {{REPORT_DATE}}',
     'body': (
         'Dear FM Team,\n\n'
         'Please find below comprehensive Daily Report of ({{REPORT_DATE}}) '
@@ -67,6 +67,13 @@ def _format_report_date(dt: datetime) -> str:
     d = dt.day
     suffix = 'th' if 11 <= d <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(d % 10, 'th')
     return f"{d}{suffix} of {dt.strftime('%B %Y')}"
+
+
+def _report_filename() -> str:
+    """Excel filename: 'Daily Report on Resolved and Pending Complaints for 28th of February 2026.xlsx'"""
+    yesterday = datetime.now() - timedelta(days=1)
+    date_str = _format_report_date(yesterday)
+    return f"Daily Report on Resolved and Pending Complaints for {date_str}.xlsx"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -125,10 +132,14 @@ def upload():
     file.save(dest)
 
     try:
-        from .mmr_service import parse_excel, compute_dashboard, df_to_rows
+        from .mmr_service import parse_excel, compute_dashboard, df_to_rows, _resolve_chargeable
         df = parse_excel(dest)
         dashboard_data = compute_dashboard(df)
         rows = df_to_rows(df)
+        for r in rows:
+            r['Space'] = _resolve_chargeable(
+                r.get('Space', ''), r.get('BaseUnit', ''), r.get('Client', '')
+            )
         return jsonify({'success': True, 'dashboard': dashboard_data, 'rows': rows,
                         'total': len(rows)})
     except Exception as e:
@@ -152,7 +163,7 @@ def download_report():
         from .mmr_service import parse_excel, generate_report_excel
         df = parse_excel(path)
         report_bytes = generate_report_excel(df)
-        filename = f"MMR_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        filename = _report_filename()
         return send_file(
             BytesIO(report_bytes),
             as_attachment=True,
@@ -225,7 +236,9 @@ def send_email_now():
     subject = data.get('subject', _DEFAULT_CONFIG['subject'])
     body    = data.get('body', '')
     yesterday = datetime.now() - timedelta(days=1)
-    body = body.replace(_REPORT_DATE_PLACEHOLDER, _format_report_date(yesterday))
+    report_date = _format_report_date(yesterday)
+    subject = subject.replace(_REPORT_DATE_PLACEHOLDER, report_date)
+    body = body.replace(_REPORT_DATE_PLACEHOLDER, report_date)
 
     if not to_raw:
         return jsonify({'error': 'Recipient (To) email is required'}), 400
@@ -244,7 +257,7 @@ def send_email_now():
         from .mmr_service import parse_excel, generate_report_excel, format_chargeable_summary_for_email
         df = parse_excel(path)
         report_bytes = generate_report_excel(df)
-        filename = f"MMR_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        filename = _report_filename()
 
         # Append chargeable summary and attachment note to body
         chargeable_summary = format_chargeable_summary_for_email(df)

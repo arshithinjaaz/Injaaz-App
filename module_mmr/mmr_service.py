@@ -10,6 +10,7 @@ import logging
 from io import BytesIO
 from datetime import datetime
 
+import re
 import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -113,19 +114,29 @@ def compute_dashboard(df: pd.DataFrame) -> dict:
         vals = df[col].replace('', None).dropna().unique().tolist()
         return sorted([str(v) for v in vals])
 
+    # Chargeable/Non-Chargeable: use resolved logic (Space + BaseUnit when Space empty)
+    if 'Space' in df.columns and 'BaseUnit' in df.columns:
+        resolved = _get_resolved_chargeable_series(df)
+        by_space = {str(k): int(v) for k, v in resolved.value_counts().items()}
+        spaces_filter = sorted(resolved.unique().astype(str).tolist())
+    else:
+        by_space = {str(k): int(v) for k, v in
+                    (df['Space'].apply(_normalise_space).value_counts().items())} if 'Space' in df.columns else {}
+        spaces_filter = uniq('Space')
+
     return {
         'total': len(df),
         'by_client':        count_by('Client'),
         'by_contract':      count_by('Contract'),
         'by_service_group': count_by('Service Group'),
-        'by_space':         count_by('Space'),
+        'by_space':         by_space,
         'by_status':        count_by('Status'),
         'by_priority':      count_by('Priority'),
         'filters': {
             'clients':        uniq('Client'),
             'contracts':      uniq('Contract'),
             'service_groups': uniq('Service Group'),
-            'spaces':         uniq('Space'),
+            'spaces':         spaces_filter,
             'statuses':       uniq('Status'),
             'priorities':     uniq('Priority'),
         }
@@ -146,6 +157,63 @@ def _normalise_space(val: str) -> str:
     return val.strip() or 'Unknown'
 
 
+# Askaan only: all chargeable. Other properties use BaseUnit logic when Space is empty.
+_ASKAAN_CLIENT_PATTERNS = ('askaan',)
+_NON_CHARGEABLE_BASEUNIT_KEYWORDS = (
+    'common area', 'commonarea', 'floor', 'general area', 'corridor', 'corridord',
+    'parking', 'telephone room', 'cctv room', 'electricity room', 'electrical room',
+    'generator room', 'pump room', 'storage', 'lobby', 'basement', 'roof',
+)
+
+
+def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str) -> str:
+    """
+    Resolve Chargeable vs Non-Chargeable. BaseUnit drives the decision when it has content;
+    otherwise fall back to Space. Askaan: all Chargeable. Flat numbers = Chargeable,
+    common area/floor/corridor/etc = Non-Chargeable.
+    """
+    base_unit = (base_unit_val or '').strip().lower()
+    client = (client_val or '').strip().lower()
+    space = (space_val or '').strip().lower()
+
+    # Askaan property: all chargeable
+    if any(p in client for p in _ASKAAN_CLIENT_PATTERNS):
+        return 'Chargeable'
+
+    # BaseUnit has content: derive from it (takes precedence over Space)
+    if base_unit:
+        for kw in _NON_CHARGEABLE_BASEUNIT_KEYWORDS:
+            if kw in base_unit:
+                return 'Non-Chargeable'
+        if re.search(r'\d+', base_unit) or any(
+            x in base_unit for x in ('flat', 'unit', 'apt', 'apartment', 'villa')
+        ):
+            return 'Chargeable'
+        return 'Non-Chargeable'
+
+    # BaseUnit empty: use Space
+    if space and space not in ('unknown',):
+        n = _normalise_space(space_val)
+        if n in ('Chargeable', 'Non-Chargeable'):
+            return n
+    return 'Non-Chargeable'
+
+
+def _get_resolved_chargeable_series(df: pd.DataFrame) -> pd.Series:
+    """Return a Series of Chargeable/Non-Chargeable per row for chargeable analysis."""
+    space_col = df['Space'] if 'Space' in df.columns else pd.Series([''] * len(df))
+    base_col = df['BaseUnit'] if 'BaseUnit' in df.columns else pd.Series([''] * len(df))
+    client_col = df['Client'] if 'Client' in df.columns else pd.Series([''] * len(df))
+    return pd.Series([
+        _resolve_chargeable(
+            space_col.iat[i] if i < len(space_col) else '',
+            base_col.iat[i] if i < len(base_col) else '',
+            client_col.iat[i] if i < len(client_col) else '',
+        )
+        for i in range(len(df))
+    ], index=df.index)
+
+
 def format_chargeable_summary_for_email(df: pd.DataFrame) -> str:
     """Build a plain-text chargeable table for email body.
     Rows: Service Groups. Cols: Chargeable (Resolved+Pending), Non-Chargeable (Resolved+Pending).
@@ -154,7 +222,7 @@ def format_chargeable_summary_for_email(df: pd.DataFrame) -> str:
     if not required.issubset(set(df.columns)):
         return ''
     work = df.copy()
-    work['_space'] = work['Space'].apply(_normalise_space)
+    work['_space'] = _get_resolved_chargeable_series(df)
     work['_status'] = work['Status'].apply(_normalise_status_bucket)
 
     agg = (
@@ -232,16 +300,21 @@ def generate_report_excel(df: pd.DataFrame) -> bytes:
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
 
+    # Populate Space with resolved Chargeable/Non-Chargeable (from BaseUnit when empty)
+    work = df.copy()
+    if 'Space' in work.columns and 'BaseUnit' in work.columns:
+        work['Space'] = _get_resolved_chargeable_series(work)
+
     # Sheet 1 – All Work Orders
-    _write_data_sheet(wb, df, 'All Work Orders')
+    _write_data_sheet(wb, work, 'All Work Orders')
 
     # Sheet 2 – Dashboard (KPI + charts)
-    _write_dashboard_sheet(wb, df)
+    _write_dashboard_sheet(wb, work)
 
     # Client-wise sheets
-    clients = sorted(df['Client'].replace('', None).dropna().unique().tolist())
+    clients = sorted(work['Client'].replace('', None).dropna().unique().tolist())
     for client in clients:
-        client_df = df[df['Client'] == client]
+        client_df = work[work['Client'] == client]
         if _is_split_client(client):
             # Split into per-contract sheets
             contracts = sorted(
@@ -259,7 +332,7 @@ def generate_report_excel(df: pd.DataFrame) -> bytes:
             _write_data_sheet(wb, client_df.copy(), name)
 
     # Chargeable / Non-Chargeable Analysis (filterable summary)
-    _write_chargeable_analysis(wb, df)
+    _write_chargeable_analysis(wb, work)
 
     buf = BytesIO()
     wb.save(buf)
@@ -594,9 +667,12 @@ def _write_dashboard_sheet(wb: openpyxl.Workbook, df: pd.DataFrame):
     right_row = panel_start
     RC = 6  # column F
 
-    # Chargeable vs Non-Chargeable
+    # Chargeable vs Non-Chargeable (resolved from Space + BaseUnit when Space empty)
     if 'Space' in df.columns:
-        space_counts = df['Space'].apply(_normalise_space).value_counts()
+        if 'BaseUnit' in df.columns:
+            space_counts = _get_resolved_chargeable_series(df).value_counts()
+        else:
+            space_counts = df['Space'].apply(_normalise_space).value_counts()
         total_space = space_counts.sum()
         rows = []
         for name, cnt in space_counts.items():
@@ -714,7 +790,7 @@ def _write_chargeable_analysis(wb: openpyxl.Workbook, df: pd.DataFrame):
         return
 
     work = df.copy()
-    work['_space']  = work['Space'].apply(_normalise_space)
+    work['_space']  = _get_resolved_chargeable_series(df)
     work['_status'] = work['Status'].apply(_normalise_status_bucket)
 
     DATA_COLS = [

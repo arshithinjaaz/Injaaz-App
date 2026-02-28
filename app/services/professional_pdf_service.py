@@ -64,42 +64,42 @@ class NumberedCanvas(canvas.Canvas):
         canvas.Canvas.save(self)
         
     def draw_page_decorations(self, page_count):
-        """Draw header and footer on each page"""
-        # Header line
+        """Draw compact header and footer on each page"""
+        # Compact header line
         self.setStrokeColor(PRIMARY_COLOR)
-        self.setLineWidth(2)
-        self.line(1.5*cm, A4[1] - 1.5*cm, A4[0] - 1.5*cm, A4[1] - 1.5*cm)
+        self.setLineWidth(1.5)
+        self.line(1.2*cm, A4[1] - 1.1*cm, A4[0] - 1.2*cm, A4[1] - 1.1*cm)
         
-        # Logo in header (if exists)
+        # Logo in header (compact)
         if os.path.exists(LOGO_PATH):
             try:
-                self.drawImage(LOGO_PATH, 1.5*cm, A4[1] - 1.4*cm, 
-                             width=1.2*cm, height=1.2*cm, preserveAspectRatio=True, mask='auto')
+                self.drawImage(LOGO_PATH, 1.2*cm, A4[1] - 1.05*cm, 
+                             width=0.9*cm, height=0.9*cm, preserveAspectRatio=True, mask='auto')
             except Exception as e:
                 logger.warning(f"Could not load logo: {e}")
         
         # Company name in header
-        self.setFont('Helvetica-Bold', 10)
+        self.setFont('Helvetica-Bold', 9)
         self.setFillColor(PRIMARY_COLOR)
-        self.drawString(3*cm, A4[1] - 1.2*cm, "INJAAZ PLATFORM")
+        self.drawString(2.4*cm, A4[1] - 0.95*cm, "INJAAZ PLATFORM")
         
-        # Footer
+        # Footer (compact)
         self.setStrokeColor(BORDER_COLOR)
         self.setLineWidth(0.5)
-        self.line(1.5*cm, 1.5*cm, A4[0] - 1.5*cm, 1.5*cm)
+        self.line(1.2*cm, 1.1*cm, A4[0] - 1.2*cm, 1.1*cm)
         
         # Page number
-        self.setFont('Helvetica', 8)
+        self.setFont('Helvetica', 7)
         self.setFillColor(colors.grey)
         page_text = f"Page {self._pageNumber} of {page_count}"
-        self.drawRightString(A4[0] - 1.5*cm, 1.2*cm, page_text)
+        self.drawRightString(A4[0] - 1.2*cm, 0.8*cm, page_text)
         
         # Timestamp
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
-        self.drawString(1.5*cm, 1.2*cm, f"Generated: {timestamp}")
+        self.drawString(1.2*cm, 0.8*cm, f"Generated: {timestamp}")
         
         # Report title in footer
-        self.drawCentredString(A4[0] / 2, 1.2*cm, self.report_title)
+        self.drawCentredString(A4[0] / 2, 0.8*cm, self.report_title)
 
 
 def get_professional_styles():
@@ -110,52 +110,52 @@ def get_professional_styles():
         'MainTitle': ParagraphStyle(
             'MainTitle',
             parent=styles['Heading1'],
-            fontSize=16,  # Reduced from 18 for compact layout
+            fontSize=15,
             textColor=PRIMARY_COLOR,
-            spaceAfter=0.08*inch,  # Reduced spacing
+            spaceAfter=0.04*inch,
             spaceBefore=0,
-            alignment=TA_CENTER,
+            alignment=TA_LEFT,
             fontName='Helvetica-Bold'
         ),
         'Subtitle': ParagraphStyle(
             'Subtitle',
             parent=styles['Normal'],
-            fontSize=10,  # Reduced from 11
+            fontSize=9,
             textColor=SECONDARY_COLOR,
-            spaceAfter=0.12*inch,  # Reduced spacing
-            alignment=TA_CENTER,
-            fontName='Helvetica-Bold'
+            spaceAfter=0.05*inch,
+            alignment=TA_LEFT,
+            fontName='Helvetica'
         ),
         'SectionHeading': ParagraphStyle(
             'SectionHeading',
             parent=styles['Heading2'],
-            fontSize=13,  # Reduced from 14
-            textColor=PRIMARY_COLOR,
-            spaceAfter=0.08*inch,  # Reduced spacing
-            spaceBefore=0.12*inch,  # Reduced spacing
+            fontSize=11,
+            textColor=colors.white,
+            spaceAfter=0,
+            spaceBefore=0.06*inch,
             fontName='Helvetica-Bold',
-            borderPadding=3,  # Reduced from 4
+            borderPadding=4,
             borderColor=PRIMARY_COLOR,
-            borderWidth=1,
-            borderRadius=3,
-            backColor=ACCENT_COLOR,
-            leftIndent=4,  # Reduced from 5
+            borderWidth=0,
+            borderRadius=2,
+            backColor=HEADER_BG,
+            leftIndent=6,
         ),
         'ItemHeading': ParagraphStyle(
             'ItemHeading',
             parent=styles['Heading3'],
-            fontSize=11,  # Reduced from 12
+            fontSize=10,
             textColor=SECONDARY_COLOR,
-            spaceAfter=0.06*inch,  # Reduced spacing
-            spaceBefore=0.08*inch,  # Reduced spacing
+            spaceAfter=0.03*inch,
+            spaceBefore=0.05*inch,
             fontName='Helvetica-Bold'
         ),
         'Normal': ParagraphStyle(
             'ProfessionalNormal',
             parent=styles['Normal'],
-            fontSize=9,  # Reduced from 10 for compact layout
-            spaceAfter=0.06*inch,  # Reduced spacing
-            leading=13  # Reduced from 14
+            fontSize=9,
+            spaceAfter=0.03*inch,
+            leading=12
         ),
         'Small': ParagraphStyle(
             'Small',
@@ -178,7 +178,7 @@ def create_header_with_logo(story, title, subtitle=None):
     
     if os.path.exists(LOGO_PATH):
         try:
-            logo = Image(LOGO_PATH, width=0.9*inch, height=0.9*inch)
+            logo = Image(LOGO_PATH, width=0.7*inch, height=0.7*inch)
             title_para = Paragraph(f"<b>{title}</b>", styles['MainTitle'])
             header_data.append([logo, title_para])
         except Exception as e:
@@ -188,10 +188,10 @@ def create_header_with_logo(story, title, subtitle=None):
         header_data.append([Paragraph(f"<b>{title}</b>", styles['MainTitle'])])
     
     if header_data and len(header_data[0]) == 2:
-        header_table = Table(header_data, colWidths=[1.2*inch, 5*inch])
+        header_table = Table(header_data, colWidths=[0.9*inch, 5.3*inch])
         header_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-            ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('TOPPADDING', (0, 0), (-1, -1), 0),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
@@ -203,7 +203,7 @@ def create_header_with_logo(story, title, subtitle=None):
     if subtitle:
         story.append(Paragraph(subtitle, styles['Subtitle']))
     
-    story.append(Spacer(1, 0.12*inch))  # Reduced spacing for compact layout
+    story.append(Spacer(1, 0.05*inch))
     return story
 
 
@@ -243,13 +243,13 @@ def create_info_table(data_list, col_widths=None):
         ('ALIGN', (1, 0), (1, -1), 'LEFT'),
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
         ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('GRID', (0, 0), (-1, -1), 0.75, PRIMARY_COLOR),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
     ]))
     
     return table
@@ -541,10 +541,10 @@ def create_professional_pdf(pdf_path, story, report_title="Injaaz Report"):
         doc = SimpleDocTemplate(
             pdf_path,
             pagesize=A4,
-            rightMargin=1.5*cm,
-            leftMargin=1.5*cm,
-            topMargin=2.2*cm,
-            bottomMargin=2*cm,
+            rightMargin=1.2*cm,
+            leftMargin=1.2*cm,
+            topMargin=1.6*cm,
+            bottomMargin=1.4*cm,
             title=report_title,
             author="Injaaz Platform"
         )

@@ -200,8 +200,8 @@ def create_pdf_report(data, output_dir):
             f"Site: {data.get('site_name', 'N/A')}"
         )
         
-        # Horizontal line separator
-        story.append(Spacer(1, 0.1*inch))
+        # Compact separator
+        story.append(Spacer(1, 0.04*inch))
         
         # SITE INFORMATION
         add_section_heading(story, "Site Information")
@@ -215,7 +215,7 @@ def create_pdf_report(data, output_dir):
         
         site_table = create_info_table(site_info_data)
         story.append(site_table)
-        story.append(Spacer(1, 0.3*inch))
+        story.append(Spacer(1, 0.1*inch))
         
         # INSPECTION ITEMS
         items = data.get('items', [])
@@ -241,14 +241,14 @@ def create_pdf_report(data, output_dir):
                 
                 item_table = create_info_table(item_details, col_widths=[1.8*inch, 4.2*inch])
                 story.append(item_table)
-                story.append(Spacer(1, 0.15*inch))
+                story.append(Spacer(1, 0.06*inch))
                 
                 # PHOTOS - Support both cloud URLs and local paths
                 photos = item.get('photos', [])
                 
                 if photos:
                     add_paragraph(story, f"<b>Attached Photos ({len(photos)} total):</b>")
-                    story.append(Spacer(1, 0.1*inch))
+                    story.append(Spacer(1, 0.04*inch))
                     add_photo_grid(story, photos)
                 
                 # Add page break after each item (except last)

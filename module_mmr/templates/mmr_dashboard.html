@@ -139,7 +139,36 @@
     .card-title { font-size: .9375rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; }
 
     /* KPIs */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .75rem; margin-bottom: 1.25rem; }
+    .kpi-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .75rem; flex: 1; min-width: 0; }
+    .kpi-download-wrap { flex-shrink: 0; }
+    .kpi-download {
+      background: var(--primary);
+      border: 1px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 1rem;
+      text-align: center;
+      width: 140px;
+      min-height: 68px;
+      cursor: pointer;
+      transition: opacity .2s;
+      text-decoration: none;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: .25rem;
+    }
+    .kpi-download:hover:not(:disabled) { opacity: .9; }
+    .kpi-download:focus { outline: none; }
+    .kpi-download:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
+    .kpi-download .kpi-value { font-size: 1.25rem; color: #fff; }
+    .kpi-download .kpi-label {
+      font-size: .8125rem;
+      font-weight: 500;
+      color: rgba(255,255,255,.95);
+    }
     .kpi {
       background: var(--white);
       border: 1px solid var(--border);
@@ -169,8 +198,13 @@
       min-width: 90px; max-width: 150px;
     }
     .filter-select:focus { outline: none; border-color: var(--primary); }
-    .filter-reset { margin-left: auto; padding: .4rem .65rem; font-size: .75rem; background: transparent; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
-    .filter-reset:hover { color: var(--text); }
+    .filter-reset {
+      margin-left: auto; padding: .4rem .75rem; font-size: .75rem; font-weight: 500;
+      background: var(--primary); color: #fff; border: 1px solid var(--primary);
+      border-radius: 6px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      transition: opacity .15s;
+    }
+    .filter-reset:hover { opacity: .9; }
 
     /* Charts */
     .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
@@ -258,6 +292,8 @@
       .page { padding: 1rem; }
       .upload-zone-inner { flex-direction: column; text-align: center; }
       .upload-zone-cta { width: 100%; }
+      .kpi-row { flex-direction: column; align-items: stretch; }
+      .kpi-download-wrap { display: flex; justify-content: center; }
       .kpi-grid { grid-template-columns: repeat(2, 1fr); }
       .schedule-row { flex-direction: column; align-items: flex-start; }
     }
@@ -273,7 +309,6 @@
       Report Generation
     </a>
     <div class="nav-actions">
-      <button class="btn btn-primary btn-sm" id="btnDownloadReport" onclick="downloadReport()" disabled>Download Report</button>
       <a href="/admin/dashboard" class="btn btn-ghost btn-sm">← Admin</a>
     </div>
   </div>
@@ -307,13 +342,21 @@
   <!-- ── DASHBOARD (hidden until data loads) ── -->
   <div id="dashboardSection" class="hidden">
 
-    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="kpi-row">
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="kpi-download-wrap">
+        <button type="button" class="kpi-download" id="btnDownloadReport" onclick="downloadReport()" disabled title="Download Excel report">
+          <span class="kpi-value">📥</span>
+          <span class="kpi-label">Download Report</span>
+        </button>
+      </div>
+    </div>
 
     <div class="filter-bar" id="filterBar">
       <label>Client</label>
       <select class="filter-select" id="fClient" onchange="updateContractOptions(); applyFilters()"><option value="">All</option></select>
       <label>Contract</label>
-      <select class="filter-select" id="fContract" onchange="applyFilters()"><option value="">All</option></select>
+      <select class="filter-select" id="fContract" onchange="updateClientFromContract(); applyFilters()"><option value="">All</option></select>
       <label>Service Group</label>
       <select class="filter-select" id="fServiceGroup" onchange="applyFilters()"><option value="">All</option></select>
       <label>Space</label>
@@ -645,7 +688,7 @@ function populateFilters(filters) {
   }
 }
 
-/** When Client changes, show only contracts under that client so "Aqaar" shows only Garden City, Orient Towers, etc. */
+/** When Client changes: show contracts for that client, or all contracts when Client=All (unchecked). */
 function updateContractOptions() {
   const clientSel = document.getElementById('fClient');
   const contractSel = document.getElementById('fContract');
@@ -659,13 +702,31 @@ function updateContractOptions() {
   } else {
     list = (dashboardData && dashboardData.filters && dashboardData.filters.contracts) ? dashboardData.filters.contracts : [];
   }
+  const prevContract = contractSel.value;
   contractSel.innerHTML = '<option value="">All</option>';
   list.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c; opt.textContent = c;
     contractSel.appendChild(opt);
   });
-  if (list.indexOf(contractSel.value) === -1) contractSel.value = '';
+  contractSel.value = list.includes(prevContract) ? prevContract : '';
+}
+
+/** When Contract changes: if Client=All and a contract is selected, auto-select the client that owns it. */
+function updateClientFromContract() {
+  const clientSel = document.getElementById('fClient');
+  const contractSel = document.getElementById('fContract');
+  if ((clientSel.value || '') !== '' || !contractSel.value) return;
+  const contract = contractSel.value.trim();
+  for (const r of allRows) {
+    if ((r['Contract'] || '').trim() === contract) {
+      const clientName = (r['Client'] || '').trim();
+      if (clientName) {
+        clientSel.value = clientName;
+        break;
+      }
+    }
+  }
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -954,6 +1015,16 @@ function escHtml(s) {
 // ════════════════════════════════════════════════════════════════
 // Download
 // ════════════════════════════════════════════════════════════════
+function getReportFilename() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const day = d.getDate();
+  const suffix = (day >= 11 && day <= 13) ? 'th' : {1:'st',2:'nd',3:'rd'}[day % 10] || 'th';
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dateStr = `${day}${suffix} of ${months[d.getMonth()]} ${d.getFullYear()}`;
+  return `Daily Report on Resolved and Pending Complaints for ${dateStr}.xlsx`;
+}
+
 async function downloadReport() {
   toast('Generating Excel report…', 'info');
   try {
@@ -964,7 +1035,7 @@ async function downloadReport() {
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href = url;
-    a.download = `MMR_Report_${new Date().toISOString().slice(0,10)}.xlsx`;
+    a.download = getReportFilename();
     a.click();
     URL.revokeObjectURL(url);
     toast('Report downloaded!', 'success');
@@ -983,7 +1054,7 @@ async function loadEmailConfig() {
     const cfg = await resp.json();
     document.getElementById('emailTo').value       = cfg.to      || '';
     document.getElementById('emailCc').value       = cfg.cc      || '';
-    document.getElementById('emailSubject').value  = cfg.subject || 'MMR Daily Work Order Report';
+    document.getElementById('emailSubject').value  = cfg.subject || 'Daily Report on Resolved and Pending Complaints for {{REPORT_DATE}}';
     document.getElementById('emailBody').value     = cfg.body    || '';
     document.getElementById('scheduleEnabled').checked = !!cfg.schedule_enabled;
     document.getElementById('scheduleHour').value   = cfg.schedule_hour   ?? 10;

@@ -21,7 +21,7 @@ def _run_scheduled_report(app):
         try:
             import os
             from datetime import datetime, timedelta
-            from .routes import _upload_path, _load_config, _format_report_date, _REPORT_DATE_PLACEHOLDER
+            from .routes import _upload_path, _load_config, _format_report_date, _REPORT_DATE_PLACEHOLDER, _report_filename
             from .mmr_service import parse_excel, generate_report_excel, format_chargeable_summary_for_email
             from common.email_service import send_email
 
@@ -45,11 +45,13 @@ def _run_scheduled_report(app):
 
             df = parse_excel(path)
             report_bytes = generate_report_excel(df)
-            filename = f"MMR_Report_{datetime.now().strftime('%Y%m%d')}.xlsx"
+            filename = _report_filename()
 
             body = config.get('body', '')
             yesterday = datetime.now() - timedelta(days=1)
-            body = body.replace(_REPORT_DATE_PLACEHOLDER, _format_report_date(yesterday))
+            report_date = _format_report_date(yesterday)
+            subject = config.get('subject', 'Daily Report on Resolved and Pending Complaints for {{REPORT_DATE}}').replace(_REPORT_DATE_PLACEHOLDER, report_date)
+            body = body.replace(_REPORT_DATE_PLACEHOLDER, report_date)
             chargeable_summary = format_chargeable_summary_for_email(df)
             if chargeable_summary:
                 body = (body.rstrip() + '\n\n' + chargeable_summary).rstrip()
@@ -57,7 +59,7 @@ def _run_scheduled_report(app):
 
             send_email(
                 recipient=to_list,
-                subject=config.get('subject', 'MMR Daily Work Order Report'),
+                subject=subject,
                 body=body,
                 cc=cc_list,
                 attachments=[{

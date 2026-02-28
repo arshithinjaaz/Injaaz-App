@@ -813,7 +813,8 @@ def get_hr_submissions():
         return jsonify({'error': 'User not found'}), 404
     
     is_hr = getattr(user, 'access_hr', False) or user.designation == 'hr_manager'
-    if user.role != 'admin' and not is_hr:
+    is_gm = user.designation == 'general_manager'
+    if user.role != 'admin' and not is_hr and not is_gm:
         return jsonify({'error': 'Access denied'}), 403
     
     # Get all HR submissions
