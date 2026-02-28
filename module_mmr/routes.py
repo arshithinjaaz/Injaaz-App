@@ -5,7 +5,7 @@ URL prefix: /admin/mmr
 import os
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 
 from flask import (Blueprint, request, jsonify, render_template,
@@ -47,11 +47,26 @@ _DEFAULT_CONFIG = {
     'to': '',
     'cc': '',
     'subject': 'MMR Daily Work Order Report',
-    'body': 'Dear Team,\n\nPlease find attached the daily MMR Work Order Report.\n\nRegards,\nInjaaz Platform',
+    'body': (
+        'Dear FM Team,\n\n'
+        'Please find below comprehensive Daily Report of ({{REPORT_DATE}}) '
+        'generated from our CAFM system / Injaaz Application for all Pending & Resolved work orders.\n\n'
+        'Regards,\n'
+        'CAFM Team'
+    ),
     'schedule_enabled': False,
     'schedule_hour': 10,
     'schedule_minute': 0,
 }
+
+_REPORT_DATE_PLACEHOLDER = '{{REPORT_DATE}}'
+
+
+def _format_report_date(dt: datetime) -> str:
+    """Format as '28th of February 2026' (previous day's date for report)."""
+    d = dt.day
+    suffix = 'th' if 11 <= d <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(d % 10, 'th')
+    return f"{d}{suffix} of {dt.strftime('%B %Y')}"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -209,6 +224,8 @@ def send_email_now():
     cc_raw = data.get('cc', '').strip()
     subject = data.get('subject', _DEFAULT_CONFIG['subject'])
     body    = data.get('body', '')
+    yesterday = datetime.now() - timedelta(days=1)
+    body = body.replace(_REPORT_DATE_PLACEHOLDER, _format_report_date(yesterday))
 
     if not to_raw:
         return jsonify({'error': 'Recipient (To) email is required'}), 400
@@ -224,10 +241,16 @@ def send_email_now():
 
     # Generate report
     try:
-        from .mmr_service import parse_excel, generate_report_excel
+        from .mmr_service import parse_excel, generate_report_excel, format_chargeable_summary_for_email
         df = parse_excel(path)
         report_bytes = generate_report_excel(df)
         filename = f"MMR_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+        # Append chargeable summary and attachment note to body
+        chargeable_summary = format_chargeable_summary_for_email(df)
+        if chargeable_summary:
+            body = (body.rstrip() + '\n\n' + chargeable_summary).rstrip()
+        body = (body.rstrip() + '\n\nFor full information, please refer to the attached Excel file.').rstrip()
     except Exception as e:
         return jsonify({'error': f'Report generation failed: {str(e)}'}), 500
 

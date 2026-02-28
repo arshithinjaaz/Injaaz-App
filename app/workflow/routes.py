@@ -414,6 +414,98 @@ def get_pending_submissions():
         return error_response('Failed to get pending submissions', status_code=500, error_code='DATABASE_ERROR')
 
 
+@workflow_bp.route('/dashboard-stats', methods=['GET'])
+@jwt_required()
+def get_dashboard_stats():
+    """Stats and recent activity for the dashboard widget (forms submitted, pending, active users, completion rate, recent activity)."""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user:
+            return error_response('User not found', status_code=404, error_code='NOT_FOUND')
+
+        # Pending count (same logic as pending submissions)
+        if user.role == 'admin':
+            pending_count = Submission.query.filter(
+                Submission.workflow_status.notin_(['completed', 'closed_by_admin', 'rejected'])
+            ).count()
+        else:
+            pending_subs = get_user_pending_submissions(user)
+            pending_count = len(pending_subs) if pending_subs else 0
+
+        # Forms submitted: for supervisor = my submissions; for admin = total
+        if user.designation == 'supervisor':
+            forms_submitted = Submission.query.filter(
+                Submission.supervisor_id == user.id
+            ).count()
+        else:
+            forms_submitted = Submission.query.count()
+
+        # Active users (admin only; others get 0 or hide)
+        active_users = 0
+        if user.role == 'admin':
+            active_users = User.query.filter_by(is_active=True).count()
+
+        # Completion rate: completed / total * 100
+        total_submissions = Submission.query.count()
+        completed_count = Submission.query.filter(Submission.workflow_status == 'completed').count()
+        completion_rate = round((completed_count / total_submissions * 100) if total_submissions else 0)
+
+        # Recent activity: last 5 submissions with user name and module
+        base_activity = Submission.query.options(joinedload(Submission.user)).order_by(Submission.created_at.desc()).limit(5).all()
+        module_labels = {'hvac_mep': 'HVAC', 'civil': 'Civil', 'cleaning': 'Cleaning', 'hr': 'HR'}
+        recent_activity = []
+        for sub in base_activity:
+            label = module_labels.get(sub.module_type, sub.module_type or 'Form')
+            name = (sub.user.full_name or sub.user.username or 'Someone') if sub.user else 'Someone'
+            parts = name.split()
+            if len(name) > 20 and len(parts) >= 2:
+                name = parts[0] + ' ' + (parts[-1][0] if parts[-1] else '') + '.'
+            status = sub.workflow_status or 'submitted'
+            if status == 'completed':
+                action = 'completed'
+            elif status == 'rejected':
+                action = 'rejected'
+            else:
+                action = 'submitted'
+            recent_activity.append({
+                'text': f'{label} inspection {action} by {name}',
+                'time_ago': _time_ago(sub.created_at),
+                'submission_id': sub.submission_id,
+            })
+
+        return success_response({
+            'forms_submitted': forms_submitted,
+            'pending_review': pending_count,
+            'active_users': active_users,
+            'completion_rate': min(100, completion_rate),
+            'recent_activity': recent_activity,
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error getting dashboard stats: {str(e)}", exc_info=True)
+        return error_response('Failed to get dashboard stats', status_code=500, error_code='DATABASE_ERROR')
+
+
+def _time_ago(dt):
+    if not dt:
+        return ''
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    if dt.tzinfo is None:
+        from datetime import timezone as tz
+        dt = dt.replace(tzinfo=tz.utc)
+    delta = now - dt
+    if delta.total_seconds() < 60:
+        return 'Just now'
+    if delta.total_seconds() < 3600:
+        return f'{int(delta.total_seconds() / 60)}m ago'
+    if delta.total_seconds() < 86400:
+        return f'{int(delta.total_seconds() / 3600)}h ago'
+    if delta.days < 7:
+        return f'{delta.days}d ago'
+    return dt.strftime('%b %d')
+
+
 @workflow_bp.route('/submissions/history', methods=['GET'])
 @jwt_required()
 def get_history_submissions():

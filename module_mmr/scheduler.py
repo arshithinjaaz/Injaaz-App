@@ -20,9 +20,9 @@ def _run_scheduled_report(app):
     with app.app_context():
         try:
             import os
-            from datetime import datetime
-            from .routes import _upload_path, _load_config
-            from .mmr_service import parse_excel, generate_report_excel
+            from datetime import datetime, timedelta
+            from .routes import _upload_path, _load_config, _format_report_date, _REPORT_DATE_PLACEHOLDER
+            from .mmr_service import parse_excel, generate_report_excel, format_chargeable_summary_for_email
             from common.email_service import send_email
 
             config = _load_config()
@@ -47,10 +47,18 @@ def _run_scheduled_report(app):
             report_bytes = generate_report_excel(df)
             filename = f"MMR_Report_{datetime.now().strftime('%Y%m%d')}.xlsx"
 
+            body = config.get('body', '')
+            yesterday = datetime.now() - timedelta(days=1)
+            body = body.replace(_REPORT_DATE_PLACEHOLDER, _format_report_date(yesterday))
+            chargeable_summary = format_chargeable_summary_for_email(df)
+            if chargeable_summary:
+                body = (body.rstrip() + '\n\n' + chargeable_summary).rstrip()
+            body = (body.rstrip() + '\n\nFor full information, please refer to the attached Excel file.').rstrip()
+
             send_email(
                 recipient=to_list,
                 subject=config.get('subject', 'MMR Daily Work Order Report'),
-                body=config.get('body', ''),
+                body=body,
                 cc=cc_list,
                 attachments=[{
                     'content': report_bytes,

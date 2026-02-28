@@ -15,6 +15,9 @@ import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.drawing.image import Image as XLImage
+from openpyxl.drawing.xdr import XDRPositiveSize2D
+from openpyxl.drawing.spreadsheet_drawing import OneCellAnchor, AnchorMarker
+from openpyxl.utils.units import pixels_to_EMU
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +146,62 @@ def _normalise_space(val: str) -> str:
     return val.strip() or 'Unknown'
 
 
+def format_chargeable_summary_for_email(df: pd.DataFrame) -> str:
+    """Build a plain-text chargeable table for email body.
+    Rows: Service Groups. Cols: Chargeable (Resolved+Pending), Non-Chargeable (Resolved+Pending).
+    """
+    required = {'Space', 'Status', 'Service Group'}
+    if not required.issubset(set(df.columns)):
+        return ''
+    work = df.copy()
+    work['_space'] = work['Space'].apply(_normalise_space)
+    work['_status'] = work['Status'].apply(_normalise_status_bucket)
+
+    agg = (
+        work.groupby('Service Group', dropna=False)
+        .apply(lambda g: pd.Series({
+            'chg_res': len(g[(g['_space'] == 'Chargeable') & (g['_status'] == 'Resolved')]),
+            'chg_pen': len(g[(g['_space'] == 'Chargeable') & (g['_status'] == 'Pending')]),
+            'nchg_res': len(g[(g['_space'] == 'Non-Chargeable') & (g['_status'] == 'Resolved')]),
+            'nchg_pen': len(g[(g['_space'] == 'Non-Chargeable') & (g['_status'] == 'Pending')]),
+        }), include_groups=False)
+        .reset_index()
+    )
+    agg['Service Group'] = agg['Service Group'].fillna('').astype(str).str.strip()
+    agg = agg.sort_values('Service Group')
+    if len(agg) == 0:
+        return ''
+
+    sg_w = 28
+    num_w = 8
+    sep = ' | '
+    h1 = 'Service Group'.ljust(sg_w) + sep
+    h1 += 'Chg Res'.rjust(num_w) + sep + 'Chg Pend'.rjust(num_w) + sep
+    h1 += 'NChg Res'.rjust(num_w) + sep + 'NChg Pend'.rjust(num_w)
+    rule = '-' * (sg_w + 4 * (num_w + len(sep)))
+
+    lines = ['Chargeable Summary by Service Group:', rule, h1, rule]
+    for _, row in agg.iterrows():
+        sg = (str(row['Service Group'] or '')[:sg_w]).ljust(sg_w)
+        chg_res = int(row['chg_res'])
+        chg_pen = int(row['chg_pen'])
+        nchg_res = int(row['nchg_res'])
+        nchg_pen = int(row['nchg_pen'])
+        lines.append(sg + sep + str(chg_res).rjust(num_w) + sep + str(chg_pen).rjust(num_w) +
+                     sep + str(nchg_res).rjust(num_w) + sep + str(nchg_pen).rjust(num_w))
+
+    tot_chg_res = int(agg['chg_res'].sum())
+    tot_chg_pen = int(agg['chg_pen'].sum())
+    tot_nchg_res = int(agg['nchg_res'].sum())
+    tot_nchg_pen = int(agg['nchg_pen'].sum())
+    lines.append(rule)
+    lines.append('Total'.ljust(sg_w) + sep +
+                 str(tot_chg_res).rjust(num_w) + sep + str(tot_chg_pen).rjust(num_w) +
+                 sep + str(tot_nchg_res).rjust(num_w) + sep + str(tot_nchg_pen).rjust(num_w))
+    lines.append(rule)
+    return '\n'.join(lines)
+
+
 def _normalise_status_bucket(val: str) -> str:
     """Bucket raw Status into Resolved / Pending."""
     v = val.strip().lower()
@@ -228,16 +287,32 @@ def _alt_fill():
     return PatternFill(start_color=ALT_ROW, end_color=ALT_ROW, fill_type='solid')
 
 def _write_logo_header(ws, title: str, span_cols: int) -> int:
-    """Writes logo + title block; returns next free row number."""
+    """Writes logo + title block; returns next free row number.
+    Logo is centered in column A. Title centered per design."""
     ws.row_dimensions[1].height = 48
     ws.row_dimensions[2].height = 18
+    ws.row_dimensions[3].height = 18
+    ws.merge_cells('A1:A3')
+    col_a = ws.column_dimensions.get('A')
+    col_a_width = col_a.width if col_a and col_a.width is not None else None
+    if col_a_width is None:
+        ws.column_dimensions['A'].width = 12
+        col_a_width = 12
 
     if os.path.exists(LOGO_PATH):
         try:
             img = XLImage(LOGO_PATH)
-            img.width = 55
-            img.height = 55
-            ws.add_image(img, 'A1')
+            img.width = 72
+            img.height = 72
+            p2e = pixels_to_EMU
+            size = XDRPositiveSize2D(p2e(72), p2e(72))
+            cell_w_px = col_a_width * 7.5
+            cell_h_px = (48 + 18 + 18) * (96 / 72)
+            col_off = p2e(max(0, (cell_w_px - 72) / 2))
+            row_off = p2e(max(0, (cell_h_px - 72) / 2))
+            marker = AnchorMarker(col=0, colOff=col_off, row=0, rowOff=row_off)
+            img.anchor = OneCellAnchor(_from=marker, ext=size)
+            ws.add_image(img)
         except Exception:
             pass
 
@@ -254,8 +329,11 @@ def _write_logo_header(ws, title: str, span_cols: int) -> int:
     if span_cols > 2:
         ws.merge_cells(f'B2:{end}2')
 
-    ws.cell(row=3, column=1, value=f'Generated: {datetime.now().strftime("%d %b %Y  %H:%M")}')
-    ws.cell(row=3, column=1).font = Font(size=8, color='888888', italic=True, name='Calibri')
+    date_cell = ws.cell(row=3, column=2, value=f'Generated: {datetime.now().strftime("%d %b %Y  %H:%M")}')
+    date_cell.font = Font(size=8, color='888888', italic=True, name='Calibri')
+    date_cell.alignment = Alignment(horizontal='left', vertical='center')
+    if span_cols > 2:
+        ws.merge_cells(f'B3:{end}3')
 
     return 5  # first data row (row 4 is a spacer)
 
@@ -595,7 +673,7 @@ def _write_data_sheet(wb: openpyxl.Workbook, df: pd.DataFrame, title: str):
         _style_data_row(ws, current_row, n, alt=(ri % 2 == 1))
         current_row += 1
 
-    # Auto-width
+    # Auto-width (keep col A at least 12 for centered logo)
     for ci, col in enumerate(cols, 1):
         max_len = max(len(col), 8)
         for row in ws.iter_rows(min_row=6, max_row=min(ws.max_row, 200),
@@ -603,7 +681,10 @@ def _write_data_sheet(wb: openpyxl.Workbook, df: pd.DataFrame, title: str):
             for cell in row:
                 if cell.value:
                     max_len = max(max_len, min(len(str(cell.value)), 60))
-        ws.column_dimensions[get_column_letter(ci)].width = min(max_len + 4, 60)
+        w = min(max_len + 4, 60)
+        if ci == 1:
+            w = max(w, 12)
+        ws.column_dimensions[get_column_letter(ci)].width = w
 
     # Print settings
     ws.page_setup.orientation = 'landscape'
@@ -651,6 +732,8 @@ def _write_chargeable_analysis(wb: openpyxl.Workbook, df: pd.DataFrame):
     ]
     NUM_COLS = len(HEADERS)
     col_widths = [28, 28, 26, 16, 16, 18, 18, 10]
+    for ci, w in enumerate(col_widths, 1):
+        ws.column_dimensions[get_column_letter(ci)].width = w
 
     # Accent fills
     chg_fill  = PatternFill(start_color='E8F5E9', end_color='E8F5E9', fill_type='solid')
@@ -749,26 +832,25 @@ def _write_chargeable_analysis(wb: openpyxl.Workbook, df: pd.DataFrame):
         current_row += 1
 
     last_data_row = current_row - 1
+    first_data_row = header_row + 1
 
-    # ── Grand Total row ──────────────────────────────────────────────
-    ws.cell(row=current_row, column=1, value='GRAND TOTAL')
-    ws.merge_cells(f'A{current_row}:C{current_row}')
-    totals = [
-        combos['chg_res'].sum(), combos['chg_pen'].sum(),
-        combos['nchg_res'].sum(), combos['nchg_pen'].sum(),
-    ]
-    for ci, val in enumerate(totals, 4):
-        ws.cell(row=current_row, column=ci, value=int(val))
-    ws.cell(row=current_row, column=NUM_COLS, value=int(sum(totals)))
+    # ── Grand Total row (SUBTOTAL so it updates when user filters) ────
+    grand_total_row = current_row
+    ws.cell(row=grand_total_row, column=1, value='GRAND TOTAL')
+    ws.merge_cells(f'A{grand_total_row}:C{grand_total_row}')
+    # Use SUBTOTAL(109, ...) so filtering shows sum of visible rows only
+    for ci in range(4, NUM_COLS + 1):
+        col_letter = get_column_letter(ci)
+        ws.cell(row=grand_total_row, column=ci, value=f'=SUBTOTAL(109,{col_letter}{first_data_row}:{col_letter}{last_data_row})')
 
     for c in range(1, NUM_COLS + 1):
-        cell = ws.cell(row=current_row, column=c)
+        cell = ws.cell(row=grand_total_row, column=c)
         cell.font = Font(bold=True, size=10, color=WHITE, name='Calibri')
         cell.fill = PatternFill(start_color=SECONDARY, end_color=SECONDARY, fill_type='solid')
         cell.alignment = Alignment(horizontal='center', vertical='center')
         cell.border = _border(SECONDARY)
-    ws.cell(row=current_row, column=1).alignment = Alignment(horizontal='left', vertical='center')
-    ws.row_dimensions[current_row].height = 28
+    ws.cell(row=grand_total_row, column=1).alignment = Alignment(horizontal='left', vertical='center')
+    ws.row_dimensions[grand_total_row].height = 28
 
     # ── AutoFilter (dropdown arrows on every column) ─────────────────
     end_col = get_column_letter(NUM_COLS)

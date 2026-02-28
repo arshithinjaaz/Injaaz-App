@@ -2105,6 +2105,77 @@ async function handleLogout() {
 }
 
 // ===========================================
+// Dashboard stats widget (right-side box)
+// ===========================================
+
+function loadDashboardStats() {
+  const widget = document.querySelector('.dashboard-widget');
+  if (!widget) return;
+
+  const textEl = document.getElementById('dashboard-activity-text');
+  const timeEl = document.getElementById('dashboard-activity-time');
+  const listEl = document.getElementById('dashboard-activity-list');
+
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    if (textEl) textEl.textContent = 'Sign in to see activity';
+    return;
+  }
+
+  authenticatedFetch('/api/workflow/dashboard-stats')
+    .then(function (response) {
+      return response.json().then(function (body) {
+        return { ok: response.ok, body: body };
+      }).catch(function () {
+        return { ok: false, body: null };
+      });
+    })
+    .then(function (result) {
+      if (!result.ok || !result.body) {
+        if (textEl) textEl.textContent = 'Unable to load stats. Try signing in again.';
+        if (timeEl) timeEl.textContent = '';
+        if (listEl) listEl.innerHTML = '';
+        return;
+      }
+      // API returns { success: true, forms_submitted, pending_review, ... } (payload merged at root)
+      var d = result.body;
+      var formsEl = document.getElementById('stat-forms-submitted');
+      var pendingEl = document.getElementById('stat-pending-review');
+      var usersEl = document.getElementById('stat-active-users');
+      var rateEl = document.getElementById('stat-completion-rate');
+
+      if (formsEl) formsEl.textContent = typeof d.forms_submitted === 'number' ? d.forms_submitted.toLocaleString() : (d.forms_submitted != null ? d.forms_submitted : '0');
+      if (pendingEl) pendingEl.textContent = typeof d.pending_review === 'number' ? d.pending_review : (d.pending_review != null ? d.pending_review : '0');
+      if (usersEl) usersEl.textContent = typeof d.active_users === 'number' ? d.active_users : (d.active_users != null ? d.active_users : '0');
+      if (rateEl) rateEl.textContent = typeof d.completion_rate === 'number' ? d.completion_rate + '%' : (d.completion_rate != null ? d.completion_rate + '%' : '0%');
+
+      var activity = d.recent_activity || [];
+      var firstItem = document.getElementById('dashboard-activity-item');
+
+      if (activity.length === 0) {
+        if (textEl) textEl.textContent = 'No recent activity';
+        if (timeEl) timeEl.textContent = '';
+        if (listEl) listEl.innerHTML = '';
+      } else {
+        if (firstItem && textEl && timeEl) {
+          textEl.textContent = activity[0].text;
+          timeEl.textContent = activity[0].time_ago || '';
+        }
+        if (listEl) {
+          listEl.innerHTML = activity.slice(1, 2).map(function (a) {
+            return '<div class="dashboard-activity-item"><span class="dashboard-activity-icon">✓</span><span class="dashboard-activity-text">' + escapeHtml(a.text) + '</span><span class="dashboard-activity-time">' + escapeHtml(a.time_ago || '') + '</span></div>';
+          }).join('');
+        }
+      }
+    })
+    .catch(function (err) {
+      if (textEl) textEl.textContent = 'Unable to load activity';
+      if (timeEl) timeEl.textContent = '';
+      if (listEl) listEl.innerHTML = '';
+    });
+}
+
+// ===========================================
 // Initialization
 // ===========================================
 
@@ -2128,6 +2199,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     loadUserWelcome();
+    loadDashboardStats();
     
     // Check immediately if user data exists
     const userStr = localStorage.getItem('user');
