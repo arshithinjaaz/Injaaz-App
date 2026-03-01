@@ -740,6 +740,176 @@
       background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
       box-shadow: 0 4px 16px rgba(18,84,53,0.3);
     }
+    .report-gen-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .btn-automation {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+    .btn-automation-pending {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #92400e;
+      border: 1px solid rgba(245,158,11,0.4);
+    }
+    .btn-automation-pending:hover {
+      background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+      box-shadow: 0 2px 8px rgba(245,158,11,0.25);
+    }
+    .btn-automation-completed {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      color: #065f46;
+      border: 1px solid rgba(16,185,129,0.4);
+    }
+    .btn-automation-completed:hover {
+      background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
+      box-shadow: 0 2px 8px rgba(16,185,129,0.25);
+    }
+    .btn-automation-disabled {
+      background: #f1f5f9;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      cursor: default;
+    }
+    .btn-automation-paused {
+      background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+      color: #4b5563;
+      border: 1px solid var(--border);
+    }
+    .btn-automation-paused:hover { opacity: .95; }
+    .automation-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: automationPulse 2s ease-in-out infinite;
+    }
+    .btn-automation-completed .automation-dot { background: #059669; }
+    .btn-automation-pending .automation-dot { background: #d97706; }
+    .btn-automation-paused .automation-dot { background: #6b7280; }
+    @keyframes automationPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    /* Automation modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.5);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 1rem;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal-automation {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      max-width: 480px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+      transform: scale(0.96);
+      transition: transform 0.2s ease;
+    }
+    .modal-overlay.active .modal-automation {
+      transform: scale(1);
+    }
+    .modal-automation-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-automation-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .modal-automation-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .modal-automation-close:hover {
+      background: var(--secondary);
+      color: var(--text);
+    }
+    .modal-automation-body {
+      padding: 1.5rem;
+    }
+    .automation-detail-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      margin-bottom: 1rem;
+    }
+    .automation-detail-row:last-child { margin-bottom: 0; }
+    .automation-detail-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .automation-detail-value {
+      font-size: 0.9375rem;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .automation-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+    .automation-status-badge.success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .automation-status-badge.pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .automation-status-badge.paused {
+      background: #e5e7eb;
+      color: #4b5563;
+    }
 
     .user-info {
       display: flex;
@@ -984,7 +1154,43 @@
           </p>
         </div>
       </div>
-      <a href="/admin/mmr/" class="btn btn-report-gen">Open Report Generation</a>
+      <div class="report-gen-actions">
+        <button type="button" id="btnReportFolder" class="btn btn-outline" onclick="openReportFolderModal()" title="View saved reports" style="background:rgba(255,255,255,0.9);color:var(--primary);border-color:var(--primary);">
+          📁 Report Folder
+        </button>
+        <button type="button" id="btnAutomation" class="btn-automation btn-automation-disabled" onclick="openAutomationModal()" disabled title="Automation status">
+          <span class="automation-dot"></span>
+          <span id="automationLabel">—</span>
+        </button>
+        <a href="/admin/mmr/" class="btn btn-report-gen">Open Report Generation</a>
+      </div>
+    </div>
+
+    <!-- Report folder modal -->
+    <div id="reportFolderModal" class="modal-overlay" onclick="if(event.target===this)closeReportFolderModal()">
+      <div class="modal-automation modal-report-folder" onclick="event.stopPropagation()" style="max-width:560px">
+        <div class="modal-automation-header">
+          <h3 class="modal-automation-title">📁 Report Folder</h3>
+          <button type="button" class="modal-automation-close" onclick="closeReportFolderModal()" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-automation-body">
+          <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem">Reports sent via email or saved manually from Report Generation.</p>
+          <div id="reportFolderList" style="max-height:320px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Automation status modal -->
+    <div id="automationModal" class="modal-overlay" onclick="if(event.target===this)closeAutomationModal()">
+      <div class="modal-automation" onclick="event.stopPropagation()">
+        <div class="modal-automation-header">
+          <h3 class="modal-automation-title">📧 Email Automation</h3>
+          <button type="button" class="modal-automation-close" onclick="closeAutomationModal()" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-automation-body" id="automationModalBody">
+          <p style="color:var(--text-muted)">Loading…</p>
+        </div>
+      </div>
     </div>
 
     <div id="alertContainer"></div>
@@ -1403,6 +1609,199 @@
         return true;
       }
       return false;
+    }
+
+    let automationStatus = null;
+
+    async function loadAutomationStatus() {
+      try {
+        const response = await authenticatedFetch('/admin/mmr/api/automation-status');
+        if (!response.ok) return;
+        automationStatus = await response.json();
+        updateAutomationButton();
+      } catch (e) {
+        console.error('Automation status load failed:', e);
+      }
+    }
+
+    function updateAutomationButton() {
+      const btn = document.getElementById('btnAutomation');
+      const label = document.getElementById('automationLabel');
+      if (!btn || !label) return;
+      if (!automationStatus) {
+        btn.className = 'btn-automation btn-automation-disabled';
+        btn.disabled = true;
+        label.textContent = '—';
+        return;
+      }
+      btn.disabled = false;
+      const status = automationStatus.automation_status;
+      if (status === 'completed') {
+        btn.className = 'btn-automation btn-automation-completed';
+        label.textContent = 'Completed';
+      } else if (status === 'pending') {
+        btn.className = 'btn-automation btn-automation-pending';
+        const next = automationStatus.next_run_at || '';
+        const excelReq = !automationStatus.excel_uploaded ? ' · Upload required' : '';
+        label.textContent = next ? `Pending · Next ${next}${excelReq}` : `Pending${excelReq}`;
+      } else if (status === 'paused') {
+        btn.className = 'btn-automation btn-automation-paused';
+        label.textContent = 'Paused · Upload to resume';
+      } else {
+        btn.className = 'btn-automation btn-automation-disabled';
+        label.textContent = 'Disabled';
+      }
+    }
+
+    function openAutomationModal() {
+      const modal = document.getElementById('automationModal');
+      const body = document.getElementById('automationModalBody');
+      if (!modal || !body) return;
+      if (!automationStatus) {
+        body.innerHTML = '<p style="color:var(--text-muted)">No automation data.</p>';
+        modal.classList.add('active');
+        return;
+      }
+      const s = automationStatus;
+      const h = String(s.schedule_hour ?? 10).padStart(2, '0');
+      const m = String(s.schedule_minute ?? 0).padStart(2, '0');
+      const status = s.automation_status;
+      const r = s.last_run;
+      let html = '';
+      if (status === 'completed') {
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Status</span><span class="automation-status-badge success">✓ Today's run completed</span></div>`;
+      } else if (status === 'pending') {
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Status</span><span class="automation-status-badge pending">⏳ Pending</span></div>`;
+      } else if (status === 'paused') {
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Status</span><span class="automation-status-badge paused">⏸ Paused</span></div>`;
+      }
+      if (s.schedule_enabled) {
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Schedule</span><span class="automation-detail-value">Daily at ${h}:${m} (GST)</span></div>`;
+      }
+      if (s.schedule_enabled) {
+        if (s.excel_uploaded) {
+          html += `<div class="automation-detail-row"><span class="automation-detail-label">Excel file</span><span class="automation-detail-value" style="color:#059669">✓ Uploaded</span></div>`;
+        } else {
+          html += `<div class="automation-detail-row"><span class="automation-detail-label">Excel file</span><span class="automation-detail-value" style="color:var(--danger)">⚠ Upload required – open Report Generation and browse file</span></div>`;
+        }
+      }
+      if (s.schedule_enabled && !s.schedule_paused) {
+        const nextMsg = s.next_run_tomorrow ? `Tomorrow at ${h}:${m} (GST)` : (s.next_run_at ? `Today at ${s.next_run_at}` : `${h}:${m}`);
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Next run</span><span class="automation-detail-value">${nextMsg}</span></div>`;
+      } else if (status === 'paused') {
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Next run</span><span class="automation-detail-value">Upload new Excel in Report Generation to resume – runs at ${h}:${m} (GST)</span></div>`;
+      }
+      if (r) {
+        html += `<div class="automation-detail-row" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)"><span class="automation-detail-label">Last run</span><span class="automation-detail-value">${r.at_formatted || r.at} · ${r.status === 'success' ? '✓ Sent' : 'Failed'}</span></div>`;
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">To</span><span class="automation-detail-value">${(r.to || '—').replace(/,/g, ', ')}</span></div>`;
+        if (r.cc) html += `<div class="automation-detail-row"><span class="automation-detail-label">CC</span><span class="automation-detail-value">${r.cc.replace(/,/g, ', ')}</span></div>`;
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Subject</span><span class="automation-detail-value">${r.subject || '—'}</span></div>`;
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Recipients</span><span class="automation-detail-value">${r.recipient_count || 0}</span></div>`;
+      }
+      if (s.schedule_enabled) {
+        html += `<div class="automation-dialog-actions" style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap">`;
+        if (s.schedule_paused) {
+          const canResume = s.excel_uploaded;
+          html += `<button type="button" class="btn btn-primary" onclick="resumeAutomation()" ${!canResume ? 'disabled' : ''}>▶ Resume</button>`;
+          html += `<span style="font-size:.8rem;color:var(--text-muted);align-self:center">${canResume ? 'Ready to resume' : 'Upload Excel in Report Generation first'}</span>`;
+        } else {
+          html += `<button type="button" class="btn btn-outline" onclick="pauseAutomation()">⏸ Pause</button>`;
+        }
+        html += `</div>`;
+      }
+      if (!s.schedule_enabled) {
+        html = `<p style="color:var(--text-muted)">Automation is disabled. Open Report Generation and enable the daily schedule to send emails automatically.</p>`;
+      }
+      body.innerHTML = html;
+      modal.classList.add('active');
+    }
+
+    async function pauseAutomation() {
+      try {
+        const resp = await authenticatedFetch('/admin/mmr/api/automation-pause', { method: 'POST' });
+        if (resp.ok) {
+          showAlert('Automation paused', 'success');
+          await loadAutomationStatus();
+          openAutomationModal();
+        } else showAlert('Failed to pause', 'error');
+      } catch (e) { showAlert('Failed to pause', 'error'); }
+    }
+
+    async function resumeAutomation() {
+      try {
+        const resp = await authenticatedFetch('/admin/mmr/api/automation-resume', { method: 'POST' });
+        const data = await resp.json();
+        if (resp.ok) {
+          showAlert('Automation resumed', 'success');
+          await loadAutomationStatus();
+          closeAutomationModal();
+        } else showAlert(data.error || 'Failed to resume', 'error');
+      } catch (e) { showAlert('Failed to resume', 'error'); }
+    }
+
+    function closeAutomationModal() {
+      document.getElementById('automationModal')?.classList.remove('active');
+    }
+
+    async function loadReportFolder() {
+      try {
+        const resp = await authenticatedFetch('/admin/mmr/api/report-folder');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        renderReportFolderList(data.files || []);
+      } catch (e) {
+        console.error('Report folder load failed:', e);
+      }
+    }
+
+    function renderReportFolderList(files) {
+      const el = document.getElementById('reportFolderList');
+      if (!el) return;
+      if (!files.length) {
+        el.innerHTML = '<p style="text-align:center;padding:2rem;color:var(--text-muted)">No reports saved yet. Open Report Generation to send emails or save to folder.</p>';
+        return;
+      }
+      el.innerHTML = files.map(f => {
+        const dt = f.modified ? new Date(f.modified).toLocaleString() : '';
+        const size = f.size ? (f.size < 1024 ? f.size + ' B' : (f.size / 1024).toFixed(1) + ' KB') : '';
+        const fn = (f.name || '').replace(/"/g, '&quot;');
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem .75rem;border-radius:6px;border:1px solid var(--border);margin-bottom:.5rem;background:#fafafa">
+          <div style="flex:1;min-width:0;word-break:break-all;font-size:.8125rem">${escapeHtml(f.name)}</div>
+          <div style="display:flex;align-items:center;gap:.5rem">
+            <span style="font-size:.7rem;color:var(--text-muted)">${dt}${size ? ' · ' + size : ''}</span>
+            <button type="button" onclick="downloadReportFile(this.dataset.fn)" data-fn="${fn}" style="padding:.35rem .6rem;font-size:.75rem;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer">Download</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function openReportFolderModal() {
+      document.getElementById('reportFolderModal')?.classList.add('active');
+      loadReportFolder();
+    }
+
+    function closeReportFolderModal() {
+      document.getElementById('reportFolderModal')?.classList.remove('active');
+    }
+
+    async function downloadReportFile(filename) {
+      if (!filename) return;
+      try {
+        const resp = await authenticatedFetch('/admin/mmr/api/report-folder/download/' + encodeURIComponent(String(filename)));
+        if (!resp.ok) throw new Error('Download failed');
+        const blob = await resp.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } catch (e) {
+        showAlert('Download failed', 'error');
+      }
     }
 
     async function loadUsers() {
@@ -2778,6 +3177,7 @@
       checkPasswordChangeRequired();
       loadUsers();
       loadDocuments();
+      loadAutomationStatus();
     });
   </script>
 </body>

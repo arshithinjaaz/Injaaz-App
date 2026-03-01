@@ -61,6 +61,102 @@
     .btn-danger { background: var(--danger); color: #fff; }
     .btn:disabled { opacity: .5; cursor: not-allowed; }
     .btn-sm { padding: .4rem .75rem; font-size: .8125rem; }
+    .btn-automation {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .4rem .75rem; border-radius: var(--radius);
+      font-size: .8125rem; font-weight: 600; border: none;
+      cursor: pointer; transition: all .2s;
+    }
+    .btn-automation-pending {
+      background: #fef3c7; color: #92400e;
+      border: 1px solid rgba(245,158,11,.4);
+    }
+    .btn-automation-pending:hover { background: #fde68a; }
+    .btn-automation-completed {
+      background: #d1fae5; color: #065f46;
+      border: 1px solid rgba(16,185,129,.4);
+    }
+    .btn-automation-completed:hover { background: #a7f3d0; }
+    .btn-automation-disabled {
+      background: #f1f5f9; color: var(--text-muted);
+      border: 1px solid var(--border);
+      cursor: default;
+    }
+    .btn-automation-paused {
+      background: #e5e7eb; color: #4b5563;
+      border: 1px solid var(--border);
+    }
+    .btn-automation-paused:hover { background: #d1d5db; }
+    .automation-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .btn-automation-completed .automation-dot { background: #059669; }
+    .btn-automation-pending .automation-dot { background: #d97706; }
+    .btn-automation-paused .automation-dot { background: #6b7280; }
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(15,23,42,.5);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999; padding: 1rem;
+      opacity: 0; visibility: hidden;
+      transition: opacity .2s, visibility .2s;
+    }
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+    .modal-automation {
+      background: var(--white); border-radius: var(--radius);
+      max-width: 520px; width: 100%;
+      box-shadow: 0 20px 40px -8px rgba(0,0,0,.15);
+      border: 1px solid var(--border);
+    }
+    .modal-automation.modal-automation-wide { max-width: 560px; }
+    .modal-automation-header {
+      padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-automation-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .modal-automation-close {
+      width: 28px; height: 28px; border-radius: 6px;
+      border: none; background: transparent; color: var(--text-muted);
+      cursor: pointer; font-size: 1.2rem;
+    }
+    .modal-automation-close:hover { background: #f3f4f6; color: var(--text); }
+    .modal-automation-body { padding: 1.25rem; }
+    .automation-detail-row { margin-bottom: 1rem; }
+    .automation-detail-row:last-child { margin-bottom: 0; }
+    .automation-detail-label {
+      font-size: .7rem; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .04em; display: block; margin-bottom: .2rem;
+    }
+    .automation-detail-value { font-size: .875rem; color: var(--text); word-break: break-word; }
+    .automation-status-badge {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .3rem .6rem; border-radius: 6px;
+      font-size: .75rem; font-weight: 600;
+    }
+    .automation-status-badge.success { background: #d1fae5; color: #065f46; }
+    .automation-status-badge.pending { background: #fef3c7; color: #92400e; }
+    .automation-status-badge.paused { background: #e5e7eb; color: #4b5563; }
+    .automation-dialog-actions { display: flex; gap: .5rem; margin-top: 1rem; flex-wrap: wrap; }
+    .automation-dialog-actions .btn { font-size: .8125rem; padding: .45rem .85rem; }
+    .modal-report-folder { max-width: 560px; }
+    .report-folder-list { max-height: 320px; overflow-y: auto; }
+    .report-folder-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .6rem .75rem; border-radius: 6px;
+      border: 1px solid var(--border); margin-bottom: .5rem;
+      font-size: .8125rem; background: #fafafa;
+    }
+    .report-folder-item:hover { background: #f3f4f6; }
+    .report-folder-item:last-child { margin-bottom: 0; }
+    .report-folder-item > div:first-child { flex: 1; min-width: 0; }
+    .report-folder-name { color: var(--text); word-break: break-all; }
+    .report-folder-meta { font-size: .7rem; color: var(--text-muted); margin-top: .2rem; }
+    .report-folder-item > div:last-child { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+    .report-folder-dl {
+      padding: .35rem .6rem; font-size: .75rem; background: var(--primary);
+      color: #fff; border: none; border-radius: 6px; cursor: pointer;
+    }
+    .report-folder-dl:hover { opacity: .9; }
+    .report-folder-empty { text-align: center; padding: 2rem; color: var(--text-muted); font-size: .875rem; }
 
     /* Page */
     .page { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
@@ -180,6 +276,11 @@
     .kpi-label { font-size: .6875rem; color: var(--text-muted); margin-top: .25rem; text-transform: uppercase; letter-spacing: .03em; }
     .kpi.accent .kpi-value { color: var(--info); }
     .kpi.warn .kpi-value { color: var(--warning); }
+    .kpi.kpi-priority { display: flex; flex-direction: column; justify-content: center; }
+    .kpi-priority .priority-breakdown { display: flex; gap: .6rem; margin-top: .35rem; font-size: .8125rem; font-weight: 600; color: var(--text); flex-wrap: wrap; }
+    .kpi-priority .priority-breakdown .p1 { color: var(--info); }
+    .kpi-priority .priority-breakdown .p2 { color: var(--text-muted); }
+    .kpi-priority .priority-breakdown .p3 { color: var(--text); }
 
     /* Filters */
     .filter-bar {
@@ -309,6 +410,13 @@
       Report Generation
     </a>
     <div class="nav-actions">
+      <button type="button" id="btnReportFolder" class="btn btn-ghost btn-sm" onclick="openReportFolderModal()" title="View saved reports">
+        📁 Report Folder
+      </button>
+      <button type="button" id="btnAutomation" class="btn-automation btn-automation-disabled" onclick="openAutomationModal()" disabled title="Automation status">
+        <span class="automation-dot"></span>
+        <span id="automationLabel">—</span>
+      </button>
       <a href="/admin/dashboard" class="btn btn-ghost btn-sm">← Admin</a>
     </div>
   </div>
@@ -472,6 +580,9 @@
             <button class="btn btn-success" id="btnSendEmail" onclick="sendEmailNow()">
               ✉️ Send Email Now
             </button>
+            <button class="btn btn-outline" id="btnSaveToFolder" onclick="saveToFolder()" disabled title="Save current report (filtered or full) to Report folder">
+              📁 Save to Folder
+            </button>
             <button class="btn btn-outline" onclick="saveEmailConfig()">
               💾 Save Config
             </button>
@@ -522,6 +633,33 @@
 
 <!-- Toast container -->
 <div id="toast-container"></div>
+
+<!-- Automation status modal (comprehensive) -->
+<div id="automationModal" class="modal-overlay" onclick="if(event.target===this)closeAutomationModal()">
+  <div class="modal-automation modal-automation-wide" onclick="event.stopPropagation()">
+    <div class="modal-automation-header">
+      <h3 class="modal-automation-title">📧 Email Automation</h3>
+      <button type="button" class="modal-automation-close" onclick="closeAutomationModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-automation-body" id="automationModalBody">
+      <p style="color:var(--text-muted)">Loading…</p>
+    </div>
+  </div>
+</div>
+
+<!-- Report folder modal -->
+<div id="reportFolderModal" class="modal-overlay" onclick="if(event.target===this)closeReportFolderModal()">
+  <div class="modal-automation modal-report-folder" onclick="event.stopPropagation()">
+    <div class="modal-automation-header">
+      <h3 class="modal-automation-title">📁 Report Folder</h3>
+      <button type="button" class="modal-automation-close" onclick="closeReportFolderModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-automation-body">
+      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem">Reports sent via email or saved manually.</p>
+      <div id="reportFolderList" class="report-folder-list"></div>
+    </div>
+  </div>
+</div>
 
 <script>
 // ════════════════════════════════════════════════════════════════
@@ -627,8 +765,10 @@ async function uploadFile(file) {
     filterRows();
     toast(`✅ Loaded ${data.total} work orders`, 'success');
     document.getElementById('btnDownloadReport').disabled = false;
+    document.getElementById('btnSaveToFolder').disabled = false;
     document.getElementById('dashboardSection').classList.remove('hidden');
     document.getElementById('uploadZone').style.borderColor = 'var(--success)';
+    loadAutomationStatus();
   } catch(err) {
     setAlert(err.message, 'danger');
     toast(err.message, 'error');
@@ -649,11 +789,14 @@ function renderDashboard(d) {
 
 function renderKPIs(d) {
   const priorities = d.by_priority || {};
-  const statuses   = d.by_status   || {};
+  const spaces    = d.by_space   || {};
+  const statuses  = d.by_status  || {};
   let pending = 0;
   for (const [k, v] of Object.entries(statuses)) {
     if (k.toLowerCase().includes('pend')) pending += v;
   }
+  const chargeable = spaces['Chargeable'] || 0;
+  const nonChargeable = spaces['Non-Chargeable'] || 0;
   const p1 = priorities['P1'] || 0;
   const p2 = priorities['P2'] || 0;
   const p3 = priorities['P3'] || 0;
@@ -663,9 +806,14 @@ function renderKPIs(d) {
   document.getElementById('kpiGrid').innerHTML = `
     <div class="kpi"><div class="kpi-value">${d.total}</div><div class="kpi-label">Total Work Orders</div></div>
     <div class="kpi warn"><div class="kpi-value">${pending}</div><div class="kpi-label">Pending</div></div>
-    <div class="kpi accent"><div class="kpi-value">${p1}</div><div class="kpi-label">Priority P1 (Urgent)</div></div>
-    <div class="kpi"><div class="kpi-value">${p2 || '–'}</div><div class="kpi-label">Priority P2</div></div>
-    <div class="kpi"><div class="kpi-value">${p3}</div><div class="kpi-label">Priority P3</div></div>
+    <div class="kpi"><div class="kpi-value">${chargeable}</div><div class="kpi-label">Chargeable</div></div>
+    <div class="kpi"><div class="kpi-value">${nonChargeable}</div><div class="kpi-label">Non-Chargeable</div></div>
+    <div class="kpi kpi-priority">
+      <div class="kpi-label">Priority</div>
+      <div class="priority-breakdown">
+        <span class="p1">P1: ${p1}</span><span class="p2">P2: ${p2 || '–'}</span><span class="p3">P3: ${p3}</span>
+      </div>
+    </div>
     <div class="kpi"><div class="kpi-value">${clients}</div><div class="kpi-label">Clients</div></div>
     <div class="kpi"><div class="kpi-value">${contracts}</div><div class="kpi-label">Contracts</div></div>
   `;
@@ -673,12 +821,13 @@ function renderKPIs(d) {
 
 function populateFilters(filters) {
   const map = {
-    fClient: filters.clients, fContract: filters.contracts,
-    fServiceGroup: filters.service_groups, fSpace: filters.spaces,
-    fStatus: filters.statuses, fPriority: filters.priorities,
+    fClient: filters?.clients, fContract: filters?.contracts,
+    fServiceGroup: filters?.service_groups, fSpace: filters?.spaces,
+    fStatus: filters?.statuses, fPriority: filters?.priorities,
   };
   for (const [id, vals] of Object.entries(map)) {
     const sel = document.getElementById(id);
+    if (!sel) continue;
     sel.innerHTML = '<option value="">All</option>';
     (vals || []).forEach(v => {
       const opt = document.createElement('option');
@@ -692,7 +841,8 @@ function populateFilters(filters) {
 function updateContractOptions() {
   const clientSel = document.getElementById('fClient');
   const contractSel = document.getElementById('fContract');
-  const client = (clientSel && clientSel.value) || '';
+  if (!clientSel || !contractSel) return;
+  const client = clientSel.value || '';
   let list = [];
   if (client) {
     const set = new Set();
@@ -716,6 +866,7 @@ function updateContractOptions() {
 function updateClientFromContract() {
   const clientSel = document.getElementById('fClient');
   const contractSel = document.getElementById('fContract');
+  if (!clientSel || !contractSel) return;
   if ((clientSel.value || '') !== '' || !contractSel.value) return;
   const contract = contractSel.value.trim();
   for (const r of allRows) {
@@ -852,21 +1003,22 @@ function renderChargeableTable(dataObj) {
 // Filters & table
 // ════════════════════════════════════════════════════════════════
 function getFilters() {
+  const el = id => document.getElementById(id);
   return {
-    client:       document.getElementById('fClient').value,
-    contract:     document.getElementById('fContract').value,
-    serviceGroup: document.getElementById('fServiceGroup').value,
-    space:        document.getElementById('fSpace').value,
-    status:       document.getElementById('fStatus').value,
-    priority:     document.getElementById('fPriority').value,
-    search:       document.getElementById('searchBox').value.toLowerCase().trim(),
+    client:       (el('fClient')?.value || ''),
+    contract:     (el('fContract')?.value || ''),
+    serviceGroup: (el('fServiceGroup')?.value || ''),
+    space:        (el('fSpace')?.value || ''),
+    status:       (el('fStatus')?.value || ''),
+    priority:     (el('fPriority')?.value || ''),
+    search:       (el('searchBox')?.value || '').toLowerCase().trim(),
   };
 }
 
 function resetFilters() {
   ['fClient','fContract','fServiceGroup','fSpace','fStatus','fPriority']
-    .forEach(id => document.getElementById(id).value = '');
-  document.getElementById('searchBox').value = '';
+    .forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  const sb = document.getElementById('searchBox'); if (sb) sb.value = '';
   applyFilters();
 }
 
@@ -902,22 +1054,30 @@ function applyFilters() {
 
 function updateKPIs(rows) {
   const total = rows.length;
-  let pending = 0, p1 = 0, p2 = 0, p3 = 0;
+  let pending = 0, p1 = 0, p2 = 0, p3 = 0, chargeable = 0, nonChargeable = 0;
   const clientSet = new Set(), contractSet = new Set();
   rows.forEach(r => {
     if ((r['Status'] || '').toLowerCase().includes('pend')) pending++;
     if (r['Priority'] === 'P1') p1++;
     if (r['Priority'] === 'P2') p2++;
     if (r['Priority'] === 'P3') p3++;
+    const space = (r['Space'] || '').trim();
+    if (space === 'Chargeable') chargeable++;
+    else if (space === 'Non-Chargeable') nonChargeable++;
     if (r['Client'])   clientSet.add(r['Client']);
     if (r['Contract']) contractSet.add(r['Contract']);
   });
   document.getElementById('kpiGrid').innerHTML = `
     <div class="kpi"><div class="kpi-value">${total}</div><div class="kpi-label">Work Orders (filtered)</div></div>
     <div class="kpi warn"><div class="kpi-value">${pending}</div><div class="kpi-label">Pending</div></div>
-    <div class="kpi accent"><div class="kpi-value">${p1}</div><div class="kpi-label">Priority P1</div></div>
-    <div class="kpi"><div class="kpi-value">${p2 || '–'}</div><div class="kpi-label">Priority P2</div></div>
-    <div class="kpi"><div class="kpi-value">${p3}</div><div class="kpi-label">Priority P3</div></div>
+    <div class="kpi"><div class="kpi-value">${chargeable}</div><div class="kpi-label">Chargeable</div></div>
+    <div class="kpi"><div class="kpi-value">${nonChargeable}</div><div class="kpi-label">Non-Chargeable</div></div>
+    <div class="kpi kpi-priority">
+      <div class="kpi-label">Priority</div>
+      <div class="priority-breakdown">
+        <span class="p1">P1: ${p1}</span><span class="p2">P2: ${p2 || '–'}</span><span class="p3">P3: ${p3}</span>
+      </div>
+    </div>
     <div class="kpi"><div class="kpi-value">${clientSet.size}</div><div class="kpi-label">Clients</div></div>
     <div class="kpi"><div class="kpi-value">${contractSet.size}</div><div class="kpi-label">Contracts</div></div>
   `;
@@ -1152,6 +1312,7 @@ async function saveSchedule() {
   if (resp.ok) {
     toast('Schedule saved', 'success');
     updateScheduleStatus(payload);
+    loadAutomationStatus();
   } else {
     toast('Failed: ' + (data.error || 'unknown'), 'error');
   }
@@ -1188,8 +1349,248 @@ function setAlert(msg, type = 'info') {
 // ════════════════════════════════════════════════════════════════
 // Init
 // ════════════════════════════════════════════════════════════════
+// Automation status
+// ════════════════════════════════════════════════════════════════
+let automationStatus = null;
+
+async function loadAutomationStatus() {
+  try {
+    const resp = await authFetch('/admin/mmr/api/automation-status');
+    if (!resp.ok) return;
+    automationStatus = await resp.json();
+    updateAutomationButton();
+  } catch (e) {
+    console.error('Automation status load failed:', e);
+  }
+}
+
+function updateAutomationButton() {
+  const btn = document.getElementById('btnAutomation');
+  const label = document.getElementById('automationLabel');
+  if (!btn || !label) return;
+  if (!automationStatus) {
+    btn.className = 'btn-automation btn-automation-disabled';
+    btn.disabled = true;
+    label.textContent = '—';
+    return;
+  }
+  btn.disabled = false;
+  const status = automationStatus.automation_status;
+  if (status === 'completed') {
+    btn.className = 'btn-automation btn-automation-completed';
+    label.textContent = 'Completed';
+  } else if (status === 'pending') {
+    btn.className = 'btn-automation btn-automation-pending';
+    const next = automationStatus.next_run_at || '';
+    const excelReq = !automationStatus.excel_uploaded ? ' · Upload required' : '';
+    label.textContent = next ? `Pending · Next ${next}${excelReq}` : `Pending${excelReq}`;
+  } else if (status === 'paused') {
+    btn.className = 'btn-automation btn-automation-paused';
+    label.textContent = 'Paused · Upload to resume';
+  } else {
+    btn.className = 'btn-automation btn-automation-disabled';
+    label.textContent = 'Disabled';
+  }
+}
+
+function openAutomationModal() {
+  const modal = document.getElementById('automationModal');
+  const body = document.getElementById('automationModalBody');
+  if (!modal || !body) return;
+  if (!automationStatus) {
+    body.innerHTML = '<p style="color:var(--text-muted)">No automation data.</p>';
+    modal.classList.add('active');
+    return;
+  }
+  const s = automationStatus;
+  const h = String(s.schedule_hour ?? 10).padStart(2, '0');
+  const m = String(s.schedule_minute ?? 0).padStart(2, '0');
+  const status = s.automation_status;
+  const r = s.last_run;
+
+  let html = '';
+
+  // ── Status badge ──
+  if (status === 'completed') {
+    html += `<div class="automation-detail-row"><span class="automation-detail-label">Status</span><span class="automation-status-badge success">✓ Today's run completed</span></div>`;
+  } else if (status === 'pending') {
+    html += `<div class="automation-detail-row"><span class="automation-detail-label">Status</span><span class="automation-status-badge pending">⏳ Pending</span></div>`;
+  } else if (status === 'paused') {
+    html += `<div class="automation-detail-row"><span class="automation-detail-label">Status</span><span class="automation-status-badge paused">⏸ Paused</span></div>`;
+  }
+
+  // ── Schedule ──
+  if (s.schedule_enabled) {
+    html += `<div class="automation-detail-row"><span class="automation-detail-label">Schedule</span><span class="automation-detail-value">Daily at ${h}:${m} (GST)</span></div>`;
+  }
+
+  // ── Excel file ──
+  if (s.schedule_enabled) {
+    if (s.excel_uploaded) {
+      html += `<div class="automation-detail-row"><span class="automation-detail-label">Excel file</span><span class="automation-detail-value" style="color:var(--success)">✓ Uploaded</span></div>`;
+    } else {
+      html += `<div class="automation-detail-row"><span class="automation-detail-label">Excel file</span><span class="automation-detail-value" style="color:var(--warning)">⚠ Upload required – browse file above to load data</span></div>`;
+    }
+  }
+
+  // ── Next run ──
+  if (s.schedule_enabled && !s.schedule_paused) {
+    const nextMsg = s.next_run_tomorrow ? `Tomorrow at ${h}:${m} (GST)` : (s.next_run_at ? `Today at ${s.next_run_at}` : `${h}:${m}`);
+    html += `<div class="automation-detail-row"><span class="automation-detail-label">Next run</span><span class="automation-detail-value">${nextMsg}</span></div>`;
+  } else if (status === 'paused') {
+    html += `<div class="automation-detail-row"><span class="automation-detail-label">Next run</span><span class="automation-detail-value">Upload new Excel file above to resume – automation will run at ${h}:${m} (GST)</span></div>`;
+  }
+
+  // ── Last run details (when we have them) ──
+  if (r) {
+    html += `<div class="automation-detail-row" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)"><span class="automation-detail-label">Last run</span><span class="automation-detail-value">${r.at_formatted || r.at} · ${r.status === 'success' ? '✓ Sent' : 'Failed'}</span></div>`;
+    html += `<div class="automation-detail-row"><span class="automation-detail-label">To</span><span class="automation-detail-value">${(r.to || '—').replace(/,/g, ', ')}</span></div>`;
+    if (r.cc) html += `<div class="automation-detail-row"><span class="automation-detail-label">CC</span><span class="automation-detail-value">${r.cc.replace(/,/g, ', ')}</span></div>`;
+    html += `<div class="automation-detail-row"><span class="automation-detail-label">Subject</span><span class="automation-detail-value">${r.subject || '—'}</span></div>`;
+    html += `<div class="automation-detail-row"><span class="automation-detail-label">Recipients</span><span class="automation-detail-value">${r.recipient_count || 0}</span></div>`;
+  }
+
+  // ── Pause / Resume actions ──
+  if (s.schedule_enabled) {
+    html += `<div class="automation-dialog-actions">`;
+    if (s.schedule_paused) {
+      const canResume = s.excel_uploaded;
+      html += `<button type="button" class="btn btn-primary" onclick="resumeAutomation()" ${!canResume ? 'disabled' : ''}>▶ Resume</button>`;
+      html += `<span style="font-size:.8rem;color:var(--text-muted);align-self:center">${canResume ? 'Ready to resume' : 'Upload Excel file above to resume'}</span>`;
+    } else {
+      html += `<button type="button" class="btn btn-outline" onclick="pauseAutomation()">⏸ Pause</button>`;
+    }
+    html += `</div>`;
+  }
+
+  if (!s.schedule_enabled) {
+    html = `<p style="color:var(--text-muted)">Automation is disabled. Enable the daily schedule in the Email Report section below to send emails automatically.</p>`;
+  }
+
+  body.innerHTML = html;
+  modal.classList.add('active');
+}
+
+async function pauseAutomation() {
+  try {
+    const resp = await authFetch('/admin/mmr/api/automation-pause', { method: 'POST' });
+    if (resp.ok) {
+      toast('Automation paused', 'success');
+      await loadAutomationStatus();
+      openAutomationModal();
+    } else toast('Failed to pause', 'error');
+  } catch (e) { toast('Failed to pause', 'error'); }
+}
+
+async function resumeAutomation() {
+  try {
+    const resp = await authFetch('/admin/mmr/api/automation-resume', { method: 'POST' });
+    const data = await resp.json();
+    if (resp.ok) {
+      toast('Automation resumed', 'success');
+      await loadAutomationStatus();
+      closeAutomationModal();
+    } else toast(data.error || 'Failed to resume', 'error');
+  } catch (e) { toast('Failed to resume', 'error'); }
+}
+
+function closeAutomationModal() {
+  document.getElementById('automationModal')?.classList.remove('active');
+}
+
+// ════════════════════════════════════════════════════════════════
+// Save to Folder & Report Folder
+// ════════════════════════════════════════════════════════════════
+async function saveToFolder() {
+  const btn = document.getElementById('btnSaveToFolder');
+  if (btn?.disabled) return;
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const payload = { rows: filteredRows.length && filteredRows.length < allRows.length ? filteredRows : null };
+    const resp = await authFetch('/admin/mmr/api/save-to-folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (resp.ok && data.success) {
+      toast('Saved to Report folder', 'success');
+      loadReportFolder();
+    } else {
+      toast(data.error || 'Failed to save', 'error');
+    }
+  } catch (e) {
+    toast('Failed to save', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📁 Save to Folder';
+  }
+}
+
+async function loadReportFolder() {
+  try {
+    const resp = await authFetch('/admin/mmr/api/report-folder');
+    if (!resp.ok) return;
+    const data = await resp.json();
+    renderReportFolderList(data.files || []);
+  } catch (e) {
+    console.error('Report folder load failed:', e);
+  }
+}
+
+function renderReportFolderList(files) {
+  const el = document.getElementById('reportFolderList');
+  if (!el) return;
+  if (!files.length) {
+    el.innerHTML = '<div class="report-folder-empty">No reports saved yet. Send an email or use Save to Folder.</div>';
+    return;
+  }
+  el.innerHTML = files.map(f => {
+    const dt = f.modified ? new Date(f.modified).toLocaleString() : '';
+    const size = f.size ? (f.size < 1024 ? f.size + ' B' : (f.size / 1024).toFixed(1) + ' KB') : '';
+    const fn = (f.name || '').replace(/"/g, '&quot;');
+    return `<div class="report-folder-item">
+      <div>
+        <div class="report-folder-name">${escHtml(f.name)}</div>
+        <div class="report-folder-meta">${dt}${size ? ' · ' + size : ''}</div>
+      </div>
+      <div>
+        <button type="button" class="report-folder-dl" onclick="downloadReportFile(this.dataset.fn)" data-fn="${fn}">Download</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openReportFolderModal() {
+  document.getElementById('reportFolderModal')?.classList.add('active');
+  loadReportFolder();
+}
+
+function closeReportFolderModal() {
+  document.getElementById('reportFolderModal')?.classList.remove('active');
+}
+
+async function downloadReportFile(filename) {
+  if (!filename) return;
+  try {
+    const resp = await authFetch('/admin/mmr/api/report-folder/download/' + encodeURIComponent(String(filename)));
+    if (!resp.ok) throw new Error('Download failed');
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    toast('Download failed', 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
   loadEmailConfig();
+  loadAutomationStatus();
 });
 </script>
 </body>

@@ -21,12 +21,15 @@ def _run_scheduled_report(app):
         try:
             import os
             from datetime import datetime, timedelta
-            from .routes import _upload_path, _load_config, _format_report_date, _REPORT_DATE_PLACEHOLDER, _report_filename
-            from .mmr_service import parse_excel, generate_report_excel, format_chargeable_summary_for_email
+            from .routes import _upload_path, _load_config, _save_last_run, _save_report_to_folder, _format_report_date, _REPORT_DATE_PLACEHOLDER, _report_filename
+            from .mmr_service import parse_excel, generate_report_excel, format_chargeable_summary_for_email, format_per_tower_chargeable_html_for_email
             from common.email_service import send_email
 
             config = _load_config()
             if not config.get('schedule_enabled'):
+                return
+            if config.get('schedule_paused'):
+                logger.info('MMR scheduler: paused (upload new Excel to resume)')
                 return
 
             path = _upload_path()
@@ -52,15 +55,28 @@ def _run_scheduled_report(app):
             report_date = _format_report_date(yesterday)
             subject = config.get('subject', 'Daily Report on Resolved and Pending Complaints for {{REPORT_DATE}}').replace(_REPORT_DATE_PLACEHOLDER, report_date)
             body = body.replace(_REPORT_DATE_PLACEHOLDER, report_date)
+            intro_for_html = body.rstrip()
             chargeable_summary = format_chargeable_summary_for_email(df)
             if chargeable_summary:
                 body = (body.rstrip() + '\n\n' + chargeable_summary).rstrip()
             body = (body.rstrip() + '\n\nFor full information, please refer to the attached Excel file.').rstrip()
 
+            html_tables = format_per_tower_chargeable_html_for_email(df)
+            html_body = None
+            if html_tables:
+                intro_escaped = intro_for_html.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
+                html_body = f'''<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;font-size:12px;color:#333">
+<p style="margin:0 0 12px 0;line-height:1.5">{intro_escaped}</p>
+{html_tables}
+<p style="margin:12px 0 8px 0;font-size:10px;color:#666;font-style:italic">* This is computer generated, please cross check at least once.</p>
+<p style="margin:0">For full information, please refer to the attached Excel file.</p>
+</body></html>'''
+
             send_email(
                 recipient=to_list,
                 subject=subject,
                 body=body,
+                html_body=html_body,
                 cc=cc_list,
                 attachments=[{
                     'content': report_bytes,
@@ -69,9 +85,22 @@ def _run_scheduled_report(app):
                                   'officedocument.spreadsheetml.sheet'),
                 }]
             )
+            recipient_count = len(to_list) + (len(cc_list) if cc_list else 0)
+            _save_last_run('success', to_list, cc_list, subject, recipient_count)
+            _save_report_to_folder(report_bytes, filename, 'email')
             logger.info('MMR scheduled report sent successfully')
         except Exception:
             logger.exception('MMR scheduled report failed')
+            try:
+                from .routes import _load_config, _save_last_run
+                config = _load_config()
+                to_raw = config.get('to', '').strip()
+                to_list = [e.strip() for e in to_raw.split(',') if e.strip()] if to_raw else []
+                cc_raw = config.get('cc', '').strip()
+                cc_list = [e.strip() for e in cc_raw.split(',') if e.strip()] if cc_raw else None
+                _save_last_run('failed', to_list or [], cc_list or [], '', 0)
+            except Exception:
+                pass
 
 
 # ──────────────────────────────────────────────────────────────────────────────

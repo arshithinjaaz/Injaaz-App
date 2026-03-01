@@ -95,6 +95,18 @@ def df_to_rows(df: pd.DataFrame) -> list:
     return rows
 
 
+def rows_to_df(rows: list) -> pd.DataFrame:
+    """Convert list of dicts (from frontend) back to DataFrame. Handles date strings."""
+    if not rows:
+        return pd.DataFrame()
+    df = pd.DataFrame(rows)
+    date_cols = ['Reported Date', 'Assigned Date', 'Work Start Date']
+    for col in date_cols:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors='coerce')
+    return df
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Dashboard aggregation
 # ──────────────────────────────────────────────────────────────────────────────
@@ -157,10 +169,11 @@ def _normalise_space(val: str) -> str:
     return val.strip() or 'Unknown'
 
 
-# Askaan only: all chargeable. Other properties use BaseUnit logic when Space is empty.
-_ASKAAN_CLIENT_PATTERNS = ('askaan',)
+# BaseUnit keywords that indicate Non-Chargeable (common areas, not apartment numbers).
+# Applied uniformly for ALL projects (Askaan, Saqr, Orient, Garden, others).
 _NON_CHARGEABLE_BASEUNIT_KEYWORDS = (
     'common area', 'commonarea', 'floor', 'general area', 'corridor', 'corridord',
+    'roof top', 'rooftop', 'ground floor', 'groundfloor',
     'parking', 'telephone room', 'cctv room', 'electricity room', 'electrical room',
     'generator room', 'pump room', 'storage', 'lobby', 'basement', 'roof',
 )
@@ -168,27 +181,25 @@ _NON_CHARGEABLE_BASEUNIT_KEYWORDS = (
 
 def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str) -> str:
     """
-    Resolve Chargeable vs Non-Chargeable. BaseUnit drives the decision when it has content;
-    otherwise fall back to Space. Askaan: all Chargeable. Flat numbers = Chargeable,
-    common area/floor/corridor/etc = Non-Chargeable.
+    Resolve Chargeable vs Non-Chargeable. Same logic for ALL projects (Askaan, Saqr, Orient, Garden, etc.):
+    - If BaseUnit has content: apartment number (flat/unit/apt) = Chargeable;
+      common area keywords (roof top, ground floor, floor, corridor, etc.) = Non-Chargeable.
+    - If BaseUnit empty: fall back to Space.
     """
     base_unit = (base_unit_val or '').strip().lower()
-    client = (client_val or '').strip().lower()
     space = (space_val or '').strip().lower()
-
-    # Askaan property: all chargeable
-    if any(p in client for p in _ASKAAN_CLIENT_PATTERNS):
-        return 'Chargeable'
 
     # BaseUnit has content: derive from it (takes precedence over Space)
     if base_unit:
         for kw in _NON_CHARGEABLE_BASEUNIT_KEYWORDS:
             if kw in base_unit:
                 return 'Non-Chargeable'
+        # Apartment number or flat/unit/apt/villa = Chargeable
         if re.search(r'\d+', base_unit) or any(
             x in base_unit for x in ('flat', 'unit', 'apt', 'apartment', 'villa')
         ):
             return 'Chargeable'
+        # Anything else (not apartment) = Non-Chargeable
         return 'Non-Chargeable'
 
     # BaseUnit empty: use Space
@@ -278,6 +289,111 @@ def _normalise_status_bucket(val: str) -> str:
     return 'Pending'
 
 
+# Tower display names and matching patterns (Client or Contract)
+_TOWER_CONFIG = [
+    ('Askaan Projects', ['askaan']),
+    ('Orient Tower', ['orient']),
+    ('Garden City', ['garden']),
+    ('C1 Tower', ['c1 tower', 'c1']),
+]
+def _tower_for_row(client: str, contract: str) -> str | None:
+    """Return tower display name if row belongs to a known tower, else None."""
+    c = (client or '').strip().lower()
+    t = (contract or '').strip().lower()
+    combined = f'{c} {t}'
+    for display_name, patterns in _TOWER_CONFIG:
+        if any(p in combined for p in patterns):
+            return display_name
+    return None
+
+
+def format_per_tower_chargeable_html_for_email(df: pd.DataFrame) -> str:
+    """Build HTML tables for email body: one table per tower (Askaan, Orient, Garden, C1).
+    Each table: Service Name | Chargeable Resolved | Chargeable Pending | Total row | Grand total.
+    Uses inline CSS for email client compatibility.
+    """
+    required = {'Space', 'Status', 'Service Group', 'Client', 'Contract'}
+    if not required.issubset(set(df.columns)):
+        return ''
+    work = df.copy()
+    work['_space'] = _get_resolved_chargeable_series(df)
+    work['_status'] = work['Status'].apply(_normalise_status_bucket)
+    work['_tower'] = work.apply(lambda r: _tower_for_row(r.get('Client'), r.get('Contract')), axis=1)
+    work = work[work['_space'] == 'Chargeable']
+    work = work[work['_tower'].notna()]
+
+    if len(work) == 0:
+        return ''
+
+    tables_html = []
+    for display_name, _ in _TOWER_CONFIG:
+        tower_df = work[work['_tower'] == display_name]
+        if len(tower_df) == 0:
+            continue
+        agg = (
+            tower_df.groupby('Service Group', dropna=False)
+            .apply(lambda g: pd.Series({
+                'resolved': len(g[g['_status'] == 'Resolved']),
+                'pending': len(g[g['_status'] == 'Pending']),
+            }), include_groups=False)
+            .reset_index()
+        )
+        agg['Service Group'] = agg['Service Group'].fillna('').astype(str).str.strip()
+        agg = agg.sort_values('Service Group')
+        resolved_total = int(agg['resolved'].sum())
+        pending_total = int(agg['pending'].sum())
+        grand_total = resolved_total + pending_total
+
+        rows_html = []
+        _pad = '2px 4px'
+        _cell = f'padding:{_pad};border:1px solid #0d3d24;font-size:10px;text-align:center;vertical-align:middle'
+        _hdr = f'background:#{ACCENT};font-weight:bold'
+        for _, r in agg.iterrows():
+            sg = (r['Service Group'] or '').strip()
+            if not sg:
+                continue
+            res = int(r['resolved'])
+            pen = int(r['pending'])
+            bg = '#ffffff' if len(rows_html) % 2 == 0 else '#f8faf8'
+            rows_html.append(
+                f'<tr style="background:{bg}">'
+                f'<td style="{_cell}">{sg}</td>'
+                f'<td style="{_cell}">{res or ""}</td>'
+                f'<td style="{_cell}">{pen or ""}</td>'
+                f'</tr>'
+            )
+
+        header_bg = f'#{PRIMARY}'
+        _sub = f'{_cell};border:1px solid #0d3d24;{_hdr};vertical-align:middle'
+        table = (
+            f'<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:10px;width:100%;max-width:420px;margin:0 0 8px 0">'
+            f'<tr><td colspan="3" style="padding:4px 6px;background:{header_bg};color:#fff;font-weight:bold;text-align:center;vertical-align:middle;border:1px solid #0d3d24;font-size:11px">{display_name}</td></tr>'
+            f'<tr>'
+            f'<td style="{_sub}">Service Name</td>'
+            f'<td colspan="2" style="{_sub}">Chargeable</td>'
+            f'</tr>'
+            f'<tr>'
+            f'<td style="{_sub}"></td>'
+            f'<td style="{_sub}">Resolved</td>'
+            f'<td style="{_sub}">Pending</td>'
+            f'</tr>'
+            + ''.join(rows_html)
+            + f'<tr style="background:{header_bg};color:#fff;font-weight:bold">'
+            f'<td style="{_cell}">Total</td>'
+            f'<td style="{_cell}">{resolved_total}</td>'
+            f'<td style="{_cell}">{pending_total}</td>'
+            f'</tr>'
+            f'<tr><td style="{_cell};border:1px solid #0d3d24"></td><td colspan="2" style="{_cell};{_hdr};border:1px solid #0d3d24">{grand_total}</td></tr>'
+            f'</table>'
+        )
+        tables_html.append(table)
+
+    if not tables_html:
+        return ''
+    # Stack tables vertically with line break between each
+    return '<br><br>'.join(tables_html)
+
+
 # Clients whose contracts must each get their own sheet instead of one
 # combined client sheet.  Matching is case-insensitive / fuzzy.
 _SPLIT_CLIENTS = {'aqaar community mangement', 'aqar community management',
@@ -361,7 +477,8 @@ def _alt_fill():
 
 def _write_logo_header(ws, title: str, span_cols: int) -> int:
     """Writes logo + title block; returns next free row number.
-    Logo is centered in column A. Title centered per design."""
+    Logo is centered in column A with a little padding."""
+    _LOGO_PADDING_PX = 6
     ws.row_dimensions[1].height = 48
     ws.row_dimensions[2].height = 18
     ws.row_dimensions[3].height = 18
@@ -369,8 +486,8 @@ def _write_logo_header(ws, title: str, span_cols: int) -> int:
     col_a = ws.column_dimensions.get('A')
     col_a_width = col_a.width if col_a and col_a.width is not None else None
     if col_a_width is None:
-        ws.column_dimensions['A'].width = 12
-        col_a_width = 12
+        ws.column_dimensions['A'].width = 14
+        col_a_width = 14
 
     if os.path.exists(LOGO_PATH):
         try:
@@ -381,9 +498,9 @@ def _write_logo_header(ws, title: str, span_cols: int) -> int:
             size = XDRPositiveSize2D(p2e(72), p2e(72))
             cell_w_px = col_a_width * 7.5
             cell_h_px = (48 + 18 + 18) * (96 / 72)
-            col_off = p2e(max(0, (cell_w_px - 72) / 2))
-            row_off = p2e(max(0, (cell_h_px - 72) / 2))
-            marker = AnchorMarker(col=0, colOff=col_off, row=0, rowOff=row_off)
+            col_off_px = _LOGO_PADDING_PX + max(0, (cell_w_px - 2 * _LOGO_PADDING_PX - 72) / 2)
+            row_off_px = _LOGO_PADDING_PX + max(0, (cell_h_px - 2 * _LOGO_PADDING_PX - 72) / 2)
+            marker = AnchorMarker(col=0, colOff=p2e(col_off_px), row=0, rowOff=p2e(row_off_px))
             img.anchor = OneCellAnchor(_from=marker, ext=size)
             ws.add_image(img)
         except Exception:
@@ -749,7 +866,7 @@ def _write_data_sheet(wb: openpyxl.Workbook, df: pd.DataFrame, title: str):
         _style_data_row(ws, current_row, n, alt=(ri % 2 == 1))
         current_row += 1
 
-    # Auto-width (keep col A at least 12 for centered logo)
+    # Auto-width (keep col A at least 14 for centered logo with padding)
     for ci, col in enumerate(cols, 1):
         max_len = max(len(col), 8)
         for row in ws.iter_rows(min_row=6, max_row=min(ws.max_row, 200),
@@ -759,7 +876,7 @@ def _write_data_sheet(wb: openpyxl.Workbook, df: pd.DataFrame, title: str):
                     max_len = max(max_len, min(len(str(cell.value)), 60))
         w = min(max_len + 4, 60)
         if ci == 1:
-            w = max(w, 12)
+            w = max(w, 14)
         ws.column_dimensions[get_column_letter(ci)].width = w
 
     # Print settings
@@ -910,6 +1027,12 @@ def _write_chargeable_analysis(wb: openpyxl.Workbook, df: pd.DataFrame):
     last_data_row = current_row - 1
     first_data_row = header_row + 1
 
+    # Blank row between data and totals so Excel AutoFilter does NOT include totals
+    # (Excel extends filter to contiguous rows; blank row breaks contiguity)
+    blank_row = current_row
+    current_row += 1
+    ws.row_dimensions[blank_row].height = 6
+
     # ── Grand Total row (SUBTOTAL so it updates when user filters) ────
     grand_total_row = current_row
     ws.cell(row=grand_total_row, column=1, value='GRAND TOTAL')
@@ -927,6 +1050,43 @@ def _write_chargeable_analysis(wb: openpyxl.Workbook, df: pd.DataFrame):
         cell.border = _border(SECONDARY)
     ws.cell(row=grand_total_row, column=1).alignment = Alignment(horizontal='left', vertical='center')
     ws.row_dimensions[grand_total_row].height = 28
+
+    # ── Chargeable Total & Non-Chargeable Total rows (below grand total) ───
+    gt = grand_total_row
+    d_l, e_l, f_l, g_l = get_column_letter(4), get_column_letter(5), get_column_letter(6), get_column_letter(7)
+    chg_total_row = gt + 1
+    ws.cell(row=chg_total_row, column=1, value='Chargeable Total')
+    ws.merge_cells(f'A{chg_total_row}:C{chg_total_row}')
+    ws.merge_cells(f'D{chg_total_row}:E{chg_total_row}')
+    ws.cell(row=chg_total_row, column=4, value=f'={d_l}{gt}+{e_l}{gt}')
+    ws.merge_cells(f'F{chg_total_row}:G{chg_total_row}')
+    ws.cell(row=chg_total_row, column=6, value='')
+    ws.cell(row=chg_total_row, column=8, value=f'={d_l}{gt}+{e_l}{gt}')
+    for c in range(1, NUM_COLS + 1):
+        cell = ws.cell(row=chg_total_row, column=c)
+        cell.font = Font(bold=True, size=9, name='Calibri')
+        cell.fill = chg_fill
+        cell.alignment = Alignment(horizontal='center' if c > 3 else 'left', vertical='center')
+        cell.border = _border()
+    ws.cell(row=chg_total_row, column=1).alignment = Alignment(horizontal='left', vertical='center')
+    ws.row_dimensions[chg_total_row].height = 22
+
+    nchg_total_row = gt + 2
+    ws.cell(row=nchg_total_row, column=1, value='Non-Chargeable Total')
+    ws.merge_cells(f'A{nchg_total_row}:C{nchg_total_row}')
+    ws.merge_cells(f'D{nchg_total_row}:E{nchg_total_row}')
+    ws.cell(row=nchg_total_row, column=4, value='')
+    ws.merge_cells(f'F{nchg_total_row}:G{nchg_total_row}')
+    ws.cell(row=nchg_total_row, column=6, value=f'={f_l}{gt}+{g_l}{gt}')
+    ws.cell(row=nchg_total_row, column=8, value=f'={f_l}{gt}+{g_l}{gt}')
+    for c in range(1, NUM_COLS + 1):
+        cell = ws.cell(row=nchg_total_row, column=c)
+        cell.font = Font(bold=True, size=9, name='Calibri')
+        cell.fill = nchg_fill
+        cell.alignment = Alignment(horizontal='center' if c > 3 else 'left', vertical='center')
+        cell.border = _border()
+    ws.cell(row=nchg_total_row, column=1).alignment = Alignment(horizontal='left', vertical='center')
+    ws.row_dimensions[nchg_total_row].height = 22
 
     # ── AutoFilter (dropdown arrows on every column) ─────────────────
     end_col = get_column_letter(NUM_COLS)
