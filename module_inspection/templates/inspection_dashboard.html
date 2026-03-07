@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <title>Inspection Form - Injaaz Application</title>
+  <meta name="theme-color" content="#125435">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <style>
+    :root {
+      --primary: #125435;
+      --primary-light: #1a7a4c;
+      --secondary: #6366f1;
+    }
+    /* Inspection Hero: taller section - gradient from dashboard.css (no grid, full height) */
+    .inspection-hero {
+      padding: 9rem 0 5rem;
+    }
+    .inspection-modules-section::before {
+      display: none;
+    }
+    .inspection-page-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .inspection-page-content .modules-section {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <!-- Nav (same as main dashboard) -->
+  <nav class="nav" id="nav">
+    <div class="nav-container">
+      <a href="/dashboard" class="logo" aria-label="Injaaz Home">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz">
+        <div class="logo-text">
+          <span class="logo-brand">Injaaz</span>
+          <span id="welcome-text" class="nav-welcome">Injaaz Application</span>
+        </div>
+      </a>
+      <div class="nav-center">
+        <ul class="nav-menu">
+          <li><a href="/dashboard">Home</a></li>
+          <li><a href="/about">About</a></li>
+          <li><a href="#" id="profileLink">Profile</a></li>
+          <li><a href="#" id="contactLink">Contact</a></li>
+          <li id="inspection-forms-menu-item">
+            <a href="/inspection/">Inspection Form</a>
+          </li>
+          <li id="hr-forms-menu-item">
+            <a href="/hr/">HR Forms</a>
+          </li>
+          <li id="submitted-forms-menu-item" style="display: none;">
+            <a href="/workflow/submitted-forms">
+              Submitted Forms
+              <span id="navSubmittedBadge" style="display: none; background: #ef4444; color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; margin-left: 4px; font-weight: 600;">0</span>
+            </a>
+          </li>
+          <li id="review-history-menu-item" style="display: none;">
+            <a href="/api/workflow/history">Review History</a>
+          </li>
+          <li id="report-gen-menu-item" style="display: none;">
+            <a href="/admin/mmr/">Report Generation</a>
+          </li>
+          <li id="admin-menu-item" style="display: none;">
+            <a href="/admin/dashboard" style="color: var(--primary); font-weight: 600;">Administrative</a>
+          </li>
+          <li id="bd-email-menu-item" style="display: none;">
+            <a href="/bd/email-module">Email Module</a>
+          </li>
+        </ul>
+      </div>
+      <div class="nav-right">
+        <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu"><span></span></button>
+        <div class="notification-wrapper" id="notificationWrapper">
+          <button class="notification-btn" id="notificationBtn" type="button" title="Notifications">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="22" height="22"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+            <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+          </button>
+          <div class="notification-dropdown" id="notificationDropdown">
+            <div class="notification-header"><h4>Notifications</h4><button class="mark-all-read" id="markAllRead">Mark all read</button></div>
+            <div class="notification-list" id="notificationList"><div class="notification-empty">No notifications</div></div>
+          </div>
+        </div>
+        <div id="pwa-install-slot" class="pwa-install-slot"></div>
+        <button class="logout-btn" id="logoutBtn" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3h12.75" /></svg>
+          <span>Logout</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+
+  <div class="inspection-page-content">
+  <!-- Hero (headline only - like HR module) -->
+  <header class="hero hero-split inspection-hero">
+    <div class="hero-content hero-split-inner">
+      <div class="hero-left">
+        <p class="hero-tagline">Inspection Module</p>
+        <h1 class="hero-title">Inspection <span class="hero-title-accent">Forms</span></h1>
+      </div>
+    </div>
+  </header>
+
+  <!-- Inspection Forms (HVAC, Civil, Cleaning - module-card style like HR) -->
+  <section class="modules-section inspection-modules-section" id="modules">
+    <div class="modules-inner">
+      <h2 class="modules-section-label">Inspection Forms</h2>
+      <div class="modules-grid" id="inspectionFormsGrid">
+        <a href="/hvac-mep/form" class="module-card" id="inspection-hvac" style="display: none;">
+          <div class="card-body">
+            <span class="module-number">01 &mdash; Inspection</span>
+            <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l5.653-4.655m5.8-5.8 4.215-4.215a2.652 2.652 0 0 1 3.586 3.586l-4.215 4.215M9.78 8.22l2.496-3.03a2.652 2.652 0 0 1 3.586 3.586L12.28 12" /></svg></div>
+            <h2 class="module-title">HVAC &amp; MEP</h2>
+            <p class="module-description">Heating, Ventilation, Air Conditioning, and Mechanical, Electrical &amp; Plumbing systems inspection and reporting.</p>
+            <span class="module-arrow">Start Inspection <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+          </div>
+        </a>
+        <a href="/civil/form" class="module-card" id="inspection-civil" style="display: none;">
+          <div class="card-body">
+            <span class="module-number">02 &mdash; Inspection</span>
+            <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z" /></svg></div>
+            <h2 class="module-title">Civil Works</h2>
+            <p class="module-description">Construction site inspections, structural assessments, and civil engineering documentation.</p>
+            <span class="module-arrow">Start Inspection <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+          </div>
+        </a>
+        <a href="/cleaning/form" class="module-card" id="inspection-cleaning" style="display: none;">
+          <div class="card-body">
+            <span class="module-number">03 &mdash; Inspection</span>
+            <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 1-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" /></svg></div>
+            <h2 class="module-title">Cleaning Services</h2>
+            <p class="module-description">Facility cleaning inspections, maintenance checklists, and service quality reports.</p>
+            <span class="module-arrow">Start Inspection <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">Injaaz</div>
+      <nav class="footer-links">
+        <a href="/about">About</a>
+        <a href="#" id="footerContactLink">Contact</a>
+      </nav>
+      <p class="footer-copy">© 2026 Injaaz Application / built by Arshith</p>
+    </div>
+  </footer>
+
+  <!-- Profile Modal -->
+  <div id="profileModal" class="contact-modal">
+    <div class="contact-modal-content profile-modal-container">
+      <button class="contact-modal-close" onclick="closeProfileModal()" aria-label="Close" style="position: absolute; top: 1rem; right: 1rem; z-index: 10;">×</button>
+      <div id="profileContent"></div>
+    </div>
+  </div>
+
+  <!-- Contact Modal -->
+  <div id="contactModal" class="contact-modal">
+    <div class="contact-modal-content">
+      <div class="contact-modal-header">
+        <h2>Contact Us</h2>
+        <button class="contact-modal-close" onclick="closeContactModal()" aria-label="Close">×</button>
+      </div>
+      <div class="contact-modal-info">
+        <div class="contact-modal-item">
+          <span class="contact-modal-icon">📍</span>
+          <div class="contact-modal-details">
+            <h4>Address</h4>
+            <p>Sheik Khalifa Bin Zayed St<br>Ajman, United Arab Emirates</p>
+          </div>
+        </div>
+        <div class="contact-modal-item">
+          <span class="contact-modal-icon">📞</span>
+          <div class="contact-modal-details">
+            <h4>Phone</h4>
+            <a href="tel:+97167123456">+971 6 712 3456</a>
+          </div>
+        </div>
+        <div class="contact-modal-item">
+          <span class="contact-modal-icon">📧</span>
+          <div class="contact-modal-details">
+            <h4>Email</h4>
+            <a href="mailto:info@injaaz.ae">info@injaaz.ae</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Show inspection form cards based on user access
+    (function() {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('access_token') || '') } })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data && data.user) {
+              localStorage.setItem('user', JSON.stringify(data.user));
+              updateInspectionCards(data.user);
+            }
+          })
+          .catch(() => {});
+        return;
+      }
+      try {
+        const user = JSON.parse(userStr);
+        updateInspectionCards(user);
+      } catch (e) {}
+    })();
+
+    function updateInspectionCards(user) {
+      if (!user) return;
+      const isAdmin = user.role === 'admin';
+      const hvac = document.getElementById('inspection-hvac');
+      const civil = document.getElementById('inspection-civil');
+      const cleaning = document.getElementById('inspection-cleaning');
+      if (hvac) hvac.style.display = (isAdmin || user.access_hvac) ? 'flex' : 'none';
+      if (civil) civil.style.display = (isAdmin || user.access_civil) ? 'flex' : 'none';
+      if (cleaning) cleaning.style.display = (isAdmin || user.access_cleaning) ? 'flex' : 'none';
+    }
+  </script>
+  <script src="{{ url_for('static', filename='pwa-install.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

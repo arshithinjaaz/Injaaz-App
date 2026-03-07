@@ -96,6 +96,15 @@ except Exception as e:
     logger.exception("Could not import module_procurement.routes.procurement_bp: %s", e)
     procurement_module_bp = None
 
+# Inspection Form Module (HVAC, Civil, Cleaning)
+inspection_bp = None
+try:
+    from module_inspection.routes import inspection_bp  # noqa: F401
+    logger.info("Imported module_inspection.routes.inspection_bp")
+except Exception as e:
+    logger.exception("Could not import module_inspection.routes.inspection_bp: %s", e)
+    inspection_bp = None
+
 # MMR (Report Generation) Module
 mmr_bp = None
 try:
@@ -638,6 +647,18 @@ def create_app():
     else:
         logger.warning("⚠️  Procurement blueprint not available - check imports")
     
+    # Register Inspection Form blueprint
+    if inspection_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(inspection_bp)
+        app.register_blueprint(inspection_bp)
+        @app.route('/inspection')
+        def redirect_inspection_to_slash():
+            return redirect('/inspection/', code=302)
+        logger.info("✅ Registered Inspection blueprint at /inspection")
+    else:
+        logger.warning("⚠️  Inspection blueprint not available - check imports")
+
     # Register MMR blueprint
     if mmr_bp:
         if hasattr(app, 'csrf') and app.csrf:

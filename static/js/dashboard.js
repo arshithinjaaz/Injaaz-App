@@ -240,28 +240,12 @@ function updateModuleVisibility(user) {
   
   const isAdmin = user.role === 'admin';
   
-  // Check HVAC access
-  const hvacCard = document.getElementById('module-hvac');
-  if (hvacCard) {
-    const hasHvacAccess = isAdmin || user.access_hvac === true;
-    hvacCard.style.display = hasHvacAccess ? 'block' : 'none';
-    hvacCard.style.visibility = hasHvacAccess ? 'visible' : 'hidden';
-  }
-  
-  // Check Civil access
-  const civilCard = document.getElementById('module-civil');
-  if (civilCard) {
-    const hasCivilAccess = isAdmin || user.access_civil === true;
-    civilCard.style.display = hasCivilAccess ? 'block' : 'none';
-    civilCard.style.visibility = hasCivilAccess ? 'visible' : 'hidden';
-  }
-  
-  // Check Cleaning access
-  const cleaningCard = document.getElementById('module-cleaning');
-  if (cleaningCard) {
-    const hasCleaningAccess = isAdmin || user.access_cleaning === true;
-    cleaningCard.style.display = hasCleaningAccess ? 'block' : 'none';
-    cleaningCard.style.visibility = hasCleaningAccess ? 'visible' : 'hidden';
+  // Check Inspection Form access (HVAC, Civil, or Cleaning)
+  const inspectionCard = document.getElementById('module-inspection');
+  if (inspectionCard) {
+    const hasInspectionAccess = isAdmin || user.access_hvac === true || user.access_civil === true || user.access_cleaning === true;
+    inspectionCard.style.display = hasInspectionAccess ? 'block' : 'none';
+    inspectionCard.style.visibility = hasInspectionAccess ? 'visible' : 'hidden';
   }
   
   // Check Submitted Forms access (Supervisors only)
@@ -312,6 +296,13 @@ function updateModuleVisibility(user) {
     const hasProcurementAccess = isAdmin || user.access_procurement_module === true;
     procurementCard.style.display = hasProcurementAccess ? 'block' : 'none';
     procurementCard.style.visibility = hasProcurementAccess ? 'visible' : 'hidden';
+  }
+
+  // Check Report Generation access (admin only)
+  const reportGenCard = document.getElementById('module-report-generation');
+  if (reportGenCard) {
+    reportGenCard.style.display = isAdmin ? 'block' : 'none';
+    reportGenCard.style.visibility = isAdmin ? 'visible' : 'hidden';
   }
   
   // Update grid layout based on visible modules

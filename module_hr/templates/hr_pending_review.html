@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
   <title>Pending HR Review - Injaaz Application</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/dashboard.css">
   <link rel="stylesheet" href="/static/css/hr-forms.css">
   <link rel="stylesheet" href="/static/mobile_responsive.css">
@@ -26,9 +27,9 @@
     .type-termination { background: #fee2e2; color: #dc2626; }
     .type-long_vacation { background: #dbeafe; color: #1d4ed8; }
     .type-asset { background: #fef3c7; color: #b45309; }
-    .btn-approve { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; }
-    .btn-approve:hover { color: white; background: #059669; }
-    .btn-reject { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; }
+    .btn-approve { background: #059669; color: white; border: none; }
+    .btn-approve:hover { color: white; background: #047857; }
+    .btn-reject { background: #dc2626; color: white; border: none; }
     .btn-reject:hover { color: white; background: #dc2626; }
     .detail-row { display: flex; padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; }
     .detail-label { font-weight: 600; color: #64748b; min-width: 140px; font-size: 0.875rem; }
@@ -63,6 +64,147 @@
     
     .review-card { cursor: pointer; transition: all 0.2s; }
     .review-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.12); border-color: #f59e0b; }
+    
+    /* Review Modal - Premium UI */
+    .review-modal-content {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      border-radius: 24px; border: none;
+      box-shadow: 0 32px 64px -12px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04);
+      overflow: hidden;
+    }
+    .review-modal-header {
+      background: linear-gradient(135deg, #0f766e 0%, #125435 50%, #0d3d2a 100%);
+      color: white; padding: 1.5rem 1.75rem; border: none;
+      position: relative; overflow: hidden;
+    }
+    .review-modal-header::before {
+      content: ''; position: absolute; top: 0; right: 0; width: 40%; height: 100%;
+      background: radial-gradient(circle at 100% 50%, rgba(255,255,255,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .review-modal-header .modal-title {
+      font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; position: relative;
+    }
+    .review-modal-header .modal-subtitle {
+      font-size: 0.85rem; opacity: 0.85; margin-top: 0.25rem; font-weight: 500; position: relative;
+    }
+    .review-modal-header .btn-close {
+      filter: brightness(0) invert(1); opacity: 0.9; position: relative;
+    }
+    .review-modal-header .btn-close:hover { opacity: 1; }
+    .review-modal-body {
+      padding: 1.75rem; max-height: 68vh; overflow-y: auto;
+      background: #f8fafc;
+    }
+    .review-form-preview .doc-form {
+      background: #fff; padding: 1.5rem; margin-bottom: 1.25rem;
+      border-radius: 16px; border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+      transition: box-shadow 0.2s ease;
+    }
+    .review-form-preview .doc-form:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .review-form-preview .doc-section-title {
+      font-size: 0.7rem; padding: 0.4rem 1rem;
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      color: #047857; border-radius: 9999px;
+      font-weight: 600; letter-spacing: 0.05em; margin-bottom: 1rem;
+      display: inline-block;
+    }
+    .review-form-preview .doc-table {
+      font-size: 0.9rem; margin-bottom: 0;
+      background: transparent; border: none; border-radius: 0;
+    }
+    .review-form-preview .doc-table tr:nth-child(even) td { background: #fafafa; }
+    .review-form-preview .doc-table td {
+      padding: 0.7rem 0.75rem; border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .review-form-preview .doc-table tr:hover td { background: #f8fafc !important; }
+    .review-form-preview .doc-table tr:last-child td { border-bottom: none; }
+    .review-form-preview .doc-table .label {
+      color: #64748b; font-weight: 500; width: 36%; font-size: 0.85rem;
+    }
+    .review-form-preview .doc-table td:not(.label) { color: #0f172a; font-weight: 500; }
+    .review-form-preview img[alt="Signature"] {
+      max-width: 200px; max-height: 72px; border-radius: 8px;
+      border: 1px solid #e2e8f0; padding: 6px; background: #fafafa;
+    }
+    .review-actions-card {
+      background: #fff; border-radius: 16px; border: none;
+      padding: 1.5rem; margin-top: 1.25rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+      border-left: 4px solid #0d9488;
+    }
+    .review-actions-card h6 {
+      font-weight: 600; color: #0f172a; font-size: 0.95rem;
+      margin-bottom: 1rem; letter-spacing: -0.01em;
+    }
+    .review-actions-card .form-control {
+      border-radius: 10px; border: 1px solid #e2e8f0;
+      padding: 0.6rem 0.85rem; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .review-actions-card .form-control:focus {
+      border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.12);
+    }
+    .review-signature-wrapper .review-sig-block {
+      max-width: 280px; border-radius: 12px;
+      border: 2px dashed #cbd5e1; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      overflow: hidden; transition: border-color 0.2s, background 0.2s;
+    }
+    .review-signature-wrapper .review-sig-block:focus-within {
+      border-color: #0d9488; background: #fff;
+    }
+    .review-sig-block .sig-canvas-wrap { position: relative; }
+    .review-sig-block .btn-clear-signature {
+      position: absolute; bottom: 10px; right: 10px;
+      font-size: 0.7rem; padding: 0.3rem 0.6rem;
+      border-radius: 6px; background: rgba(255,255,255,0.95);
+      border: 1px solid #e2e8f0; transition: all 0.2s;
+    }
+    .review-sig-block .btn-clear-signature:hover {
+      background: #fff; border-color: #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .review-modal-footer {
+      padding: 1.25rem 1.75rem; background: #fff;
+      border-top: 1px solid #e2e8f0; gap: 1rem; flex-wrap: wrap;
+    }
+    .review-export-btn {
+      padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 500;
+      border-radius: 10px; border: 1px solid #e2e8f0;
+      background: #fff; color: #475569; text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .review-export-btn:hover {
+      background: #f8fafc; border-color: #cbd5e1; color: #0f172a;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .review-modal-footer .btn-light.border {
+      border-radius: 10px; font-weight: 500; padding: 0.5rem 1.25rem;
+      border: 1px solid #e2e8f0 !important; transition: all 0.2s;
+    }
+    .review-modal-footer .btn-light.border:hover {
+      background: #f8fafc !important; border-color: #cbd5e1 !important;
+    }
+    .review-modal-footer .btn-approve {
+      border-radius: 10px; font-weight: 600; padding: 0.5rem 1.25rem;
+      box-shadow: 0 2px 4px rgba(16,185,129,0.25); transition: all 0.2s;
+    }
+    .review-modal-footer .btn-approve:hover {
+      transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,0.35);
+    }
+    .review-modal-footer .btn-reject {
+      border-radius: 10px; font-weight: 600; padding: 0.5rem 1.25rem;
+      transition: all 0.2s;
+    }
+    .review-modal-footer .btn-reject:hover {
+      transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,0.25);
+    }
+    .review-modal-body::-webkit-scrollbar { width: 8px; }
+    .review-modal-body::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+    .review-modal-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .review-modal-body::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
 </head>
 <body>
@@ -97,49 +239,59 @@
   
   <!-- Review Modal -->
   <div class="modal fade" id="reviewModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-      <div class="modal-content" style="border-radius: 16px;">
-        <div class="modal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-          <h5 class="modal-title" style="font-weight: 600;">Review Request</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content review-modal-content">
+        <div class="modal-header review-modal-header">
+          <div>
+            <h5 class="modal-title">Review Request</h5>
+            <p class="modal-subtitle mb-0">Review and approve HR request</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
-          <div id="requestDetails" class="form-as-filled"></div>
+        <div class="modal-body review-modal-body">
+          <div id="requestDetails" class="form-as-filled review-form-preview"></div>
           
-          <hr>
-          
-          <div id="hrFormFields" class="mb-3" style="display:none;">
-            <h6 style="font-weight: 600; margin-bottom: 0.75rem; color: #b45309;">Complete HR Section</h6>
-            <div class="row g-2 mb-2">
-              <div class="col-md-6"><label class="form-label small">Checked by HR</label><input type="text" class="form-control form-control-sm" id="hrChecked" placeholder="YES / NO"></div>
-              <div class="col-md-6"><label class="form-label small">Balance C/F</label><input type="text" class="form-control form-control-sm" id="hrBalanceCf"></div>
-              <div class="col-md-6"><label class="form-label small">Contract Year</label><input type="text" class="form-control form-control-sm" id="hrContractYear"></div>
-              <div class="col-md-6"><label class="form-label small">Paid</label><input type="text" class="form-control form-control-sm" id="hrPaid"></div>
-              <div class="col-md-6"><label class="form-label small">Unpaid</label><input type="text" class="form-control form-control-sm" id="hrUnpaid"></div>
+          <div class="review-actions-card">
+            <h6 class="mb-3" style="font-weight: 600; color: #374151; font-size: 0.9rem;">Your Response</h6>
+            
+            <div id="hrFormFields" class="mb-3" style="display:none;">
+              <label class="form-label small text-muted">Complete HR Section</label>
+              <div class="row g-2 mb-3">
+                <div class="col-md-6"><label class="form-label small text-muted">Checked by HR</label><input type="text" class="form-control form-control-sm" id="hrChecked" placeholder="YES / NO"></div>
+                <div class="col-md-6"><label class="form-label small text-muted">Balance C/F</label><input type="text" class="form-control form-control-sm" id="hrBalanceCf"></div>
+                <div class="col-md-6"><label class="form-label small text-muted">Contract Year</label><input type="text" class="form-control form-control-sm" id="hrContractYear"></div>
+                <div class="col-md-6"><label class="form-label small text-muted">Paid</label><input type="text" class="form-control form-control-sm" id="hrPaid"></div>
+                <div class="col-md-6"><label class="form-label small text-muted">Unpaid</label><input type="text" class="form-control form-control-sm" id="hrUnpaid"></div>
+              </div>
             </div>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label" style="font-weight: 600;">Your Comments</label>
-            <textarea class="form-control" id="reviewComments" rows="3" placeholder="Add your comments (optional)"></textarea>
-          </div>
-          
-          <div class="mb-3" style="touch-action: none;">
-            <label class="form-label" style="font-weight: 600;">Your Signature (HR)</label>
-            <div class="signature-block" style="touch-action: none;">
-              <div class="sig-canvas-wrap" style="touch-action: none;">
-                <canvas id="signatureCanvas" class="signature-pad w-100" width="400" height="150" style="touch-action: none; display: block; min-height: 150px;"></canvas>
-                <button type="button" class="btn btn-clear-signature" onclick="clearSignature()">Clear</button>
+            
+            <div class="mb-4">
+              <label class="form-label" style="font-weight: 500; color: #475569;">Comments</label>
+              <textarea class="form-control" id="reviewComments" rows="2" placeholder="Add your comments (optional)"></textarea>
+            </div>
+            
+            <div class="review-signature-wrapper" style="touch-action: none;">
+              <label class="form-label" style="font-weight: 500; color: #475569;">Your Signature (HR)</label>
+              <div class="signature-block review-sig-block" style="touch-action: none;">
+                <div class="sig-canvas-wrap" style="touch-action: none;">
+                  <canvas id="signatureCanvas" class="signature-pad" width="320" height="100" style="touch-action: none; display: block; width: 100%; max-width: 260px; height: 100px; border-radius: 8px;"></canvas>
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-clear-signature" onclick="clearSignature()">Clear</button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <a id="printBtnPending" href="#" target="_blank" class="btn btn-outline-secondary" style="margin-right: auto;">🖨️ Print (HR Document)</a>
-          <a id="docxBtnPending" href="#" class="btn btn-outline-secondary" style="display: none;">📄 Download DOCX</a>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-reject" onclick="rejectRequest()">Reject</button>
-          <button type="button" class="btn btn-approve" onclick="approveRequest()">Approve & Forward to GM</button>
+        <div class="modal-footer review-modal-footer">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <a id="printBtnPending" href="#" target="_blank" class="review-export-btn">🖨️ Print</a>
+            <a id="docxBtnPending" href="#" class="review-export-btn" style="display: none;">📄 DOCX</a>
+            <a id="pdfBtnPending" href="#" class="review-export-btn" style="display: none;">📕 PDF</a>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-reject" onclick="rejectRequest()">Reject</button>
+            <button type="button" class="btn btn-approve" onclick="approveRequest()">Approve & Forward to GM</button>
+          </div>
         </div>
       </div>
     </div>
@@ -148,6 +300,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const HR_SUPPORTED_DOCX_FORMS = {{ (supported_docx_forms or [])|tojson }};
+    const HR_SUPPORTED_PDF_FORMS = {{ (supported_pdf_forms or [])|tojson }};
     const token = localStorage.getItem('access_token');
     let currentSubmissionId = null;
     let signaturePad = null;
@@ -165,12 +318,12 @@
         });
       }
       const wrap = canvas.closest('.sig-canvas-wrap');
-      const w = wrap ? wrap.offsetWidth : canvas.offsetWidth || 400;
+      const w = wrap ? wrap.offsetWidth : 320;
       const ratio = Math.max(window.devicePixelRatio || 1, 1);
       canvas.width = Math.max(w, 200) * ratio;
-      canvas.height = 150 * ratio;
+      canvas.height = 100 * ratio;
       canvas.style.width = (canvas.width / ratio) + 'px';
-      canvas.style.height = '150px';
+      canvas.style.height = '100px';
       canvas.getContext('2d').scale(ratio, ratio);
       signaturePad.clear();
     }
@@ -431,6 +584,13 @@
         const supportsDocx = (HR_SUPPORTED_DOCX_FORMS || []).includes(formType);
         docxBtn.style.display = supportsDocx ? 'inline-block' : 'none';
         docxBtn.href = supportsDocx ? ('/hr/download-docx/' + encodeURIComponent(submissionId)) : '#';
+      }
+      const pdfBtn = document.getElementById('pdfBtnPending');
+      if (pdfBtn) {
+        const formType = (submission.module_type || submission.form_type || '').replace('hr_', '');
+        const supportsPdf = (HR_SUPPORTED_PDF_FORMS || []).includes(formType);
+        pdfBtn.style.display = supportsPdf ? 'inline-block' : 'none';
+        pdfBtn.href = supportsPdf ? ('/hr/download-pdf/' + encodeURIComponent(submissionId)) : '#';
       }
       
       const details = document.getElementById('requestDetails');

@@ -870,6 +870,66 @@
     .modal-automation-body {
       padding: 1.5rem;
     }
+    .modal-report-folder { max-width: 600px; }
+    .modal-report-folder .report-folder-subtitle {
+      font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5;
+    }
+    .report-folder-list {
+      max-height: 360px; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: rgba(18,84,53,0.25) transparent;
+    }
+    .report-folder-list::-webkit-scrollbar { width: 8px; }
+    .report-folder-list::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
+    .report-folder-list::-webkit-scrollbar-thumb { background: rgba(18,84,53,0.2); border-radius: 4px; }
+    .report-folder-list::-webkit-scrollbar-thumb:hover { background: rgba(18,84,53,0.35); }
+    .report-folder-item {
+      display: flex; align-items: stretch; gap: 1rem;
+      padding: 1rem 1.25rem; border-radius: 10px;
+      margin-bottom: 0.75rem; font-size: 0.8125rem;
+      background: #fff; border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .report-folder-item:hover {
+      border-color: rgba(18,84,53,0.25);
+      box-shadow: 0 4px 12px rgba(18,84,53,0.08);
+    }
+    .report-folder-item:last-child { margin-bottom: 0; }
+    .report-folder-item > .report-folder-content {
+      flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
+    }
+    .report-folder-name {
+      color: var(--text); font-weight: 500; line-height: 1.4;
+      word-break: break-word; hyphens: auto;
+    }
+    .report-folder-meta {
+      font-size: 0.75rem; color: var(--text-muted); margin-top: 0.35rem;
+      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+    }
+    .report-folder-meta span { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .report-folder-actions {
+      display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;
+    }
+    .report-folder-open {
+      padding: 0.5rem 0.85rem; font-size: 0.8125rem; font-weight: 500;
+      background: transparent; color: var(--primary);
+      border: 1px solid var(--primary); border-radius: 8px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .report-folder-open:hover {
+      background: rgba(18,84,53,0.06); border-color: var(--primary-hover);
+    }
+    .report-folder-dl {
+      padding: 0.5rem 0.85rem; font-size: 0.8125rem; font-weight: 500;
+      background: var(--primary); color: #fff; border: none;
+      border-radius: 8px; cursor: pointer; transition: all 0.2s;
+    }
+    .report-folder-dl:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .report-folder-empty {
+      text-align: center; padding: 3rem 2rem; color: var(--text-muted);
+      font-size: 0.9375rem; line-height: 1.6; background: #fafafa;
+      border-radius: 10px; border: 1px dashed var(--border);
+    }
     .automation-detail-row {
       display: flex;
       flex-direction: column;
@@ -1168,14 +1228,17 @@
 
     <!-- Report folder modal -->
     <div id="reportFolderModal" class="modal-overlay" onclick="if(event.target===this)closeReportFolderModal()">
-      <div class="modal-automation modal-report-folder" onclick="event.stopPropagation()" style="max-width:560px">
+      <div class="modal-automation modal-report-folder" onclick="event.stopPropagation()">
         <div class="modal-automation-header">
           <h3 class="modal-automation-title">📁 Report Folder</h3>
-          <button type="button" class="modal-automation-close" onclick="closeReportFolderModal()" aria-label="Close">&times;</button>
+          <div style="display:flex;align-items:center;gap:.5rem">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="loadReportFolder(); showAlert('List refreshed', 'info')" title="Refresh list">↻</button>
+            <button type="button" class="modal-automation-close" onclick="closeReportFolderModal()" aria-label="Close">×</button>
+          </div>
         </div>
         <div class="modal-automation-body">
-          <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem">Reports sent via email or saved manually from Report Generation.</p>
-          <div id="reportFolderList" style="max-height:320px;overflow-y:auto"></div>
+          <p class="report-folder-subtitle">Reports sent via email or saved manually from Report Generation.</p>
+          <div id="reportFolderList" class="report-folder-list"></div>
         </div>
       </div>
     </div>
@@ -1754,22 +1817,41 @@
       }
     }
 
+    function escapeAttr(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function openReportFromAdmin(btn) {
+      try {
+        const filters = JSON.parse(btn?.dataset?.filters || '{}');
+        sessionStorage.setItem('mmr_restore_filters', JSON.stringify(filters || {}));
+        window.location.href = '/admin/mmr/';
+      } catch (e) {
+        showAlert('Could not open report', 'error');
+      }
+    }
+
     function renderReportFolderList(files) {
       const el = document.getElementById('reportFolderList');
       if (!el) return;
       if (!files.length) {
-        el.innerHTML = '<p style="text-align:center;padding:2rem;color:var(--text-muted)">No reports saved yet. Open Report Generation to send emails or save to folder.</p>';
+        el.innerHTML = '<div class="report-folder-empty">No reports saved yet. Open Report Generation to send emails or save to folder.</div>';
         return;
       }
       el.innerHTML = files.map(f => {
-        const dt = f.modified ? new Date(f.modified).toLocaleString() : '';
+        const dt = f.modified ? new Date(f.modified).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '';
         const size = f.size ? (f.size < 1024 ? f.size + ' B' : (f.size / 1024).toFixed(1) + ' KB') : '';
         const fn = (f.name || '').replace(/"/g, '&quot;');
-        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem .75rem;border-radius:6px;border:1px solid var(--border);margin-bottom:.5rem;background:#fafafa">
-          <div style="flex:1;min-width:0;word-break:break-all;font-size:.8125rem">${escapeHtml(f.name)}</div>
-          <div style="display:flex;align-items:center;gap:.5rem">
-            <span style="font-size:.7rem;color:var(--text-muted)">${dt}${size ? ' · ' + size : ''}</span>
-            <button type="button" onclick="downloadReportFile(this.dataset.fn)" data-fn="${fn}" style="padding:.35rem .6rem;font-size:.75rem;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer">Download</button>
+        const filtersAttr = escapeAttr(JSON.stringify(f.filters || {}));
+        const filenameAttr = escapeAttr(f.name || '');
+        return `<div class="report-folder-item">
+          <div class="report-folder-content">
+            <div class="report-folder-name">${escapeHtml(f.name)}</div>
+            <div class="report-folder-meta">${dt ? '<span>' + dt + '</span>' : ''}${dt && size ? ' · ' : ''}${size ? '<span>' + size + '</span>' : ''}</div>
+          </div>
+          <div class="report-folder-actions">
+            <button type="button" class="report-folder-open" data-filters="${filtersAttr}" data-filename="${filenameAttr}" onclick="openReportFromAdmin(this)" title="Open report in dashboard">Open</button>
+            <button type="button" class="report-folder-dl" onclick="downloadReportFile(this.dataset.fn)" data-fn="${fn}">Download</button>
           </div>
         </div>`;
       }).join('');

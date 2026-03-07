@@ -17,7 +17,7 @@
   --text-muted: #9ca3af;
   --bg-light: #f9fafb;
   --white: #ffffff;
-  --bg-body: #ffffff;
+  --bg-body: #f8faf8;
   --bg-surface: #ffffff;
   --bg-card: #ffffff;
   --border-color: #e5e7eb;
@@ -45,13 +45,16 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--white);
+  background: var(--bg-body);
   color: var(--text-dark);
   overflow-x: hidden;
   line-height: 1.6;
   position: relative;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 html {
@@ -80,14 +83,17 @@ html {
 }
 
 .nav-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 3rem;
-  display: flex;
-  justify-content: space-between;
+  width: 100%;
+  max-width: 100%;
+  min-width: 320px;
+  margin: 0;
+  padding: 0.75rem 2rem 0.75rem 2.5rem;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 2rem;
-  height: 72px;
+  gap: 1.5rem;
+  min-height: 72px;
+  box-sizing: border-box;
 }
 
 /* Logo */
@@ -98,6 +104,18 @@ html {
   text-decoration: none;
   transition: opacity 0.2s ease;
   flex-shrink: 0;
+  min-width: 0;
+  grid-column: 1;
+  justify-self: start;
+  margin-right: 1.5rem;
+}
+
+.nav-center {
+  grid-column: 2;
+  justify-self: end;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
   min-width: 0;
 }
 
@@ -118,6 +136,7 @@ html {
   justify-content: center;
   gap: 0.1rem;
   min-width: 0;
+  text-align: left;
 }
 
 .logo-brand {
@@ -137,6 +156,7 @@ html {
   color: var(--text-dark);
   line-height: 1.2;
   white-space: nowrap;
+  text-align: left;
 }
 
 /* Mobile menu toggle (hidden by default) */
@@ -147,17 +167,22 @@ html {
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
   flex-shrink: 0;
+  min-width: 0;
+  grid-column: 3;
+  justify-self: end;
 }
 
 .nav-menu {
   display: flex;
-  gap: 0.25rem;
+  gap: 1rem;
   list-style: none;
   align-items: center;
   margin: 0;
   padding: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .nav-menu li {
@@ -166,14 +191,15 @@ html {
 }
 
 .nav-menu a {
-  color: var(--text-light);
+  color: #000;
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
   transition: color 0.2s ease, background 0.2s ease;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.85rem;
   border-radius: var(--radius-sm);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .nav-menu a:hover {
@@ -198,6 +224,8 @@ html {
   text-decoration: none;
   transition: all 0.2s ease;
   cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .logout-btn::before {
@@ -230,13 +258,13 @@ html {
   background:
     radial-gradient(ellipse 70% 60% at 0% 50%, rgba(18, 84, 53, 0.1) 0%, transparent 70%),
     radial-gradient(ellipse 40% 40% at 100% 10%, rgba(18, 84, 53, 0.05) 0%, transparent 60%),
-    linear-gradient(160deg, #f5f9f6 0%, #fafbfa 50%, #ffffff 100%);
+    linear-gradient(160deg, #f5f9f6 0%, #fafbfa 50%, #f8faf8 100%);
   position: relative;
   z-index: 1;
   overflow: hidden;
 }
 
-/* Subtle decorative grid */
+/* Subtle decorative grid - fades gradually to merge with content below (no hard line) */
 .hero::before {
   content: '';
   position: absolute;
@@ -245,11 +273,62 @@ html {
     linear-gradient(rgba(18, 84, 53, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(18, 84, 53, 0.04) 1px, transparent 1px);
   background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 60% 80% at 0% 40%, black 30%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse 60% 80% at 0% 40%, black 30%, transparent 80%);
+  mask-image: linear-gradient(to bottom, black 0%, black 45%, transparent 95%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 45%, transparent 95%);
   pointer-events: none;
   z-index: 0;
   animation: gridDrift 12s linear infinite;
+}
+
+/* Inspection: gradient only (no grid), full width & height */
+.inspection-page-content {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 0% 50%, rgba(18, 84, 53, 0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 100% 10%, rgba(18, 84, 53, 0.05) 0%, transparent 60%),
+    linear-gradient(160deg, #f5f9f6 0%, #fafbfa 50%, #f8faf8 100%);
+  overflow: hidden;
+}
+.inspection-page-content .hero,
+.inspection-page-content .modules-section {
+  background: transparent !important;
+  position: relative;
+  z-index: 1;
+}
+.inspection-page-content .hero::before {
+  display: none; /* No grid - gradient only */
+}
+
+/* Module hero pages (HR, Inspection, Procurement, Review History) - green grid + main dashboard colors */
+/* Background extends to merge seamlessly with content below - no hard line */
+.hero.hr-hero,
+.hero.inspection-hero,
+.hero.proc-hero,
+.hero.review-hero {
+  background:
+    radial-gradient(ellipse 70% 60% at 0% 50%, rgba(18, 84, 53, 0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 100% 10%, rgba(18, 84, 53, 0.05) 0%, transparent 60%),
+    linear-gradient(160deg, #f5f9f6 0%, #fafbfa 50%, #f8faf8 100%);
+  padding-bottom: 6rem;
+}
+
+/* HR hero: gradient at top full width, no glow orb */
+.hero.hr-hero {
+  background: linear-gradient(180deg, #eef4f0 0%, #f2f7f4 45%, #F8FAF8 100%);
+}
+.hero.hr-hero::after {
+  display: none;
+}
+
+/* Grid fades gradually to bottom - no sharp cutoff, merges with content */
+.hero.hr-hero::before,
+.hero.inspection-hero::before,
+.hero.proc-hero::before,
+.hero.review-hero::before {
+  mask-image: linear-gradient(to bottom, black 0%, black 45%, transparent 95%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 45%, transparent 95%);
 }
 
 /* Glow orb behind text */
@@ -609,24 +688,19 @@ html {
 
 /* ---- Section ---- */
 .modules-section {
-  background: #f8faf9;
+  background: #f8faf8;
   padding: 3rem 0 5rem;
   width: 100%;
   display: block !important;
   opacity: 0;
+  margin-top: -1rem; /* Overlap hero slightly for seamless merge */
   transform: translateY(12px);
   animation: heroReveal 0.6s var(--ease-out) forwards 0.35s;
   position: relative;
 }
 
 .modules-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, var(--border-color) 20%, var(--border-color) 80%, transparent 100%);
+  display: none;
 }
 
 .modules-inner {
@@ -805,9 +879,9 @@ html {
    Footer
    =========================================== */
 .footer {
-  border-top: 1px solid var(--border-color);
-  background: var(--bg-light);
-  margin-top: 0;
+  background: #f8faf8;
+  margin-top: auto;
+  flex-shrink: 0;
 }
 
 .footer::before {
@@ -1143,7 +1217,82 @@ html {
   .nav-container {
     padding: 0 2rem;
   }
-  
+
+  /* Show hamburger earlier to prevent nav overlap on tablet */
+  .mobile-menu-toggle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    border: 1px solid var(--border-color) !important;
+    background: var(--bg-light) !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    color: var(--text-dark) !important;
+  }
+
+  .nav-center {
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: visible !important;
+    pointer-events: none !important;
+  }
+
+  .nav-center .nav-menu {
+    position: fixed !important;
+    top: 72px !important;
+    left: -100% !important;
+    width: min(280px, 80vw) !important;
+    height: calc(100vh - 72px) !important;
+    height: calc(100dvh - 72px) !important;
+    background: white !important;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.08) !important;
+    flex-direction: column !important;
+    display: flex !important;
+    padding: 0.5rem 0 !important;
+    gap: 0 !important;
+    transition: left 0.3s var(--ease-out) !important;
+    z-index: 999 !important;
+    overflow-y: auto !important;
+    list-style: none !important;
+    margin: 0 !important;
+    border-right: 1px solid var(--border-color) !important;
+  }
+
+  .nav-menu.active {
+    left: 0 !important;
+  }
+
+  .nav-menu li {
+    width: 100% !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  .nav-menu li a,
+  .nav-menu a {
+    display: flex !important;
+    align-items: center !important;
+    padding: 0.9rem 1.25rem !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+    color: var(--text-dark) !important;
+    border-bottom: 1px solid var(--border-light) !important;
+    text-decoration: none !important;
+    min-height: 48px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .nav-center .nav-menu {
+    pointer-events: auto !important;
+  }
+
   .hero-split .hero-content {
     padding: 0 2rem;
   }
@@ -1225,6 +1374,18 @@ html {
     gap: 0.5rem !important;
     height: 56px !important;
   }
+
+  .nav-center {
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: visible !important;
+    pointer-events: none !important;
+  }
+
+  .nav-center .nav-menu {
+    pointer-events: auto !important;
+  }
   
   .logo {
     flex: 1 1 auto !important;
@@ -1274,6 +1435,20 @@ html {
   }
   
   .notification-btn:hover {
+    background: var(--border-light) !important;
+  }
+
+  #pwa-install-btn.pwa-nav-icon {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    padding: 0 !important;
+    background: var(--bg-light) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  #pwa-install-btn.pwa-nav-icon:hover {
     background: var(--border-light) !important;
   }
   
@@ -1676,8 +1851,39 @@ html {
    Notification Bell & Dropdown
    =========================================== */
 
+.pwa-install-slot {
+  display: contents;
+}
+
+#pwa-install-btn.pwa-nav-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-mid);
+  transition: all 0.15s ease;
+  position: static;
+  box-shadow: none;
+  animation: none;
+}
+
+#pwa-install-btn.pwa-nav-icon:hover {
+  background: var(--bg-light);
+  color: var(--primary);
+}
+
+#pwa-install-btn.pwa-nav-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
 .notification-wrapper {
   position: relative;
+  flex-shrink: 0;
 }
 
 .notification-btn {

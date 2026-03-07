@@ -3,97 +3,135 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interview Assessment Form - INJAAZ</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/hr-forms.css">
-  <style>
-    .doc-table .rating-input { min-width: 140px; width: 100%; padding: 0.5rem; font-size: 0.9rem; }
-    .doc-table-assessment { table-layout: fixed; }
-    .doc-table-assessment .col-factor { width: 20%; }
-    .doc-table-assessment .col-indicators { width: 55%; }
-    .doc-table-assessment .col-rating { width: 25%; }
-    .success-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; }
-    .success-overlay.show { opacity: 1; visibility: visible; }
-  </style>
+  <title>Interview Assessment Form — INJAAZ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/hr-forms-unified.css">
 </head>
-<body class="hr-form-page">
-  <div class="success-overlay" id="successModal">
-    <div class="success-modal">
-      <div style="width:64px;height:64px;background:linear-gradient(135deg,#10b981,#059669);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;"><svg width="32" height="32" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
-      <h2 style="font-size:1.35rem;font-weight:700;color:#1e293b;">Form Submitted!</h2>
-      <p class="text-muted" style="margin:0.5rem 0;">Interview assessment sent to HR.</p>
-      <div id="submissionId" style="background:#f1f5f9;padding:0.5rem 1rem;border-radius:8px;font-family:monospace;font-size:0.85rem;margin:1rem 0;"></div>
-      <button class="btn hr-form-submit" onclick="window.location.href='/hr/my-requests'">View My Requests</button>
+<body class="hr-form-unified">
+
+  <div class="success-bg" id="successModal">
+    <div class="success-box">
+      <button type="button" class="success-back-btn" onclick="closeSuccessBackToForm()" title="Back to form">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+      </button>
+      <div class="success-icon"><svg width="30" height="30" fill="none" stroke="#fff" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></div>
+      <h2>Form Submitted!</h2>
+      <p>Interview assessment sent to HR.</p>
+      <div class="sub-id" id="submissionId"></div>
+      <button class="btn-submit" style="width:100%;justify-content:center" onclick="window.location.href='/hr/my-requests'">View My Requests</button>
     </div>
   </div>
 
-  <div class="hr-form-wrapper"><div class="container-fluid py-4">
-    <a href="/hr/" class="back-link"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Back to HR Module</a>
-    
-    <div class="doc-form">
-      <div class="doc-header">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="doc-logo">
-        <h1 class="doc-title">Interview Assessment Form</h1>
+  <div class="page">
+    <div class="page-inner">
+      <a href="/hr/" class="back-btn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Back to HR
+      </a>
+
+      <div class="card">
+        <div class="hd">
+          <div class="hd-left">
+            <h1>Interview Assessment Form</h1>
+            <p class="hd-sub">INJAAZ Platform · HR</p>
+          </div>
+          <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="hd-logo">
+        </div>
+
+        <form id="hrForm">
+          <div class="form-body">
+
+            <section class="sec">
+              <h2 class="sec-hd">Candidate Details</h2>
+              <div class="grid-2">
+                <div class="fld"><label class="fld-lbl">Candidate Name <span class="req">*</span></label><input class="fld-inp" type="text" name="candidate_name" required></div>
+                <div class="fld"><label class="fld-lbl">Position Title <span class="req">*</span></label><input class="fld-inp" type="text" name="position_title" required></div>
+                <div class="fld"><label class="fld-lbl">Academic Qualification</label><input class="fld-inp" type="text" name="academic_qualification"></div>
+                <div class="fld"><label class="fld-lbl">Age</label><input class="fld-inp" type="number" name="age" min="18" max="99"></div>
+                <div class="fld"><label class="fld-lbl">Marital Status</label><input class="fld-inp" type="text" name="marital_status"></div>
+                <div class="fld"><label class="fld-lbl">No. of Dependents</label><input class="fld-inp" type="number" name="dependents" min="0"></div>
+                <div class="fld"><label class="fld-lbl">Nationality</label><input class="fld-inp" type="text" name="nationality"></div>
+                <div class="fld">
+                  <label class="fld-lbl">Gender</label>
+                  <div class="yn-row">
+                    <label><input type="radio" name="gender" value="F"> F</label>
+                    <label><input type="radio" name="gender" value="M"> M</label>
+                  </div>
+                </div>
+                <div class="fld"><label class="fld-lbl">Current Job Title</label><input class="fld-inp" type="text" name="current_job_title"></div>
+                <div class="fld"><label class="fld-lbl">Years of Experience</label><input class="fld-inp" type="text" name="years_experience" placeholder="e.g. 5"></div>
+                <div class="fld"><label class="fld-lbl">Current Salary</label><input class="fld-inp" type="text" name="current_salary" placeholder="Optional"></div>
+                <div class="fld"><label class="fld-lbl">Expected Salary</label><input class="fld-inp" type="text" name="expected_salary" placeholder="Optional"></div>
+                <div class="fld"><label class="fld-lbl">Interview Date <span class="req">*</span></label><input class="fld-inp" type="date" name="interview_date" required></div>
+                <div class="fld"><label class="fld-lbl">Interview by <span class="req">*</span></label><input class="fld-inp" type="text" name="interview_by" required></div>
+              </div>
+            </section>
+
+            <section class="sec">
+              <h2 class="sec-hd">Assessment Factors</h2>
+              <p style="font-size:.9rem;margin-bottom:1rem;">The Interviewer shall indicate the rating by selecting Outstanding, V. Good, Good, Fair, or Low for each factor.</p>
+              <div class="grid-3">
+                <div class="fld"><label class="fld-lbl">Turn-out & appearance</label><select class="rating-select" name="rating_turnout"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></div>
+                <div class="fld"><label class="fld-lbl">Confidence</label><select class="rating-select" name="rating_confidence"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></div>
+                <div class="fld"><label class="fld-lbl">Mental Alertness</label><select class="rating-select" name="rating_mental_alertness"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></div>
+                <div class="fld"><label class="fld-lbl">Maturity & Emotional Stability</label><select class="rating-select" name="rating_maturity"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></div>
+                <div class="fld"><label class="fld-lbl">Communication Skills</label><select class="rating-select" name="rating_communication"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></div>
+                <div class="fld"><label class="fld-lbl">Technical Knowledge</label><select class="rating-select" name="rating_technical"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></div>
+                <div class="fld"><label class="fld-lbl">Relevant Training</label><select class="rating-select" name="rating_training"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></div>
+                <div class="fld"><label class="fld-lbl">Relevant Experience</label><select class="rating-select" name="rating_experience"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></div>
+                <div class="fld"><label class="fld-lbl">Overall Rating <span class="req">*</span></label><select class="rating-select" name="rating_overall" required><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></div>
+              </div>
+            </section>
+
+            <section class="sec">
+              <h2 class="sec-hd">Overall Assessment</h2>
+              <p style="font-size:.9rem;margin-bottom:.75rem;">Professional (e.g. academic qualification, technical skills, experience, etc.)</p>
+              <div class="fld"><textarea class="fld-inp" name="overall_assessment" rows="3" placeholder="Provide descriptive assessment"></textarea></div>
+              <div class="yn-row" style="margin-top:1rem">
+                <label class="fld-lbl">Eligibility for Employment <span class="req">*</span></label>
+                <label><input type="radio" name="eligibility" value="yes" required> YES</label>
+                <label><input type="radio" name="eligibility" value="no"> NO</label>
+              </div>
+            </section>
+
+          </div>
+
+          <div class="doc-ft">
+            <div class="doc-ft-meta"><span>Interview Assessment Form</span><span>DATE: <span id="docDate"></span></span></div>
+            P.O Box: 3456 Ajman, UAE · Tel 067116815 · www.injaaz.ae
+          </div>
+
+          <div class="submit-bar">
+            <button type="button" class="btn-reset" onclick="if(confirm('Reset the form?')){document.getElementById('hrForm').reset()}">Reset</button>
+            <button type="submit" class="btn-submit"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Submit Form</button>
+          </div>
+        </form>
       </div>
-
-      <form id="hrForm">
-        <div class="doc-form-grid form-single">
-          <div class="doc-form-col">
-        <div class="doc-section-title">Candidate Details</div>
-        <table class="doc-table doc-table-pairs doc-table-candidate">
-          <tr><td class="label">Candidate Name</td><td><input type="text" name="candidate_name" required></td><td class="label">Position Title</td><td><input type="text" name="position_title" required></td></tr>
-          <tr><td class="label">Academic Qualification</td><td><input type="text" name="academic_qualification"></td><td class="label">Age</td><td><input type="number" name="age" min="18" max="99"></td></tr>
-          <tr><td class="label">Marital Status</td><td><input type="text" name="marital_status"></td><td class="label">No. of Dependents</td><td><input type="number" name="dependents" min="0"></td></tr>
-          <tr><td class="label">Nationality</td><td><input type="text" name="nationality"></td><td class="label">Gender</td><td><label class="radio-inline"><input type="radio" name="gender" value="F"> F</label> <label class="radio-inline"><input type="radio" name="gender" value="M"> M</label></td></tr>
-          <tr><td class="label">Current Job Title</td><td><input type="text" name="current_job_title"></td><td class="label">Years of Experience</td><td><input type="text" name="years_experience" placeholder="e.g. 5"></td></tr>
-          <tr><td class="label">Current Salary</td><td><input type="text" name="current_salary" placeholder="Optional"></td><td class="label">Expected Salary</td><td><input type="text" name="expected_salary" placeholder="Optional"></td></tr>
-          <tr><td class="label">Interview Date</td><td><input type="date" name="interview_date" required></td><td class="label">Interview by</td><td><input type="text" name="interview_by" required></td></tr>
-        </table>
-          </div>
-          <div class="doc-form-col">
-        <div class="doc-section-title">Assessment Factors</div>
-        <p class="doc-note mb-2">The Interviewer shall indicate the rating by selecting Outstanding, V. Good, Good, Fair, or Low for each factor.</p>
-        <table class="doc-table doc-table-assessment">
-          <tr><td class="col-factor">FACTOR</td><td class="col-indicators">DEMONSTRABLE INDICATORS</td><td class="col-rating">RATING</td></tr>
-          <tr><td>Turn-out & appearance</td><td>The Turn-out and appearance are appropriate to the role</td><td><select name="rating_turnout" class="rating-input"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></td></tr>
-          <tr><td>Confidence</td><td>Demonstrates professional competence and self-confidence</td><td><select name="rating_confidence" class="rating-input"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></td></tr>
-          <tr><td>Mental Alertness</td><td>Comprehends and coherently responds to questions</td><td><select name="rating_mental_alertness" class="rating-input"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></td></tr>
-          <tr><td>Maturity & Emotional Stability</td><td>Demonstrates composure and balanced behaviour</td><td><select name="rating_maturity" class="rating-input"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></td></tr>
-          <tr><td>Communication Skills</td><td>Good listener, expresses thoughts and opinions clearly</td><td><select name="rating_communication" class="rating-input"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></td></tr>
-          <tr><td>Technical Knowledge</td><td>Candidate awareness of duties and responsibilities</td><td><select name="rating_technical" class="rating-input"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></td></tr>
-          <tr><td>Relevant Training</td><td>Has professional/technical training relevant to the role</td><td><select name="rating_training" class="rating-input"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></td></tr>
-          <tr><td>Relevant Experience</td><td>Previous work experience meets job requirements</td><td><select name="rating_experience" class="rating-input"><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></td></tr>
-          <tr><td>Overall Rating</td><td>The candidate's overall suitability for the position</td><td><select name="rating_overall" class="rating-input" required><option value="">Select</option><option value="outstanding">Outstanding</option><option value="v_good">V. Good</option><option value="good">Good</option><option value="fair">Fair</option><option value="low">Low</option></select></td></tr>
-        </table>
-
-        <div class="doc-section-title">Overall Assessment</div>
-        <p class="doc-note mb-2">Professional (e.g. academic qualification, technical skills, experience, etc.)</p>
-        <textarea name="overall_assessment" rows="3" class="form-control mb-2" placeholder="Provide descriptive assessment"></textarea>
-
-        <p class="mb-0"><strong>Eligibility for Employment</strong> <label class="radio-inline"><input type="radio" name="eligibility" value="yes" required> YES</label> <label class="radio-inline"><input type="radio" name="eligibility" value="no"> NO</label></p>
-          </div>
-        </div>
-        <div class="mt-3 text-center">
-          <button type="submit" class="btn btn-lg hr-form-submit">Submit Interview Assessment</button>
-        </div>
-      </form>
     </div>
-  </div></div>
+  </div>
 
-  <script>
-    document.querySelector('[name="interview_date"]').value = new Date().toISOString().split('T')[0];
-    document.getElementById('hrForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(e.target).entries());
-      data.form_type = 'interview_assessment';
-      data.employee_name = data.candidate_name;
-      try {
-        const res = await fetch('/hr/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }, body: JSON.stringify(data) });
-        const result = await res.json();
-        if (result.success) { document.getElementById('submissionId').textContent = result.submission_id; document.getElementById('successModal').classList.add('show'); }
-        else { alert('Error: ' + result.error); }
-      } catch (err) { alert('Error: ' + err.message); }
-    });
-  </script>
+<script>
+document.querySelector('[name="interview_date"]').value = new Date().toISOString().split('T')[0];
+document.getElementById('docDate').textContent = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+function closeSuccessBackToForm(){
+  document.getElementById('successModal').classList.remove('show');
+  const btn=document.querySelector('#hrForm .btn-submit');
+  if(btn){btn.disabled=false;btn.innerHTML='<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Submit Form'}
+}
+
+document.getElementById('hrForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const fd=new FormData(e.target),data=Object.fromEntries(fd.entries());
+  data.form_type='interview_assessment';
+  data.employee_name=data.candidate_name;
+  const btn=e.target.querySelector('.btn-submit');
+  btn.disabled=true;btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="spin"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Submitting…';
+  try{const res=await fetch('/hr/api/submit',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem('access_token')},body:JSON.stringify(data)});const r=await res.json();
+  if(r.success){document.getElementById('submissionId').textContent=r.submission_id;document.getElementById('successModal').classList.add('show')}
+  else{alert('Error: '+(r.error||'Unknown'));btn.disabled=false;btn.innerHTML='<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Submit Form'}
+  }catch(err){alert('Network error: '+err.message);btn.disabled=false;btn.innerHTML='<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Submit Form'}
+});
+</script>
 </body>
 </html>

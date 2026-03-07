@@ -21,7 +21,10 @@ def _run_scheduled_report(app):
         try:
             import os
             from datetime import datetime, timedelta
-            from .routes import _upload_path, _load_config, _save_last_run, _save_report_to_folder, _format_report_date, _REPORT_DATE_PLACEHOLDER, _report_filename
+            from .routes import (_upload_path, _load_config, _save_last_run,
+                                  _save_report_to_folder, _format_report_date,
+                                  _REPORT_DATE_PLACEHOLDER, _report_filename,
+                                  _complete_current_cycle)
             from .mmr_service import parse_excel, generate_report_excel, format_chargeable_summary_for_email, format_per_tower_chargeable_html_for_email
             from common.email_service import send_email
 
@@ -88,6 +91,7 @@ def _run_scheduled_report(app):
             recipient_count = len(to_list) + (len(cc_list) if cc_list else 0)
             _save_last_run('success', to_list, cc_list, subject, recipient_count)
             _save_report_to_folder(report_bytes, filename, 'email')
+            _complete_current_cycle('scheduler', subject, recipient_count, filename)
             logger.info('MMR scheduled report sent successfully')
         except Exception:
             logger.exception('MMR scheduled report failed')

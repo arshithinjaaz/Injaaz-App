@@ -14,37 +14,69 @@ logger = logging.getLogger(__name__)
 
 def fit_docx_to_one_page(source_stream):
     """
-    Reduce margins and paragraph spacing so the document fits on one page,
-    and apply a single font (Calibri) to all form text.
+    Make document compact: reduce margins, paragraph spacing, table padding
+    so it fits on one sheet with minimal white space.
     """
     from docx import Document
     from docx.shared import Cm, Pt
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
 
     source_stream.seek(0)
     doc = Document(source_stream)
-    margin = Cm(0.7)
+
+    # Compact margins
     for section in doc.sections:
-        section.top_margin = margin
-        section.bottom_margin = margin
-        section.left_margin = margin
-        section.right_margin = margin
+        section.top_margin = Cm(0.6)
+        section.bottom_margin = Cm(0.6)
+        section.left_margin = Cm(1.2)
+        section.right_margin = Cm(1.2)
+
     FORM_FONT = "Calibri"
-    BODY_SIZE = Pt(11)
+    BODY_SIZE = Pt(9)
     for para in doc.paragraphs:
+        para.alignment = WD_ALIGN_PARAGRAPH.LEFT
         pf = para.paragraph_format
         pf.space_before = Pt(0)
-        pf.space_after = Pt(2)
+        pf.space_after = Pt(1)
+        pf.line_spacing = Pt(11)
         for run in para.runs:
             run.font.name = FORM_FONT
             if run.font.size is None or run.font.size.pt < 14:
                 run.font.size = BODY_SIZE
-    # Tables (e.g. header): same font for all cell text
+
+    # Tables: compact padding, font, and proper alignment
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
+                # Reduce cell padding (values in dxa: 50 = ~1.8pt)
+                tc = cell._tc
+                tcPr = tc.get_or_add_tcPr()
+                existing = tcPr.find(qn("w:tcMar"))
+                if existing is not None:
+                    tcPr.remove(existing)
+                tcMar = OxmlElement("w:tcMar")
+                for side in ("top", "start", "bottom", "end"):
+                    el = OxmlElement(f"w:{side}")
+                    el.set(qn("w:w"), "50")
+                    el.set(qn("w:type"), "dxa")
+                    tcMar.append(el)
+                tcPr.append(tcMar)
                 for para in cell.paragraphs:
+                    para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                    pf = para.paragraph_format
+                    pf.space_before = Pt(0)
+                    pf.space_after = Pt(0)
                     for run in para.runs:
                         run.font.name = FORM_FONT
+                        if run.font.size and run.font.size.pt > 10:
+                            run.font.size = Pt(9)
+                # Remove any coloured background so cells are plain (no tint)
+                existing_shd = tcPr.find(qn("w:shd"))
+                if existing_shd is not None:
+                    tcPr.remove(existing_shd)
+
     out = BytesIO()
     doc.save(out)
     out.seek(0)
@@ -110,11 +142,12 @@ def _fmt_date(v):
 def _normalize_form_data_for_docx(form_data, form_type):
     """
     Apply field aliases so UI form field names map to DOCX template placeholders.
-    Both forms (leave_application and leave) use the same Leave Application template.
+    Ensures all HR form data maps correctly to Word template placeholders.
     """
     fd = dict(form_data or {})
+
+    # --- Leave Application ---
     if form_type in ('leave', 'leave_application'):
-        # hr_leave_form uses different names; map to template placeholders
         if fd.get('start_date') and not fd.get('first_day_of_leave'):
             fd['first_day_of_leave'] = fd['start_date']
         if fd.get('end_date') and not fd.get('last_day_of_leave'):
@@ -124,12 +157,24 @@ def _normalize_form_data_for_docx(form_data, form_type):
         if fd.get('contact_number') and not fd.get('telephone_reachable'):
             fd['telephone_reachable'] = fd['contact_number']
         if not fd.get('today_date') and (fd.get('submitted_at') or fd.get('first_day_of_leave')):
-            from datetime import datetime
             try:
                 fd['today_date'] = datetime.now().strftime('%Y-%m-%d')
             except Exception:
                 pass
-    # Checkbox values: "on" -> "Completed" for station clearance and similar
+        # Leave type: map value to display label for template
+        leave_labels = {
+            'annual': 'Annual Leave', 'sick': 'Sick Leave', 'ot_compensatory': 'OT Compensatory Off',
+            'compassionate': 'Compassionate Leave', 'study': 'Study Leave', 'unpaid': 'Unpaid Leave',
+            'examination': 'Examination Leave (UAE Nationals)', 'hajj': 'Hajj Leave', 'other': 'Other',
+        }
+        if fd.get('leave_type') in leave_labels:
+            fd['leave_type_display'] = leave_labels[fd['leave_type']]
+        elif fd.get('leave_type') == 'other' and fd.get('leave_type_other'):
+            fd['leave_type_display'] = fd['leave_type_other']
+        else:
+            fd['leave_type_display'] = fd.get('leave_type') or '-'
+
+    # --- Checkbox values: "on" -> "Completed" for station clearance and similar ---
     checkbox_keys = {
         'tasks_handed_over', 'documents_handed_over', 'files_handed_over', 'keys_returned',
         'toolbox_returned', 'access_card_returned', 'email_cancelled', 'software_hardware_returned',
@@ -138,6 +183,65 @@ def _normalize_form_data_for_docx(form_data, form_type):
     for k in checkbox_keys:
         if k in fd and fd[k] == 'on':
             fd[k] = 'Completed'
+
+    # --- Grievance: complaint / complaint_description (template may use either) ---
+    if form_type == 'grievance':
+        complaint_text = fd.get('complaint_description') or fd.get('complaint') or '-'
+        fd['complaint'] = complaint_text
+        fd['complaint_description'] = complaint_text
+
+    # --- Duty Resumption: ensure all template fields present ---
+    if form_type == 'duty_resumption':
+        if fd.get('company') and not fd.get('organization'):
+            fd['organization'] = fd['company']
+
+    # --- Passport Release: purpose_of_release, release_date ---
+    if form_type == 'passport_release':
+        if not fd.get('purpose_of_release'):
+            fd['purpose_of_release'] = '-'
+
+    # --- Contract renewal: map sub-ratings to section ratings for DOCX ---
+    if form_type == 'contract_renewal':
+        for sn, keys in [
+            ('01', ['rating_01a', 'rating_01b', 'rating_01c', 'rating_01d', 'rating_01e']),
+            ('02', ['rating_02a', 'rating_02b', 'rating_02c', 'rating_02d', 'rating_02e']),
+            ('03', ['rating_03a', 'rating_03b', 'rating_03c', 'rating_03d', 'rating_03e']),
+            ('04', ['rating_04a', 'rating_04b', 'rating_04c']),
+        ]:
+            vals = [float(fd.get(k) or 0) for k in keys if fd.get(k) and str(fd.get(k)).strip()]
+            if vals:
+                avg = round(sum(vals) / len(vals), 1)
+                fd[f'rating_{sn}'] = int(avg) if avg == int(avg) else avg
+            elif not fd.get(f'rating_{sn}'):
+                fd[f'rating_{sn}'] = '-'
+        if fd.get('areas_for_improvement') and not fd.get('areas_for_improvement_display'):
+            fd['areas_for_improvement_display'] = fd['areas_for_improvement']
+
+    # --- Interview Assessment: map rating values to display ---
+    if form_type == 'interview_assessment':
+        rating_map = {'outstanding': 'Outstanding', 'v_good': 'V. Good', 'good': 'Good', 'fair': 'Fair', 'low': 'Low'}
+        for k in ['rating_turnout', 'rating_confidence', 'rating_mental_alertness', 'rating_maturity',
+                  'rating_communication', 'rating_technical', 'rating_training', 'rating_experience', 'rating_overall']:
+            if fd.get(k) in rating_map:
+                fd[f'{k}_display'] = rating_map[fd[k]]
+
+    # --- Station Clearance: type_of_departure display ---
+    if form_type == 'station_clearance':
+        dep_map = {'transfer': 'Transfer', 'resignation': 'Resignation', 'termination': 'Termination', 'end_of_contract': 'End of Contract'}
+        if fd.get('type_of_departure') in dep_map:
+            fd['type_of_departure_display'] = dep_map[fd['type_of_departure']]
+        else:
+            fd['type_of_departure_display'] = fd.get('type_of_departure') or '-'
+
+    # --- Visa Renewal: decision display ---
+    if form_type == 'visa_renewal':
+        dec_map = {'continue': 'Continue employment for next 2 years and willing to have visa renewed',
+                   'discontinue': 'Discontinue service and require visa cancellation'}
+        if fd.get('decision') in dec_map:
+            fd['decision_display'] = dec_map[fd['decision']]
+        else:
+            fd['decision_display'] = fd.get('decision') or '-'
+
     return fd
 
 
@@ -177,6 +281,39 @@ def _add_signatures_to_context(tpl, ctx, form_data, signature_pairs):
     return tmp_paths
 
 
+def _get_context_extra_for_form(form_type, fd):
+    """
+    Return extra context: aliases and derived fields for template placeholders.
+    Only adds keys not already in form_data (generic context handles those).
+    Values are not date-formatted here; generic context does that for fd keys.
+    """
+    def _val(v):
+        return v if v not in (None, '') else '-'
+
+    extra = {}
+    if form_type in ('leave', 'leave_application'):
+        extra['leave_type'] = _val(fd.get('leave_type_display') or fd.get('leave_type'))
+        if not fd.get('telephone_reachable') and fd.get('mobile_no'):
+            extra['telephone_reachable'] = fd['mobile_no']
+    elif form_type == 'duty_resumption':
+        pass  # employee_id, company, leave_ended are in fd, generic handles
+    elif form_type == 'passport_release':
+        pass  # purpose_of_release, release_date in fd
+    elif form_type == 'grievance':
+        extra['complaint'] = _val(fd.get('complaint_description') or fd.get('complaint'))
+    elif form_type == 'interview_assessment':
+        extra['rating_overall'] = _val(fd.get('rating_overall_display') or fd.get('rating_overall'))
+    elif form_type == 'station_clearance':
+        extra['type_of_departure'] = _val(fd.get('type_of_departure_display') or fd.get('type_of_departure'))
+    elif form_type == 'contract_renewal':
+        pass  # areas_for_improvement, comments_01-04 in fd
+    elif form_type == 'staff_appraisal':
+        pass  # all in fd
+    elif form_type == 'visa_renewal':
+        extra['decision'] = _val(fd.get('decision_display') or fd.get('decision'))
+    return extra
+
+
 def _generate_filled_docx_generic(form_type, form_data, output_path_or_stream, submission_id=None,
                                    context_extra=None, signature_pairs=None):
     """Load template, build context (generic + extra), add signatures, render, save."""
@@ -187,6 +324,8 @@ def _generate_filled_docx_generic(form_type, form_data, output_path_or_stream, s
     tpl = DocxTemplate(template_path)
     fd = _normalize_form_data_for_docx(form_data, form_type)
     ctx = _build_generic_context(fd)
+    form_extra = _get_context_extra_for_form(form_type, fd)
+    ctx.update(form_extra)
     if context_extra:
         ctx.update(context_extra)
     if submission_id:
@@ -209,21 +348,47 @@ def _generate_filled_docx_generic(form_type, form_data, output_path_or_stream, s
                 pass
 
 
+def _signature_to_transparent_png(data_url):
+    """Convert base64 signature to PNG with transparent background (no white). Returns temp path or None."""
+    if not data_url or not isinstance(data_url, str) or not data_url.startswith('data:image'):
+        return None
+    try:
+        _, b64 = data_url.split(',', 1)
+        raw = base64.b64decode(b64)
+        try:
+            from PIL import Image as PILImage
+            pil = PILImage.open(BytesIO(raw)).convert('RGBA')
+            data = pil.load()
+            w, h = pil.size
+            for y in range(h):
+                for x in range(w):
+                    r, g, b, a = data[x, y]
+                    if r >= 250 and g >= 250 and b >= 250:
+                        data[x, y] = (r, g, b, 0)
+            f = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+            pil.save(f, 'PNG')
+            f.close()
+            return f.name
+        except Exception:
+            f = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+            f.write(raw)
+            f.close()
+            return f.name
+    except Exception:
+        return None
+
+
 def _signature_to_inline_image(tpl, data_url, width_mm=22, height_mm=10):
     """Convert base64 data URL signature to InlineImage for docxtpl.
-    Returns (InlineImage, tmp_path) so caller can delete tmp_path after render/save.
-    docxtpl reads the image file during render(), so the file must exist until then.
+    Uses transparent PNG (no background colour). Returns (InlineImage, tmp_path).
     """
     if not data_url or not isinstance(data_url, str) or not data_url.startswith('data:image'):
         return None, None
     try:
         _, InlineImage, Mm = _get_docxtpl()
-        # data:image/png;base64,iVBORw0KGgo...
-        header, b64 = data_url.split(',', 1)
-        img_data = base64.b64decode(b64)
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
-            f.write(img_data)
-            tmp_path = f.name
+        tmp_path = _signature_to_transparent_png(data_url)
+        if not tmp_path:
+            return None, None
         img = InlineImage(tpl, tmp_path, width=Mm(width_mm), height=Mm(height_mm))
         return img, tmp_path
     except Exception:
@@ -258,8 +423,9 @@ def _add_commencement_signatures(tpl, ctx, form_data):
     """Add signature InlineImages to context. Returns list of temp file paths to delete after save."""
     fd = form_data or {}
     tmp_paths = []
-    emp_sig, emp_path = _signature_to_inline_image(tpl, fd.get('employee_signature'))
-    rep_sig, rep_path = _signature_to_inline_image(tpl, fd.get('reporting_to_signature'))
+    # Decent space for signature pad: 50mm x 22mm
+    emp_sig, emp_path = _signature_to_inline_image(tpl, fd.get('employee_signature'), width_mm=50, height_mm=22)
+    rep_sig, rep_path = _signature_to_inline_image(tpl, fd.get('reporting_to_signature'), width_mm=50, height_mm=22)
     if emp_path:
         tmp_paths.append(emp_path)
     if rep_path:
@@ -396,60 +562,51 @@ def generate_commencement_docx(form_data, output_path_or_stream, submission_id=N
 
 def generate_hr_docx(submission, output_path_or_stream):
     """
-    Generate HR DOCX from submission. Filled for commencement and performance_evaluation;
-    template copy for other forms.
-    Returns (True, filled=True) if generated with data, (True, filled=False) if template only,
-    (False, False) if no template.
+    Generate HR DOCX from submission.
+    All forms use docx_builder (programmatic) for consistent layout:
+    - Single instruction, no duplicates
+    - Logo on right, all fields left-aligned
+    - Signatures placed correctly with transparent background
+    Returns (True, filled=True) if generated with data, (False, False) if not supported.
     """
     form_type = (submission.module_type or '').replace('hr_', '')
-    form_data = submission.form_data or {}
-
+    form_data = _normalize_form_data_for_docx(submission.form_data or {}, form_type)
     if form_type == 'commencement':
-        generate_commencement_docx(form_data, output_path_or_stream, submission.submission_id)
-        return True, True
-    if form_type == 'performance_evaluation':
-        generate_performance_evaluation_docx(form_data, output_path_or_stream, submission.submission_id)
-        return True, True
+        emp_sig = form_data.get('employee_signature')
+        rep_sig = form_data.get('reporting_to_signature')
+        has_emp = bool(emp_sig and isinstance(emp_sig, str) and emp_sig.startswith('data:image'))
+        has_rep = bool(rep_sig and isinstance(rep_sig, str) and rep_sig.startswith('data:image'))
+        if not has_emp or not has_rep:
+            logger.warning(
+                "Commencement DOCX: missing signatures (employee=%s, reporting=%s). "
+                "Ensure both signatures are drawn and applied before submitting.",
+                has_emp, has_rep
+            )
+    submission_id = getattr(submission, 'submission_id', None)
 
-    # Generic filled DOCX for all other forms. Include HR/GM signature so print copy shows approval.
-    FILLED_FORM_SIGNATURES = {
-        'leave_application': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
-        'leave': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
-        'duty_resumption': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
-        'passport_release': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
-        'grievance': [('complainant_signature', 'complainant_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
-        'interview_assessment': [('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
-        'staff_appraisal': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
-        'station_clearance': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature')],
-        'visa_renewal': [('employee_signature', 'employee_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
-        'contract_renewal': [('evaluator_signature', 'evaluator_signature'), ('hr_signature', 'hr_signature'), ('gm_signature', 'gm_signature')],
-    }
-    if form_type in FILLED_FORM_SIGNATURES:
-        try:
-            _generate_filled_docx_generic(
-                form_type, form_data, output_path_or_stream, submission_id=submission.submission_id,
-                signature_pairs=FILLED_FORM_SIGNATURES[form_type]
-            )
-            return True, True
-        except Exception as e:
-            logger.exception(
-                "Failed to generate filled DOCX for %s (submission %s): %s",
-                form_type, getattr(submission, 'submission_id', '?'), e
-            )
-            raise
-    template_path = _get_template_path(form_type)
-    if not template_path:
+    # All forms: use docx_builder for full control over layout
+    from module_hr.docx_builder import build_professional_docx, supports_builder
+
+    if not supports_builder(form_type):
         return False, False
-    with open(template_path, 'rb') as f:
-        output_path_or_stream.write(f.read())
-    return True, False
+
+    try:
+        ok = build_professional_docx(
+            form_type,
+            form_data,
+            output_path_or_stream,
+            submission_id=submission_id,
+        )
+        return (ok, True) if ok else (False, False)
+    except Exception as e:
+        logger.exception(
+            "Failed to generate DOCX for %s (submission %s): %s",
+            form_type, submission_id, e
+        )
+        raise
 
 
 def get_supported_docx_forms():
-    """Return list of form types that support DOCX download."""
-    form_types = (
-        'commencement', 'leave_application', 'leave', 'duty_resumption', 'passport_release',
-        'grievance', 'performance_evaluation', 'interview_assessment', 'staff_appraisal',
-        'station_clearance', 'visa_renewal', 'contract_renewal',
-    )
-    return [ft for ft in form_types if _get_template_path(ft)]
+    """Return list of form types that support DOCX download (via docx_builder)."""
+    from module_hr.docx_builder import _BUILDERS
+    return list(_BUILDERS.keys())

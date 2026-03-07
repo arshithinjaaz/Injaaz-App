@@ -3,105 +3,219 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Staff Appraisal Form - INJAAZ</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/hr-forms.css">
+  <title>Staff Appraisal Form — INJAAZ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/hr-forms-unified.css">
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
-  <style>
-    .success-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; }
-    .success-overlay.show { opacity: 1; visibility: visible; }
-    .doc-table .rating-input { width: 55px; padding: 0.35rem; text-align: center; }
-  </style>
 </head>
-<body class="hr-form-page">
-  <div class="success-overlay" id="successModal">
-    <div class="success-modal">
-      <div style="width:64px;height:64px;background:linear-gradient(135deg,#10b981,#059669);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;"><svg width="32" height="32" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
-      <h2 style="font-size:1.35rem;font-weight:700;color:#1e293b;">Form Submitted!</h2>
-      <p class="text-muted" style="margin:0.5rem 0;">Staff appraisal form sent to HR.</p>
-      <div id="submissionId" style="background:#f1f5f9;padding:0.5rem 1rem;border-radius:8px;font-family:monospace;font-size:0.85rem;margin:1rem 0;"></div>
-      <button class="btn hr-form-submit" onclick="window.location.href='/hr/my-requests'">View My Requests</button>
+<body class="hr-form-unified">
+
+  <div class="success-bg" id="successModal">
+    <div class="success-box">
+      <button type="button" class="success-back-btn" onclick="closeSuccessBackToForm()" title="Back to form">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+      </button>
+      <div class="success-icon"><svg width="30" height="30" fill="none" stroke="#fff" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></div>
+      <h2>Form Submitted!</h2>
+      <p>Staff appraisal form sent to HR.</p>
+      <div class="sub-id" id="submissionId"></div>
+      <button class="btn-submit" style="width:100%;justify-content:center" onclick="window.location.href='/hr/my-requests'">View My Requests</button>
     </div>
   </div>
 
-  <div class="hr-form-wrapper"><div class="container-fluid py-4">
-    <a href="/hr/" class="back-link"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Back to HR Module</a>
-    
-    <div class="doc-form">
-      <div class="doc-header">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="doc-logo">
-        <h1 class="doc-title">Staff Appraisal Form</h1>
+  <div class="sig-modal-bg" id="sigBg">
+    <div class="sig-modal">
+      <div class="sig-modal-hd"><h3 id="sigTitle">Signature</h3><button class="sig-modal-x" onclick="closeSig()">&times;</button></div>
+      <div class="sig-modal-body">
+        <p class="sig-modal-hint">Draw your signature using your mouse or finger.</p>
+        <div class="sig-canvas-box"><canvas id="sigCanvas" height="180"></canvas><span class="sig-canvas-guide">Sign here</span></div>
+        <div class="sig-modal-ft"><button class="btn-m-clear" onclick="clearModalPad()">Clear</button><button class="btn-m-apply" onclick="applySig()">Apply Signature</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="page-inner">
+      <a href="/hr/" class="back-btn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Back to HR
+      </a>
+
+      <div class="step-bar">
+        <div class="step-item active" id="step1Badge" onclick="goToStep1()" role="button" tabindex="0"><span class="num">1</span><span>Performance</span></div>
+        <div class="step-connector" id="connector1"></div>
+        <div class="step-item locked" id="step2Badge" onclick="goToStep2()" role="button" tabindex="0"><span class="num">2</span><span>Signature</span></div>
       </div>
 
-      <form id="hrForm">
-        <table class="doc-table">
-          <tr><td colspan="6" class="doc-section">Employee Information:</td></tr>
-          <tr><td class="label" style="width:20%;">Name:</td><td><input type="text" name="employee_name" required></td><td class="label">Employee ID:</td><td><input type="text" name="employee_id" required></td><td></td><td></td></tr>
-          <tr><td class="label">Department:</td><td><input type="text" name="department" required></td><td class="label">Position:</td><td><input type="text" name="position" required></td><td></td><td></td></tr>
-          <tr><td class="label">Appraisal Period:</td><td><input type="text" name="appraisal_period" placeholder="e.g. Jan 2025 - Dec 2025" required></td><td class="label">Reviewer:</td><td><input type="text" name="reviewer" required></td><td></td><td></td></tr>
-        </table>
-
-        <table class="doc-table">
-          <tr><td colspan="6" class="doc-section">Performance Criteria and Weightage</td></tr>
-          <tr><td style="width:35%;">Performance Criterion</td><td style="width:12%;">Weightage (%)</td><td style="width:12%;">Rating (1-5)</td><td style="width:41%;">Comments</td></tr>
-          <tr><td>Punctuality - Regularity in attendance and adherence to schedule</td><td>15%</td><td><input type="number" name="rating_punctuality" class="rating-input" min="1" max="5" step="0.5"></td><td><input type="text" name="comments_punctuality"></td></tr>
-          <tr><td>Job Knowledge and Expertise - Understanding of job responsibilities, skills</td><td>15%</td><td><input type="number" name="rating_job_knowledge" class="rating-input" min="1" max="5" step="0.5"></td><td><input type="text" name="comments_job_knowledge"></td></tr>
-          <tr><td>Quality of Work - Accuracy, attention to detail, meeting quality standards</td><td>15%</td><td><input type="number" name="rating_quality" class="rating-input" min="1" max="5" step="0.5"></td><td><input type="text" name="comments_quality"></td></tr>
-          <tr><td>Productivity - Efficiency, meeting deadlines, handling workload</td><td>15%</td><td><input type="number" name="rating_productivity" class="rating-input" min="1" max="5" step="0.5"></td><td><input type="text" name="comments_productivity"></td></tr>
-          <tr><td>Communication Skills - Effectiveness in written and verbal communication</td><td>10%</td><td><input type="number" name="rating_communication" class="rating-input" min="1" max="5" step="0.5"></td><td><input type="text" name="comments_communication"></td></tr>
-          <tr><td>Teamwork and Collaboration - Willingness to work with others</td><td>10%</td><td><input type="number" name="rating_teamwork" class="rating-input" min="1" max="5" step="0.5"></td><td><input type="text" name="comments_teamwork"></td></tr>
-          <tr><td>Problem-Solving & Initiative - Root cause analysis, handling challenges</td><td>10%</td><td><input type="number" name="rating_problem_solving" class="rating-input" min="1" max="5" step="0.5"></td><td><input type="text" name="comments_problem_solving"></td></tr>
-          <tr><td>Adaptability - Flexibility in dealing with changes</td><td>5%</td><td><input type="number" name="rating_adaptability" class="rating-input" min="1" max="5" step="0.5"></td><td><input type="text" name="comments_adaptability"></td></tr>
-          <tr><td>Leadership (if applicable) - Ability to lead and manage team</td><td>5%</td><td><input type="number" name="rating_leadership" class="rating-input" min="1" max="5" step="0.5"></td><td><input type="text" name="comments_leadership"></td></tr>
-          <tr><td colspan="2" class="label">Total Weightage: 100%</td><td class="label">Total Score:</td><td><input type="number" name="total_score" class="rating-input" min="0" max="5" step="0.1" placeholder="0-5"> out of 5</td><td></td><td></td></tr>
-          <tr><td colspan="4"><small>Rating: 1 Unsatisfactory | 2 Conditional | 3 Satisfactory | 4 Very Good | 5 Outstanding</small></td><td></td><td></td></tr>
-        </table>
-
-        <table class="doc-table">
-          <tr><td class="label">Employee Strengths and Achievements:</td></tr>
-          <tr><td><textarea name="employee_strengths" rows="5" placeholder="Provide a summary of key strengths and achievements"></textarea></td></tr>
-        </table>
-
-        <table class="doc-table">
-          <tr><td class="label">Employee Signature:</td><td><canvas id="signaturePad" class="signature-pad" width="100%" height="120"></canvas><button type="button" class="btn btn-clear-signature" onclick="signaturePad.clear()">Clear</button></td></tr>
-        </table>
-
-        <div class="mt-3 text-center">
-          <button type="submit" class="btn btn-lg hr-form-submit">Submit Staff Appraisal</button>
+      <div class="card">
+        <div class="hd">
+          <div class="hd-left">
+            <h1>Staff Appraisal Form</h1>
+            <p class="hd-sub">INJAAZ Platform · HR</p>
+          </div>
+          <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="hd-logo">
         </div>
-      </form>
+
+        <form id="hrForm">
+          <div class="form-body">
+
+            <div class="step-panel active" id="step1Panel">
+              <div class="step-hint">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span><strong>Step 1 of 2</strong> — Complete employee info and performance criteria, then continue to signature.</span>
+              </div>
+              <section class="sec">
+                <h2 class="sec-hd">Employee Information</h2>
+                <div class="grid-2">
+                  <div class="fld"><label class="fld-lbl">Name <span class="req">*</span></label><input class="fld-inp" type="text" name="employee_name" required></div>
+                  <div class="fld"><label class="fld-lbl">Employee ID <span class="req">*</span></label><input class="fld-inp" type="text" name="employee_id" required></div>
+                  <div class="fld"><label class="fld-lbl">Department <span class="req">*</span></label><input class="fld-inp" type="text" name="department" required></div>
+                  <div class="fld"><label class="fld-lbl">Position <span class="req">*</span></label><input class="fld-inp" type="text" name="position" required></div>
+                  <div class="fld"><label class="fld-lbl">Appraisal Period <span class="req">*</span></label><input class="fld-inp" type="text" name="appraisal_period" placeholder="e.g. Jan 2025 - Dec 2025" required></div>
+                  <div class="fld"><label class="fld-lbl">Reviewer <span class="req">*</span></label><input class="fld-inp" type="text" name="reviewer" required></div>
+                </div>
+              </section>
+              <section class="sec">
+                <h2 class="sec-hd">Performance Criteria and Weightage</h2>
+                <p style="font-size:.85rem;margin-bottom:1rem;">Rating: 1 Unsatisfactory | 2 Conditional | 3 Satisfactory | 4 Very Good | 5 Outstanding</p>
+                <div class="grid-3">
+                  <div class="fld"><label class="fld-lbl">Punctuality (15%)</label><input class="fld-inp" type="number" name="rating_punctuality" min="1" max="5" step="0.5" placeholder="1-5"></div>
+                  <div class="fld"><label class="fld-lbl">Job Knowledge (15%)</label><input class="fld-inp" type="number" name="rating_job_knowledge" min="1" max="5" step="0.5" placeholder="1-5"></div>
+                  <div class="fld"><label class="fld-lbl">Quality of Work (15%)</label><input class="fld-inp" type="number" name="rating_quality" min="1" max="5" step="0.5" placeholder="1-5"></div>
+                  <div class="fld"><label class="fld-lbl">Productivity (15%)</label><input class="fld-inp" type="number" name="rating_productivity" min="1" max="5" step="0.5" placeholder="1-5"></div>
+                  <div class="fld"><label class="fld-lbl">Communication (10%)</label><input class="fld-inp" type="number" name="rating_communication" min="1" max="5" step="0.5" placeholder="1-5"></div>
+                  <div class="fld"><label class="fld-lbl">Teamwork (10%)</label><input class="fld-inp" type="number" name="rating_teamwork" min="1" max="5" step="0.5" placeholder="1-5"></div>
+                  <div class="fld"><label class="fld-lbl">Problem-Solving (10%)</label><input class="fld-inp" type="number" name="rating_problem_solving" min="1" max="5" step="0.5" placeholder="1-5"></div>
+                  <div class="fld"><label class="fld-lbl">Adaptability (5%)</label><input class="fld-inp" type="number" name="rating_adaptability" min="1" max="5" step="0.5" placeholder="1-5"></div>
+                  <div class="fld"><label class="fld-lbl">Leadership (5%)</label><input class="fld-inp" type="number" name="rating_leadership" min="1" max="5" step="0.5" placeholder="1-5"></div>
+                  <div class="fld"><label class="fld-lbl">Comments (Punctuality)</label><input class="fld-inp" type="text" name="comments_punctuality"></div>
+                  <div class="fld"><label class="fld-lbl">Comments (Job Knowledge)</label><input class="fld-inp" type="text" name="comments_job_knowledge"></div>
+                  <div class="fld"><label class="fld-lbl">Comments (Quality)</label><input class="fld-inp" type="text" name="comments_quality"></div>
+                  <div class="fld"><label class="fld-lbl">Comments (Productivity)</label><input class="fld-inp" type="text" name="comments_productivity"></div>
+                  <div class="fld"><label class="fld-lbl">Comments (Communication)</label><input class="fld-inp" type="text" name="comments_communication"></div>
+                  <div class="fld"><label class="fld-lbl">Comments (Teamwork)</label><input class="fld-inp" type="text" name="comments_teamwork"></div>
+                  <div class="fld"><label class="fld-lbl">Comments (Problem-Solving)</label><input class="fld-inp" type="text" name="comments_problem_solving"></div>
+                  <div class="fld"><label class="fld-lbl">Comments (Adaptability)</label><input class="fld-inp" type="text" name="comments_adaptability"></div>
+                  <div class="fld"><label class="fld-lbl">Comments (Leadership)</label><input class="fld-inp" type="text" name="comments_leadership"></div>
+                  <div class="fld"><label class="fld-lbl">Total Score (0-5)</label><input class="fld-inp" type="number" name="total_score" min="0" max="5" step="0.1" placeholder="0-5"></div>
+                </div>
+              </section>
+              <section class="sec">
+                <h2 class="sec-hd">Employee Strengths and Achievements</h2>
+                <div class="fld"><textarea class="fld-inp" name="employee_strengths" rows="5" placeholder="Provide a summary of key strengths and achievements"></textarea></div>
+              </section>
+              <div class="step-nav">
+                <span></span>
+                <button type="button" class="btn-next" onclick="goToStep2()">Continue to Step 2 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></button>
+              </div>
+            </div>
+
+            <div class="step-panel" id="step2Panel">
+              <div class="step-hint">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span><strong>Step 2 of 2</strong> — Add employee signature and submit.</span>
+              </div>
+              <section class="sec">
+                <h2 class="sec-hd">Employee Signature</h2>
+                <div class="fld">
+                  <label class="fld-lbl">Employee Signature <span class="req">*</span></label>
+                  <div class="sig-wrap">
+                    <div class="sig-box" id="empSigPrev"><span class="sig-ph">No signature</span><img id="empSigImg" src="" style="display:none"></div>
+                    <div class="sig-actions">
+                      <button type="button" class="btn-plus" onclick="openSig('employee')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m8-8H4"/></svg> Sign</button>
+                      <button type="button" class="btn-rm" id="empSigRm" onclick="rmSig('employee')">Remove</button>
+                    </div>
+                    <input type="hidden" name="employee_signature" id="empSigData">
+                  </div>
+                </div>
+              </section>
+              <div class="step-nav">
+                <button type="button" class="btn-back" onclick="goToStep1()"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"/></svg> Back to Step 1</button>
+                <span></span>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="doc-ft">
+            <div class="doc-ft-meta"><span>Staff Appraisal Form</span><span>DATE: <span id="docDate"></span></span></div>
+            P.O Box: 3456 Ajman, UAE · Tel 067116815 · www.injaaz.ae
+          </div>
+
+          <div class="submit-bar" id="submitBar" style="display:none">
+            <button type="button" class="btn-reset" onclick="if(confirm('Reset the form?')){document.getElementById('hrForm').reset();clearAllSigs();goToStep1()}">Reset</button>
+            <button type="submit" class="btn-submit"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Submit Form</button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div></div>
+  </div>
 
-  <script>
-    const canvas = document.getElementById('signaturePad');
-    const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
-    function resizeCanvas() { const ratio = Math.max(window.devicePixelRatio || 1, 1); const w = document.getElementById('signaturePad').parentElement?.offsetWidth || 340; canvas.width = w * ratio; canvas.height = 120 * ratio; canvas.getContext('2d').scale(ratio, ratio); signaturePad.clear(); }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+<script>
+document.getElementById('docDate').textContent = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
 
-    document.querySelectorAll('[name^="rating_"]').forEach(inp => inp.addEventListener('input', calcTotal));
-    function calcTotal() {
-      const ratings = document.querySelectorAll('[name^="rating_"]');
-      const weights = [15,15,15,15,10,10,10,5,5];
-      let wsum = 0, wtotal = 0;
-      ratings.forEach((r, i) => { const v = parseFloat(r.value); if (!isNaN(v) && weights[i]) { wsum += v * weights[i]/100; wtotal += weights[i]/100; } });
-      const total = document.querySelector('[name="total_score"]');
-      if (wtotal > 0) total.value = (wsum).toFixed(1);
-    }
+document.querySelectorAll('[name^="rating_"]').forEach(inp=>inp.addEventListener('input',calcTotal));
+function calcTotal(){
+  const ratings=document.querySelectorAll('[name^="rating_"]');
+  const weights=[15,15,15,15,10,10,10,5,5];
+  let wsum=0,wtotal=0;
+  ratings.forEach((r,i)=>{const v=parseFloat(r.value);if(!isNaN(v)&&weights[i]){wsum+=v*weights[i]/100;wtotal+=weights[i]/100}});
+  const total=document.querySelector('[name="total_score"]');
+  if(wtotal>0)total.value=(wsum).toFixed(1);
+}
 
-    document.getElementById('hrForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(e.target).entries());
-      data.form_type = 'staff_appraisal';
-      data.employee_signature = signaturePad.isEmpty() ? '' : signaturePad.toDataURL('image/png');
-      try {
-        const res = await fetch('/hr/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }, body: JSON.stringify(data) });
-        const result = await res.json();
-        if (result.success) { document.getElementById('submissionId').textContent = result.submission_id; document.getElementById('successModal').classList.add('show'); }
-        else { alert('Error: ' + result.error); }
-      } catch (err) { alert('Error: ' + err.message); }
-    });
-  </script>
+function goToStep2(){
+  document.getElementById('step1Panel').classList.remove('active');
+  document.getElementById('step2Panel').classList.add('active');
+  document.getElementById('submitBar').style.display='flex';
+  document.getElementById('step1Badge').className='step-item done';
+  document.getElementById('step1Badge').querySelector('.num').innerHTML='✓';
+  document.getElementById('step2Badge').className='step-item active';
+  document.getElementById('step2Badge').classList.remove('locked');
+  document.getElementById('connector1').classList.add('done');
+  document.getElementById('step2Panel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function goToStep1(){
+  document.getElementById('step2Panel').classList.remove('active');
+  document.getElementById('step1Panel').classList.add('active');
+  document.getElementById('submitBar').style.display='none';
+  document.getElementById('step1Badge').className='step-item active';
+  document.getElementById('step1Badge').querySelector('.num').textContent='1';
+  document.getElementById('step2Badge').className='step-item locked';
+  document.getElementById('connector1').classList.remove('done');
+  document.getElementById('step1Panel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function closeSuccessBackToForm(){
+  document.getElementById('successModal').classList.remove('show');
+  goToStep1();
+  const btn=document.querySelector('#hrForm .btn-submit');
+  if(btn){btn.disabled=false;btn.innerHTML='<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Submit Form'}
+}
+
+let pad=null,target=null;
+const bg=document.getElementById('sigBg'),cv=document.getElementById('sigCanvas');
+const sigCfg={employee:{prev:'empSigPrev',img:'empSigImg',data:'empSigData',rm:'empSigRm',title:'Employee Signature'}};
+
+function openSig(t){target=t;const c=sigCfg[t];if(!c)return;document.getElementById('sigTitle').textContent=c.title;bg.classList.add('open');document.body.style.overflow='hidden';requestAnimationFrame(()=>{const r=window.devicePixelRatio||1,w=cv.offsetWidth;cv.width=w*r;cv.height=180*r;cv.getContext('2d').scale(r,r);cv.style.height='180px';if(pad)pad.off();pad=new SignaturePad(cv,{backgroundColor:'rgb(250,250,250)',penColor:'#0d1f14',minWidth:1.2,maxWidth:2.8})})}
+function closeSig(){bg.classList.remove('open');document.body.style.overflow='';target=null}
+function clearModalPad(){if(pad)pad.clear()}
+function applySig(){if(!pad||pad.isEmpty()){alert('Please draw your signature first.');return}const url=pad.toDataURL('image/png'),c=sigCfg[target];if(!c)return;const img=document.getElementById(c.img),ph=document.querySelector('#'+c.prev+' .sig-ph'),inp=document.getElementById(c.data),rm=document.getElementById(c.rm);if(img){img.src=url;img.style.display='block'}if(ph)ph.style.display='none';if(inp)inp.value=url;if(rm)rm.style.display='inline-flex';closeSig()}
+function rmSig(t){const c=sigCfg[t];if(!c)return;const img=document.getElementById(c.img),ph=document.querySelector('#'+c.prev+' .sig-ph'),inp=document.getElementById(c.data),rm=document.getElementById(c.rm);if(img){img.src='';img.style.display='none'}if(ph)ph.style.display='block';if(inp)inp.value='';if(rm)rm.style.display='none'}
+function clearAllSigs(){rmSig('employee')}
+bg.addEventListener('click',e=>{if(e.target===bg)closeSig()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&bg.classList.contains('open'))closeSig()});
+
+document.getElementById('hrForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const fd=new FormData(e.target),data=Object.fromEntries(fd.entries());
+  data.form_type='staff_appraisal';
+  const btn=e.target.querySelector('.btn-submit');
+  btn.disabled=true;btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="spin"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Submitting…';
+  try{const res=await fetch('/hr/api/submit',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem('access_token')},body:JSON.stringify(data)});const r=await res.json();
+  if(r.success){document.getElementById('submissionId').textContent=r.submission_id;document.getElementById('successModal').classList.add('show')}
+  else{alert('Error: '+(r.error||'Unknown'));btn.disabled=false;btn.innerHTML='<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Submit Form'}
+  }catch(err){alert('Network error: '+err.message);btn.disabled=false;btn.innerHTML='<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Submit Form'}
+});
+</script>
 </body>
 </html>

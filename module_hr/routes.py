@@ -11,6 +11,7 @@ from app.models import db, User, Submission, Notification
 
 from .print_utils import render_form_for_print
 from .docx_service import generate_hr_docx, get_supported_docx_forms
+from .pdf_service import generate_hr_pdf, get_supported_pdf_forms
 
 hr_bp = Blueprint('hr', __name__, template_folder='templates')
 
@@ -212,7 +213,7 @@ def hr_dashboard():
     if user.role != 'admin' and not is_hr and not is_gm:
         return redirect('/hr/my-requests')
     
-    return render_template('hr_dashboard.html', user=user, supported_docx_forms=get_supported_docx_forms())
+    return render_template('hr_dashboard.html', user=user, supported_docx_forms=get_supported_docx_forms(), supported_pdf_forms=get_supported_pdf_forms())
 
 
 @hr_bp.route('/pending-review')
@@ -228,7 +229,7 @@ def pending_review():
     if user.role != 'admin' and not is_hr:
         return jsonify({'error': 'Access denied'}), 403
     
-    return render_template('hr_pending_review.html', user=user, supported_docx_forms=get_supported_docx_forms())
+    return render_template('hr_pending_review.html', user=user, supported_docx_forms=get_supported_docx_forms(), supported_pdf_forms=get_supported_pdf_forms())
 
 
 @hr_bp.route('/approved-forms')
@@ -242,7 +243,7 @@ def approved_forms():
     is_gm = user.designation == 'general_manager'
     if user.role != 'admin' and not is_hr and not is_gm:
         return jsonify({'error': 'Access denied'}), 403
-    return render_template('hr_approved_forms.html', user=user, supported_docx_forms=get_supported_docx_forms())
+    return render_template('hr_approved_forms.html', user=user, supported_docx_forms=get_supported_docx_forms(), supported_pdf_forms=get_supported_pdf_forms())
 
 
 @hr_bp.route('/gm-approval')
@@ -257,7 +258,7 @@ def gm_approval():
     if user.role != 'admin' and user.designation != 'general_manager':
         return jsonify({'error': 'Access denied'}), 403
     
-    return render_template('hr_gm_approval.html', user=user, supported_docx_forms=get_supported_docx_forms())
+    return render_template('hr_gm_approval.html', user=user, supported_docx_forms=get_supported_docx_forms(), supported_pdf_forms=get_supported_pdf_forms())
 
 
 @hr_bp.route('/print/<submission_id>')
@@ -323,8 +324,7 @@ def hr_download_docx(submission_id):
         if not generated:
             return jsonify({'error': 'DOCX download not available for this form type'}), 404
         buf.seek(0)
-        if not filled:
-            buf = fit_docx_to_one_page(buf)
+        buf = fit_docx_to_one_page(buf)
         form_title = get_form_type_display(submission.module_type).replace(' ', '_')
         filename = f"{form_title}_{submission_id}.docx"
         return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document', as_attachment=True, download_name=filename)
@@ -333,6 +333,37 @@ def hr_download_docx(submission_id):
     except Exception as e:
         current_app.logger.exception('DOCX generation failed')
         return jsonify({'error': f'Failed to generate document: {str(e)}'}), 500
+
+
+@hr_bp.route('/download-pdf/<submission_id>')
+@jwt_required()
+def hr_download_pdf(submission_id):
+    """Download professional branded PDF - bold layout, INJAAZ design"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    is_hr = getattr(user, 'access_hr', False) or user.designation == 'hr_manager'
+    is_gm = user.designation == 'general_manager'
+    if user.role != 'admin' and not is_hr and not is_gm:
+        return jsonify({'error': 'Access denied'}), 403
+
+    submission = Submission.query.filter_by(submission_id=submission_id).first()
+    if not submission or not submission.module_type.startswith('hr_'):
+        return jsonify({'error': 'Submission not found'}), 404
+
+    try:
+        from io import BytesIO
+        buf = BytesIO()
+        ok, err = generate_hr_pdf(submission, buf)
+        if not ok:
+            return jsonify({'error': err or 'PDF not available for this form type'}), 404
+        buf.seek(0)
+        form_title = get_form_type_display(submission.module_type).replace(' ', '_')
+        filename = f"{form_title}_{submission_id}.pdf"
+        return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=filename)
+    except Exception as e:
+        current_app.logger.exception('PDF generation failed')
+        return jsonify({'error': f'Failed to generate PDF: {str(e)}'}), 500
 
 
 # ============================================

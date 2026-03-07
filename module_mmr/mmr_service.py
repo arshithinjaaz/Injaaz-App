@@ -52,6 +52,21 @@ def parse_excel(file_path: str) -> pd.DataFrame:
         # Fall back to active sheet if named sheet not found
         df = pd.read_excel(file_path)
 
+    return _normalise_parsed_df(df)
+
+
+def parse_saved_report_excel(file_path: str) -> pd.DataFrame:
+    """Parse a saved report Excel (from report folder). Reads 'All Work Orders' sheet.
+    Header is at row 5 (1-based), data starts at row 6. Pandas header=4 = 0-based row 4 = 5th row."""
+    try:
+        df = pd.read_excel(file_path, sheet_name='All Work Orders', header=4)
+    except Exception:
+        return pd.DataFrame()
+    return _normalise_parsed_df(df)
+
+
+def _normalise_parsed_df(df: pd.DataFrame) -> pd.DataFrame:
+    """Common normalisation for parsed Excel data."""
     df.columns = [str(c).strip() for c in df.columns]
 
     # Drop completely empty rows
@@ -63,12 +78,16 @@ def parse_excel(file_path: str) -> pd.DataFrame:
         if col in df.columns:
             df[col] = df[col].fillna('').astype(str).str.strip()
 
-    # Normalise work order number – keep only rows with a numeric WO number
+    # Normalise work order number – keep rows with valid WO formats:
+    # - Pure numeric: 10017690
+    # - Manual prefix: Manual - 10017703
     # (trailing metadata rows like parmFromDate / parmToDate are discarded)
     if 'WorkOrder No' in df.columns:
         df = df[df['WorkOrder No'].notna()]
         df['WorkOrder No'] = df['WorkOrder No'].astype(str).str.strip()
-        df = df[df['WorkOrder No'].str.match(r'^\d+$')]  # digits-only
+        # Match digits-only OR "Manual - " + digits
+        wo_valid = df['WorkOrder No'].str.match(r'^(?:\d+|Manual\s*-\s*\d+)$', case=False, na=False)
+        df = df[wo_valid]
 
     # Parse dates
     for col in ['Reported Date', 'Assigned Date', 'Work Start Date']:
@@ -169,6 +188,12 @@ def _normalise_space(val: str) -> str:
     return val.strip() or 'Unknown'
 
 
+# Projects where AC/HVAC complaints are always Non-Chargeable (Garden City only)
+_AC_NON_CHARGEABLE_PROJECTS = ('garden',)
+
+# Clients/contracts where all base units are Chargeable (office / internal sites).
+_ALL_BASEUNITS_CHARGEABLE_CLIENTS = ('askaan', 'ajman holding', 'injaaz')
+
 # BaseUnit keywords that indicate Non-Chargeable (common areas, not apartment numbers).
 # Applied uniformly for ALL projects (Askaan, Saqr, Orient, Garden, others).
 _NON_CHARGEABLE_BASEUNIT_KEYWORDS = (
@@ -179,13 +204,28 @@ _NON_CHARGEABLE_BASEUNIT_KEYWORDS = (
 )
 
 
-def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str) -> str:
+def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
+                       service_group_val: str = '', contract_val: str = '') -> str:
     """
-    Resolve Chargeable vs Non-Chargeable. Same logic for ALL projects (Askaan, Saqr, Orient, Garden, etc.):
-    - If BaseUnit has content: apartment number (flat/unit/apt) = Chargeable;
-      common area keywords (roof top, ground floor, floor, corridor, etc.) = Non-Chargeable.
-    - If BaseUnit empty: fall back to Space.
+    Resolve Chargeable vs Non-Chargeable.
+    - Garden City only: all AC/HVAC complaints = Non-Chargeable.
+    - Askaan, Ajman Holding, Injaaz: all base units = Chargeable.
+    - Else: BaseUnit apartment = Chargeable; common area = Non-Chargeable; fallback to Space.
     """
+    client = (client_val or '').strip().lower()
+    contract = (contract_val or '').strip().lower()
+    combined = f'{client} {contract}'
+    sg = (service_group_val or '').strip().lower()
+
+    # Garden City only: AC/HVAC complaints are always Non-Chargeable
+    if any(p in combined for p in _AC_NON_CHARGEABLE_PROJECTS):
+        if 'hvac' in sg or 'ac' in sg or 'air conditioning' in sg or 'airconditioning' in sg:
+            return 'Non-Chargeable'
+
+    # Askaan, Ajman Holding, Injaaz office: all base units are Chargeable
+    if any(p in combined for p in _ALL_BASEUNITS_CHARGEABLE_CLIENTS):
+        return 'Chargeable'
+
     base_unit = (base_unit_val or '').strip().lower()
     space = (space_val or '').strip().lower()
 
@@ -215,11 +255,15 @@ def _get_resolved_chargeable_series(df: pd.DataFrame) -> pd.Series:
     space_col = df['Space'] if 'Space' in df.columns else pd.Series([''] * len(df))
     base_col = df['BaseUnit'] if 'BaseUnit' in df.columns else pd.Series([''] * len(df))
     client_col = df['Client'] if 'Client' in df.columns else pd.Series([''] * len(df))
+    contract_col = df['Contract'] if 'Contract' in df.columns else pd.Series([''] * len(df))
+    sg_col = df['Service Group'] if 'Service Group' in df.columns else pd.Series([''] * len(df))
     return pd.Series([
         _resolve_chargeable(
             space_col.iat[i] if i < len(space_col) else '',
             base_col.iat[i] if i < len(base_col) else '',
             client_col.iat[i] if i < len(client_col) else '',
+            sg_col.iat[i] if i < len(sg_col) else '',
+            contract_col.iat[i] if i < len(contract_col) else '',
         )
         for i in range(len(df))
     ], index=df.index)
@@ -290,10 +334,11 @@ def _normalise_status_bucket(val: str) -> str:
 
 
 # Tower display names and matching patterns (Client or Contract)
+# Askaan + Saqr treated as one project; Orient/Garden get - TFM suffix
 _TOWER_CONFIG = [
-    ('Askaan Projects', ['askaan']),
-    ('Orient Tower', ['orient']),
-    ('Garden City', ['garden']),
+    ('Askaan + Saqr Projects', ['askaan', 'saqr']),
+    ('Orient Tower - TFM', ['orient']),
+    ('Garden City - TFM', ['garden']),
     ('C1 Tower', ['c1 tower', 'c1']),
 ]
 def _tower_for_row(client: str, contract: str) -> str | None:
@@ -308,9 +353,9 @@ def _tower_for_row(client: str, contract: str) -> str | None:
 
 
 def format_per_tower_chargeable_html_for_email(df: pd.DataFrame) -> str:
-    """Build HTML tables for email body: one table per tower (Askaan, Orient, Garden, C1).
+    """Build HTML tables for email body: one table per tower (Askaan+Saqr, Orient, Garden, C1).
     Each table: Service Name | Chargeable Resolved | Chargeable Pending | Total row | Grand total.
-    Uses inline CSS for email client compatibility.
+    Uses resolved chargeable logic (Garden City AC = Non-Chargeable). Inline CSS for email compatibility.
     """
     required = {'Space', 'Status', 'Service Group', 'Client', 'Contract'}
     if not required.issubset(set(df.columns)):
@@ -346,7 +391,7 @@ def format_per_tower_chargeable_html_for_email(df: pd.DataFrame) -> str:
 
         rows_html = []
         _pad = '2px 4px'
-        _cell = f'padding:{_pad};border:1px solid #0d3d24;font-size:10px;text-align:center;vertical-align:middle'
+        _cell = f'padding:{_pad};border:1px solid #0d3d24;font-size:10px;text-align:center'
         _hdr = f'background:#{ACCENT};font-weight:bold'
         for _, r in agg.iterrows():
             sg = (r['Service Group'] or '').strip()
@@ -364,10 +409,10 @@ def format_per_tower_chargeable_html_for_email(df: pd.DataFrame) -> str:
             )
 
         header_bg = f'#{PRIMARY}'
-        _sub = f'{_cell};border:1px solid #0d3d24;{_hdr};vertical-align:middle'
+        _sub = f'{_cell};border:1px solid #0d3d24;{_hdr}'
         table = (
             f'<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:10px;width:100%;max-width:420px;margin:0 0 8px 0">'
-            f'<tr><td colspan="3" style="padding:4px 6px;background:{header_bg};color:#fff;font-weight:bold;text-align:center;vertical-align:middle;border:1px solid #0d3d24;font-size:11px">{display_name}</td></tr>'
+            f'<tr><td colspan="3" style="padding:4px 6px;background:{header_bg};color:#fff;font-weight:bold;text-align:center;border:1px solid #0d3d24;font-size:11px">{display_name}</td></tr>'
             f'<tr>'
             f'<td style="{_sub}">Service Name</td>'
             f'<td colspan="2" style="{_sub}">Chargeable</td>'

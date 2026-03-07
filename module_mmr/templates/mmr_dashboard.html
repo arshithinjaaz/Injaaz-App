@@ -137,26 +137,67 @@
     .automation-status-badge.paused { background: #e5e7eb; color: #4b5563; }
     .automation-dialog-actions { display: flex; gap: .5rem; margin-top: 1rem; flex-wrap: wrap; }
     .automation-dialog-actions .btn { font-size: .8125rem; padding: .45rem .85rem; }
-    .modal-report-folder { max-width: 560px; }
-    .report-folder-list { max-height: 320px; overflow-y: auto; }
+    .modal-report-folder { max-width: 600px; }
+    .modal-report-folder .modal-automation-body { padding: 1.5rem; }
+    .modal-report-folder .report-folder-subtitle {
+      font-size: .875rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5;
+    }
+    .report-folder-list {
+      max-height: 360px; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: rgba(18,84,53,.25) transparent;
+    }
+    .report-folder-list::-webkit-scrollbar { width: 8px; }
+    .report-folder-list::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
+    .report-folder-list::-webkit-scrollbar-thumb { background: rgba(18,84,53,.2); border-radius: 4px; }
+    .report-folder-list::-webkit-scrollbar-thumb:hover { background: rgba(18,84,53,.35); }
     .report-folder-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: .6rem .75rem; border-radius: 6px;
-      border: 1px solid var(--border); margin-bottom: .5rem;
-      font-size: .8125rem; background: #fafafa;
+      display: flex; align-items: stretch; gap: 1rem;
+      padding: 1rem 1.25rem; border-radius: 10px;
+      margin-bottom: .75rem; font-size: .8125rem;
+      background: #fff; border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0,0,0,.04);
+      transition: box-shadow .2s, border-color .2s;
     }
-    .report-folder-item:hover { background: #f3f4f6; }
+    .report-folder-item:hover {
+      border-color: rgba(18,84,53,.25);
+      box-shadow: 0 4px 12px rgba(18,84,53,.08);
+    }
     .report-folder-item:last-child { margin-bottom: 0; }
-    .report-folder-item > div:first-child { flex: 1; min-width: 0; }
-    .report-folder-name { color: var(--text); word-break: break-all; }
-    .report-folder-meta { font-size: .7rem; color: var(--text-muted); margin-top: .2rem; }
-    .report-folder-item > div:last-child { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
-    .report-folder-dl {
-      padding: .35rem .6rem; font-size: .75rem; background: var(--primary);
-      color: #fff; border: none; border-radius: 6px; cursor: pointer;
+    .report-folder-item > .report-folder-content {
+      flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
     }
-    .report-folder-dl:hover { opacity: .9; }
-    .report-folder-empty { text-align: center; padding: 2rem; color: var(--text-muted); font-size: .875rem; }
+    .report-folder-name {
+      color: var(--text); font-weight: 500; line-height: 1.4;
+      word-break: break-word; hyphens: auto;
+    }
+    .report-folder-meta {
+      font-size: .75rem; color: var(--text-muted); margin-top: .35rem;
+      display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+    }
+    .report-folder-meta span { display: inline-flex; align-items: center; gap: .25rem; }
+    .report-folder-actions {
+      display: flex; align-items: center; gap: .5rem; flex-shrink: 0;
+    }
+    .report-folder-open {
+      padding: .5rem .85rem; font-size: .8125rem; font-weight: 500;
+      background: transparent; color: var(--primary);
+      border: 1px solid var(--primary); border-radius: 8px;
+      cursor: pointer; transition: all .2s;
+    }
+    .report-folder-open:hover {
+      background: rgba(18,84,53,.06); border-color: var(--primary-light);
+    }
+    .report-folder-dl {
+      padding: .5rem .85rem; font-size: .8125rem; font-weight: 500;
+      background: var(--primary); color: #fff; border: none;
+      border-radius: 8px; cursor: pointer; transition: all .2s;
+    }
+    .report-folder-dl:hover { background: var(--primary-light); transform: translateY(-1px); }
+    .report-folder-empty {
+      text-align: center; padding: 3rem 2rem; color: var(--text-muted);
+      font-size: .9375rem; line-height: 1.6; background: #fafafa;
+      border-radius: 10px; border: 1px dashed var(--border);
+    }
 
     /* Page */
     .page { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
@@ -398,6 +439,185 @@
       .kpi-grid { grid-template-columns: repeat(2, 1fr); }
       .schedule-row { flex-direction: column; align-items: flex-start; }
     }
+
+    /* ── Roadmap Drawer ─────────────────────────────────────────── */
+    .roadmap-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      backdrop-filter: blur(3px);
+      z-index: 9990;
+      opacity: 0; visibility: hidden;
+      transition: opacity .25s, visibility .25s;
+    }
+    .roadmap-overlay.active { opacity: 1; visibility: visible; }
+    .roadmap-panel {
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: min(900px, 96vw);
+      background: var(--white);
+      box-shadow: -8px 0 48px rgba(0,0,0,.14);
+      z-index: 9991;
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform .3s cubic-bezier(.4,0,.2,1);
+    }
+    .roadmap-overlay.active .roadmap-panel { transform: none; }
+    .roadmap-panel-hdr {
+      padding: 1.1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between;
+      flex-shrink: 0; background: var(--white);
+    }
+    .roadmap-panel-title { font-size: 1rem; font-weight: 700; }
+    .roadmap-panel-sub { font-size: .8125rem; color: var(--text-muted); margin-top: .15rem; }
+    .roadmap-close {
+      width: 32px; height: 32px; border: none; background: transparent;
+      color: var(--text-muted); font-size: 1.3rem; cursor: pointer;
+      border-radius: 6px; flex-shrink: 0; line-height: 1;
+    }
+    .roadmap-close:hover { background: #f3f4f6; color: var(--text); }
+    .roadmap-body {
+      flex: 1; overflow-y: auto; padding: 1.5rem;
+      scrollbar-width: thin; scrollbar-color: rgba(18,84,53,.2) transparent;
+    }
+    .roadmap-body::-webkit-scrollbar { width: 6px; }
+    .roadmap-body::-webkit-scrollbar-thumb { background: rgba(18,84,53,.2); border-radius: 3px; }
+    .roadmap-section-title {
+      font-size: .75rem; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .07em; margin-bottom: 1rem;
+    }
+
+    /* Pipeline track */
+    .pipeline-wrap { position: relative; margin-bottom: 1.5rem; }
+    .pipeline-track { display: flex; position: relative; }
+    .pipeline-track::before {
+      content: '';
+      position: absolute; top: 19px; left: 12.5%; right: 12.5%;
+      height: 2px; background: var(--border); z-index: 0;
+    }
+    .pipeline-progress {
+      position: absolute; top: 19px; left: 12.5%;
+      height: 2px; background: var(--primary); z-index: 1;
+      transition: width .5s ease;
+    }
+    .pipeline-step {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      position: relative; z-index: 2; padding: 0 .35rem;
+    }
+    .pipeline-dot {
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 2.5px solid var(--border); background: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem; font-weight: 700; margin-bottom: .6rem;
+      transition: all .25s;
+    }
+    .pipeline-step.ps-done .pipeline-dot { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .pipeline-step.ps-active .pipeline-dot { border-color: var(--primary); color: var(--primary); box-shadow: 0 0 0 4px rgba(18,84,53,.1); }
+    .pipeline-step.ps-locked .pipeline-dot { background: #f1f5f9; border-color: #cbd5e1; color: #94a3b8; }
+    .pipeline-step-name { font-size: .75rem; font-weight: 600; text-align: center; color: var(--text-muted); line-height: 1.3; }
+    .pipeline-step.ps-done .pipeline-step-name { color: var(--primary); }
+    .pipeline-step.ps-active .pipeline-step-name { color: var(--text); }
+
+    /* Step cards */
+    .step-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: .625rem; margin-bottom: 1.5rem; }
+    .step-card {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: .875rem; background: var(--white);
+      display: flex; flex-direction: column; gap: .25rem;
+    }
+    .step-card.sc-done { border-color: rgba(16,185,129,.35); background: #f0fdf4; }
+    .step-card.sc-active { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(18,84,53,.06); }
+    .step-card.sc-locked { background: #f8fafc; border-color: #e2e8f0; }
+    .sc-num { font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+    .sc-title { font-size: .8rem; font-weight: 700; color: var(--text); }
+    .sc-body { font-size: .75rem; color: var(--text-muted); line-height: 1.45; flex: 1; }
+    .step-card.sc-done .sc-body { color: #047857; }
+    .step-card.sc-active .sc-body { color: var(--text); }
+    .step-card.sc-locked .sc-title { color: var(--text-muted); }
+    .sc-time { font-size: .7rem; color: var(--text-muted); margin-top: .2rem; }
+    .sc-btn {
+      margin-top: .5rem; padding: .45rem .65rem;
+      font-size: .75rem; font-weight: 600;
+      border: none; border-radius: 6px; cursor: pointer;
+      transition: opacity .15s; width: 100%; text-align: center;
+    }
+    .sc-btn-approve { background: var(--primary); color: #fff; }
+    .sc-btn-approve:hover { opacity: .9; }
+    .sc-btn-send { background: var(--success); color: #fff; }
+    .sc-btn-send:hover { opacity: .9; }
+    .sc-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Auto controls strip */
+    .auto-strip {
+      display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+      padding: .875rem 1rem;
+      background: #f9fafb; border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 1.5rem;
+      font-size: .8125rem;
+    }
+    .auto-strip-label { font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
+    .auto-strip-val { flex: 1; color: var(--text); }
+
+    /* Cycle history list */
+    .cycle-history { display: flex; flex-direction: column; gap: .5rem; }
+    .cycle-item {
+      display: flex; align-items: center; gap: .875rem;
+      padding: .7rem 1rem; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--white); font-size: .8125rem;
+    }
+    .cycle-item:hover { border-color: rgba(18,84,53,.25); }
+    .cycle-badge {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem; font-weight: 700; flex-shrink: 0;
+    }
+    .cb-sent    { background: #d1fae5; color: #065f46; }
+    .cb-failed  { background: #fee2e2; color: #991b1b; }
+    .cb-partial { background: #fef3c7; color: #92400e; }
+    .cycle-info { flex: 1; min-width: 0; }
+    .cycle-info-top { font-weight: 600; color: var(--text); }
+    .cycle-info-sub { font-size: .7rem; color: var(--text-muted); margin-top: .1rem; }
+
+    @media (max-width: 640px) { .step-cards { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 400px) { .step-cards { grid-template-columns: 1fr; } }
+
+    /* Report Folder right-open panel (same pattern as roadmap) */
+    .reportfolder-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      backdrop-filter: blur(3px);
+      z-index: 9990;
+      opacity: 0; visibility: hidden;
+      transition: opacity .25s, visibility .25s;
+    }
+    .reportfolder-overlay.active { opacity: 1; visibility: visible; }
+    .reportfolder-panel {
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: min(560px, 96vw);
+      background: var(--white);
+      box-shadow: -8px 0 48px rgba(0,0,0,.14);
+      z-index: 9991;
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform .3s cubic-bezier(.4,0,.2,1);
+    }
+    .reportfolder-overlay.active .reportfolder-panel { transform: none; }
+    .reportfolder-panel-hdr {
+      padding: 1.1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0; background: var(--white);
+    }
+    .reportfolder-panel-title { font-size: 1rem; font-weight: 700; }
+    .reportfolder-panel-body {
+      flex: 1; overflow-y: auto; padding: 1.5rem;
+      scrollbar-width: thin; scrollbar-color: rgba(18,84,53,.2) transparent;
+      min-height: 0;
+    }
+    .reportfolder-panel-body .report-folder-list {
+      max-height: none;
+    }
+    .reportfolder-panel-body::-webkit-scrollbar { width: 6px; }
+    .reportfolder-panel-body::-webkit-scrollbar-thumb { background: rgba(18,84,53,.2); border-radius: 3px; }
   </style>
 </head>
 <body>
@@ -405,19 +625,22 @@
 <!-- Navbar -->
 <nav class="navbar">
   <div class="navbar-inner">
-    <a href="/admin/dashboard" class="navbar-brand">
+    <a href="/dashboard" class="navbar-brand">
       <img src="/static/logo.png" alt="Injaaz">
       Report Generation
     </a>
     <div class="nav-actions">
-      <button type="button" id="btnReportFolder" class="btn btn-ghost btn-sm" onclick="openReportFolderModal()" title="View saved reports">
+      <button type="button" id="btnReportFolder" class="btn btn-ghost btn-sm" onclick="openReportFolderPanel()" title="View saved reports">
         📁 Report Folder
       </button>
-      <button type="button" id="btnAutomation" class="btn-automation btn-automation-disabled" onclick="openAutomationModal()" disabled title="Automation status">
+      <button type="button" id="btnAutomation" class="btn-automation btn-automation-disabled" onclick="openRoadmapPanel()" disabled title="View automation roadmap">
         <span class="automation-dot"></span>
         <span id="automationLabel">—</span>
       </button>
-      <a href="/admin/dashboard" class="btn btn-ghost btn-sm">← Admin</a>
+      <button type="button" id="btnStopAuto" class="btn btn-danger btn-sm hidden" onclick="stopAutomation()" title="Stop automation immediately">
+        🛑 Stop
+      </button>
+      <a href="/admin/dashboard" class="btn btn-ghost btn-sm">← Dashboard</a>
     </div>
   </div>
 </nav>
@@ -553,6 +776,9 @@
               To <span style="color:red">*</span>
               <span style="font-weight:400;color:var(--text-muted);font-size:.75rem;margin-left:.4rem;">(@injaaz.ae only)</span>
             </label>
+            <button type="button" class="btn btn-outline btn-sm" id="btnSavedAddresses" onclick="fillSavedAddresses()" style="margin-bottom:.5rem" title="Fill or clear To and CC with saved addresses">
+              📋 Use saved addresses
+            </button>
             <input class="form-input" id="emailTo" type="text"
                    placeholder="name@injaaz.ae, name2@injaaz.ae"
                    oninput="validateEmailField(this)">
@@ -583,6 +809,9 @@
             <button class="btn btn-outline" id="btnSaveToFolder" onclick="saveToFolder()" disabled title="Save current report (filtered or full) to Report folder">
               📁 Save to Folder
             </button>
+            <button class="btn btn-outline" id="btnSaveToDrive" onclick="saveToDrive()" disabled title="Save report to TrueNAS CAFM drive (\\172.25.70.137\Injaaz\CAFM)">
+              💾 Save to Drive
+            </button>
             <button class="btn btn-outline" onclick="saveEmailConfig()">
               💾 Save Config
             </button>
@@ -611,11 +840,14 @@
                    min="0" max="59" placeholder="00" value="0">
             <span style="font-size:.78rem;color:var(--text-muted)">(24h, GST)</span>
           </div>
-          <div style="margin-top:1rem">
+          <div style="margin-top:1rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" onclick="saveSchedule()">
               ✔ Save Schedule
             </button>
-            <span id="scheduleStatus" style="margin-left:.75rem;font-size:.83rem;color:var(--text-muted)"></span>
+            <button type="button" id="btnStopAutoCard" class="btn btn-danger btn-sm hidden" onclick="stopAutomation()" title="Disable the schedule and stop all automated sending">
+              🛑 Stop Automation
+            </button>
+            <span id="scheduleStatus" style="font-size:.83rem;color:var(--text-muted)"></span>
           </div>
           <div style="margin-top:1.5rem;padding:1rem;background:var(--accent);border-radius:8px">
             <p style="font-size:.82rem;font-weight:600;color:var(--primary);margin-bottom:.4rem">ℹ️ Note</p>
@@ -634,6 +866,22 @@
 <!-- Toast container -->
 <div id="toast-container"></div>
 
+<!-- ════════ Roadmap Panel ════════ -->
+<div id="roadmapOverlay" class="roadmap-overlay" onclick="if(event.target===this)closeRoadmapPanel()">
+  <div class="roadmap-panel" onclick="event.stopPropagation()">
+    <div class="roadmap-panel-hdr">
+      <div>
+        <div class="roadmap-panel-title">📊 Email Automation Roadmap</div>
+        <div class="roadmap-panel-sub" id="roadmapSub">Loading…</div>
+      </div>
+      <button class="roadmap-close" onclick="closeRoadmapPanel()" aria-label="Close">✕</button>
+    </div>
+    <div class="roadmap-body" id="roadmapBody">
+      <p style="color:var(--text-muted);font-size:.875rem">Loading…</p>
+    </div>
+  </div>
+</div>
+
 <!-- Automation status modal (comprehensive) -->
 <div id="automationModal" class="modal-overlay" onclick="if(event.target===this)closeAutomationModal()">
   <div class="modal-automation modal-automation-wide" onclick="event.stopPropagation()">
@@ -647,15 +895,18 @@
   </div>
 </div>
 
-<!-- Report folder modal -->
-<div id="reportFolderModal" class="modal-overlay" onclick="if(event.target===this)closeReportFolderModal()">
-  <div class="modal-automation modal-report-folder" onclick="event.stopPropagation()">
-    <div class="modal-automation-header">
-      <h3 class="modal-automation-title">📁 Report Folder</h3>
-      <button type="button" class="modal-automation-close" onclick="closeReportFolderModal()" aria-label="Close">&times;</button>
+<!-- Report Folder right-open panel (same as Automation Roadmap) -->
+<div id="reportFolderOverlay" class="reportfolder-overlay" onclick="if(event.target===this)closeReportFolderPanel()">
+  <div class="reportfolder-panel" onclick="event.stopPropagation()">
+    <div class="reportfolder-panel-hdr">
+      <div class="reportfolder-panel-title">📁 Report Folder</div>
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="loadReportFolder(); toast('List refreshed', 'info')" title="Refresh list">↻</button>
+        <button type="button" class="roadmap-close" onclick="closeReportFolderPanel()" aria-label="Close">✕</button>
+      </div>
     </div>
-    <div class="modal-automation-body">
-      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem">Reports sent via email or saved manually.</p>
+    <div class="reportfolder-panel-body">
+      <p class="report-folder-subtitle" style="font-size:.875rem;color:var(--text-muted);margin-bottom:1rem">Reports sent via email or saved manually.</p>
       <div id="reportFolderList" class="report-folder-list"></div>
     </div>
   </div>
@@ -763,12 +1014,15 @@ async function uploadFile(file) {
     dashboardData = data.dashboard;
     renderDashboard(dashboardData);
     filterRows();
+    applyStoredFiltersIfAny();
     toast(`✅ Loaded ${data.total} work orders`, 'success');
     document.getElementById('btnDownloadReport').disabled = false;
     document.getElementById('btnSaveToFolder').disabled = false;
+    document.getElementById('btnSaveToDrive').disabled = false;
     document.getElementById('dashboardSection').classList.remove('hidden');
     document.getElementById('uploadZone').style.borderColor = 'var(--success)';
     loadAutomationStatus();
+    loadCycleData();
   } catch(err) {
     setAlert(err.message, 'danger');
     toast(err.message, 'error');
@@ -1241,6 +1495,33 @@ async function saveEmailConfig() {
 
 const ALLOWED_DOMAIN = 'injaaz.ae';
 
+const SAVED_ADDRESSES = {
+  to: 'dennis@injaaz.ae, shakeel@injaaz.ae, araki@injaaz.ae, abbas@injaaz.ae, a.mohammed@injaaz.ae',
+  cc: 'taha@injaaz.ae, george@injaaz.ae, arshith@injaaz.ae, eslam@injaaz.ae, alaa@injaaz.ae, mona@injaaz.ae, siraj@injaaz.ae, jismon@injaaz.ae, ousman@injaaz.ae',
+};
+
+function fillSavedAddresses() {
+  const toEl = document.getElementById('emailTo');
+  const ccEl = document.getElementById('emailCc');
+  const btn = document.getElementById('btnSavedAddresses');
+  const isFilled = btn && btn.getAttribute('data-filled') === 'true';
+  if (isFilled) {
+    toEl.value = '';
+    ccEl.value = '';
+    btn.setAttribute('data-filled', 'false');
+    btn.textContent = '📋 Use saved addresses';
+    toast('To and CC cleared', 'info');
+  } else {
+    toEl.value = SAVED_ADDRESSES.to;
+    ccEl.value = SAVED_ADDRESSES.cc;
+    btn.setAttribute('data-filled', 'true');
+    btn.textContent = '✕ Clear saved addresses';
+    toast('To and CC filled with saved addresses', 'info');
+  }
+  validateEmailField(toEl);
+  validateEmailField(ccEl);
+}
+
 function validateEmailField(input) {
   const errorEl = document.getElementById(input.id + 'Error');
   if (!input.value.trim()) { input.classList.remove('input-error'); if (errorEl) errorEl.textContent = ''; return true; }
@@ -1368,6 +1649,14 @@ function updateAutomationButton() {
   const btn = document.getElementById('btnAutomation');
   const label = document.getElementById('automationLabel');
   if (!btn || !label) return;
+
+  // Show / hide the Stop buttons (navbar + card)
+  const stopNavBtn  = document.getElementById('btnStopAuto');
+  const stopCardBtn = document.getElementById('btnStopAutoCard');
+  const schedActive = automationStatus && automationStatus.schedule_enabled && !automationStatus.schedule_paused;
+  if (stopNavBtn)  stopNavBtn.classList.toggle('hidden', !schedActive);
+  if (stopCardBtn) stopCardBtn.classList.toggle('hidden', !schedActive);
+
   if (!automationStatus) {
     btn.className = 'btn-automation btn-automation-disabled';
     btn.disabled = true;
@@ -1389,7 +1678,37 @@ function updateAutomationButton() {
     label.textContent = 'Paused · Upload to resume';
   } else {
     btn.className = 'btn-automation btn-automation-disabled';
-    label.textContent = 'Disabled';
+    label.textContent = 'Automation';
+  }
+}
+
+async function stopAutomation() {
+  if (!confirm('Stop automation? This will disable the daily schedule immediately. You can re-enable it anytime from the Email Report section.')) return;
+  const navBtn  = document.getElementById('btnStopAuto');
+  const cardBtn = document.getElementById('btnStopAutoCard');
+  if (navBtn)  { navBtn.disabled = true;  navBtn.textContent  = 'Stopping…'; }
+  if (cardBtn) { cardBtn.disabled = true; cardBtn.textContent = '🛑 Stopping…'; }
+  try {
+    const resp = await authFetch('/admin/mmr/api/email-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schedule_enabled: false, schedule_paused: true }),
+    });
+    if (resp.ok) {
+      toast('✅ Automation stopped. No more scheduled emails will be sent.', 'success');
+      document.getElementById('scheduleEnabled').checked = false;
+      updateScheduleStatus({ schedule_enabled: false });
+      await loadAutomationStatus();
+      await loadCycleData();
+    } else {
+      const d = await resp.json();
+      toast('❌ ' + (d.error || 'Failed to stop automation'), 'error');
+    }
+  } catch (e) {
+    toast('Request failed', 'error');
+  } finally {
+    if (navBtn)  { navBtn.disabled = false;  navBtn.textContent  = '🛑 Stop'; }
+    if (cardBtn) { cardBtn.disabled = false; cardBtn.textContent = '🛑 Stop Automation'; }
   }
 }
 
@@ -1477,7 +1796,7 @@ async function pauseAutomation() {
     if (resp.ok) {
       toast('Automation paused', 'success');
       await loadAutomationStatus();
-      openAutomationModal();
+      renderRoadmap();
     } else toast('Failed to pause', 'error');
   } catch (e) { toast('Failed to pause', 'error'); }
 }
@@ -1489,7 +1808,7 @@ async function resumeAutomation() {
     if (resp.ok) {
       toast('Automation resumed', 'success');
       await loadAutomationStatus();
-      closeAutomationModal();
+      renderRoadmap();
     } else toast(data.error || 'Failed to resume', 'error');
   } catch (e) { toast('Failed to resume', 'error'); }
 }
@@ -1501,13 +1820,54 @@ function closeAutomationModal() {
 // ════════════════════════════════════════════════════════════════
 // Save to Folder & Report Folder
 // ════════════════════════════════════════════════════════════════
+function getCurrentFilters() {
+  return {
+    client:       (document.getElementById('fClient')?.value || '').trim(),
+    contract:     (document.getElementById('fContract')?.value || '').trim(),
+    serviceGroup: (document.getElementById('fServiceGroup')?.value || '').trim(),
+    space:        (document.getElementById('fSpace')?.value || '').trim(),
+    status:       (document.getElementById('fStatus')?.value || '').trim(),
+    priority:     (document.getElementById('fPriority')?.value || '').trim(),
+  };
+}
+
+function applyFiltersFromState(filters) {
+  if (!filters || typeof filters !== 'object') return;
+  const ids = ['fClient','fContract','fServiceGroup','fSpace','fStatus','fPriority'];
+  const keys = ['client','contract','serviceGroup','space','status','priority'];
+  keys.forEach((k, i) => {
+    const el = document.getElementById(ids[i]);
+    if (el && filters[k]) el.value = filters[k];
+  });
+  updateContractOptions();
+  updateClientFromContract();
+  applyFilters();
+}
+
+function applyStoredFiltersIfAny() {
+  try {
+    const stored = sessionStorage.getItem('mmr_restore_filters');
+    if (stored) {
+      const filters = JSON.parse(stored);
+      sessionStorage.removeItem('mmr_restore_filters');
+      applyFiltersFromState(filters);
+      toast('Dashboard filters restored from saved report', 'success');
+    }
+  } catch (e) {
+    sessionStorage.removeItem('mmr_restore_filters');
+  }
+}
+
 async function saveToFolder() {
   const btn = document.getElementById('btnSaveToFolder');
   if (btn?.disabled) return;
   btn.disabled = true;
   btn.textContent = 'Saving…';
   try {
-    const payload = { rows: filteredRows.length && filteredRows.length < allRows.length ? filteredRows : null };
+    const payload = {
+      rows: filteredRows.length && filteredRows.length < allRows.length ? filteredRows : null,
+      filters: getCurrentFilters(),
+    };
     const resp = await authFetch('/admin/mmr/api/save-to-folder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1528,6 +1888,35 @@ async function saveToFolder() {
   }
 }
 
+async function saveToDrive() {
+  const btn = document.getElementById('btnSaveToDrive');
+  if (btn?.disabled) return;
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const payload = {
+      rows: filteredRows.length && filteredRows.length < allRows.length ? filteredRows : null,
+      filters: getCurrentFilters(),
+    };
+    const resp = await authFetch('/admin/mmr/api/save-to-drive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (resp.ok && data.success) {
+      toast('Saved to TrueNAS drive', 'success');
+    } else {
+      toast(data.error || 'Failed to save to drive', 'error');
+    }
+  } catch (e) {
+    toast('Failed to save to drive', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Save to Drive';
+  }
+}
+
 async function loadReportFolder() {
   try {
     const resp = await authFetch('/admin/mmr/api/report-folder');
@@ -1539,6 +1928,10 @@ async function loadReportFolder() {
   }
 }
 
+function escapeAttr(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 function renderReportFolderList(files) {
   const el = document.getElementById('reportFolderList');
   if (!el) return;
@@ -1546,29 +1939,87 @@ function renderReportFolderList(files) {
     el.innerHTML = '<div class="report-folder-empty">No reports saved yet. Send an email or use Save to Folder.</div>';
     return;
   }
+  const isOnMmrPage = !!document.getElementById('dashboardSection');
   el.innerHTML = files.map(f => {
-    const dt = f.modified ? new Date(f.modified).toLocaleString() : '';
+    const dt = f.modified ? new Date(f.modified).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '';
     const size = f.size ? (f.size < 1024 ? f.size + ' B' : (f.size / 1024).toFixed(1) + ' KB') : '';
     const fn = (f.name || '').replace(/"/g, '&quot;');
+    const filtersAttr = escapeAttr(JSON.stringify(f.filters || {}));
+    const filenameAttr = escapeAttr(f.name || '');
+    const openBtn = isOnMmrPage
+      ? `<button type="button" class="report-folder-open" data-filters="${filtersAttr}" data-filename="${filenameAttr}" onclick="openReportAndRestoreFilters(this); closeReportFolderPanel();" title="Open report in dashboard">Open</button>`
+      : `<button type="button" class="report-folder-open" data-filters="${filtersAttr}" data-filename="${filenameAttr}" onclick="openReportFromAdmin(this)" title="Open Report Generation with saved filters">Open</button>`;
     return `<div class="report-folder-item">
-      <div>
+      <div class="report-folder-content">
         <div class="report-folder-name">${escHtml(f.name)}</div>
-        <div class="report-folder-meta">${dt}${size ? ' · ' + size : ''}</div>
+        <div class="report-folder-meta">${dt ? `<span>${dt}</span>` : ''}${size ? `<span>${size}</span>` : ''}</div>
       </div>
-      <div>
+      <div class="report-folder-actions">
+        ${openBtn}
         <button type="button" class="report-folder-dl" onclick="downloadReportFile(this.dataset.fn)" data-fn="${fn}">Download</button>
       </div>
     </div>`;
   }).join('');
 }
 
-function openReportFolderModal() {
-  document.getElementById('reportFolderModal')?.classList.add('active');
+async function openReportAndRestoreFilters(btn) {
+  try {
+    const filters = JSON.parse(btn?.dataset?.filters || '{}');
+    const filename = btn?.dataset?.filename || '';
+
+    if (!filename) {
+      if (allRows.length > 0) {
+        applyFiltersFromState(filters);
+        toast('Dashboard filters restored', 'success');
+      } else {
+        sessionStorage.setItem('mmr_restore_filters', JSON.stringify(filters || {}));
+        toast('Filters saved. Upload a file to see the dashboard with these filters applied.', 'info');
+      }
+      return;
+    }
+
+    toast('Loading report…', 'info');
+    const resp = await authFetch('/admin/mmr/api/report-folder/open/' + encodeURIComponent(filename));
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Failed to load report');
+
+    allRows = data.rows;
+    dashboardData = data.dashboard;
+    destroyCharts();
+    renderDashboard(dashboardData);
+    filterRows();
+    applyFiltersFromState(filters);
+    document.getElementById('btnDownloadReport').disabled = false;
+    document.getElementById('btnSaveToFolder').disabled = false;
+    document.getElementById('btnSaveToDrive').disabled = false;
+    document.getElementById('dashboardSection').classList.remove('hidden');
+    document.getElementById('uploadZone').style.borderColor = 'var(--success)';
+    loadAutomationStatus();
+    toast('Report loaded. Dashboard updated.', 'success');
+  } catch (e) {
+    toast(e.message || 'Could not load report', 'error');
+  }
+}
+
+function openReportFromAdmin(btn) {
+  try {
+    const filters = JSON.parse(btn?.dataset?.filters || '{}');
+    const filename = btn?.dataset?.filename || '';
+    sessionStorage.setItem('mmr_restore_filters', JSON.stringify(filters || {}));
+    sessionStorage.setItem('mmr_restore_filename', filename);
+    window.location.href = '/admin/mmr/';
+  } catch (e) {
+    toast('Could not open report', 'error');
+  }
+}
+
+function openReportFolderPanel() {
+  document.getElementById('reportFolderOverlay')?.classList.add('active');
   loadReportFolder();
 }
 
-function closeReportFolderModal() {
-  document.getElementById('reportFolderModal')?.classList.remove('active');
+function closeReportFolderPanel() {
+  document.getElementById('reportFolderOverlay')?.classList.remove('active');
 }
 
 async function downloadReportFile(filename) {
@@ -1588,9 +2039,306 @@ async function downloadReportFile(filename) {
 }
 
 // ════════════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
+// Roadmap Panel
+// ════════════════════════════════════════════════════════════════
+let cycleLog = null;
+
+async function openRoadmapPanel() {
+  document.getElementById('roadmapOverlay').classList.add('active');
+  await Promise.all([loadAutomationStatus(), loadCycleData()]);
+}
+
+function closeRoadmapPanel() {
+  document.getElementById('roadmapOverlay').classList.remove('active');
+}
+
+async function loadCycleData() {
+  try {
+    const resp = await authFetch('/admin/mmr/api/cycles');
+    if (!resp.ok) return;
+    cycleLog = await resp.json();
+    renderRoadmap();
+  } catch (e) {
+    console.error('Cycle data load failed:', e);
+  }
+}
+
+function fmtDT(iso) {
+  if (!iso) return null;
+  try { return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }); }
+  catch { return iso; }
+}
+
+function fmtD(iso) {
+  if (!iso) return null;
+  try { return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' }); }
+  catch { return iso; }
+}
+
+function buildStepCard(num, title, cls, body, time, actionHtml) {
+  return `<div class="step-card ${cls}">
+    <div class="sc-num">Step ${num}</div>
+    <div class="sc-title">${title}</div>
+    <div class="sc-body">${body}</div>
+    ${time ? `<div class="sc-time">🕐 ${time}</div>` : ''}
+    ${actionHtml || ''}
+  </div>`;
+}
+
+function renderRoadmap() {
+  const body   = document.getElementById('roadmapBody');
+  const subEl  = document.getElementById('roadmapSub');
+  if (!body) return;
+
+  const s       = automationStatus || {};
+  const current = cycleLog?.current;
+  const history = cycleLog?.history || [];
+
+  // Header sub-line
+  if (current) {
+    const cycleDate = fmtD(current.upload_at) || '—';
+    subEl.textContent = `Cycle #${current.cycle_id} · ${cycleDate}`;
+  } else {
+    subEl.textContent = 'No active cycle – upload an Excel file to begin';
+  }
+
+  // ── Step states ──
+  const s1 = !!(current?.upload_at);
+  const s2 = !!(current?.approved_at);
+  const s3 = !!(current?.sent_at);
+  const s4 = s3; // locked state is active once sent
+
+  const psDot = (done, active) => done ? 'ps-done' : active ? 'ps-active' : 'ps-locked';
+  const scCard = (done, active) => done ? 'sc-done' : active ? 'sc-active' : 'sc-locked';
+
+  const dot1 = psDot(s1, true);
+  const dot2 = psDot(s2, s1 && !s3);
+  const dot3 = psDot(s3, s1);
+  const dot4 = psDot(false, s4);
+
+  const cd1 = scCard(s1, !s1);
+  const cd2 = scCard(s2, s1 && !s3);
+  const cd3 = scCard(s3, s1);
+  const cd4 = scCard(false, s4);
+
+  // Progress bar width (steps completed → fill from dot1 to next dot)
+  const progressWidth = s3 ? '75%' : s2 ? '50%' : s1 ? '25%' : '0%';
+
+  // ── Pipeline track ──
+  const dots = [
+    { icon: s1 ? '✓' : '1', name: 'Upload',       cls: dot1 },
+    { icon: s2 ? '✓' : '2', name: 'Review &<br>Approve', cls: dot2 },
+    { icon: s3 ? '✓' : '3', name: 'Send Email',   cls: dot3 },
+    { icon: s4 ? '🔒' : '4', name: 'Lock &<br>Await', cls: dot4 },
+  ];
+  const pipelineHtml = `
+    <div class="pipeline-wrap">
+      <div class="pipeline-track">
+        <div class="pipeline-progress" style="width:${progressWidth}"></div>
+        ${dots.map(d => `<div class="pipeline-step ${d.cls}">
+          <div class="pipeline-dot">${d.icon}</div>
+          <div class="pipeline-step-name">${d.name}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+
+  // ── Step cards ──
+  // Card 1 – Upload
+  const card1 = buildStepCard(1, 'Upload Excel', cd1,
+    s1
+      ? `✓ File loaded${current.upload_by ? ` by <strong>${escHtml(current.upload_by)}</strong>` : ''}`
+      : 'Upload a new CAFM work-order Excel file to begin a dispatch cycle.',
+    s1 ? fmtDT(current.upload_at) : null, null);
+
+  // Card 2 – Approve
+  const approveBtnHtml = (s1 && !s2 && !s3)
+    ? `<button class="sc-btn sc-btn-approve" id="btnApprove" onclick="approveCycleAction()">✓ Mark Reviewed</button>`
+    : '';
+  const card2 = buildStepCard(2, 'Review & Approve', cd2,
+    s2
+      ? `✓ Approved by <strong>${escHtml(current.approved_by || 'admin')}</strong>`
+      : s1
+        ? 'Review the dashboard data below, then mark it as approved.'
+        : 'Awaiting upload.',
+    s2 ? fmtDT(current.approved_at) : null, approveBtnHtml);
+
+  // Card 3 – Send
+  const schedNote = (s.schedule_enabled && !s3)
+    ? `<br><small>Auto scheduled at ${String(s.schedule_hour ?? 10).padStart(2,'0')}:${String(s.schedule_minute ?? 0).padStart(2,'0')} GST</small>`
+    : '';
+  const automationRunning = s.schedule_enabled && !s.schedule_paused;
+  const sendBtnHtml = (s1 && !s3)
+    ? (automationRunning
+        ? `<button class="sc-btn sc-btn-send" disabled style="opacity:.85;cursor:default">✓ Automation started</button>`
+        : `<button class="sc-btn sc-btn-send" id="roadmapStartBtn" onclick="startAutomationFromRoadmap()">▶ Start the automation</button>`)
+    : '';
+  const card3 = buildStepCard(3, 'Send Email Report', cd3,
+    s3
+      ? `✓ Sent to <strong>${current.recipient_count || 0}</strong> recipients${current.sent_by ? ` by <strong>${escHtml(current.sent_by)}</strong>` : ''}`
+      : s1
+        ? `Ready to dispatch.${schedNote}`
+        : 'Awaiting upload.',
+    s3 ? fmtDT(current.sent_at) : null, sendBtnHtml);
+
+  // Card 4 – Lock
+  const lockBody = s4
+    ? '<span style="color:var(--success);font-weight:600">✓ Automated email has been sent.</span> Upload a new Excel file to start the next cycle.'
+    : 'Becomes active after the email is sent. Prevents re-sending without a fresh file.';
+  const lockActionHtml = s4
+    ? `<button class="sc-btn sc-btn-approve" onclick="refreshToStartNextCycle()">↻ Refresh to start automation</button>`
+    : null;
+  const card4 = buildStepCard(4, 'Lock / Await Next', cd4, lockBody, null, lockActionHtml);
+
+  const stepCardsHtml = `<div class="step-cards">${card1}${card2}${card3}${card4}</div>`;
+
+  // ── Schedule / automation strip ──
+  let autoHtml = '';
+  if (s.schedule_enabled !== undefined) {
+    const schedLabel = s.schedule_enabled
+      ? `Daily at ${String(s.schedule_hour ?? 10).padStart(2,'0')}:${String(s.schedule_minute ?? 0).padStart(2,'0')} GST`
+      : 'Automation';
+    const statusBadge = s.automation_status === 'completed'
+      ? `<span class="automation-status-badge success" style="font-size:.75rem">✓ Today completed</span>`
+      : s.automation_status === 'pending'
+        ? `<span class="automation-status-badge pending" style="font-size:.75rem">⏳ Pending</span>`
+        : s.automation_status === 'paused'
+          ? `<span class="automation-status-badge paused" style="font-size:.75rem">⏸ Paused</span>`
+          : '';
+    const prBtn = s.schedule_enabled
+      ? (s.schedule_paused
+          ? `<button type="button" class="btn btn-primary btn-sm" onclick="resumeAutomation()" ${!s.excel_uploaded ? 'disabled' : ''} style="font-size:.75rem">▶ Resume</button>`
+          : `<button type="button" class="btn btn-outline btn-sm" onclick="pauseAutomation()" style="font-size:.75rem">⏸ Pause</button>
+             <button type="button" class="btn btn-danger btn-sm" onclick="stopAutomation()" style="font-size:.75rem">🛑 Stop</button>`)
+      : '';
+    autoHtml = `
+      <div class="auto-strip">
+        <span class="auto-strip-label">⏰ Schedule</span>
+        <span class="auto-strip-val">${schedLabel}</span>
+        ${statusBadge}
+        ${prBtn}
+      </div>`;
+  }
+
+  // ── Cycle history ──
+  let histHtml = '<div class="roadmap-section-title" style="margin-top:0">Cycle History</div>';
+  if (history.length) {
+    histHtml += `<div class="cycle-history">${history.map(c => {
+      const isSent   = c.status === 'sent';
+      const isFailed = c.status === 'failed';
+      const badgeCls = isSent ? 'cb-sent' : isFailed ? 'cb-failed' : 'cb-partial';
+      const icon     = isSent ? '✓' : isFailed ? '✗' : '–';
+      const label    = isSent ? 'Sent' : isFailed ? 'Failed' : 'Abandoned';
+      const dateStr  = fmtD(c.sent_at || c.upload_at) || '';
+      const recip    = isSent ? ` · ${c.recipient_count || 0} recipients` : '';
+      const subj     = c.subject
+        ? ` · ${c.subject.length > 45 ? c.subject.substring(0, 45) + '…' : c.subject}`
+        : '';
+      return `<div class="cycle-item">
+        <div class="cycle-badge ${badgeCls}">${icon}</div>
+        <div class="cycle-info">
+          <div class="cycle-info-top">Cycle #${c.cycle_id} · ${label}</div>
+          <div class="cycle-info-sub">${dateStr}${recip}${subj ? `<br>${escHtml(subj)}` : ''}</div>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+  } else {
+    histHtml += `<p style="color:var(--text-muted);font-size:.8125rem">No completed cycles yet. Send your first report to see history here.</p>`;
+  }
+
+  body.innerHTML = `
+    <div class="roadmap-section-title">Current Cycle</div>
+    ${pipelineHtml}
+    ${stepCardsHtml}
+    ${autoHtml}
+    <hr style="border:none;border-top:1px solid var(--border);margin:1.5rem 0 1.25rem">
+    ${histHtml}
+  `;
+}
+
+// Refresh page to start next automation cycle (Step 4)
+function refreshToStartNextCycle() {
+  closeRoadmapPanel();
+  window.location.reload();
+}
+
+// Approve the current cycle (Step 2)
+async function approveCycleAction() {
+  const btn = document.getElementById('btnApprove');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const resp = await authFetch('/admin/mmr/api/approve', { method: 'POST' });
+    const data = await resp.json();
+    if (resp.ok) {
+      toast('✓ Cycle marked as reviewed', 'success');
+      await loadCycleData();
+    } else {
+      toast(data.error || 'Could not approve', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '✓ Mark Reviewed'; }
+    }
+  } catch (e) {
+    toast('Request failed', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Mark Reviewed'; }
+  }
+}
+
+// Start the automation from roadmap (Step 3) – resumes schedule, does NOT send immediately
+async function startAutomationFromRoadmap() {
+  const btn = document.getElementById('roadmapStartBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
+  try {
+    const resp = await authFetch('/admin/mmr/api/automation-resume', { method: 'POST' });
+    const data = await resp.json();
+    if (resp.ok) {
+      const h = String(automationStatus?.schedule_hour ?? 10).padStart(2, '0');
+      const m = String(automationStatus?.schedule_minute ?? 0).padStart(2, '0');
+      toast(`Automation started. Email will be sent at ${h}:${m} GST.`, 'success');
+      await loadAutomationStatus();
+      await loadCycleData();
+      renderRoadmap();
+    } else {
+      toast(data.error || 'Failed to start automation', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '▶ Start the automation'; }
+    }
+  } catch (e) {
+    toast(e.message || 'Failed to start automation', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '▶ Start the automation'; }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
   loadEmailConfig();
   loadAutomationStatus();
+  loadCycleData();
+
+  const filename = sessionStorage.getItem('mmr_restore_filename');
+  const filtersJson = sessionStorage.getItem('mmr_restore_filters');
+  if (filename) {
+    sessionStorage.removeItem('mmr_restore_filename');
+    sessionStorage.removeItem('mmr_restore_filters');
+    try {
+      toast('Loading report…', 'info');
+      const resp = await authFetch('/admin/mmr/api/report-folder/open/' + encodeURIComponent(filename));
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Failed to load report');
+
+      allRows = data.rows;
+      dashboardData = data.dashboard;
+      renderDashboard(dashboardData);
+      filterRows();
+      const filters = filtersJson ? JSON.parse(filtersJson) : {};
+      applyFiltersFromState(filters);
+      document.getElementById('btnDownloadReport').disabled = false;
+      document.getElementById('btnSaveToFolder').disabled = false;
+      document.getElementById('btnSaveToDrive').disabled = false;
+      document.getElementById('dashboardSection').classList.remove('hidden');
+      document.getElementById('uploadZone').style.borderColor = 'var(--success)';
+      loadAutomationStatus();
+      toast('Report loaded. Dashboard filters restored.', 'success');
+    } catch (e) {
+      toast(e.message || 'Could not load report', 'error');
+    }
+  }
 });
 </script>
 </body>

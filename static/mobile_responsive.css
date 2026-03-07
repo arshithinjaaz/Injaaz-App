@@ -419,8 +419,7 @@
   
   /* Footer - subtle mobile */
   .footer {
-    background: var(--white, #fff) !important;
-    border-top: 1px solid var(--border-color, #e5e7eb) !important;
+    background: #f8faf8 !important;
   }
 }
 

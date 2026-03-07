@@ -166,7 +166,8 @@
         </div>
         <div class="modal-footer">
           <a id="printBtnGm" href="#" target="_blank" class="btn btn-outline-light" style="margin-right: auto;">🖨️ Print (HR Document)</a>
-          <a id="docxBtnGm" href="#" class="btn btn-outline-light" style="display: none;">📄 Download DOCX</a>
+          <a id="docxBtnGm" href="#" class="btn btn-outline-light" style="display: none;">📄 DOCX</a>
+          <a id="pdfBtnGm" href="#" class="btn btn-outline-light" style="display: none;">📕 PDF</a>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-reject" onclick="rejectRequest()">Reject</button>
           <button type="button" class="btn btn-approve" onclick="approveRequest()">Give Final Approval</button>
@@ -178,6 +179,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const HR_SUPPORTED_DOCX_FORMS = {{ (supported_docx_forms or [])|tojson }};
+    const HR_SUPPORTED_PDF_FORMS = {{ (supported_pdf_forms or [])|tojson }};
     const token = localStorage.getItem('access_token');
     let currentSubmissionId = null;
     let signaturePad = null;
@@ -322,6 +324,13 @@
         const supportsDocx = (HR_SUPPORTED_DOCX_FORMS || []).includes(formType);
         docxBtn.style.display = supportsDocx ? 'inline-block' : 'none';
         docxBtn.href = supportsDocx ? ('/hr/download-docx/' + encodeURIComponent(submissionId)) : '#';
+      }
+      const pdfBtn = document.getElementById('pdfBtnGm');
+      if (pdfBtn) {
+        const formType = (submission.module_type || submission.form_type || '').replace('hr_', '');
+        const supportsPdf = (HR_SUPPORTED_PDF_FORMS || []).includes(formType);
+        pdfBtn.style.display = supportsPdf ? 'inline-block' : 'none';
+        pdfBtn.href = supportsPdf ? ('/hr/download-pdf/' + encodeURIComponent(submissionId)) : '#';
       }
       
       const formData = submission.form_data || {};

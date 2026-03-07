@@ -40,8 +40,9 @@ def _validate_injaaz_emails(raw: str) -> tuple[list[str], str | None]:
         )
     return emails, None
 
-_CONFIG_FILE = 'mmr_email_config.json'
-_UPLOAD_FILE  = 'mmr_latest.xlsx'
+_CONFIG_FILE    = 'mmr_email_config.json'
+_UPLOAD_FILE    = 'mmr_latest.xlsx'
+_CYCLE_LOG_FILE = 'mmr_cycle_log.json'
 
 _DEFAULT_CONFIG = {
     'to': 'dennis@injaaz.ae, shakeel@injaaz.ae, araki@injaaz.ae, abbas@injaaz.ae, a.mohammed@injaaz.ae',
@@ -95,8 +96,14 @@ def _reports_folder():
     return folder
 
 
-def _save_report_to_folder(report_bytes: bytes, base_filename: str, suffix: str = '') -> str | None:
-    """Save report to folder with timestamp. Returns saved filename or None."""
+# TrueNAS / network drive path for Save to Drive (internal use)
+_TRUENAS_CAFM_PATH = r'\\172.25.70.137\Injaaz\CAFM'
+
+
+def _save_report_to_folder(report_bytes: bytes, base_filename: str, suffix: str = '',
+                          filters: dict | None = None) -> str | None:
+    """Save report to folder with timestamp. Optionally save filter state to restore dashboard.
+    Returns saved filename or None."""
     try:
         folder = _reports_folder()
         now = datetime.now()
@@ -105,9 +112,26 @@ def _save_report_to_folder(report_bytes: bytes, base_filename: str, suffix: str 
         path = os.path.join(folder, name)
         with open(path, 'wb') as f:
             f.write(report_bytes)
+        # Save filter state for restoring dashboard when opening report
+        if filters is not None:
+            filters_path = path.replace('.xlsx', '_filters.json')
+            with open(filters_path, 'w') as f:
+                json.dump(filters, f, indent=2)
         return name
     except Exception as e:
         logger.warning(f'MMR save to folder failed: {e}')
+        return None
+
+
+def _save_report_to_drive(report_bytes: bytes, filename: str) -> str | None:
+    """Save report to TrueNAS CAFM path (\\\\172.25.70.137\\Injaaz\\CAFM). Returns full path or None."""
+    try:
+        path = os.path.join(_TRUENAS_CAFM_PATH, filename)
+        with open(path, 'wb') as f:
+            f.write(report_bytes)
+        return path
+    except Exception as e:
+        logger.warning(f'MMR save to drive failed: {e}')
         return None
 
 def _load_config() -> dict:
@@ -123,6 +147,116 @@ def _load_config() -> dict:
 def _save_config(config: dict):
     with open(_config_path(), 'w') as f:
         json.dump(config, f, indent=2)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Cycle log helpers  (stored as mmr_cycle_log.json next to the config)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _cycle_log_path():
+    return os.path.join(current_app.config['GENERATED_DIR'], _CYCLE_LOG_FILE)
+
+
+def _get_caller_identity() -> str:
+    """Safely extract a username string from the current JWT identity."""
+    try:
+        identity = get_jwt_identity()
+        if isinstance(identity, str):
+            return identity
+        if isinstance(identity, dict):
+            return identity.get('username') or identity.get('sub') or 'admin'
+        return str(identity) or 'admin'
+    except Exception:
+        return 'admin'
+
+
+def _load_cycle_log() -> dict:
+    try:
+        p = _cycle_log_path()
+        if os.path.exists(p):
+            with open(p) as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {'current': None, 'history': [], 'next_cycle_id': 1}
+
+
+def _save_cycle_log(log: dict):
+    try:
+        with open(_cycle_log_path(), 'w') as f:
+            json.dump(log, f, indent=2)
+    except Exception as e:
+        logger.warning(f'MMR cycle log save failed: {e}')
+
+
+def _start_new_cycle(uploaded_by: str = 'admin') -> dict:
+    """Begin a fresh dispatch cycle. Pushes any existing current cycle to history."""
+    log = _load_cycle_log()
+    current = log.get('current')
+    if current and current.get('upload_at'):
+        history = log.get('history', [])
+        history.insert(0, current)
+        log['history'] = history[:50]
+    cycle_id = int(log.get('next_cycle_id', 1))
+    log['next_cycle_id'] = cycle_id + 1
+    log['current'] = {
+        'cycle_id': cycle_id,
+        'upload_at': datetime.now().isoformat(),
+        'upload_by': uploaded_by,
+        'approved_at': None,
+        'approved_by': None,
+        'sent_at': None,
+        'sent_by': None,
+        'recipient_count': 0,
+        'subject': '',
+        'report_filename': '',
+        'status': 'uploaded',
+    }
+    _save_cycle_log(log)
+    return log['current']
+
+
+def _approve_current_cycle(approved_by: str = 'admin') -> bool:
+    """Mark current cycle as reviewed. Returns False if nothing to approve."""
+    log = _load_cycle_log()
+    current = log.get('current')
+    if not current or current.get('status') != 'uploaded':
+        return False
+    current['approved_at'] = datetime.now().isoformat()
+    current['approved_by'] = approved_by
+    current['status'] = 'approved'
+    log['current'] = current
+    _save_cycle_log(log)
+    return True
+
+
+def _complete_current_cycle(sent_by: str, subject: str,
+                             recipient_count: int, report_filename: str):
+    """Record a successful email send against the current cycle."""
+    try:
+        log = _load_cycle_log()
+        current = log.get('current')
+        if not current:
+            cycle_id = int(log.get('next_cycle_id', 1))
+            log['next_cycle_id'] = cycle_id + 1
+            current = {
+                'cycle_id': cycle_id,
+                'upload_at': datetime.now().isoformat(),
+                'upload_by': 'system',
+                'approved_at': None,
+                'approved_by': None,
+                'status': 'uploaded',
+            }
+        current['sent_at'] = datetime.now().isoformat()
+        current['sent_by'] = sent_by
+        current['recipient_count'] = recipient_count
+        current['subject'] = subject
+        current['report_filename'] = report_filename
+        current['status'] = 'sent'
+        log['current'] = current
+        _save_cycle_log(log)
+    except Exception as e:
+        logger.warning(f'MMR complete cycle failed: {e}')
 
 
 def _save_last_run(status: str, to_list: list, cc_list: list | None, subject: str, recipient_count: int):
@@ -176,8 +310,15 @@ def upload():
         rows = df_to_rows(df)
         for r in rows:
             r['Space'] = _resolve_chargeable(
-                r.get('Space', ''), r.get('BaseUnit', ''), r.get('Client', '')
+                r.get('Space', ''), r.get('BaseUnit', ''), r.get('Client', ''),
+                r.get('Service Group', ''), r.get('Contract', '')
             )
+        # Start a new dispatch cycle for this upload
+        try:
+            _start_new_cycle(_get_caller_identity())
+        except Exception:
+            pass
+
         # Auto-resume automation when new file uploaded (each run needs fresh Excel)
         config = _load_config()
         if config.get('schedule_enabled') and config.get('schedule_paused'):
@@ -238,6 +379,7 @@ def save_to_folder():
 
     data = request.get_json() or {}
     rows = data.get('rows')
+    filters = data.get('filters')  # { client, contract, serviceGroup, space, status, priority }
 
     try:
         from .mmr_service import parse_excel, generate_report_excel, rows_to_df
@@ -249,7 +391,7 @@ def save_to_folder():
             df = parse_excel(path)
         report_bytes = generate_report_excel(df)
         filename = _report_filename()
-        saved = _save_report_to_folder(report_bytes, filename, 'saved')
+        saved = _save_report_to_folder(report_bytes, filename, 'saved', filters=filters)
         if saved:
             return jsonify({'success': True, 'filename': saved})
         return jsonify({'error': 'Failed to save to folder'}), 500
@@ -258,11 +400,43 @@ def save_to_folder():
         return jsonify({'error': str(e)}), 500
 
 
+@mmr_bp.route('/api/save-to-drive', methods=['POST'])
+@jwt_required()
+@admin_required
+def save_to_drive():
+    """Save current (optionally filtered) report to TrueNAS CAFM drive (\\\\172.25.70.137\\Injaaz\\CAFM)."""
+    path = _upload_path()
+    if not os.path.exists(path):
+        return jsonify({'error': 'No file uploaded yet. Please upload an Excel file first.'}), 400
+
+    data = request.get_json() or {}
+    rows = data.get('rows')
+    filters = data.get('filters')
+
+    try:
+        from .mmr_service import parse_excel, generate_report_excel, rows_to_df
+        if rows:
+            df = rows_to_df(rows)
+            if df.empty:
+                return jsonify({'error': 'No rows to save. Apply filters or upload data.'}), 400
+        else:
+            df = parse_excel(path)
+        report_bytes = generate_report_excel(df)
+        filename = _report_filename()
+        saved_path = _save_report_to_drive(report_bytes, filename)
+        if saved_path:
+            return jsonify({'success': True, 'path': saved_path, 'filename': filename})
+        return jsonify({'error': 'Failed to save to drive. Check network access to TrueNAS.'}), 500
+    except Exception as e:
+        logger.error(f'MMR save to drive error: {e}', exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @mmr_bp.route('/api/report-folder', methods=['GET'])
 @jwt_required()
 @admin_required
 def list_report_folder():
-    """List all saved reports in the report folder."""
+    """List all saved reports in the report folder. Includes filter state for restoring dashboard."""
     folder = _reports_folder()
     files = []
     for name in sorted(os.listdir(folder), reverse=True):
@@ -270,11 +444,22 @@ def list_report_folder():
             path = os.path.join(folder, name)
             try:
                 stat = os.stat(path)
-                files.append({
+                entry = {
                     'name': name,
                     'size': stat.st_size,
                     'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                })
+                }
+                # Load saved filter state if present
+                filters_path = path.replace('.xlsx', '_filters.json')
+                if os.path.exists(filters_path):
+                    try:
+                        with open(filters_path) as f:
+                            entry['filters'] = json.load(f)
+                    except Exception:
+                        entry['filters'] = {}
+                else:
+                    entry['filters'] = {}
+                files.append(entry)
             except OSError:
                 pass
     return jsonify({'files': files})
@@ -297,6 +482,41 @@ def download_report_folder_file(filename):
         download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
+
+@mmr_bp.route('/api/report-folder/open/<path:filename>', methods=['GET'])
+@jwt_required()
+@admin_required
+def open_report_from_folder(filename):
+    """Load a saved report's data for display in the dashboard."""
+    if '..' in filename or '/' in filename or '\\' in filename:
+        return jsonify({'error': 'Invalid filename'}), 400
+    folder = _reports_folder()
+    path = os.path.join(folder, filename)
+    if not os.path.exists(path) or not os.path.isfile(path):
+        return jsonify({'error': 'File not found'}), 404
+
+    try:
+        from .mmr_service import parse_saved_report_excel, compute_dashboard, df_to_rows, _resolve_chargeable
+        df = parse_saved_report_excel(path)
+        if df.empty:
+            return jsonify({'error': 'Could not parse report. The file may be in a different format.'}), 400
+        dashboard_data = compute_dashboard(df)
+        rows = df_to_rows(df)
+        for r in rows:
+            r['Space'] = _resolve_chargeable(
+                r.get('Space', ''), r.get('BaseUnit', ''), r.get('Client', ''),
+                r.get('Service Group', ''), r.get('Contract', '')
+            )
+        return jsonify({
+            'success': True,
+            'dashboard': dashboard_data,
+            'rows': rows,
+            'total': len(rows),
+        })
+    except Exception as e:
+        logger.error(f'MMR open report error: {e}', exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -414,6 +634,37 @@ def resume_automation():
     except Exception:
         pass
     return jsonify({'success': True, 'paused': False})
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Cycle endpoints
+# ──────────────────────────────────────────────────────────────────────────────
+
+@mmr_bp.route('/api/cycles', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_cycles():
+    """Return full cycle log (current cycle + history)."""
+    return jsonify(_load_cycle_log())
+
+
+@mmr_bp.route('/api/approve', methods=['POST'])
+@jwt_required()
+@admin_required
+def approve_cycle():
+    """Mark the current cycle as reviewed/approved."""
+    user = _get_caller_identity()
+    if _approve_current_cycle(user):
+        return jsonify({'success': True})
+    log = _load_cycle_log()
+    current = log.get('current')
+    if not current:
+        return jsonify({'error': 'No active cycle. Upload an Excel file first.'}), 400
+    if current.get('status') == 'approved':
+        return jsonify({'error': 'Already approved', 'already_approved': True}), 400
+    if current.get('status') == 'sent':
+        return jsonify({'error': 'Cycle already completed. Upload a new file to start the next cycle.'}), 400
+    return jsonify({'error': 'Cannot approve in the current cycle state'}), 400
 
 
 @mmr_bp.route('/api/email-config', methods=['POST'])
@@ -540,9 +791,14 @@ def send_email_now():
         )
         if ok:
             _save_report_to_folder(report_bytes, filename, 'email')
+            try:
+                rc = len(to_list) + (len(cc_list) if cc_list else 0)
+                _complete_current_cycle(_get_caller_identity(), subject, rc, filename)
+            except Exception:
+                pass
             return jsonify({
                 'success': True,
-                'message': 'Email sent successfully. If you don’t see it, check spam/junk and “Promotions” (Gmail).'
+                'message': "Email sent successfully. If you don't see it, check spam/junk and Promotions (Gmail)."
             })
         return jsonify({'error': 'Email was rejected by the mail server. Check credentials and try again.'}), 502
     except Exception as e:
