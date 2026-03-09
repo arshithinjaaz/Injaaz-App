@@ -164,6 +164,15 @@ html {
   display: none;
 }
 
+/* Mobile drawer and overlay - hidden on desktop (only shown in @media max-width: 2000px) */
+.mobile-menu-drawer {
+  display: none;
+}
+
+.mobile-overlay {
+  display: none;
+}
+
 .nav-right {
   display: flex;
   align-items: center;
@@ -321,12 +330,69 @@ html {
 .hero.hr-hero::after {
   display: none;
 }
+.hero.hr-hero .back-btn,
+.hero.inspection-hero .back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+  transition: color 0.2s;
+}
+.hero.hr-hero .back-btn:hover,
+.hero.inspection-hero .back-btn:hover {
+  color: var(--primary-light);
+}
 
-/* Grid fades gradually to bottom - no sharp cutoff, merges with content */
-.hero.hr-hero::before,
+/* Inspection hero: same green gradient at top as HR module, no grid */
+.hero.inspection-hero {
+  background: linear-gradient(180deg, #eef4f0 0%, #f2f7f4 45%, #F8FAF8 100%);
+}
 .hero.inspection-hero::before,
+.hero.inspection-hero::after {
+  display: none;
+}
+
+/* Review History hero: same as HR/Inspection - gradient at top, no grid */
+.hero.review-hero {
+  background: linear-gradient(180deg, #eef4f0 0%, #f2f7f4 45%, #F8FAF8 100%);
+}
+.hero.review-hero::before,
+.hero.review-hero::after {
+  display: none;
+}
+
+/* Procurement hero: match Inspection - gradient at top, no grid */
+.hero.proc-hero {
+  background: linear-gradient(180deg, #eef4f0 0%, #f2f7f4 45%, #F8FAF8 100%);
+}
 .hero.proc-hero::before,
-.hero.review-hero::before {
+.hero.proc-hero::after {
+  display: none;
+}
+.hero.proc-hero .back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+  transition: color 0.2s;
+}
+.hero.proc-hero .back-btn:hover {
+  color: var(--primary-light);
+}
+
+/* Review History dashboard: match HR/Inspection background */
+.review-dashboard {
+  background: #F8FAF8;
+}
+
+/* Grid fades gradually to bottom - no sharp cutoff (HR only; Procurement/Inspection use gradient only) */
+.hero.hr-hero::before {
   mask-image: linear-gradient(to bottom, black 0%, black 45%, transparent 95%);
   -webkit-mask-image: linear-gradient(to bottom, black 0%, black 45%, transparent 95%);
 }
@@ -483,12 +549,26 @@ html {
   opacity: 0;
 }
 
+.dashboard-widget-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.dashboard-widget-link:hover {
+  opacity: 0.95;
+}
+.dashboard-widget-link:hover .dashboard-widget {
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0,0,0,0.04);
+}
 .dashboard-widget {
   background: var(--white);
   border-radius: 20px;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0,0,0,0.04);
   border: none;
   overflow: hidden;
+  transition: box-shadow 0.2s ease;
 }
 
 .dashboard-widget-header {
@@ -946,18 +1026,27 @@ html {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.65);
   z-index: 2000;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 2rem;
+  padding: 20rem 2rem 2rem 2rem;
+  overflow-y: auto;
   opacity: 0;
   animation: modalFadeIn 0.2s ease forwards;
 }
 
 .contact-modal.active {
   display: flex;
+  opacity: 1;
+}
+
+.contact-modal.active .contact-modal-content {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  visibility: visible !important;
+  animation: none !important;
+  background: #ffffff !important;
 }
 
 @keyframes modalFadeIn {
@@ -1211,86 +1300,233 @@ html {
 }
 
 /* ===========================================
-   Responsive - Tablet
+   Responsive - Nav collapse (show hamburger when nav would overlap welcome)
    =========================================== */
-@media (max-width: 1024px) {
+@media (max-width: 2000px) {
   .nav-container {
-    padding: 0 2rem;
+    padding: 0 1.5rem;
   }
 
-  /* Show hamburger earlier to prevent nav overlap on tablet */
+  /* Show hamburger as soon as resolution shrinks - nav goes to menu */
   .mobile-menu-toggle {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px !important;
-    min-height: 40px !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
     border: 1px solid var(--border-color) !important;
-    background: var(--bg-light) !important;
-    border-radius: 8px !important;
+    background: #fff !important;
+    border-radius: 10px !important;
     cursor: pointer !important;
     padding: 0 !important;
     color: var(--text-dark) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
+  }
+
+  .mobile-menu-toggle:hover {
+    background: var(--bg-light) !important;
+    border-color: var(--primary) !important;
+    color: var(--primary) !important;
+  }
+
+  .mobile-menu-toggle:active,
+  .mobile-menu-toggle.active {
+    background: rgba(18, 84, 53, 0.08) !important;
+    border-color: var(--primary) !important;
+    color: var(--primary) !important;
   }
 
   .nav-center {
     position: absolute !important;
     width: 0 !important;
     height: 0 !important;
-    overflow: visible !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
     pointer-events: none !important;
   }
 
+  /* Hide nav-center menu in collapsed mode (links shown in drawer) */
   .nav-center .nav-menu {
+    display: none !important;
+  }
+
+  /* Show drawer when collapsed (overlay shown via .active in its own rule) */
+  .mobile-menu-drawer {
+    display: block !important;
+  }
+
+  /* Slide-out menu drawer - right side, outside nav to avoid backdrop-filter containing block */
+  .mobile-menu-drawer {
     position: fixed !important;
     top: 72px !important;
-    left: -100% !important;
-    width: min(280px, 80vw) !important;
+    right: -100% !important;
+    left: auto !important;
+    width: min(320px, 88vw) !important;
+    max-width: 320px !important;
     height: calc(100vh - 72px) !important;
     height: calc(100dvh - 72px) !important;
-    background: white !important;
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.08) !important;
-    flex-direction: column !important;
-    display: flex !important;
-    padding: 0.5rem 0 !important;
-    gap: 0 !important;
-    transition: left 0.3s var(--ease-out) !important;
-    z-index: 999 !important;
+    background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%) !important;
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.06) !important;
+    padding: 0 !important;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease !important;
+    z-index: 1001 !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    border-left: 1px solid var(--border-color) !important;
+  }
+
+  .mobile-menu-drawer.active {
+    right: 0 !important;
+    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .mobile-menu-drawer-list {
     list-style: none !important;
     margin: 0 !important;
-    border-right: 1px solid var(--border-color) !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
-  .nav-menu.active {
-    left: 0 !important;
-  }
-
-  .nav-menu li {
+  .mobile-menu-drawer-list li {
     width: 100% !important;
     padding: 0 !important;
     display: block !important;
   }
 
-  .nav-menu li a,
-  .nav-menu a {
+  .mobile-menu-drawer-list li a,
+  .mobile-menu-drawer-list a {
     display: flex !important;
     align-items: center !important;
-    padding: 0.9rem 1.25rem !important;
-    font-size: 0.95rem !important;
+    padding: 1rem 1.5rem !important;
+    font-size: 1rem !important;
     font-weight: 500 !important;
     color: var(--text-dark) !important;
-    border-bottom: 1px solid var(--border-light) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
     text-decoration: none !important;
-    min-height: 48px !important;
+    min-height: 52px !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    transition: background 0.2s ease, color 0.2s ease !important;
   }
 
-  .nav-center .nav-menu {
-    pointer-events: auto !important;
+  .mobile-menu-drawer-list li a:hover,
+  .mobile-menu-drawer-list a:hover {
+    background: rgba(18, 84, 53, 0.06) !important;
+    color: var(--primary) !important;
+  }
+
+  .mobile-menu-drawer-list li a:active,
+  .mobile-menu-drawer-list a:active {
+    background: rgba(18, 84, 53, 0.1) !important;
+  }
+
+  .mobile-menu-drawer-list li:first-child a {
+    border-top: none !important;
+  }
+
+  /* Compact logo when hamburger is shown */
+  .logo {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  .logo img {
+    height: 32px !important;
+  }
+
+  .logo-brand {
+    font-size: 0.55rem !important;
+  }
+
+  /* Keep welcome text full size - do not shrink */
+  .nav-welcome,
+  #welcome-text {
+    font-size: 1.08rem !important;
+    font-weight: 600 !important;
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    white-space: nowrap !important;
+  }
+
+  /* Hamburger icon (3 lines) */
+  .mobile-menu-toggle span {
+    display: block !important;
+    width: 18px !important;
+    height: 2px !important;
+    background: currentColor !important;
+    position: relative !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .mobile-menu-toggle span::before,
+  .mobile-menu-toggle span::after {
+    content: '' !important;
+    position: absolute !important;
+    left: 0 !important;
+    width: 18px !important;
+    height: 2px !important;
+    background: currentColor !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .mobile-menu-toggle span::before {
+    top: -6px !important;
+  }
+
+  .mobile-menu-toggle span::after {
+    bottom: -6px !important;
+  }
+
+  .mobile-menu-toggle.active span {
+    background: transparent !important;
+  }
+
+  .mobile-menu-toggle.active span::before {
+    top: 0 !important;
+    transform: rotate(45deg) !important;
+  }
+
+  .mobile-menu-toggle.active span::after {
+    bottom: 0 !important;
+    transform: rotate(-45deg) !important;
+  }
+
+  /* Backdrop overlay when menu is open */
+  .mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 72px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 998;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+  }
+
+  .mobile-overlay.active {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* ===========================================
+   Responsive - Tablet
+   =========================================== */
+@media (max-width: 1024px) {
+  .nav-container {
+    padding: 0 2rem;
   }
 
   .hero-split .hero-content {
@@ -1402,16 +1638,16 @@ html {
     font-size: 0.65rem !important;
   }
   
-  /* Full name visible on mobile */
+  /* Full welcome text visible at 768px and above (750px+) */
   .nav-welcome,
   #welcome-text {
     font-size: 1rem !important;
     font-weight: 600 !important;
     color: var(--text-dark) !important;
     white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    max-width: 200px !important;
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
   }
   
   .nav-right {
@@ -1452,37 +1688,15 @@ html {
     background: var(--border-light) !important;
   }
   
-  /* Slide-out menu */
-  .nav-menu {
-    position: fixed !important;
+  /* Drawer position at 768px (nav height 56px) */
+  .mobile-menu-drawer {
     top: 56px !important;
-    left: -100% !important;
-    width: min(280px, 80vw) !important;
     height: calc(100vh - 56px) !important;
     height: calc(100dvh - 56px) !important;
-    background: white !important;
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.08) !important;
-    flex-direction: column !important;
-    display: flex !important;
-    padding: 0.5rem 0 !important;
-    gap: 0 !important;
-    transition: left 0.3s var(--ease-out) !important;
-    z-index: 999 !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    border-right: 1px solid var(--border-color) !important;
-    list-style: none !important;
   }
-  
-  .nav-menu.active {
-    left: 0 !important;
-  }
-  
-  .nav-menu li {
-    width: 100% !important;
-    padding: 0 !important;
-    display: block !important;
-    list-style: none !important;
+
+  .mobile-overlay {
+    top: 56px !important;
   }
   
   .nav-menu li a,
@@ -1744,10 +1958,12 @@ html {
   .nav-welcome,
   #welcome-text {
     font-size: 0.95rem !important;
-    max-width: 180px !important;
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
   }
   
-  .nav-menu {
+  .mobile-menu-drawer {
     top: 52px !important;
     height: calc(100vh - 52px) !important;
     height: calc(100dvh - 52px) !important;
@@ -1834,6 +2050,56 @@ html {
 
 #profileModal #profileContent {
   padding: 0;
+}
+
+/* Profile Modal Container - shared across all modules */
+.contact-modal-content.profile-modal-container {
+  max-width: 420px !important;
+  width: 92% !important;
+  min-width: 300px;
+  padding: 0 !important;
+  border-radius: 20px !important;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@media (min-width: 480px) {
+  .contact-modal-content.profile-modal-container {
+    max-width: 420px !important;
+    width: 420px !important;
+    max-height: 85vh;
+  }
+}
+
+@media (max-width: 479px) {
+  .contact-modal-content.profile-modal-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    border-radius: 0 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+  }
+  #profileModal.contact-modal {
+    padding: 0 !important;
+  }
+  #profileModal .contact-modal-close {
+    top: 0.75rem !important;
+    right: 0.75rem !important;
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 1.25rem !important;
+  }
+}
+
+#profileContent {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Profile Modal Responsive */

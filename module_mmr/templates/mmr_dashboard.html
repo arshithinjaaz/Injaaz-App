@@ -7,6 +7,8 @@
   <link rel="icon" type="image/png" href="/static/logo.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/mobile_responsive.css">
+  <link rel="stylesheet" href="/static/animations.css">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -27,24 +29,9 @@
     }
 
     body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    body.mmr-dashboard { padding-top: 72px; }
 
-    /* Navbar */
-    .navbar {
-      background: var(--white);
-      border-bottom: 1px solid var(--border);
-      padding: 0 1.5rem;
-    }
-    .navbar-inner {
-      max-width: 1400px; margin: 0 auto;
-      display: flex; justify-content: space-between; align-items: center;
-      height: 56px;
-    }
-    .navbar-brand {
-      display: flex; align-items: center; gap: .5rem;
-      text-decoration: none; color: var(--text); font-weight: 600; font-size: 1rem;
-    }
-    .navbar-brand img { height: 28px; }
-    .nav-actions { display: flex; gap: .5rem; }
+    /* Buttons and components (nav uses dashboard.css) */
     .btn {
       padding: .5rem 1rem; border: none; border-radius: var(--radius);
       font-size: .875rem; font-weight: 500; cursor: pointer;
@@ -202,8 +189,52 @@
     /* Page */
     .page { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
 
-    /* Upload */
-    .upload-wrap { max-width: 520px; margin: 0 auto 2rem; }
+    /* Upload row: centered upload box + Saved Report & Automation on right */
+    .upload-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      margin: 3rem 0 2rem;
+      flex-wrap: wrap;
+    }
+    .upload-wrap { flex: 0 0 auto; min-width: 280px; max-width: 520px; }
+    .upload-side-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      flex-shrink: 0;
+      min-width: 160px;
+    }
+    .upload-side-actions .btn-report-folder,
+    .upload-side-actions .btn-automation {
+      width: 100%;
+      min-width: 160px;
+      justify-content: center;
+      padding: 0.5rem 1rem;
+      font-size: .875rem;
+      font-weight: 600;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background .2s, border-color .2s, color .2s;
+    }
+    .upload-side-actions .btn-report-folder {
+      background: var(--primary);
+      color: #fff;
+      border: 1px solid var(--primary);
+    }
+    .upload-side-actions .btn-report-folder:hover {
+      background: var(--primary-light);
+      color: #fff;
+    }
+    .upload-side-actions .btn-automation.btn-automation-disabled {
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+    .upload-side-actions .btn-automation.btn-automation-disabled:hover {
+      background: rgba(18, 84, 53, .08);
+    }
     .upload-zone {
       background: var(--white);
       border: 1px solid var(--border);
@@ -430,8 +461,12 @@
       .page { padding: 1rem; }
     }
     @media (max-width: 768px) {
-      .navbar-inner { padding: 0 1rem; }
       .page { padding: 1rem; }
+      .upload-row { flex-direction: column; }
+      .upload-wrap { max-width: 100%; }
+      .upload-side-actions { flex-direction: row; flex-wrap: wrap; min-width: auto; }
+      .upload-side-actions .btn-report-folder,
+      .upload-side-actions .btn-automation { min-width: 0; width: auto; }
       .upload-zone-inner { flex-direction: column; text-align: center; }
       .upload-zone-cta { width: 100%; }
       .kpi-row { flex-direction: column; align-items: stretch; }
@@ -485,7 +520,6 @@
       font-size: .75rem; font-weight: 700; color: var(--text-muted);
       text-transform: uppercase; letter-spacing: .07em; margin-bottom: 1rem;
     }
-
     /* Pipeline track */
     .pipeline-wrap { position: relative; margin-bottom: 1.5rem; }
     .pipeline-track { display: flex; position: relative; }
@@ -551,11 +585,20 @@
       display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
       padding: .875rem 1rem;
       background: #f9fafb; border: 1px solid var(--border);
-      border-radius: var(--radius); margin-bottom: 1.5rem;
+      border-radius: var(--radius); margin-bottom: 1rem;
       font-size: .8125rem;
     }
     .auto-strip-label { font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
     .auto-strip-val { flex: 1; color: var(--text); }
+    .roadmap-timing-prompt {
+      padding: 1rem 1.25rem; margin-bottom: 1.5rem;
+      background: #f0fdf4; border: 1px solid rgba(16,185,129,.3);
+      border-radius: var(--radius); font-size: .8125rem;
+    }
+    .roadmap-timing-question {
+      font-weight: 600; color: var(--text); margin-bottom: .75rem;
+    }
+    .roadmap-timing-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
 
     /* Cycle history list */
     .cycle-history { display: flex; flex-direction: column; gap: .5rem; }
@@ -620,54 +663,44 @@
     .reportfolder-panel-body::-webkit-scrollbar-thumb { background: rgba(18,84,53,.2); border-radius: 3px; }
   </style>
 </head>
-<body>
-
-<!-- Navbar -->
-<nav class="navbar">
-  <div class="navbar-inner">
-    <a href="/dashboard" class="navbar-brand">
-      <img src="/static/logo.png" alt="Injaaz">
-      Report Generation
-    </a>
-    <div class="nav-actions">
-      <button type="button" id="btnReportFolder" class="btn btn-ghost btn-sm" onclick="openReportFolderPanel()" title="View saved reports">
-        📁 Report Folder
-      </button>
-      <button type="button" id="btnAutomation" class="btn-automation btn-automation-disabled" onclick="openRoadmapPanel()" disabled title="View automation roadmap">
-        <span class="automation-dot"></span>
-        <span id="automationLabel">—</span>
-      </button>
-      <button type="button" id="btnStopAuto" class="btn btn-danger btn-sm hidden" onclick="stopAutomation()" title="Stop automation immediately">
-        🛑 Stop
-      </button>
-      <a href="/admin/dashboard" class="btn btn-ghost btn-sm">← Dashboard</a>
-    </div>
-  </div>
-</nav>
+<body class="mmr-dashboard">
+  {% set active_page = 'report' %}
+  {% include 'partials/main_navbar.html' with context %}
 
 <div class="page">
   <!-- Alert -->
   <div id="alertBox"></div>
 
-  <!-- Upload Zone -->
-  <div class="upload-wrap">
-  <div class="upload-zone" id="uploadZone"
-       ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)"
-       onclick="document.getElementById('fileInput').click()">
-    <div class="upload-zone-inner">
-      <div class="upload-icon-box">📊</div>
-      <div class="upload-zone-text">
-        <h3>Upload MMR Excel File</h3>
-        <p>Reactive Work Order Excel · drag &amp; drop or click to browse</p>
+  <!-- Upload row: upload box + Saved Report & Automation on the right -->
+  <div class="upload-row">
+    <div class="upload-wrap">
+      <div class="upload-zone" id="uploadZone"
+           ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)"
+           onclick="document.getElementById('fileInput').click()">
+        <div class="upload-zone-inner">
+          <div class="upload-icon-box">📊</div>
+          <div class="upload-zone-text">
+            <h3>Upload MMR Excel File</h3>
+            <p>Reactive Work Order Excel · drag &amp; drop or click to browse</p>
+          </div>
+          <span class="upload-zone-cta">Browse files</span>
+        </div>
+        <div class="upload-progress" id="uploadProgress">
+          <div class="upload-progress-bar" id="uploadProgressBar"></div>
+        </div>
+        <div class="upload-zone-footer">Supports .xlsx .xls</div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="onFileSelected(event)">
       </div>
-      <span class="upload-zone-cta">Browse files</span>
     </div>
-    <div class="upload-progress" id="uploadProgress">
-      <div class="upload-progress-bar" id="uploadProgressBar"></div>
+    <div class="upload-side-actions">
+      <button type="button" id="btnReportFolder" class="btn btn-outline btn-report-folder" onclick="openReportFolderPanel()" title="View saved reports">
+        📁 Saved Report
+      </button>
+      <button type="button" id="btnAutomation" class="btn-automation btn-automation-disabled" onclick="openRoadmapPanel()" disabled title="View automation roadmap">
+        <span class="automation-dot"></span>
+        <span id="automationLabel">—</span>
+      </button>
     </div>
-    <div class="upload-zone-footer">Supports .xlsx .xls</div>
-    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="onFileSelected(event)">
-  </div>
   </div>
 
   <!-- ── DASHBOARD (hidden until data loads) ── -->
@@ -809,7 +842,7 @@
             <button class="btn btn-outline" id="btnSaveToFolder" onclick="saveToFolder()" disabled title="Save current report (filtered or full) to Report folder">
               📁 Save to Folder
             </button>
-            <button class="btn btn-outline" id="btnSaveToDrive" onclick="saveToDrive()" disabled title="Save report to TrueNAS CAFM drive (\\172.25.70.137\Injaaz\CAFM)">
+            <button class="btn btn-outline" id="btnSaveToDrive" onclick="saveToDrive()" disabled title="Save report to \\172.25.70.137\Injaaz\CAFM\Daily Generated Report">
               💾 Save to Drive
             </button>
             <button class="btn btn-outline" onclick="saveEmailConfig()">
@@ -1865,7 +1898,7 @@ async function saveToFolder() {
   btn.textContent = 'Saving…';
   try {
     const payload = {
-      rows: filteredRows.length && filteredRows.length < allRows.length ? filteredRows : null,
+      rows: filteredRows.length > 0 ? filteredRows : null,
       filters: getCurrentFilters(),
     };
     const resp = await authFetch('/admin/mmr/api/save-to-folder', {
@@ -1895,7 +1928,7 @@ async function saveToDrive() {
   btn.textContent = 'Saving…';
   try {
     const payload = {
-      rows: filteredRows.length && filteredRows.length < allRows.length ? filteredRows : null,
+      rows: filteredRows.length > 0 ? filteredRows : null,
       filters: getCurrentFilters(),
     };
     const resp = await authFetch('/admin/mmr/api/save-to-drive', {
@@ -1905,13 +1938,22 @@ async function saveToDrive() {
     });
     const data = await resp.json();
     if (resp.ok && data.success) {
-      toast('Saved to TrueNAS drive', 'success');
+      btn.textContent = '✓ Saved';
+      const msg = data.saved_locally
+        ? `✓ Saved locally (drive unavailable): ${data.filename || 'report'}`
+        : `✓ File saved: ${data.filename || 'report'}`;
+      toast(msg, 'success');
+      setTimeout(() => {
+        btn.textContent = '💾 Save to Drive';
+        btn.disabled = false;
+      }, 1500);
     } else {
       toast(data.error || 'Failed to save to drive', 'error');
+      btn.disabled = false;
+      btn.textContent = '💾 Save to Drive';
     }
   } catch (e) {
     toast('Failed to save to drive', 'error');
-  } finally {
     btn.disabled = false;
     btn.textContent = '💾 Save to Drive';
   }
@@ -2197,32 +2239,45 @@ function renderRoadmap() {
     const schedLabel = s.schedule_enabled
       ? `Daily at ${String(s.schedule_hour ?? 10).padStart(2,'0')}:${String(s.schedule_minute ?? 0).padStart(2,'0')} GST`
       : 'Automation';
-    const statusBadge = s.automation_status === 'completed'
-      ? `<span class="automation-status-badge success" style="font-size:.75rem">✓ Today completed</span>`
-      : s.automation_status === 'pending'
-        ? `<span class="automation-status-badge pending" style="font-size:.75rem">⏳ Pending</span>`
-        : s.automation_status === 'paused'
-          ? `<span class="automation-status-badge paused" style="font-size:.75rem">⏸ Paused</span>`
-          : '';
+    const statusBadge = s.automation_status === 'pending'
+      ? `<span class="automation-status-badge pending" style="font-size:.75rem">⏳ Pending</span>`
+      : s.automation_status === 'paused'
+        ? `<span class="automation-status-badge paused" style="font-size:.75rem">⏸ Paused</span>`
+        : '';
     const prBtn = s.schedule_enabled
       ? (s.schedule_paused
           ? `<button type="button" class="btn btn-primary btn-sm" onclick="resumeAutomation()" ${!s.excel_uploaded ? 'disabled' : ''} style="font-size:.75rem">▶ Resume</button>`
           : `<button type="button" class="btn btn-outline btn-sm" onclick="pauseAutomation()" style="font-size:.75rem">⏸ Pause</button>
              <button type="button" class="btn btn-danger btn-sm" onclick="stopAutomation()" style="font-size:.75rem">🛑 Stop</button>`)
       : '';
+    let timingPrompt = '';
+    if (s4 && s.schedule_enabled) {
+      timingPrompt = `
+      <div class="roadmap-timing-prompt">
+        <p class="roadmap-timing-question">For the next cycle, use the same timing or set a new timing?</p>
+        <div class="roadmap-timing-actions">
+          <button type="button" class="btn btn-outline btn-sm" onclick="toast('✓ Same timing will be used for the next cycle.', 'success')" style="font-size:.75rem">Same timing</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="closeRoadmapPanel(); document.getElementById('emailCard')?.scrollIntoView({behavior:'smooth'})" style="font-size:.75rem">Set new timing</button>
+        </div>
+      </div>`;
+    }
     autoHtml = `
       <div class="auto-strip">
         <span class="auto-strip-label">⏰ Schedule</span>
         <span class="auto-strip-val">${schedLabel}</span>
         ${statusBadge}
         ${prBtn}
-      </div>`;
+      </div>
+      ${timingPrompt}`;
   }
 
-  // ── Cycle history ──
+  // ── Cycle history (include completed current cycle at top when sent) ──
+  const displayHistory = s3 && current
+    ? [current, ...history]
+    : history;
   let histHtml = '<div class="roadmap-section-title" style="margin-top:0">Cycle History</div>';
-  if (history.length) {
-    histHtml += `<div class="cycle-history">${history.map(c => {
+  if (displayHistory.length) {
+    histHtml += `<div class="cycle-history">${displayHistory.map(c => {
       const isSent   = c.status === 'sent';
       const isFailed = c.status === 'failed';
       const badgeCls = isSent ? 'cb-sent' : isFailed ? 'cb-failed' : 'cb-partial';
@@ -2255,10 +2310,15 @@ function renderRoadmap() {
   `;
 }
 
-// Refresh page to start next automation cycle (Step 4)
-function refreshToStartNextCycle() {
-  closeRoadmapPanel();
-  window.location.reload();
+// Refresh automation process (Step 4) – reload data, no full page reload
+async function refreshToStartNextCycle() {
+  try {
+    await loadAutomationStatus();
+    await loadCycleData();
+    renderRoadmap();
+  } catch (e) {
+    toast('Could not refresh', 'error');
+  }
 }
 
 // Approve the current cycle (Step 2)
@@ -2341,5 +2401,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 </script>
+  <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

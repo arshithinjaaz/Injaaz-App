@@ -1,0 +1,89 @@
+{# Main dashboard navigation bar - use across all modules #}
+{# Optional: active_page = 'home' | 'about' | 'admin' | 'report' | 'hr' | 'inspection' | 'procurement' | 'all-submissions' | 'pending-review' | 'submitted-forms' | 'bd-email' #}
+<nav class="nav" id="nav">
+  <div class="nav-container">
+    <a href="/dashboard" class="logo" aria-label="Injaaz Home">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz">
+      <div class="logo-text">
+        <span class="logo-brand">Injaaz</span>
+        <span id="welcome-text" class="nav-welcome">Injaaz Application</span>
+      </div>
+    </a>
+    <div class="nav-center">
+      <ul class="nav-menu">
+        <li><a href="/dashboard" {% if active_page == 'home' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Home</a></li>
+        <li><a href="/about" {% if active_page == 'about' %}style="color: var(--primary); font-weight: 600;"{% endif %}>About</a></li>
+        <li><a href="javascript:void(0)" id="profileLink" role="button" onclick="if(typeof openProfileModal==='function'){openProfileModal();}">Profile</a></li>
+        <li><a href="javascript:void(0)" id="contactLink" role="button" onclick="if(typeof openContactModal==='function'){openContactModal();}">Contact</a></li>
+        <li id="inspection-forms-menu-item">
+          <a href="/inspection/" {% if active_page == 'inspection' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Inspection Form</a>
+        </li>
+        <li id="hr-forms-menu-item">
+          <a href="/hr/" {% if active_page == 'hr' %}style="color: var(--primary); font-weight: 600;"{% endif %}>HR Forms</a>
+        </li>
+        <li id="procurement-menu-item" style="display: none;">
+          <a href="/procurement/" {% if active_page == 'procurement' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Procurement</a>
+        </li>
+        <li id="submitted-forms-menu-item" style="display: none;">
+          <a href="/workflow/submitted-forms" {% if active_page == 'submitted-forms' %}style="color: var(--primary); font-weight: 600;"{% endif %}>
+            Submitted Forms
+            <span id="navSubmittedBadge" style="display: none; background: #ef4444; color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; margin-left: 4px; font-weight: 600;">0</span>
+          </a>
+        </li>
+        <li id="pending-review-menu-item" style="display: none;">
+          <a href="/workflow/pending-reviews" {% if active_page == 'pending-review' %}style="color: var(--primary); font-weight: 600;"{% endif %}>
+            Pending Review
+            <span id="navPendingBadge" style="display: none; background: #ef4444; color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; margin-left: 4px; font-weight: 600;">0</span>
+          </a>
+        </li>
+        <li id="review-history-menu-item" style="display: none;">
+          <a href="/api/workflow/history" {% if active_page == 'all-submissions' %}style="color: var(--primary); font-weight: 600;"{% endif %}>All Submissions</a>
+        </li>
+        <li id="report-gen-menu-item" style="display: none;">
+          <a href="/admin/mmr/" {% if active_page == 'report' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Report Generation</a>
+        </li>
+        <li id="admin-menu-item" style="display: none;">
+          <a href="/admin/dashboard" {% if active_page == 'admin' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Administrative</a>
+        </li>
+        <li id="bd-email-menu-item" style="display: none;">
+          <a href="/bd/email-module" {% if active_page == 'bd-email' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Email Module</a>
+        </li>
+      </ul>
+    </div>
+    <div class="nav-right">
+      <button type="button" class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu" aria-expanded="false">
+        <span></span>
+      </button>
+      <div class="notification-wrapper" id="notificationWrapper">
+        <button class="notification-btn" id="notificationBtn" type="button" title="Notifications">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="22" height="22">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+          </svg>
+          <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+        </button>
+        <div class="notification-dropdown" id="notificationDropdown">
+          <div class="notification-header">
+            <h4>Notifications</h4>
+            <button class="mark-all-read" id="markAllRead">Mark all read</button>
+          </div>
+          <div class="notification-list" id="notificationList">
+            <div class="notification-empty">No notifications</div>
+          </div>
+        </div>
+      </div>
+      <div id="pwa-install-slot" class="pwa-install-slot"></div>
+      <button class="logout-btn" id="logoutBtn" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3h12.75" />
+        </svg>
+        <span>Logout</span>
+      </button>
+    </div>
+  </div>
+</nav>
+<div class="mobile-menu-drawer" id="mobileMenuDrawer" aria-hidden="true">
+  <ul class="mobile-menu-drawer-list" id="mobileMenuDrawerList"></ul>
+</div>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+{% include 'partials/contact_modal.html' %}
+{% include 'partials/profile_modal.html' %}

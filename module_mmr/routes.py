@@ -96,8 +96,8 @@ def _reports_folder():
     return folder
 
 
-# TrueNAS / network drive path for Save to Drive (internal use)
-_TRUENAS_CAFM_PATH = r'\\172.25.70.137\Injaaz\CAFM'
+# TrueNAS / network drive path for Save to Drive (set TRUENAS_CAFM_PATH in .env to override)
+_TRUENAS_CAFM_PATH = os.environ.get('TRUENAS_CAFM_PATH') or r'\\172.25.70.137\Injaaz\CAFM\Daily Generated Report'
 
 
 def _save_report_to_folder(report_bytes: bytes, base_filename: str, suffix: str = '',
@@ -123,16 +123,49 @@ def _save_report_to_folder(report_bytes: bytes, base_filename: str, suffix: str 
         return None
 
 
-def _save_report_to_drive(report_bytes: bytes, filename: str) -> str | None:
-    """Save report to TrueNAS CAFM path (\\\\172.25.70.137\\Injaaz\\CAFM). Returns full path or None."""
+def _save_report_to_drive(report_bytes: bytes, filename: str, save_path: str | None = None) -> tuple[str | None, str | None, bool]:
+    """Save report to given path or default TrueNAS path. Returns (full_path, None) on success or (None, error_message) on failure."""
+    base = (save_path or '').strip() or _TRUENAS_CAFM_PATH
+    # Normalize path for Windows UNC (avoid double backslashes)
+    base = os.path.normpath(base)
     try:
-        path = os.path.join(_TRUENAS_CAFM_PATH, filename)
+        # Create target directory if it doesn't exist
+        if not os.path.exists(base):
+            try:
+                os.makedirs(base, exist_ok=True)
+            except OSError as e:
+                return None, f'Cannot create folder {base}. {e}'
+        path = os.path.join(base, filename)
         with open(path, 'wb') as f:
             f.write(report_bytes)
-        return path
+        return path, None, False
+    except PermissionError as e:
+        logger.warning(f'MMR save to drive permission error: {e}')
+        return None, 'Permission denied. Check TrueNAS share permissions.', False
+    except OSError as e:
+        logger.warning(f'MMR save to drive failed: {e}')
+        err = str(e)
+        # Fallback: save to local report folder if network drive fails
+        try:
+            local_name = _save_report_to_folder(report_bytes, filename, 'drive_fallback')
+            if local_name:
+                local_path = os.path.join(_reports_folder(), local_name)
+                return local_path, None, True  # Success, saved locally
+        except Exception:
+            pass
+        if 'cannot find' in err.lower() or 'no such file' in err.lower() or 'network' in err.lower():
+            return None, f'Cannot reach TrueNAS. Ensure {base} is accessible. ({err})', False
+        return None, err, False
     except Exception as e:
         logger.warning(f'MMR save to drive failed: {e}')
-        return None
+        # Fallback to local
+        try:
+            local_name = _save_report_to_folder(report_bytes, filename, 'drive_fallback')
+            if local_name:
+                return os.path.join(_reports_folder(), local_name), None, True
+        except Exception:
+            pass
+        return None, str(e), False
 
 def _load_config() -> dict:
     try:
@@ -412,6 +445,7 @@ def save_to_drive():
     data = request.get_json() or {}
     rows = data.get('rows')
     filters = data.get('filters')
+    save_path = data.get('save_path')
 
     try:
         from .mmr_service import parse_excel, generate_report_excel, rows_to_df
@@ -422,11 +456,17 @@ def save_to_drive():
         else:
             df = parse_excel(path)
         report_bytes = generate_report_excel(df)
-        filename = _report_filename()
-        saved_path = _save_report_to_drive(report_bytes, filename)
+        base_name = _report_filename().replace('.xlsx', '')
+        ts = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        filename = f'{base_name}_{ts}.xlsx'
+        saved_path, err, saved_locally = _save_report_to_drive(report_bytes, filename, save_path=save_path)
         if saved_path:
-            return jsonify({'success': True, 'path': saved_path, 'filename': filename})
-        return jsonify({'error': 'Failed to save to drive. Check network access to TrueNAS.'}), 500
+            return jsonify({
+                'success': True, 'path': saved_path, 'filename': filename,
+                'saved_locally': saved_locally
+            })
+        msg = err or 'Failed to save to drive. Check network access to TrueNAS.'
+        return jsonify({'error': msg}), 500
     except Exception as e:
         logger.error(f'MMR save to drive error: {e}', exc_info=True)
         return jsonify({'error': str(e)}), 500

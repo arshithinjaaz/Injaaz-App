@@ -13,6 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
   
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -328,20 +329,8 @@
   </style>
 </head>
 <body>
-  <!-- Navigation -->
-  <nav class="nav">
-    <div class="nav-container">
-      <a href="/dashboard" class="logo">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
-        <div class="logo-text">
-          <h1>Injaaz Application</h1>
-        </div>
-      </a>
-      <button onclick="window.location.href='/dashboard'" class="action-button">
-        ← Back to Dashboard
-      </button>
-    </div>
-  </nav>
+  {% set active_page = 'pending-review' %}
+  {% include 'partials/main_navbar.html' with context %}
 
   <!-- Main Content -->
   <div class="container">
@@ -541,6 +530,8 @@
     // Load on page load
     document.addEventListener('DOMContentLoaded', loadPendingReviews);
   </script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
   <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
 </body>
 </html>

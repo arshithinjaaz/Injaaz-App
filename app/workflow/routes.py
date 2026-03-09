@@ -456,7 +456,8 @@ def get_dashboard_stats():
         module_labels = {'hvac_mep': 'HVAC', 'civil': 'Civil', 'cleaning': 'Cleaning', 'hr': 'HR'}
         recent_activity = []
         for sub in base_activity:
-            label = module_labels.get(sub.module_type, sub.module_type or 'Form')
+            mt = sub.module_type or ''
+            label = module_labels.get(mt, 'HR' if mt.startswith('hr') else (mt or 'Form'))
             name = (sub.user.full_name or sub.user.username or 'Someone') if sub.user else 'Someone'
             parts = name.split()
             if len(name) > 20 and len(parts) >= 2:
@@ -468,8 +469,9 @@ def get_dashboard_stats():
                 action = 'rejected'
             else:
                 action = 'submitted'
+            form_type = 'form' if mt.startswith('hr') else 'inspection'
             recent_activity.append({
-                'text': f'{label} inspection {action} by {name}',
+                'text': f'{label} {form_type} {action} by {name}',
                 'time_ago': _time_ago(sub.created_at),
                 'submission_id': sub.submission_id,
             })

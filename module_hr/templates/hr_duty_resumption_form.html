@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Duty Resumption Form — INJAAZ</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/animations.css">
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -23,11 +24,7 @@
     body{
       font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
       color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.5;
-      background:
-        radial-gradient(ellipse 100% 80% at 50% -20%, rgba(18,84,53,.08), transparent 50%),
-        radial-gradient(ellipse 70% 50% at 100% 0%, rgba(26,122,77,.05), transparent 45%),
-        radial-gradient(ellipse 70% 50% at 0% 50%, rgba(18,84,53,.04), transparent 45%),
-        linear-gradient(180deg, #f8faf8 0%, #eef4f0 50%, #e8f0ec 100%);
+      background:#fafafa;
     }
 
     .page{width:100%;min-height:100vh;padding:0 0 3rem}
@@ -47,7 +44,7 @@
     }
 
     .hd{
-      background:linear-gradient(160deg, #0a3320 0%, #0d3d24 25%, #125435 55%, #1a7a4d 100%);
+      background:linear-gradient(160deg, #051a10 0%, #082a18 25%, #0d3d24 55%, #125435 100%);
       padding:2rem 2.5rem;position:relative;overflow:hidden;
       display:flex;align-items:center;justify-content:space-between;gap:2rem;
     }
@@ -231,7 +228,7 @@
         <div class="hd">
           <div class="hd-left">
             <h1>Duty Resumption Form</h1>
-            <p class="hd-sub">INJAAZ Platform · HR</p>
+            <p class="hd-sub">INJAAZ FACILITY MANAGEMENT</p>
           </div>
           <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="hd-logo">
         </div>

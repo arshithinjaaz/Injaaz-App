@@ -46,8 +46,10 @@ def fit_docx_to_one_page(source_stream):
             if run.font.size is None or run.font.size.pt < 14:
                 run.font.size = BODY_SIZE
 
-    # Tables: compact padding, font, and proper alignment
-    for table in doc.tables:
+    # Tables: compact padding, font, and proper alignment (skip first table = header)
+    for ti, table in enumerate(doc.tables):
+        if ti == 0:
+            continue  # Preserve header: logo right alignment, headline size
         for row in table.rows:
             for cell in row.cells:
                 # Reduce cell padding (values in dxa: 50 = ~1.8pt)
@@ -217,16 +219,31 @@ def _normalize_form_data_for_docx(form_data, form_type):
         if fd.get('areas_for_improvement') and not fd.get('areas_for_improvement_display'):
             fd['areas_for_improvement_display'] = fd['areas_for_improvement']
 
-    # --- Interview Assessment: map rating values to display ---
+    # --- Interview Assessment: map rating values to display + field aliases ---
     if form_type == 'interview_assessment':
+        if fd.get('position_applied') and not fd.get('position_title'):
+            fd['position_title'] = fd['position_applied']
         rating_map = {'outstanding': 'Outstanding', 'v_good': 'V. Good', 'good': 'Good', 'fair': 'Fair', 'low': 'Low'}
         for k in ['rating_turnout', 'rating_confidence', 'rating_mental_alertness', 'rating_maturity',
                   'rating_communication', 'rating_technical', 'rating_training', 'rating_experience', 'rating_overall']:
             if fd.get(k) in rating_map:
                 fd[f'{k}_display'] = rating_map[fd[k]]
 
-    # --- Station Clearance: type_of_departure display ---
+    # --- Staff Appraisal: template uses appraisal_period, reviewer ---
+    if form_type == 'staff_appraisal':
+        if fd.get('review_period') and not fd.get('appraisal_period'):
+            fd['appraisal_period'] = fd['review_period']
+        if fd.get('evaluator_name') and not fd.get('reviewer'):
+            fd['reviewer'] = fd['evaluator_name']
+
+    # --- Station Clearance: type_of_departure display + field aliases ---
     if form_type == 'station_clearance':
+        if fd.get('last_working_day') and not fd.get('last_working_date'):
+            fd['last_working_date'] = fd['last_working_day']
+        if fd.get('departure_reason') and not fd.get('type_of_departure'):
+            fd['type_of_departure'] = fd['departure_reason']
+        if fd.get('designation') and not fd.get('position'):
+            fd['position'] = fd['designation']
         dep_map = {'transfer': 'Transfer', 'resignation': 'Resignation', 'termination': 'Termination', 'end_of_contract': 'End of Contract'}
         if fd.get('type_of_departure') in dep_map:
             fd['type_of_departure_display'] = dep_map[fd['type_of_departure']]
@@ -253,7 +270,7 @@ def _build_generic_context(form_data, date_keys=None):
         for k, v in fd.items():
             if v and ('date' in k.lower() or 'day' in k.lower() or 'start' in k.lower() or 'end' in k.lower() or 'joining' in k.lower() or 'returning' in k.lower() or 'release' in k.lower() or 'incident' in k.lower() or 'employment' in k.lower() or 'last_working' in k.lower() or 'form_date' in k.lower() or ('evaluation' in k.lower() and 'date' in k)):
                 date_keys.add(k)
-    skip = {'form_type', 'employee_signature', 'evaluator_signature', 'gm_signature', 'hr_signature', 'complainant_signature'}
+    skip = {'form_type', 'employee_signature', 'evaluator_signature', 'gm_signature', 'hr_signature', 'complainant_signature', 'interviewer_signature', 'replacement_signature', 'reporting_to_signature'}
     ctx = {}
     for k, v in fd.items():
         if k in skip:
@@ -560,44 +577,97 @@ def generate_commencement_docx(form_data, output_path_or_stream, submission_id=N
                 pass
 
 
+# Signature placeholders per form: (template_placeholder_key, form_data_key)
+_SIGNATURE_PAIRS = {
+    'commencement': [
+        ('employee_signature', 'employee_signature'),
+        ('reporting_to_signature', 'reporting_to_signature'),
+    ],
+    'leave_application': [
+        ('employee_signature', 'employee_signature'),
+        ('replacement_signature', 'replacement_signature'),
+        ('gm_signature', 'gm_signature'),
+        ('hr_signature', 'hr_signature'),
+    ],
+    'leave': [
+        ('employee_signature', 'employee_signature'),
+        ('replacement_signature', 'replacement_signature'),
+        ('gm_signature', 'gm_signature'),
+        ('hr_signature', 'hr_signature'),
+    ],
+    'duty_resumption': [
+        ('employee_signature', 'employee_signature'),
+        ('gm_signature', 'gm_signature'),
+        ('hr_signature', 'hr_signature'),
+    ],
+    'passport_release': [
+        ('employee_signature', 'employee_signature'),
+        ('gm_signature', 'gm_signature'),
+        ('hr_signature', 'hr_signature'),
+    ],
+    'grievance': [
+        ('complainant_signature', 'complainant_signature'),
+        ('hr_signature', 'hr_signature'),
+        ('gm_signature', 'gm_signature'),
+    ],
+    'interview_assessment': [
+        ('interviewer_signature', 'interviewer_signature'),
+        ('hr_signature', 'hr_signature'),
+        ('gm_signature', 'gm_signature'),
+    ],
+    'staff_appraisal': [
+        ('employee_signature', 'employee_signature'),
+        ('evaluator_signature', 'evaluator_signature'),
+        ('hr_signature', 'hr_signature'),
+        ('gm_signature', 'gm_signature'),
+    ],
+    'station_clearance': [
+        ('employee_signature', 'employee_signature'),
+        ('hr_signature', 'hr_signature'),
+    ],
+    'visa_renewal': [
+        ('employee_signature', 'employee_signature'),
+        ('hr_signature', 'hr_signature'),
+        ('gm_signature', 'gm_signature'),
+    ],
+    'contract_renewal': [
+        ('evaluator_signature', 'evaluator_signature'),
+        ('hr_signature', 'hr_signature'),
+        ('gm_signature', 'gm_signature'),
+    ],
+    'performance_evaluation': [
+        ('employee_signature', 'employee_signature'),
+        ('evaluator_signature', 'evaluator_signature'),
+        ('hr_signature', 'hr_signature'),
+        ('gm_signature', 'gm_signature'),
+    ],
+}
+
+
 def generate_hr_docx(submission, output_path_or_stream):
     """
     Generate HR DOCX from submission.
-    All forms use docx_builder (programmatic) for consistent layout:
-    - Single instruction, no duplicates
-    - Logo on right, all fields left-aligned
-    - Signatures placed correctly with transparent background
-    Returns (True, filled=True) if generated with data, (False, False) if not supported.
+    Uses actual Word templates from HR Documents — exact template layout, sections, styling.
+    Word and PDF outputs follow the HR Documents templates for consistent document format.
+    Returns (True, filled=True) if generated, (False, False) if not supported.
     """
     form_type = (submission.module_type or '').replace('hr_', '')
-    form_data = _normalize_form_data_for_docx(submission.form_data or {}, form_type)
-    if form_type == 'commencement':
-        emp_sig = form_data.get('employee_signature')
-        rep_sig = form_data.get('reporting_to_signature')
-        has_emp = bool(emp_sig and isinstance(emp_sig, str) and emp_sig.startswith('data:image'))
-        has_rep = bool(rep_sig and isinstance(rep_sig, str) and rep_sig.startswith('data:image'))
-        if not has_emp or not has_rep:
-            logger.warning(
-                "Commencement DOCX: missing signatures (employee=%s, reporting=%s). "
-                "Ensure both signatures are drawn and applied before submitting.",
-                has_emp, has_rep
-            )
+    form_data = submission.form_data or {}
     submission_id = getattr(submission, 'submission_id', None)
 
-    # All forms: use docx_builder for full control over layout
-    from module_hr.docx_builder import build_professional_docx, supports_builder
-
-    if not supports_builder(form_type):
+    template_path = _get_template_path(form_type)
+    if not template_path:
         return False, False
 
     try:
-        ok = build_professional_docx(
+        _generate_filled_docx_generic(
             form_type,
             form_data,
             output_path_or_stream,
             submission_id=submission_id,
+            signature_pairs=_SIGNATURE_PAIRS.get(form_type),
         )
-        return (ok, True) if ok else (False, False)
+        return True, True
     except Exception as e:
         logger.exception(
             "Failed to generate DOCX for %s (submission %s): %s",
@@ -607,6 +677,5 @@ def generate_hr_docx(submission, output_path_or_stream):
 
 
 def get_supported_docx_forms():
-    """Return list of form types that support DOCX download (via docx_builder)."""
-    from module_hr.docx_builder import _BUILDERS
-    return list(_BUILDERS.keys())
+    """Return list of form types that support DOCX download (via HR Documents templates)."""
+    return list(_SIGNATURE_PAIRS.keys())

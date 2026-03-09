@@ -15,6 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
   
   <style>
     :root {
@@ -379,7 +380,9 @@
     }
   </style>
 </head>
-<body>
+<body class="submitted-forms-page">
+  {% set active_page = 'submitted-forms' %}
+  {% include 'partials/main_navbar.html' with context %}
   <div class="container-custom">
     <a href="/dashboard" class="back-button">
       ← Back to Dashboard
@@ -837,6 +840,8 @@
       }
     }
   </script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
   <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
 </body>
 </html>

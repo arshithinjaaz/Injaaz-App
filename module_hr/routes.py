@@ -314,7 +314,6 @@ def hr_download_docx(submission_id):
 
     try:
         from io import BytesIO
-        from module_hr.docx_service import fit_docx_to_one_page
         buf = BytesIO()
         result = generate_hr_docx(submission, buf)
         if isinstance(result, tuple):
@@ -324,7 +323,6 @@ def hr_download_docx(submission_id):
         if not generated:
             return jsonify({'error': 'DOCX download not available for this form type'}), 404
         buf.seek(0)
-        buf = fit_docx_to_one_page(buf)
         form_title = get_form_type_display(submission.module_type).replace(' ', '_')
         filename = f"{form_title}_{submission_id}.docx"
         return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document', as_attachment=True, download_name=filename)

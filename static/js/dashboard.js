@@ -292,10 +292,14 @@ function updateModuleVisibility(user) {
 
   // Check Procurement Module access
   const procurementCard = document.getElementById('module-procurement');
+  const procurementMenuItem = document.getElementById('procurement-menu-item');
+  const hasProcurementAccess = isAdmin || user.access_procurement_module === true;
   if (procurementCard) {
-    const hasProcurementAccess = isAdmin || user.access_procurement_module === true;
     procurementCard.style.display = hasProcurementAccess ? 'block' : 'none';
     procurementCard.style.visibility = hasProcurementAccess ? 'visible' : 'hidden';
+  }
+  if (procurementMenuItem) {
+    procurementMenuItem.style.display = hasProcurementAccess ? 'list-item' : 'none';
   }
 
   // Check Report Generation access (admin only)
@@ -465,10 +469,15 @@ async function loadPendingCount(user) {
   
   const reviewerDesignations = ['operations_manager', 'business_development', 'procurement', 'general_manager'];
   const isReviewer = user && (user.designation && reviewerDesignations.includes(user.designation));
-  
+  const pendingReviewMenuItem = document.getElementById('pending-review-menu-item');
+
   if (reviewHistoryModule) {
     reviewHistoryModule.style.display = 'none';
     reviewHistoryModule.style.visibility = 'hidden';
+  }
+
+  if (pendingReviewMenuItem) {
+    pendingReviewMenuItem.style.display = isReviewer ? 'list-item' : 'none';
   }
   
   if (!isReviewer) {
@@ -2102,6 +2111,8 @@ async function handleLogout() {
 function loadDashboardStats() {
   const widget = document.querySelector('.dashboard-widget');
   if (!widget) return;
+  // Review History page populates its widget from submission data, not global stats
+  if (document.body.classList.contains('review-dashboard')) return;
 
   const textEl = document.getElementById('dashboard-activity-text');
   const timeEl = document.getElementById('dashboard-activity-time');
@@ -2153,7 +2164,7 @@ function loadDashboardStats() {
           timeEl.textContent = activity[0].time_ago || '';
         }
         if (listEl) {
-          listEl.innerHTML = activity.slice(1, 2).map(function (a) {
+          listEl.innerHTML = activity.slice(1, 5).map(function (a) {
             return '<div class="dashboard-activity-item"><span class="dashboard-activity-icon">✓</span><span class="dashboard-activity-text">' + escapeHtml(a.text) + '</span><span class="dashboard-activity-time">' + escapeHtml(a.time_ago || '') + '</span></div>';
           }).join('');
         }
@@ -2173,7 +2184,49 @@ function loadDashboardStats() {
 document.addEventListener('DOMContentLoaded', function() {
   // Check if we're on the dashboard page (has modulesGrid or modules section)
   const isDashboardPage = document.getElementById('modulesGrid') || document.getElementById('modules');
-  
+  const isReviewHistoryPage = document.body.classList.contains('review-dashboard');
+  const hasMainNav = document.getElementById('nav') && document.querySelector('#nav .nav-center');
+
+  // Run nav visibility on any page with main dashboard nav (admin, hr, mmr, procurement, bd-email, etc.)
+  function runNavVisibility() {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        checkAndShowAdminMenu(user);
+        updateModuleVisibility(user);
+        if (typeof loadPendingCount === 'function') {
+          loadPendingCount(user);
+        }
+      } catch (e) {
+        console.error('Error parsing user from localStorage:', e);
+      }
+    } else {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.user) {
+            localStorage.setItem('user', JSON.stringify(data.user));
+            checkAndShowAdminMenu(data.user);
+            updateModuleVisibility(data.user);
+            if (typeof loadPendingCount === 'function') {
+              loadPendingCount(data.user);
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Failed to fetch user data:', error);
+        });
+      }
+    }
+  }
+
   // Ensure modules section is visible on load (dashboard only)
   if (isDashboardPage) {
     const modulesSection = document.getElementById('modules');
@@ -2229,17 +2282,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       }
     }
+  } else if (isReviewHistoryPage || hasMainNav) {
+    loadUserWelcome();
+    runNavVisibility();
   }
-  
+
   // Enhanced scroll effect
   const nav = document.getElementById('nav');
-  window.addEventListener('scroll', () => {
-    if (window.pageYOffset > 50) {
-      nav.classList.add('scrolled');
-    } else {
-      nav.classList.remove('scrolled');
-    }
-  });
+  if (nav) {
+    window.addEventListener('scroll', () => {
+      if (window.pageYOffset > 50) {
+        nav.classList.add('scrolled');
+      } else {
+        nav.classList.remove('scrolled');
+      }
+    });
+  }
   
   // Profile link click handler
   const profileLink = document.getElementById('profileLink');
@@ -2284,8 +2342,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
-  // Smooth scroll for anchor links
+  // Smooth scroll for anchor links (exclude Profile/Contact which open modals)
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    if (anchor.id === 'profileLink' || anchor.id === 'contactLink') return;
     anchor.addEventListener('click', function (e) {
       e.preventDefault();
       const href = this.getAttribute('href');
@@ -2315,40 +2374,91 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // Mobile menu toggle
+  // Mobile menu toggle - uses drawer outside nav (avoids backdrop-filter containing block)
   const mobileMenuToggle = document.getElementById('mobileMenuToggle');
   const navMenu = document.querySelector('.nav-menu');
+  const mobileMenuDrawer = document.getElementById('mobileMenuDrawer');
+  const mobileMenuDrawerList = document.getElementById('mobileMenuDrawerList');
   const mobileOverlay = document.getElementById('mobileOverlay');
-  
+
   function closeMobileMenu() {
-    if (mobileMenuToggle) mobileMenuToggle.classList.remove('active');
-    if (navMenu) navMenu.classList.remove('active');
+    if (mobileMenuToggle) {
+      mobileMenuToggle.classList.remove('active');
+      mobileMenuToggle.setAttribute('aria-expanded', 'false');
+    }
+    if (mobileMenuDrawer) {
+      mobileMenuDrawer.classList.remove('active');
+      mobileMenuDrawer.setAttribute('aria-hidden', 'true');
+    }
     if (mobileOverlay) mobileOverlay.classList.remove('active');
     document.body.style.overflow = '';
   }
-  
-  if (mobileMenuToggle && navMenu) {
-    mobileMenuToggle.addEventListener('click', function() {
-      const isOpen = navMenu.classList.contains('active');
+
+  function populateDrawer() {
+    if (!navMenu || !mobileMenuDrawerList) return;
+    mobileMenuDrawerList.innerHTML = '';
+    navMenu.querySelectorAll('li').forEach(function(li) {
+      var clone = li.cloneNode(true);
+      clone.querySelectorAll('[id]').forEach(function(el) { el.removeAttribute('id'); });
+      mobileMenuDrawerList.appendChild(clone);
+    });
+  }
+
+  function openMobileMenu() {
+    populateDrawer();
+    if (mobileMenuToggle) {
+      mobileMenuToggle.classList.add('active');
+      mobileMenuToggle.setAttribute('aria-expanded', 'true');
+    }
+    if (mobileMenuDrawer) {
+      mobileMenuDrawer.classList.add('active');
+      mobileMenuDrawer.setAttribute('aria-hidden', 'false');
+    }
+    if (mobileOverlay) mobileOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  if (mobileMenuToggle && mobileMenuDrawer) {
+    mobileMenuToggle.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const isOpen = mobileMenuDrawer.classList.contains('active');
       if (isOpen) {
         closeMobileMenu();
       } else {
-        mobileMenuToggle.classList.add('active');
-        navMenu.classList.add('active');
-        if (mobileOverlay) mobileOverlay.classList.add('active');
-        document.body.style.overflow = 'hidden';
+        openMobileMenu();
       }
     });
   }
-  
+
   if (mobileOverlay) {
     mobileOverlay.addEventListener('click', closeMobileMenu);
   }
-  
-  // Close mobile menu when clicking on a link
-  if (navMenu) {
-    navMenu.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', closeMobileMenu);
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && mobileMenuDrawer && mobileMenuDrawer.classList.contains('active')) {
+      closeMobileMenu();
+    }
+  });
+
+  if (mobileMenuDrawerList) {
+    mobileMenuDrawerList.addEventListener('click', function(e) {
+      var a = e.target.closest('a');
+      if (!a) return;
+      var text = (a.textContent || '').trim().toLowerCase();
+      if (text === 'profile') {
+        e.preventDefault();
+        if (typeof openProfileModal === 'function') openProfileModal();
+        closeMobileMenu();
+      } else if (text === 'contact') {
+        e.preventDefault();
+        if (typeof openContactModal === 'function') openContactModal();
+        closeMobileMenu();
+      } else if (a.getAttribute('href') === '#' || a.getAttribute('href') === 'javascript:void(0)') {
+        closeMobileMenu();
+      } else {
+        closeMobileMenu();
+      }
     });
   }
   

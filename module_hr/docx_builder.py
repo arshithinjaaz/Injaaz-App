@@ -2,7 +2,8 @@
 Professional DOCX builder for HR forms.
 Generates branded, print-ready documents from HR form submission data
 using python-docx — no Word templates required.
-Matches PDF template exactly for Commencement Form (B&W, logo right, same layout).
+Follows the PDF template: same layout, sections, and styling as hr_pdf_builder
+so Word and PDF outputs are consistent across all HR forms.
 """
 import os
 import base64
@@ -38,6 +39,24 @@ _LOGO = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "static", "logo.png"
 )
+
+
+def _section_avg(fd, sn, suffixes):
+    """Compute section average from sub-ratings when rating_{sn} not provided."""
+    v = (fd or {}).get(f"rating_{sn}")
+    if v not in (None, "", "-"):
+        return str(v)
+    vals = []
+    for s in suffixes:
+        x = (fd or {}).get(f"rating_{sn}{s}")
+        if x not in (None, "", "-"):
+            try:
+                vals.append(float(str(x).strip()))
+            except (ValueError, TypeError):
+                pass
+    if vals:
+        return f"{sum(vals) / len(vals):.1f}"
+    return "—"
 
 
 # ── XML / low-level helpers ───────────────────────────────────────────────────
@@ -117,6 +136,29 @@ def _cell_text(cell, text, bold=False, italic=False, size=9,
     return p
 
 
+def _cell_text_with_indicator(cell, criterion, indicator, size=8.5, color=C_DARK,
+                              indicator_color=C_MUTED, indicator_size=7.5):
+    """Criterion (normal) + line break + indicator (italic, muted)."""
+    p = cell.paragraphs[0]
+    p.clear()
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    pf = p.paragraph_format
+    pf.space_before = Pt(1)
+    pf.space_after = Pt(1)
+    r1 = p.add_run(str(criterion) if criterion else "")
+    r1.font.name = FONT
+    r1.font.size = Pt(size)
+    r1.font.bold = False
+    r1.font.color.rgb = _rgb(color)
+    if indicator:
+        r2 = p.add_run("\n" + str(indicator))
+        r2.font.name = FONT
+        r2.font.size = Pt(indicator_size)
+        r2.font.italic = True
+        r2.font.color.rgb = _rgb(indicator_color)
+    return p
+
+
 def _set_row_height(row, cm):
     tr = row._tr
     trPr = tr.get_or_add_trPr()
@@ -131,14 +173,15 @@ def _set_row_height(row, cm):
 
 # ── Document setup ────────────────────────────────────────────────────────────
 def _new_doc():
+    """New document with PDF-matching margins (1.4cm sides, A4)."""
     doc = Document()
     for section in doc.sections:
         section.page_height = Cm(29.7)
         section.page_width = Cm(21.0)
-        section.top_margin = Cm(1.2)
-        section.bottom_margin = Cm(1.2)
-        section.left_margin = Cm(2.0)
-        section.right_margin = Cm(2.0)
+        section.top_margin = Cm(0.7)
+        section.bottom_margin = Cm(1.4)
+        section.left_margin = Cm(1.4)
+        section.right_margin = Cm(1.4)
     # Remove default paragraph spacing
     style = doc.styles["Normal"]
     style.font.name = FONT
@@ -350,13 +393,21 @@ def _rating_table(doc, rows_data):
         _cell_text(hrow.cells[ci], txt, bold=True, size=7.5, color=C_WHITE,
                    align=WD_ALIGN_PARAGRAPH.CENTER)
 
-    for i, (criterion, score, max_val, weight) in enumerate(rows_data):
+    for i, row_data in enumerate(rows_data):
+        if len(row_data) == 5:
+            criterion, indicator, score, max_val, weight = row_data
+        else:
+            criterion, score, max_val, weight = row_data
+            indicator = None
         row = t.add_row()
-        _set_row_height(row, 0.62)
+        _set_row_height(row, 0.7 if indicator else 0.62)
         bg = C_LROW if i % 2 == 0 else C_WHITE
         _set_bg(row.cells[0], bg)
         _set_borders(row.cells[0], bottom=C_LINE)
-        _cell_text(row.cells[0], criterion, size=8.5, color=C_DARK)
+        if indicator:
+            _cell_text_with_indicator(row.cells[0], criterion, indicator)
+        else:
+            _cell_text(row.cells[0], criterion, size=8.5, color=C_DARK)
 
         # Score cell: highlighted if filled
         score_str = str(score) if score not in (None, "", "-", "—") else "—"
@@ -562,29 +613,29 @@ def _sig_to_transparent_png(data_url):
 
 
 def _add_header_pdf_style(doc, form_name):
-    """Logo right, headline left: Injaaz Facility Management's + form name. B&W."""
+    """Left: Injaaz Facility Management (grey) + form title (bold); right: logo only, no text below."""
     t = doc.add_table(rows=1, cols=2)
     _no_table_borders(t)
-    t.columns[0].width = Cm(12.5)
-    t.columns[1].width = Cm(4.5)
+    t.columns[0].width = Cm(14.0)
+    t.columns[1].width = Cm(3.0)
     row = t.rows[0]
-    # Left: Injaaz Facility Management's + form name
+    # Left: Injaaz Facility Management (small grey) + form name (large bold black)
     lc = row.cells[0]
     lc.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
     p = lc.paragraphs[0]
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(2)
-    r1 = p.add_run("Injaaz Facility Management's\n")
+    r1 = p.add_run("Injaaz Facility Management\n")
     r1.font.name = FONT
-    r1.font.size = Pt(7)
+    r1.font.size = Pt(8)
     r1.font.color.rgb = _rgb(C_BW_GRAY)
     r2 = p.add_run(form_name)
     r2.font.name = FONT
-    r2.font.size = Pt(14)
+    r2.font.size = Pt(16)
     r2.font.bold = True
     r2.font.color.rgb = _rgb(C_BW_BLACK)
-    # Right: logo
+    # Right: logo only (no INJAAZ text, compact)
     rc = row.cells[1]
     rc.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
     rp = rc.paragraphs[0]
@@ -594,14 +645,12 @@ def _add_header_pdf_style(doc, form_name):
     if os.path.isfile(_LOGO):
         try:
             run = rp.add_run()
-            run.add_picture(_LOGO, width=Cm(1.7), height=Cm(1.7))
+            run.add_picture(_LOGO, width=Cm(1.8), height=Cm(1.8))
         except Exception:
             _fallback_logo_bw(rp)
     else:
         _fallback_logo_bw(rp)
-    # Bottom rule
-    _add_rule(doc, C_BW_BLACK, 1)
-    _gap(doc, 4)
+    _gap(doc, 2)
 
 
 def _fallback_logo_bw(p):
@@ -623,7 +672,7 @@ def _add_rule(doc, color_hex, pt=0.5):
 
 
 def _section_bar_numbered(doc, num, title):
-    """01. Title with underline. B&W."""
+    """01. Title with underline. B&W. Professional spacing."""
     t = doc.add_table(rows=1, cols=1)
     _no_table_borders(t)
     t.columns[0].width = Cm(17.0)
@@ -631,15 +680,15 @@ def _section_bar_numbered(doc, num, title):
     p = c.paragraphs[0]
     p.clear()
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.space_before = Pt(4)
     p.paragraph_format.space_after = Pt(6)
     run = p.add_run(f"{num}. {title}")
     run.font.name = FONT
-    run.font.size = Pt(9)
+    run.font.size = Pt(11)
     run.font.bold = True
     run.font.color.rgb = _rgb(C_BW_BLACK)
     _set_borders(c, bottom=C_BW_BLACK)
-    _gap(doc, 2)
+    _gap(doc, 3)
 
 
 def _instruction_line(doc, text):
@@ -649,13 +698,13 @@ def _instruction_line(doc, text):
     p.paragraph_format.space_after = Pt(4)
     for run in p.runs:
         run.font.name = FONT
-        run.font.size = Pt(6)
+        run.font.size = Pt(8)
         run.font.color.rgb = _rgb(C_BW_GRAY)
     _gap(doc, 4)
 
 
 def _data_table_pdf_style(doc, pairs, cols=2):
-    """B&W: label | value, horizontal lines only."""
+    """B&W: label | value, horizontal lines only. Professional alignment."""
     if not pairs:
         return
     if cols == 4:
@@ -666,36 +715,36 @@ def _data_table_pdf_style(doc, pairs, cols=2):
                 r.append(pairs[i + 1])
             rows_data.append(r)
         t = doc.add_table(rows=0, cols=4)
-        widths = [Cm(3.7), Cm(4.6), Cm(3.7), Cm(4.6)]
+        widths = [Cm(4.0), Cm(4.5), Cm(4.0), Cm(4.5)]
     else:
         rows_data = [[p] for p in pairs]
         t = doc.add_table(rows=0, cols=2)
-        widths = [Cm(4.8), Cm(12.2)]
+        widths = [Cm(5.0), Cm(12.0)]
     _no_table_borders(t)
     for i, w in enumerate(widths):
         t.columns[i].width = w
     for row_pairs in rows_data:
         row = t.add_row()
-        _set_row_height(row, 0.55)
+        _set_row_height(row, 0.58)
         idx = 0
         for lbl, val in row_pairs:
-            _cell_text(row.cells[idx], lbl.upper(), bold=True, size=7, color=C_BW_GRAY)
+            _cell_text(row.cells[idx], lbl, bold=True, size=9, color=C_BW_GRAY)
             _set_borders(row.cells[idx], bottom=C_BW_LIGHT)
-            _cell_text(row.cells[idx + 1], val or "—", size=8, color=C_BW_BLACK)
+            _cell_text(row.cells[idx + 1], val or "—", size=10, color=C_BW_BLACK)
             _set_borders(row.cells[idx + 1], bottom=C_BW_LIGHT)
             idx += 2
         while idx < len(widths):
             row.cells[idx].paragraphs[0].clear()
             idx += 1
-    _gap(doc, 5)
+    _gap(doc, 6)
 
 
 def _sig_block_pdf_style(doc, signatures):
-    """Transparent signature, no box. Left-aligned. B&W."""
+    """Transparent signature, no box. Left-aligned. B&W. Professional layout."""
     if not signatures:
         return
     n = len(signatures)
-    col_w = Cm(min(4.0, 17.0 / n))
+    col_w = Cm(max(4.5, 17.0 / n))
     t = doc.add_table(rows=3, cols=n)
     _no_table_borders(t)
     for i in range(n):
@@ -703,9 +752,9 @@ def _sig_block_pdf_style(doc, signatures):
     # Label row
     for i, (label, _, _) in enumerate(signatures):
         c = t.rows[0].cells[i]
-        _cell_text(c, label, bold=True, size=7, color=C_BW_BLACK, space_before=0, space_after=2)
+        _cell_text(c, label, bold=True, size=9, color=C_BW_BLACK, space_before=0, space_after=2)
     # Signature row - no borders, no background, decent space
-    _set_row_height(t.rows[1], 1.2)
+    _set_row_height(t.rows[1], 1.4)
     tmp_paths = []
     for i, (_, img_data, _) in enumerate(signatures):
         c = t.rows[1].cells[i]
@@ -723,13 +772,13 @@ def _sig_block_pdf_style(doc, signatures):
                     run = p.add_run()
                     run.add_picture(path, width=Mm(45), height=Mm(18))
                 except Exception:
-                    p.add_run("Sign").font.size = Pt(7)
+                    p.add_run("Sign").font.size = Pt(9)
             else:
-                p.add_run("Sign").font.size = Pt(7)
+                p.add_run("Sign").font.size = Pt(9)
         else:
             r = p.add_run("Sign")
             r.font.name = FONT
-            r.font.size = Pt(7)
+            r.font.size = Pt(9)
             r.font.color.rgb = _rgb(C_BW_GRAY)
     for path in tmp_paths:
         try:
@@ -739,8 +788,93 @@ def _sig_block_pdf_style(doc, signatures):
     # Date row
     for i, (_, _, date_val) in enumerate(signatures):
         c = t.rows[2].cells[i]
-        _cell_text(c, _fmt(date_val) if date_val else "Date", size=6, color=C_BW_GRAY, space_before=0, space_after=0)
+        _cell_text(c, _fmt(date_val) if date_val else "Date", size=8, color=C_BW_GRAY, space_before=0, space_after=0)
     _gap(doc, 6)
+
+
+def _long_field_pdf_style(doc, label, value):
+    """Label + value, B&W. For multi-line text."""
+    if not value and value != 0:
+        value = "—"
+    t = doc.add_table(rows=2, cols=1)
+    _no_table_borders(t)
+    t.columns[0].width = Cm(17.0)
+    lc = t.rows[0].cells[0]
+    _cell_text(lc, label, bold=True, size=9, color=C_BW_GRAY)
+    _set_borders(lc, bottom=C_BW_LIGHT)
+    vc = t.rows[1].cells[0]
+    p = vc.paragraphs[0]
+    p.clear()
+    p.paragraph_format.space_before = Pt(3)
+    p.paragraph_format.space_after = Pt(3)
+    run = p.add_run(str(value) if value not in (None, "", "-") else "—")
+    run.font.name = FONT
+    run.font.size = Pt(10)
+    run.font.color.rgb = _rgb(C_BW_BLACK)
+    _set_borders(vc, bottom=C_BW_LIGHT)
+    _gap(doc, 5)
+
+
+def _rating_table_pdf_style(doc, rows_data):
+    """Rating table, B&W. Professional alignment. rows_data = (criterion, score, max_val, weight) or (criterion, indicator, score, max_val, weight)."""
+    if not rows_data:
+        return
+    t = doc.add_table(rows=0, cols=3)
+    _no_table_borders(t)
+    t.columns[0].width = Cm(10.0)
+    t.columns[1].width = Cm(3.5)
+    t.columns[2].width = Cm(3.5)
+    hrow = t.add_row()
+    _set_row_height(hrow, 0.55)
+    for ci, txt in enumerate(["Criterion", "Score", "Max / Weight"]):
+        _cell_text(hrow.cells[ci], txt, bold=True, size=9, color=C_BW_BLACK, align=WD_ALIGN_PARAGRAPH.CENTER)
+        _set_borders(hrow.cells[ci], bottom=C_BW_BLACK)
+    for i, row_data in enumerate(rows_data):
+        if len(row_data) == 5:
+            criterion, indicator, score, max_val, weight = row_data
+        else:
+            criterion, score, max_val, weight = row_data
+            indicator = None
+        row = t.add_row()
+        _set_row_height(row, 0.7 if indicator else 0.62)
+        if indicator:
+            _cell_text_with_indicator(row.cells[0], criterion, indicator, color=C_BW_BLACK, indicator_color=C_BW_GRAY, size=10, indicator_size=9)
+        else:
+            _cell_text(row.cells[0], criterion, size=10, color=C_BW_BLACK)
+        _set_borders(row.cells[0], bottom=C_BW_LIGHT)
+        score_str = str(score) if score not in (None, "", "-", "—") else "—"
+        _cell_text(row.cells[1], score_str, bold=(score_str != "—"), size=10, color=C_BW_BLACK, align=WD_ALIGN_PARAGRAPH.CENTER)
+        _set_borders(row.cells[1], bottom=C_BW_LIGHT)
+        _cell_text(row.cells[2], str(weight) if weight else str(max_val), size=9, color=C_BW_GRAY, align=WD_ALIGN_PARAGRAPH.CENTER)
+        _set_borders(row.cells[2], bottom=C_BW_LIGHT)
+    _gap(doc, 5)
+
+
+def _checklist_table_pdf_style(doc, items):
+    """Checklist table, B&W. items = (label, status_value, date_value). Professional alignment."""
+    if not items:
+        return
+    t = doc.add_table(rows=0, cols=3)
+    _no_table_borders(t)
+    t.columns[0].width = Cm(10.0)
+    t.columns[1].width = Cm(3.5)
+    t.columns[2].width = Cm(3.5)
+    hrow = t.add_row()
+    _set_row_height(hrow, 0.55)
+    for ci, txt in enumerate(["Item", "Status", "Date"]):
+        _cell_text(hrow.cells[ci], txt, bold=True, size=9, color=C_BW_BLACK, align=WD_ALIGN_PARAGRAPH.CENTER)
+        _set_borders(hrow.cells[ci], bottom=C_BW_BLACK)
+    for i, (label, status, date_val) in enumerate(items):
+        row = t.add_row()
+        _set_row_height(row, 0.62)
+        _cell_text(row.cells[0], label, size=10, color=C_BW_BLACK)
+        _set_borders(row.cells[0], bottom=C_BW_LIGHT)
+        done = str(status).lower() in ("on", "completed", "yes", "true", "1")
+        _cell_text(row.cells[1], "Done" if done else "—", size=10, color=C_BW_BLACK, align=WD_ALIGN_PARAGRAPH.CENTER)
+        _set_borders(row.cells[1], bottom=C_BW_LIGHT)
+        _cell_text(row.cells[2], _fmt(date_val) if date_val else "—", size=9, color=C_BW_GRAY, align=WD_ALIGN_PARAGRAPH.CENTER)
+        _set_borders(row.cells[2], bottom=C_BW_LIGHT)
+    _gap(doc, 5)
 
 
 def _info_box_pdf_style(doc, text):
@@ -758,12 +892,12 @@ def _info_box_pdf_style(doc, text):
     p.paragraph_format.right_indent = Cm(0.3)
     r1 = p.add_run("Note ")
     r1.font.name = FONT
-    r1.font.size = Pt(7)
+    r1.font.size = Pt(9)
     r1.font.bold = True
     r1.font.color.rgb = _rgb(C_BW_BLACK)
     r2 = p.add_run(text)
     r2.font.name = FONT
-    r2.font.size = Pt(7)
+    r2.font.size = Pt(9)
     r2.font.color.rgb = _rgb(C_BW_BLACK)
     _gap(doc, 5)
 
@@ -777,7 +911,7 @@ def _footer_pdf_style(doc):
     p.paragraph_format.space_after = Pt(0)
     r = p.add_run(f"Generated {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     r.font.name = FONT
-    r.font.size = Pt(6)
+    r.font.size = Pt(8)
     r.font.color.rgb = _rgb(C_BW_GRAY)
 
 
@@ -787,9 +921,9 @@ def _footer_pdf_style(doc):
 
 def _build_leave_application(fd):
     doc = _new_doc()
-    _add_header(doc, "Leave Application Form")
-    _section(doc, "Employee Information")
-    _data_table(doc, [
+    _add_header_pdf_style(doc, "Leave Application Form")
+    _section_bar_numbered(doc, "01", "Employee Information")
+    _data_table_pdf_style(doc, [
         ("Employee Name",   _fd(fd, "employee_name")),
         ("Employee ID",     _fd(fd, "employee_id")),
         ("Job Title",       _fd(fd, "job_title")),
@@ -800,13 +934,13 @@ def _build_leave_application(fd):
         ("Today's Date",    _fmt(fd.get("today_date"))),
     ], cols=4)
 
-    _section(doc, "Leave Details")
-    leave_type = _fd(fd, "leave_type")
+    _section_bar_numbered(doc, "02", "Leave Details")
+    leave_type = _fd(fd, "leave_type_display") or _fd(fd, "leave_type")
     if leave_type == "other":
         leave_type = _fd(fd, "leave_type_other", "Other")
-    _data_table(doc, [
+    _data_table_pdf_style(doc, [
         ("Leave Type",            leave_type),
-        ("Salary Advance",        _fd(fd, "salary_advance", "No").upper()),
+        ("Salary Advance",        _fd(fd, "salary_advance", "No")),
         ("First Day of Leave",    _fmt(fd.get("first_day_of_leave"))),
         ("Last Day of Leave",     _fmt(fd.get("last_day_of_leave"))),
         ("Total Days",            _fd(fd, "total_days_requested")),
@@ -815,15 +949,15 @@ def _build_leave_application(fd):
         ("Replacement Name",      _fd(fd, "replacement_name")),
     ], cols=4)
 
-    _section(doc, "Signatures")
-    _sig_block(doc, [
+    _section_bar_numbered(doc, "03", "Signatures")
+    _sig_block_pdf_style(doc, [
         ("Employee",      fd.get("employee_signature"),    fd.get("today_date")),
         ("Replacement",   fd.get("replacement_signature"), None),
         ("GM Approval",   fd.get("gm_signature"),          None),
     ])
 
-    _section(doc, "HR Use Only")
-    _data_table(doc, [
+    _section_bar_numbered(doc, "04", "HR Use Only")
+    _data_table_pdf_style(doc, [
         ("HR Checked",      _fd(fd, "hr_checked")),
         ("Balance C/F",     _fd(fd, "hr_balance_cf")),
         ("Contract Year",   _fd(fd, "hr_contract_year")),
@@ -831,24 +965,19 @@ def _build_leave_application(fd):
         ("Unpaid",          _fd(fd, "hr_unpaid")),
     ], cols=4)
     if fd.get("hr_comments"):
-        _long_field(doc, "HR Comments", fd.get("hr_comments"))
-    _sig_block(doc, [("HR Signature", fd.get("hr_signature"), fd.get("hr_date"))])
-    _footer(doc)
+        _long_field_pdf_style(doc, "HR Comments", fd.get("hr_comments"))
+    _sig_block_pdf_style(doc, [("HR Signature", fd.get("hr_signature"), fd.get("hr_date"))])
+    _footer_pdf_style(doc)
     return doc
 
 
 def _build_commencement(fd):
-    """Commencement Form — exact same layout as PDF (B&W, logo right, same sections)."""
+    """Commencement Form — PDF template (B&W, logo right, same sections)."""
     doc = _new_doc()
-    for section in doc.sections:
-        section.left_margin = Cm(1.4)
-        section.right_margin = Cm(1.4)
-        section.top_margin = Cm(0.7)
-        section.bottom_margin = Cm(1.4)
     _add_header_pdf_style(doc, "Commencement Form")
     _instruction_line(doc,
-        "To complete the administrative aspect of your Employment please complete this form within 5 days of joining "
-        "and fax it back to AH or email it to joana@ajmanholding.ae")
+        "To complete the administrative aspect of your employment, please complete this form within 5 days of joining "
+        "and email it to joana@ajmanholding.ae")
     _section_bar_numbered(doc, "01", "Personal Details")
     _data_table_pdf_style(doc, [
         ("Full Name", _fd(fd, "employee_name")),
@@ -886,9 +1015,9 @@ def _build_commencement(fd):
 
 def _build_duty_resumption(fd):
     doc = _new_doc()
-    _add_header(doc, "Duty Resumption Form")
-    _section(doc, "Employee Details")
-    _data_table(doc, [
+    _add_header_pdf_style(doc, "Duty Resumption Form")
+    _section_bar_numbered(doc, "01", "Employee Details")
+    _data_table_pdf_style(doc, [
         ("Requester",       _fd(fd, "requester")),
         ("Employee Name",   _fd(fd, "employee_name")),
         ("Employee ID",     _fd(fd, "employee_id")),
@@ -896,36 +1025,35 @@ def _build_duty_resumption(fd):
         ("Company",         _fd(fd, "company", "INJAAZ LLC")),
     ], cols=4)
 
-    _section(doc, "Leave & Resumption Dates")
-    _data_table(doc, [
-        ("Leave Started",            _fmt(fd.get("leave_started"))),
-        ("Leave Ended",              _fmt(fd.get("leave_ended"))),
-        ("Planned Resumption Date",  _fmt(fd.get("planned_resumption_date"))),
-        ("Actual Resumption Date",   _fmt(fd.get("actual_resumption_date"))),
-        ("Note",                     _fd(fd, "note")),
+    _section_bar_numbered(doc, "02", "Leave & Resumption Dates")
+    _data_table_pdf_style(doc, [
+        ("Leave Started",        _fmt(fd.get("leave_started"))),
+        ("Leave Ended",          _fmt(fd.get("leave_ended"))),
+        ("Planned Resumption",   _fmt(fd.get("planned_resumption_date"))),
+        ("Actual Resumption",    _fmt(fd.get("actual_resumption_date"))),
+        ("Note",                 _fd(fd, "note")),
     ], cols=4)
 
     if fd.get("line_manager_remarks"):
-        _section(doc, "Line Manager Remarks")
-        _long_field(doc, "Remarks", fd.get("line_manager_remarks"))
+        _long_field_pdf_style(doc, "Line Manager Remarks", fd.get("line_manager_remarks"))
 
-    _section(doc, "Signatures")
+    _section_bar_numbered(doc, "03", "Signatures")
     sigs = [("Employee", fd.get("employee_signature"), fd.get("sign_date"))]
-    if fd.get("gm_signature"):
-        sigs.append(("GM Approval", fd.get("gm_signature"), None))
     if fd.get("hr_signature"):
         sigs.append(("HR", fd.get("hr_signature"), None))
-    _sig_block(doc, sigs)
-    _footer(doc)
+    if fd.get("gm_signature"):
+        sigs.append(("GM Approval", fd.get("gm_signature"), None))
+    _sig_block_pdf_style(doc, sigs)
+    _footer_pdf_style(doc)
     return doc
 
 
 def _build_passport_release(fd):
     doc = _new_doc()
     form_type_val = _fd(fd, "passport_form_type", "release").replace("_", " ").title()
-    _add_header(doc, f"Passport {form_type_val} Form")
-    _section(doc, "Request Details")
-    _data_table(doc, [
+    _add_header_pdf_style(doc, f"Passport {form_type_val} Form")
+    _section_bar_numbered(doc, "01", "Request Details")
+    _data_table_pdf_style(doc, [
         ("Form Type",    form_type_val),
         ("Date",         _fmt(fd.get("form_date"))),
         ("Requester",    _fd(fd, "requester")),
@@ -937,25 +1065,25 @@ def _build_passport_release(fd):
     ], cols=4)
 
     if fd.get("purpose_of_release"):
-        _section(doc, "Purpose of Release")
-        _long_field(doc, "Purpose", fd.get("purpose_of_release"))
+        _section_bar_numbered(doc, "01b", "Purpose of Release")
+        _long_field_pdf_style(doc, "Purpose of Release", fd.get("purpose_of_release"))
 
-    _section(doc, "Signatures")
+    _section_bar_numbered(doc, "02", "Signatures")
     sigs = [("Employee", fd.get("employee_signature"), fd.get("form_date"))]
-    if fd.get("gm_signature"):
-        sigs.append(("GM Approval", fd.get("gm_signature"), None))
     if fd.get("hr_signature"):
         sigs.append(("HR", fd.get("hr_signature"), None))
-    _sig_block(doc, sigs)
-    _footer(doc)
+    if fd.get("gm_signature"):
+        sigs.append(("GM Approval", fd.get("gm_signature"), None))
+    _sig_block_pdf_style(doc, sigs)
+    _footer_pdf_style(doc)
     return doc
 
 
 def _build_grievance(fd):
     doc = _new_doc()
-    _add_header(doc, "Employee Grievance / Disciplinary Action Form")
-    _section(doc, "First Party (Complainant)")
-    _data_table(doc, [
+    _add_header_pdf_style(doc, "Employee Grievance / Disciplinary Action Form")
+    _section_bar_numbered(doc, "01", "First Party (Complainant)")
+    _data_table_pdf_style(doc, [
         ("Employee Name",      _fd(fd, "complainant_name")),
         ("Employee ID",        _fd(fd, "complainant_id")),
         ("Designation",        _fd(fd, "complainant_designation")),
@@ -965,8 +1093,8 @@ def _build_grievance(fd):
         ("Location",           _fd(fd, "issue_location", "").replace("_", " ").title()),
     ], cols=4)
 
-    _section(doc, "Second Party")
-    _data_table(doc, [
+    _section_bar_numbered(doc, "02", "Second Party")
+    _data_table_pdf_style(doc, [
         ("Employee Name",   _fd(fd, "second_party_name")),
         ("Staff ID",        _fd(fd, "second_party_id")),
         ("Department",      _fd(fd, "second_party_department")),
@@ -975,63 +1103,64 @@ def _build_grievance(fd):
         ("Contact No.",     _fd(fd, "second_party_contact")),
     ], cols=4)
 
-    _section(doc, "Complaint Details")
-    _long_field(doc, "Description of Complaint", fd.get("complaint_description"))
-    _data_table(doc, [
+    _section_bar_numbered(doc, "03", "Complaint Details")
+    _long_field_pdf_style(doc, "Description of Complaint", fd.get("complaint_description") or fd.get("complaint"))
+    _data_table_pdf_style(doc, [
         ("Witnesses",     _fd(fd, "witnesses")),
         ("Who Informed",  _fd(fd, "who_informed")),
         ("Attachment",    _fd(fd, "attachment")),
     ], cols=2)
 
-    _section(doc, "HR Review")
-    _data_table(doc, [
+    _section_bar_numbered(doc, "04", "HR Review")
+    _data_table_pdf_style(doc, [
         ("Statement 2nd Party", _fd(fd, "statement_2nd_party")),
         ("Statement Verified",  _fd(fd, "hr_statement_verified")),
         ("1st / Recurring",     _fd(fd, "hr_first_recurring")),
     ], cols=4)
     if fd.get("hr_remarks"):
-        _long_field(doc, "HR Remarks", fd.get("hr_remarks"))
+        _long_field_pdf_style(doc, "HR Remarks", fd.get("hr_remarks"))
     if fd.get("gm_remarks"):
-        _long_field(doc, "GM Remarks", fd.get("gm_remarks"))
+        _long_field_pdf_style(doc, "GM Remarks", fd.get("gm_remarks"))
 
-    _section(doc, "Signatures")
+    _section_bar_numbered(doc, "05", "Signatures")
     sigs = [("Complainant", fd.get("complainant_signature"), fd.get("date_of_incident"))]
     if fd.get("hr_signature"):
         sigs.append(("HR", fd.get("hr_signature"), None))
     if fd.get("gm_signature"):
         sigs.append(("GM", fd.get("gm_signature"), None))
-    _sig_block(doc, sigs)
-    _footer(doc)
+    _sig_block_pdf_style(doc, sigs)
+    _footer_pdf_style(doc)
     return doc
 
 
 def _build_visa_renewal(fd):
     doc = _new_doc()
-    _add_header(doc, "Visa Renewal Form")
-    _section(doc, "Employee Information")
-    _data_table(doc, [
+    _add_header_pdf_style(doc, "Visa Renewal Form")
+    _section_bar_numbered(doc, "01", "Employee Information")
+    dec = _fd(fd, "decision_display") or _fd(fd, "decision", "").replace("_", " ").title()
+    _data_table_pdf_style(doc, [
         ("Date",             _fmt(fd.get("form_date"))),
         ("Employee Name",    _fd(fd, "employee_name")),
         ("Employee ID",      _fd(fd, "employee_id")),
         ("Employer",         _fd(fd, "employer", "INJAAZ")),
         ("Position",         _fd(fd, "position")),
         ("Years Completed",  _fd(fd, "years_completed")),
-        ("Decision",         _fd(fd, "decision", "").replace("_", " ").title()),
+        ("Decision",         dec),
     ], cols=4)
 
-    _section(doc, "Signature")
-    _sig_block(doc, [
+    _section_bar_numbered(doc, "02", "Signature")
+    _sig_block_pdf_style(doc, [
         ("Employee", fd.get("employee_signature"), fd.get("form_date")),
     ])
-    _footer(doc)
+    _footer_pdf_style(doc)
     return doc
 
 
 def _build_interview_assessment(fd):
     doc = _new_doc()
-    _add_header(doc, "Interview Assessment Form")
-    _section(doc, "Candidate Information")
-    _data_table(doc, [
+    _add_header_pdf_style(doc, "Interview Assessment Form")
+    _section_bar_numbered(doc, "01", "Candidate Information")
+    _data_table_pdf_style(doc, [
         ("Candidate Name",         _fd(fd, "candidate_name")),
         ("Position Title",         _fd(fd, "position_title")),
         ("Academic Qualification", _fd(fd, "academic_qualification")),
@@ -1048,42 +1177,67 @@ def _build_interview_assessment(fd):
         ("Interview By",           _fd(fd, "interview_by")),
     ], cols=4)
 
-    _section(doc, "Assessment Ratings")
-    _rating_table(doc, [
-        ("Turn-out & Appearance",         _fd(fd, "rating_turnout"),          "Outstanding→Low", ""),
-        ("Confidence",                    _fd(fd, "rating_confidence"),        "Outstanding→Low", ""),
-        ("Mental Alertness",              _fd(fd, "rating_mental_alertness"),  "Outstanding→Low", ""),
-        ("Maturity & Emotional Stability",_fd(fd, "rating_maturity"),          "Outstanding→Low", ""),
-        ("Communication Skills",          _fd(fd, "rating_communication"),     "Outstanding→Low", ""),
-        ("Technical Knowledge",           _fd(fd, "rating_technical"),         "Outstanding→Low", ""),
-        ("Relevant Training",             _fd(fd, "rating_training"),          "Outstanding→Low", ""),
-        ("Relevant Experience",           _fd(fd, "rating_experience"),        "Outstanding→Low", ""),
-        ("Overall Rating",                _fd(fd, "rating_overall"),           "Outstanding→Low", ""),
+    _section_bar_numbered(doc, "02", "Assessment Ratings")
+    indicators = [
+        "The turn-out and appearance are appropriate to the position.",
+        "Demonstrates professional competence and self-confidence.",
+        "Comprehends and coherently responds to questions.",
+        "Shows composure and handles pressure appropriately.",
+        "Expresses ideas clearly and listens effectively.",
+        "Displays adequate knowledge for the role.",
+        "Has relevant certifications or training.",
+        "Experience matches job requirements.",
+        "The candidate's overall suitability for the position.",
+    ]
+    _rating_table_pdf_style(doc, [
+        ("Turn-out & Appearance", indicators[0], _fd(fd, "rating_turnout"), "Outstanding→Low", ""),
+        ("Confidence", indicators[1], _fd(fd, "rating_confidence"), "Outstanding→Low", ""),
+        ("Mental Alertness", indicators[2], _fd(fd, "rating_mental_alertness"), "Outstanding→Low", ""),
+        ("Maturity & Emotional Stability", indicators[3], _fd(fd, "rating_maturity"), "Outstanding→Low", ""),
+        ("Communication Skills", indicators[4], _fd(fd, "rating_communication"), "Outstanding→Low", ""),
+        ("Technical Knowledge", indicators[5], _fd(fd, "rating_technical"), "Outstanding→Low", ""),
+        ("Relevant Training", indicators[6], _fd(fd, "rating_training"), "Outstanding→Low", ""),
+        ("Relevant Experience", indicators[7], _fd(fd, "rating_experience"), "Outstanding→Low", ""),
+        ("Overall Rating", indicators[8], _fd(fd, "rating_overall"), "Outstanding→Low", ""),
     ])
 
-    if fd.get("overall_assessment"):
-        _section(doc, "Overall Assessment")
-        _long_field(doc, "Assessment", fd.get("overall_assessment"))
+    _section_bar_numbered(doc, "03", "Overall Assessment / Comments")
+    if fd.get("assessment_professional"):
+        _long_field_pdf_style(doc, "Professional", fd.get("assessment_professional"))
+    if fd.get("assessment_personality"):
+        _long_field_pdf_style(doc, "Personality", fd.get("assessment_personality"))
+    if fd.get("overall_assessment") and not fd.get("assessment_professional") and not fd.get("assessment_personality"):
+        _long_field_pdf_style(doc, "Assessment", fd.get("overall_assessment"))
 
-    _data_table(doc, [("Eligible for Employment", _fd(fd, "eligibility", "").upper())], cols=2)
+    _data_table_pdf_style(doc, [("Eligible for Employment", _fd(fd, "eligibility", ""))], cols=2)
+    if fd.get("job_recommended_for"):
+        _data_table_pdf_style(doc, [("Job Recommended for", _fd(fd, "job_recommended_for"))], cols=2)
 
-    _section(doc, "Signatures")
+    _section_bar_numbered(doc, "04", "Interviewer Details")
+    _data_table_pdf_style(doc, [
+        ("Interviewer's Name", _fd(fd, "interviewer_name", _fd(fd, "interview_by"))),
+        ("Title", _fd(fd, "interviewer_title")),
+    ], cols=2)
+    if fd.get("interviewer_signature"):
+        _sig_block_pdf_style(doc, [("Interviewer", fd.get("interviewer_signature"), None)])
+
+    _section_bar_numbered(doc, "05", "Signatures")
     sigs = []
     if fd.get("hr_signature"):
         sigs.append(("HR", fd.get("hr_signature"), None))
     if fd.get("gm_signature"):
         sigs.append(("GM", fd.get("gm_signature"), None))
     if sigs:
-        _sig_block(doc, sigs)
-    _footer(doc)
+        _sig_block_pdf_style(doc, sigs)
+    _footer_pdf_style(doc)
     return doc
 
 
 def _build_staff_appraisal(fd):
     doc = _new_doc()
-    _add_header(doc, "Staff Appraisal Form")
-    _section(doc, "Employee Information")
-    _data_table(doc, [
+    _add_header_pdf_style(doc, "Staff Appraisal Form")
+    _section_bar_numbered(doc, "01", "Employee Information")
+    _data_table_pdf_style(doc, [
         ("Employee Name",   _fd(fd, "employee_name")),
         ("Employee ID",     _fd(fd, "employee_id")),
         ("Department",      _fd(fd, "department")),
@@ -1092,18 +1246,18 @@ def _build_staff_appraisal(fd):
         ("Reviewer",        _fd(fd, "reviewer")),
     ], cols=4)
 
-    _section(doc, "Performance Ratings  (Scale 1 – 5)")
-    _rating_table(doc, [
-        ("Punctuality",    _fd(fd, "rating_punctuality"),     "1-5", "15%"),
-        ("Job Knowledge",  _fd(fd, "rating_job_knowledge"),   "1-5", "15%"),
-        ("Quality of Work",_fd(fd, "rating_quality"),         "1-5", "15%"),
-        ("Productivity",   _fd(fd, "rating_productivity"),    "1-5", "15%"),
-        ("Communication",  _fd(fd, "rating_communication"),   "1-5", "10%"),
-        ("Teamwork",       _fd(fd, "rating_teamwork"),        "1-5", "10%"),
-        ("Problem-Solving",_fd(fd, "rating_problem_solving"), "1-5", "10%"),
-        ("Adaptability",   _fd(fd, "rating_adaptability"),    "1-5",  "5%"),
-        ("Leadership",     _fd(fd, "rating_leadership"),      "1-5",  "5%"),
-        ("TOTAL SCORE",    _fd(fd, "total_score"),            "5",   "100%"),
+    _section_bar_numbered(doc, "02", "Performance Ratings (Scale 1–5)")
+    _rating_table_pdf_style(doc, [
+        ("Punctuality (15%)",    _fd(fd, "rating_punctuality"),     "1-5", ""),
+        ("Job Knowledge (15%)", _fd(fd, "rating_job_knowledge"),   "1-5", ""),
+        ("Quality of Work (15%)", _fd(fd, "rating_quality"),       "1-5", ""),
+        ("Productivity (15%)",  _fd(fd, "rating_productivity"),     "1-5", ""),
+        ("Communication (10%)", _fd(fd, "rating_communication"),    "1-5", ""),
+        ("Teamwork (10%)",      _fd(fd, "rating_teamwork"),         "1-5", ""),
+        ("Problem-Solving (10%)", _fd(fd, "rating_problem_solving"), "1-5", ""),
+        ("Adaptability (5%)",   _fd(fd, "rating_adaptability"),      "1-5", ""),
+        ("Leadership (5%)",    _fd(fd, "rating_leadership"),        "1-5", ""),
+        ("TOTAL SCORE",        _fd(fd, "total_score"),               "5", ""),
     ])
 
     # Comments
@@ -1121,29 +1275,28 @@ def _build_staff_appraisal(fd):
     comment_pairs = [(lbl, _fd(fd, key)) for key, lbl in comment_fields
                      if fd.get(key) and fd[key] not in ("", "-")]
     if comment_pairs:
-        _section(doc, "Evaluator Comments")
-        _data_table(doc, comment_pairs, cols=2)
+        _section_bar_numbered(doc, "03", "Evaluator Comments")
+        _data_table_pdf_style(doc, comment_pairs, cols=2)
 
     if fd.get("employee_strengths"):
-        _section(doc, "Employee Strengths")
-        _long_field(doc, "Strengths & Achievements", fd.get("employee_strengths"))
+        _long_field_pdf_style(doc, "Employee Strengths", fd.get("employee_strengths"))
 
-    _section(doc, "Signatures")
+    _section_bar_numbered(doc, "04", "Signatures")
     sigs = [("Employee", fd.get("employee_signature"), None)]
     if fd.get("hr_signature"):
         sigs.append(("HR", fd.get("hr_signature"), None))
     if fd.get("gm_signature"):
         sigs.append(("GM", fd.get("gm_signature"), None))
-    _sig_block(doc, sigs)
-    _footer(doc)
+    _sig_block_pdf_style(doc, sigs)
+    _footer_pdf_style(doc)
     return doc
 
 
 def _build_station_clearance(fd):
     doc = _new_doc()
-    _add_header(doc, "Station Clearance Form")
-    _section(doc, "Employee Information")
-    _data_table(doc, [
+    _add_header_pdf_style(doc, "Station Clearance Form")
+    _section_bar_numbered(doc, "01", "Employee Information")
+    _data_table_pdf_style(doc, [
         ("Employee Name",     _fd(fd, "employee_name")),
         ("Employee ID",       _fd(fd, "employee_id")),
         ("Position",          _fd(fd, "position")),
@@ -1154,63 +1307,62 @@ def _build_station_clearance(fd):
         ("Last Working Date", _fmt(fd.get("last_working_date"))),
     ], cols=4)
 
-    _section(doc, "Department Clearance")
+    _section_bar_numbered(doc, "02", "Department Clearance")
     dept_items = [
-        ("Has completed / handed over all tasks on hand",     fd.get("tasks_handed_over"),     fd.get("dept_date_1")),
-        ("Has handed over all original working documents",    fd.get("documents_handed_over"), fd.get("dept_date_2")),
-        ("Has handed over all normal & electronic files",     fd.get("files_handed_over"),     fd.get("dept_date_3")),
-        ("Keys Returned",                                     fd.get("keys_returned"),         fd.get("dept_date_4")),
-        ("Toolbox Returned",                                  fd.get("toolbox_returned"),      fd.get("dept_date_5")),
-        ("Access Card",                                       fd.get("access_card_returned"),  fd.get("dept_date_6")),
+        ("Tasks handed over",        fd.get("tasks_handed_over"),     fd.get("dept_date_1")),
+        ("Documents handed over",   fd.get("documents_handed_over"), fd.get("dept_date_2")),
+        ("Files handed over",        fd.get("files_handed_over"),     fd.get("dept_date_3")),
+        ("Keys returned",            fd.get("keys_returned"),         fd.get("dept_date_4")),
+        ("Toolbox returned",         fd.get("toolbox_returned"),      fd.get("dept_date_5")),
+        ("Access card",              fd.get("access_card_returned"),  fd.get("dept_date_6")),
     ]
-    _checklist_table(doc, dept_items)
+    _checklist_table_pdf_style(doc, dept_items)
     if fd.get("dept_others"):
-        _long_field(doc, "Department – Others", fd.get("dept_others"))
+        _long_field_pdf_style(doc, "Department – Others", fd.get("dept_others"))
 
-    _section(doc, "IT Clearance")
+    _section_bar_numbered(doc, "03", "IT Clearance")
     it_items = [
-        ("E-mail Account Cancelled",                   fd.get("email_cancelled"),         None),
-        ("Has returned all software / hardware",       fd.get("software_hardware_returned"),None),
-        ("Laptop Returned",                            fd.get("laptop_returned"),           None),
+        ("E-mail cancelled",              fd.get("email_cancelled"),              None),
+        ("Software/hardware returned",    fd.get("software_hardware_returned"),  None),
+        ("Laptop returned",               fd.get("laptop_returned"),             None),
     ]
-    _checklist_table(doc, it_items)
+    _checklist_table_pdf_style(doc, it_items)
     if fd.get("it_others"):
-        _long_field(doc, "IT – Others", fd.get("it_others"))
+        _long_field_pdf_style(doc, "IT – Others", fd.get("it_others"))
 
-    _section(doc, "HR Clearance")
+    _section_bar_numbered(doc, "04", "HR Clearance")
     hr_items = [
-        ("Employee file shifted to Exit folder",       fd.get("file_shifted"),  None),
-        ("Payment of outstanding dues (Salary)",       fd.get("dues_paid"),     None),
-        ("Medical Card Returned",                      fd.get("medical_card_returned"), None),
+        ("Employee file shifted",      fd.get("file_shifted"),  None),
+        ("Dues paid",                  fd.get("dues_paid"),     None),
+        ("Medical card returned",      fd.get("medical_card_returned"), None),
     ]
-    _checklist_table(doc, hr_items)
+    _checklist_table_pdf_style(doc, hr_items)
     if fd.get("hr_others"):
-        _long_field(doc, "HR – Others", fd.get("hr_others"))
+        _long_field_pdf_style(doc, "HR – Others", fd.get("hr_others"))
 
-    _section(doc, "Finance Clearance")
+    _section_bar_numbered(doc, "05", "Finance Clearance")
     fin_items = [("EOS Benefits Transfer", fd.get("eos_transfer"), None)]
-    _checklist_table(doc, fin_items)
+    _checklist_table_pdf_style(doc, fin_items)
     if fd.get("finance_others"):
-        _long_field(doc, "Finance – Others", fd.get("finance_others"))
+        _long_field_pdf_style(doc, "Finance – Others", fd.get("finance_others"))
 
     if fd.get("remarks"):
-        _section(doc, "Remarks")
-        _long_field(doc, "Remarks", fd.get("remarks"))
+        _long_field_pdf_style(doc, "Remarks", fd.get("remarks"))
 
-    _section(doc, "Signatures")
+    _section_bar_numbered(doc, "06", "Signatures")
     sigs = [("Employee", fd.get("employee_signature"), None)]
     if fd.get("hr_signature"):
         sigs.append(("HR", fd.get("hr_signature"), None))
-    _sig_block(doc, sigs)
-    _footer(doc)
+    _sig_block_pdf_style(doc, sigs)
+    _footer_pdf_style(doc)
     return doc
 
 
 def _build_performance_evaluation(fd):
     doc = _new_doc()
-    _add_header(doc, "Performance Evaluation Form")
-    _section(doc, "Employee Information")
-    _data_table(doc, [
+    _add_header_pdf_style(doc, "Performance Evaluation Form")
+    _section_bar_numbered(doc, "01", "Employee Information")
+    _data_table_pdf_style(doc, [
         ("Employee Name",    _fd(fd, "employee_name")),
         ("Employee ID",      _fd(fd, "employee_id")),
         ("Department",       _fd(fd, "department")),
@@ -1220,8 +1372,8 @@ def _build_performance_evaluation(fd):
         ("Evaluation By",    _fd(fd, "evaluation_done_by")),
     ], cols=4)
 
-    _section(doc, "Performance Scores  (Scale 1 – 10)")
-    _rating_table(doc, [
+    _section_bar_numbered(doc, "02", "Performance Scores (Scale 1–10)")
+    _rating_table_pdf_style(doc, [
         ("Score 01", _fd(fd, "score_01"), "10", ""),
         ("Score 02", _fd(fd, "score_02"), "10", ""),
         ("Score 03", _fd(fd, "score_03"), "10", ""),
@@ -1235,11 +1387,12 @@ def _build_performance_evaluation(fd):
         ("OVERALL SCORE", _fd(fd, "overall_score"), "100", ""),
     ])
 
-    _section(doc, "Evaluator Details")
-    _data_table(doc, [
-        ("Evaluator Name",        _fd(fd, "evaluator_name")),
-        ("Evaluator Designation", _fd(fd, "evaluator_designation")),
-    ], cols=4)
+    if fd.get("evaluator_name") or fd.get("evaluator_designation"):
+        _section_bar_numbered(doc, "03", "Evaluator Details")
+        _data_table_pdf_style(doc, [
+            ("Evaluator Name",        _fd(fd, "evaluator_name")),
+            ("Evaluator Designation", _fd(fd, "evaluator_designation")),
+        ], cols=4)
     for lbl, key in [
         ("Evaluator Observation",  "evaluator_observation"),
         ("Area of Concern",        "area_of_concern"),
@@ -1251,25 +1404,25 @@ def _build_performance_evaluation(fd):
         ("HR Remarks",             "hr_remarks"),
     ]:
         if fd.get(key) and fd[key] not in ("", "-"):
-            _long_field(doc, lbl, fd.get(key))
+            _long_field_pdf_style(doc, lbl, fd.get(key))
 
-    _section(doc, "Signatures")
+    _section_bar_numbered(doc, "04", "Signatures")
     sigs = [("Employee", fd.get("employee_signature"), fd.get("employee_sign_date"))]
     sigs.append(("Evaluator", fd.get("evaluator_signature"), fd.get("evaluator_sign_date")))
     if fd.get("hr_signature"):
         sigs.append(("HR", fd.get("hr_signature"), None))
     if fd.get("gm_signature"):
         sigs.append(("GM", fd.get("gm_signature"), None))
-    _sig_block(doc, sigs)
-    _footer(doc)
+    _sig_block_pdf_style(doc, sigs)
+    _footer_pdf_style(doc)
     return doc
 
 
 def _build_contract_renewal(fd):
     doc = _new_doc()
-    _add_header(doc, "Contract Renewal Assessment Form")
-    _section(doc, "Employee Information")
-    _data_table(doc, [
+    _add_header_pdf_style(doc, "Contract Renewal Assessment Form")
+    _section_bar_numbered(doc, "01", "Employee Information")
+    _data_table_pdf_style(doc, [
         ("Employee Name",     _fd(fd, "employee_name")),
         ("Employee ID",       _fd(fd, "employee_id")),
         ("Department",        _fd(fd, "department")),
@@ -1280,69 +1433,68 @@ def _build_contract_renewal(fd):
         ("Evaluation By",     _fd(fd, "evaluation_by")),
     ], cols=4)
 
-    # Sub-rating labels
+    # Sub-rating labels (match PDF exactly)
     sub_labels = {
         "01": [
             ("01A", "Completes assigned tasks efficiently and accurately"),
-            ("01B", "Demonstrates a strong understanding of job responsibilities"),
+            ("01B", "Demonstrates strong understanding of job responsibilities"),
             ("01C", "Meets deadlines consistently"),
             ("01D", "Produces work of high quality"),
             ("01E", "Takes initiative to improve work processes"),
         ],
         "02": [
-            ("02A", "Shows a positive attitude towards work and colleagues"),
-            ("02B", "Accepts feedback constructively and strives for improvement"),
-            ("02C", "Maintains professionalism in all interactions"),
-            ("02D", "Demonstrates adaptability to changing situations"),
+            ("02A", "Shows positive attitude towards work and colleagues"),
+            ("02B", "Accepts feedback constructively"),
+            ("02C", "Maintains professionalism"),
+            ("02D", "Demonstrates adaptability"),
             ("02E", "Upholds company policies and values"),
         ],
         "03": [
-            ("03A", "Communicates clearly and effectively with team members"),
-            ("03B", "Works collaboratively and contributes to team goals"),
-            ("03C", "Resolves conflicts or issues amicably"),
+            ("03A", "Communicates clearly and effectively"),
+            ("03B", "Works collaboratively"),
+            ("03C", "Resolves conflicts amicably"),
             ("03D", "Demonstrates good listening skills"),
-            ("03E", "Keeps supervisors and colleagues informed of progress"),
+            ("03E", "Keeps supervisors informed of progress"),
         ],
         "04": [
-            ("04A", "Arrives on time and prepared for work"),
+            ("04A", "Arrives on time and prepared"),
             ("04B", "Maintains consistent attendance"),
-            ("04C", "Provides notice and valid reasons for absences"),
+            ("04C", "Provides notice for absences"),
         ],
     }
     section_titles = {
-        "01": "SN 01 – Job Performance",
-        "02": "SN 02 – Attitude & Work Ethics",
-        "03": "SN 03 – Communication & Teamwork",
-        "04": "SN 04 – Punctuality & Attendance",
+        "01": "Job Performance",
+        "02": "Attitude & Work Ethics",
+        "03": "Communication & Teamwork",
+        "04": "Punctuality & Attendance",
     }
 
     for sn, sub_list in sub_labels.items():
-        _section(doc, section_titles[sn])
+        _section_bar_numbered(doc, f"0{int(sn)+1}", section_titles[sn])
+        suffixes = [suffix[-1].lower() for _, suffix in sub_list]
         rows = []
         for suffix, label in sub_list:
             key = f"rating_{sn}{suffix[-1].lower()}"
             rows.append((label, _fd(fd, key), "1–5", ""))
-        # Average
-        avg_key = f"rating_{sn}"
-        rows.append((f"Section {sn} Average", _fd(fd, avg_key), "1–5", "Avg"))
-        _rating_table(doc, rows)
+        rows.append((f"Section {sn} Average", _section_avg(fd, sn, suffixes), "1–5", "Avg"))
+        _rating_table_pdf_style(doc, rows)
         comment_key = f"comments_{sn}"
         if fd.get(comment_key):
-            _long_field(doc, "Comments", fd.get(comment_key))
+            _long_field_pdf_style(doc, "Comments", fd.get(comment_key))
 
-    _section(doc, "Summary")
-    _data_table(doc, [
+    _section_bar_numbered(doc, "06", "Summary")
+    _data_table_pdf_style(doc, [
         ("Total Score",          _fd(fd, "overall_score")),
         ("Recommendation",       _fd(fd, "recommendation", "").replace("_", " ").title()),
         ("Strength",             _fd(fd, "strength")),
         ("Areas for Improvement",_fd(fd, "areas_for_improvement")),
     ], cols=2)
 
-    _section(doc, "Evaluator Signature")
-    _sig_block(doc, [
+    _section_bar_numbered(doc, "07", "Evaluator Signature")
+    _sig_block_pdf_style(doc, [
         ("Evaluator", fd.get("evaluator_signature"), fd.get("evaluator_date")),
     ])
-    _footer(doc)
+    _footer_pdf_style(doc)
     return doc
 
 

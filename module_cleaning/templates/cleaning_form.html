@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='photo_upload_queue.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
   <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
   <script src="{{ url_for('static', filename='production_logger.js') }}" defer></script>
   <script src="{{ url_for('static', filename='photo_upload_queue.js') }}"></script>
@@ -857,24 +858,19 @@
     }
   </style>
 </head>
-<body>
-  <!-- Navigation Bar -->
-  <nav class="navbar">
-    <div class="navbar-container">
-      <a class="navbar-brand" href="/dashboard">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz">
-        <span>Injaaz Application</span>
-      </a>
-      <div class="module-badge">Cleaning Services</div>
-      <div class="navbar-nav">
-        {% if is_edit_mode %}
-        <a href="/dashboard" class="nav-btn prev-btn">← Back to Dashboard</a>
-        {% else %}
-        <a href="/civil/form" class="nav-btn prev-btn">← Previous</a>
-        {% endif %}
-      </div>
+<body class="inspection-form">
+  {% set active_page = 'inspection' %}
+  {% include 'partials/main_navbar.html' with context %}
+  <div class="inspection-form-bar" style="background:#fff;border-bottom:1px solid #e5e7eb;padding:0.5rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+    <span style="font-weight:600;color:var(--primary);">Cleaning Services</span>
+    <div style="display:flex;gap:0.5rem;">
+      {% if is_edit_mode %}
+      <a href="/dashboard" class="btn btn-outline-secondary btn-sm">← Back to Dashboard</a>
+      {% else %}
+      <a href="/civil/form" class="btn btn-outline-secondary btn-sm">← Previous</a>
+      {% endif %}
     </div>
-  </nav>
+  </div>
 
   <div class="container">
     <!-- Form Header with Save Draft -->
@@ -5965,5 +5961,7 @@
         });
     });
 </script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

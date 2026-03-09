@@ -16,22 +16,19 @@ html{scroll-behavior:smooth}
 body.hr-form-unified{
   font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
   color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.5;
-  background:radial-gradient(ellipse 100% 80% at 50% -20%, rgba(18,84,53,.08), transparent 50%),
-    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(26,122,77,.05), transparent 45%),
-    radial-gradient(ellipse 70% 50% at 0% 50%, rgba(18,84,53,.04), transparent 45%),
-    linear-gradient(180deg, #f8faf8 0%, #eef4f0 50%, #e8f0ec 100%);
+  background:#fafafa;
 }
 .hr-form-unified .page{width:100%;min-height:100vh;padding:0 0 3rem}
 .hr-form-unified .page-inner{max-width:1400px;margin:0 auto;padding:1.5rem 2rem 2rem}
 .hr-form-unified .back-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.55rem 1.1rem;font-size:.875rem;font-weight:600;color:var(--pri);background:rgba(255,255,255,.95);border:1px solid rgba(221,232,226,.8);border-radius:999px;text-decoration:none;box-shadow:0 2px 12px rgba(18,84,53,.06);transition:all var(--t);margin-bottom:1.5rem;backdrop-filter:blur(8px)}
 .hr-form-unified .back-btn:hover{background:#fff;border-color:var(--pri-sm);color:var(--pri-d);box-shadow:0 4px 16px rgba(18,84,53,.1)}
 .hr-form-unified .card{background:rgba(255,255,255,.98);border-radius:var(--r-xl);box-shadow:var(--sh-lg);overflow:hidden;border:1px solid rgba(232,240,236,.9);width:100%;backdrop-filter:blur(12px)}
-.hr-form-unified .hd{background:linear-gradient(160deg, #0a3320 0%, #0d3d24 25%, #125435 55%, #1a7a4d 100%);padding:2rem 2.5rem;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:2rem}
+.hr-form-unified .hd{background:linear-gradient(160deg, #051a10 0%, #082a18 25%, #0d3d24 55%, #125435 100%);padding:2rem 2.5rem;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:2rem}
 .hr-form-unified .hd::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg, rgba(255,255,255,.06) 0%, transparent 50%);pointer-events:none}
 .hr-form-unified .hd-left{position:relative;text-align:left}
 .hr-form-unified .hd h1{font-size:1.6rem;font-weight:800;color:#fff;letter-spacing:-.02em;position:relative;margin:0;text-shadow:0 1px 2px rgba(0,0,0,.15)}
-.hr-form-unified .hd-sub{font-size:.82rem;color:rgba(255,255,255,.88);margin-top:.4rem;font-weight:500;letter-spacing:.02em;position:relative}
-.hr-form-unified .hd-logo{position:relative;height:88px;width:auto;filter:brightness(0) invert(1);opacity:.95;flex-shrink:0}
+.hr-form-unified .hd-sub{font-size:.7rem;color:rgba(255,255,255,.88);margin-top:.35rem;font-weight:500;letter-spacing:.04em;text-transform:uppercase;position:relative}
+.hr-form-unified .hd-logo{position:relative;height:72px;width:auto;max-width:72px;object-fit:contain;filter:brightness(0) invert(1);opacity:.95;flex-shrink:0}
 .hr-form-unified .step-bar{display:flex;align-items:center;justify-content:center;gap:0;padding:1.35rem 2rem;width:100%}
 .hr-form-unified .step-item{display:flex;align-items:center;gap:.65rem;padding:.65rem 1.6rem;border-radius:999px;font-size:.9rem;font-weight:600;transition:all var(--t);cursor:pointer}
 .hr-form-unified .step-item .num{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0}
@@ -63,6 +60,8 @@ body.hr-form-unified{
 .hr-form-unified .fld{display:flex;flex-direction:column;gap:.35rem}
 .hr-form-unified .fld-lbl{font-size:.8rem;font-weight:600;color:var(--ink2)}
 .hr-form-unified .fld-lbl .req{color:#dc2626;font-weight:700}
+.hr-form-unified .fld-indicator{display:block;font-size:.78rem;color:var(--muted,#6b7280);font-style:italic;margin-top:.15rem}
+.hr-form-unified .fld-hint{font-weight:400;font-size:.85em;color:var(--muted,#6b7280);font-style:italic}
 .hr-form-unified .fld-inp{width:100%;border:1.5px solid rgba(221,232,226,.9);border-radius:var(--r-sm);padding:.65rem 1rem;font-size:.9rem;font-family:inherit;color:var(--ink);background:#fff;outline:none;transition:border-color var(--t),box-shadow var(--t)}
 .hr-form-unified .fld-inp:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(18,84,53,.14)}
 .hr-form-unified .fld-inp::placeholder{color:var(--muted)}

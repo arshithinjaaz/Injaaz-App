@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -1183,18 +1184,9 @@
     }
   </style>
 </head>
-<body>
-  <nav class="navbar">
-    <div class="navbar-container">
-      <a href="/dashboard" class="navbar-brand">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz">
-        <span>Administrative Dashboard</span>
-      </a>
-      <div class="nav-actions">
-        <a href="/dashboard" class="btn btn-primary">← Back to Dashboard</a>
-      </div>
-    </div>
-  </nav>
+<body class="admin-dashboard">
+  {% set active_page = 'admin' %}
+  {% include 'partials/main_navbar.html' with context %}
 
   <div class="container admin-content">
     <div class="page-header">
@@ -3262,6 +3254,8 @@
       loadAutomationStatus();
     });
   </script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>
 

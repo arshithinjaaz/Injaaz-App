@@ -1,32 +1,57 @@
-/* Light, global animations */
+/* =============================================
+   Seamless global animations – Injaaz
+   Subtle, consistent motion across the site
+   ============================================= */
+
+:root {
+  --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation: none !important;
     transition: none !important;
   }
 }
 
+/* Page load – soft fade in */
 body {
-  animation: pageFade 0.35s ease;
+  animation: pageFade 0.28s var(--ease-out) forwards;
 }
 
+/* Links & buttons – subtle lift on hover */
 .btn,
 button,
 a {
-  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+  transition: transform 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out),
+    background 0.15s var(--ease-out), color 0.15s var(--ease-out),
+    border-color 0.15s var(--ease-out), opacity 0.15s var(--ease-out);
 }
 
 .btn:hover,
-button:hover {
+button:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 
+/* Nav links – smooth color transition */
+.nav-menu a,
+.nav a {
+  transition: color 0.15s var(--ease-out), background 0.15s var(--ease-out);
+}
+
+/* Cards & sections – gentle hover lift */
 .card,
 .module-card,
 .history-section,
 .admin-card,
-.form-section {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.form-section,
+.chart-card,
+.kpi-download {
+  transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out);
 }
 
 .card:hover,
@@ -37,11 +62,12 @@ button:hover {
   transform: translateY(-2px);
 }
 
+/* Badges & tags */
 .badge,
 .status-badge,
 .workflow-badge,
 .module-tag {
-  transition: transform 0.2s ease;
+  transition: transform 0.15s var(--ease-out), opacity 0.15s var(--ease-out);
 }
 
 .badge:hover,
@@ -51,10 +77,71 @@ button:hover {
   transform: translateY(-1px);
 }
 
+/* Form inputs – smooth focus */
+input,
+select,
+textarea {
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out),
+    background 0.15s var(--ease-out);
+}
+
+/* Modals & overlays */
+.modal-overlay,
+.roadmap-overlay,
+.reportfolder-overlay {
+  transition: opacity 0.2s var(--ease-out), visibility 0.2s var(--ease-out);
+}
+
+.modal-automation,
+.roadmap-panel,
+.reportfolder-panel {
+  transition: transform 0.22s var(--ease-out);
+}
+
+/* Upload zone & interactive blocks */
+.upload-zone,
+.upload-side-actions .btn {
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out),
+    transform 0.15s var(--ease-out);
+}
+
+.upload-zone:hover {
+  transform: translateY(-1px);
+}
+
+/* Table rows – subtle highlight */
+tr,
+.table-row,
+.cycle-item {
+  transition: background 0.15s var(--ease-out);
+}
+
+/* Staggered fade-in utility */
+.animate-in {
+  animation: fadeInUp 0.35s var(--ease-out) forwards;
+  opacity: 0;
+}
+
+.animate-in-delay-1 { animation-delay: 0.06s; }
+.animate-in-delay-2 { animation-delay: 0.12s; }
+.animate-in-delay-3 { animation-delay: 0.18s; }
+.animate-in-delay-4 { animation-delay: 0.24s; }
+
 @keyframes pageFade {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
