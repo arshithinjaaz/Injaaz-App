@@ -71,10 +71,35 @@ def _format_report_date(dt: datetime) -> str:
     return f"{d}{suffix} of {dt.strftime('%B %Y')}"
 
 
-def _report_filename() -> str:
-    """Excel filename: 'Daily Report on Resolved and Pending Complaints for 28th of February 2026.xlsx'"""
-    yesterday = datetime.now() - timedelta(days=1)
-    date_str = _format_report_date(yesterday)
+def _format_report_date_range_str(date_range: tuple | None) -> str | None:
+    """Format date range for filename: 1 date=single, 2 dates=date1 & date2, 3+=date1 - date2."""
+    if not date_range or len(date_range) < 2:
+        return None
+    min_d, max_d = date_range[0], date_range[1]
+    n_unique = date_range[2] if len(date_range) >= 3 else 1
+    if not min_d or not max_d:
+        return None
+    s1, s2 = _format_report_date(min_d), _format_report_date(max_d)
+    if n_unique == 1 or min_d.date() == max_d.date():
+        return s1
+    if n_unique == 2:
+        return f"{s1} & {s2}"
+    return f"{s1} - {s2}"
+
+
+def _report_filename(report_date: datetime | None = None, report_date_range: tuple | None = None,
+                     upload_path: str | None = None) -> str:
+    """Excel filename based on report date(s).
+    1 date: single date | 2 dates: date1 & date2 | 3+ dates: date1 - date2"""
+    date_str = _format_report_date_range_str(report_date_range) if report_date_range else None
+    if date_str is None:
+        dt = report_date
+        if dt is None and upload_path and os.path.exists(upload_path):
+            from .mmr_service import get_report_date_from_excel
+            dt = get_report_date_from_excel(upload_path)
+        if dt is None:
+            dt = datetime.now() - timedelta(days=1)
+        date_str = _format_report_date(dt)
     return f"Daily Report on Resolved and Pending Complaints for {date_str}.xlsx"
 
 
@@ -96,20 +121,27 @@ def _reports_folder():
     return folder
 
 
-# TrueNAS / network drive path for Save to Drive (set TRUENAS_CAFM_PATH in .env to override)
+# TrueNAS / network drive paths for Save to Drive
 _TRUENAS_CAFM_PATH = os.environ.get('TRUENAS_CAFM_PATH') or r'\\172.25.70.137\Injaaz\CAFM\Daily Generated Report'
+_SAVE_TO_DRIVE_GENERAL_PATH = os.environ.get('MMR_SAVE_DRIVE_GENERAL_PATH') or r'\\172.25.70.137\Injaaz\General\CAFM\Daily Generated Report'
+# Email report save location (set MMR_EMAIL_SAVE_PATH in .env to override)
+_EMAIL_REPORT_SAVE_PATH = os.environ.get('MMR_EMAIL_SAVE_PATH') or r'\\172.25.70.137\Injaaz\General\CAFM'
 
 
 def _save_report_to_folder(report_bytes: bytes, base_filename: str, suffix: str = '',
                           filters: dict | None = None) -> str | None:
-    """Save report to folder with timestamp. Optionally save filter state to restore dashboard.
-    Returns saved filename or None."""
+    """Save report to folder. Filename uses only reported date(s), no save timestamp.
+    Optionally save filter state to restore dashboard. Returns saved filename or None."""
     try:
         folder = _reports_folder()
-        now = datetime.now()
-        ts = now.strftime('%Y-%m-%d_%H-%M-%S')
-        name = base_filename.replace('.xlsx', '') + (f'_{suffix}' if suffix else '') + f'_{ts}.xlsx'
+        base = base_filename.replace('.xlsx', '') if base_filename.endswith('.xlsx') else base_filename
+        name = base + '.xlsx'
         path = os.path.join(folder, name)
+        n = 1
+        while os.path.exists(path):
+            n += 1
+            name = f"{base} ({n}).xlsx"
+            path = os.path.join(folder, name)
         with open(path, 'wb') as f:
             f.write(report_bytes)
         # Save filter state for restoring dashboard when opening report
@@ -121,6 +153,22 @@ def _save_report_to_folder(report_bytes: bytes, base_filename: str, suffix: str 
     except Exception as e:
         logger.warning(f'MMR save to folder failed: {e}')
         return None
+
+
+def _save_email_report_to_network(report_bytes: bytes, base_filename: str) -> None:
+    """Save email report to General CAFM path (\\\\172.25.70.137\\Injaaz\\General\\CAFM). Best-effort, logs on failure.
+    Filename uses only reported date(s), no save timestamp."""
+    try:
+        name = base_filename if base_filename.endswith('.xlsx') else base_filename + '.xlsx'
+        path, err, saved_locally = _save_report_to_drive(report_bytes, name, save_path=_EMAIL_REPORT_SAVE_PATH)
+        if path and not saved_locally:
+            logger.info(f'MMR email report saved to network: {path}')
+        elif path and saved_locally:
+            logger.warning(f'MMR email report: network unavailable, saved locally: {path}')
+        elif err:
+            logger.warning(f'MMR email report save to {_EMAIL_REPORT_SAVE_PATH} failed: {err}')
+    except Exception as e:
+        logger.warning(f'MMR save email report to network failed: {e}')
 
 
 def _save_report_to_drive(report_bytes: bytes, filename: str, save_path: str | None = None) -> tuple[str | None, str | None, bool]:
@@ -138,9 +186,10 @@ def _save_report_to_drive(report_bytes: bytes, filename: str, save_path: str | N
         path = os.path.join(base, filename)
         with open(path, 'wb') as f:
             f.write(report_bytes)
+        logger.info(f'MMR report saved to network: {path}')
         return path, None, False
     except PermissionError as e:
-        logger.warning(f'MMR save to drive permission error: {e}')
+        logger.warning(f'MMR save to drive permission error ({base}): {e}')
         return None, 'Permission denied. Check TrueNAS share permissions.', False
     except OSError as e:
         logger.warning(f'MMR save to drive failed: {e}')
@@ -150,6 +199,7 @@ def _save_report_to_drive(report_bytes: bytes, filename: str, save_path: str | N
             local_name = _save_report_to_folder(report_bytes, filename, 'drive_fallback')
             if local_name:
                 local_path = os.path.join(_reports_folder(), local_name)
+                logger.warning(f'MMR save to drive failed ({base}): {err}. Fallback: saved locally to {local_path}')
                 return local_path, None, True  # Success, saved locally
         except Exception:
             pass
@@ -157,12 +207,14 @@ def _save_report_to_drive(report_bytes: bytes, filename: str, save_path: str | N
             return None, f'Cannot reach TrueNAS. Ensure {base} is accessible. ({err})', False
         return None, err, False
     except Exception as e:
-        logger.warning(f'MMR save to drive failed: {e}')
+        logger.warning(f'MMR save to drive failed ({base}): {e}')
         # Fallback to local
         try:
             local_name = _save_report_to_folder(report_bytes, filename, 'drive_fallback')
             if local_name:
-                return os.path.join(_reports_folder(), local_name), None, True
+                local_path = os.path.join(_reports_folder(), local_name)
+                logger.warning(f'MMR drive fallback: saved locally to {local_path}')
+                return local_path, None, True
         except Exception:
             pass
         return None, str(e), False
@@ -382,10 +434,11 @@ def download_report():
         return jsonify({'error': 'No file uploaded yet. Please upload an Excel file first.'}), 404
 
     try:
-        from .mmr_service import parse_excel, generate_report_excel
+        from .mmr_service import parse_excel, generate_report_excel, get_report_date_range_from_df
         df = parse_excel(path)
         report_bytes = generate_report_excel(df)
-        filename = _report_filename()
+        date_range = get_report_date_range_from_df(df)
+        filename = _report_filename(report_date_range=date_range, upload_path=path)
         return send_file(
             BytesIO(report_bytes),
             as_attachment=True,
@@ -415,7 +468,7 @@ def save_to_folder():
     filters = data.get('filters')  # { client, contract, serviceGroup, space, status, priority }
 
     try:
-        from .mmr_service import parse_excel, generate_report_excel, rows_to_df
+        from .mmr_service import parse_excel, generate_report_excel, rows_to_df, get_report_date_range_from_df
         if rows:
             df = rows_to_df(rows)
             if df.empty:
@@ -423,7 +476,8 @@ def save_to_folder():
         else:
             df = parse_excel(path)
         report_bytes = generate_report_excel(df)
-        filename = _report_filename()
+        date_range = get_report_date_range_from_df(df)
+        filename = _report_filename(report_date_range=date_range, upload_path=path)
         saved = _save_report_to_folder(report_bytes, filename, 'saved', filters=filters)
         if saved:
             return jsonify({'success': True, 'filename': saved})
@@ -448,7 +502,7 @@ def save_to_drive():
     save_path = data.get('save_path')
 
     try:
-        from .mmr_service import parse_excel, generate_report_excel, rows_to_df
+        from .mmr_service import parse_excel, generate_report_excel, rows_to_df, get_report_date_range_from_df
         if rows:
             df = rows_to_df(rows)
             if df.empty:
@@ -456,15 +510,40 @@ def save_to_drive():
         else:
             df = parse_excel(path)
         report_bytes = generate_report_excel(df)
-        base_name = _report_filename().replace('.xlsx', '')
-        ts = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        filename = f'{base_name}_{ts}.xlsx'
-        saved_path, err, saved_locally = _save_report_to_drive(report_bytes, filename, save_path=save_path)
-        if saved_path:
-            return jsonify({
-                'success': True, 'path': saved_path, 'filename': filename,
-                'saved_locally': saved_locally
-            })
+        date_range = get_report_date_range_from_df(df)
+        filename = _report_filename(report_date_range=date_range, upload_path=path)
+
+        if save_path:
+            # Custom path: save only there
+            saved_path, err, saved_locally = _save_report_to_drive(report_bytes, filename, save_path=save_path)
+            if saved_path:
+                return jsonify({
+                    'success': True, 'path': saved_path, 'filename': filename,
+                    'saved_locally': saved_locally
+                })
+        else:
+            # Default Save to Drive: save to both locations
+            path1, err1, loc1 = _save_report_to_drive(report_bytes, filename, save_path=_TRUENAS_CAFM_PATH)
+            path2, err2, loc2 = _save_report_to_drive(report_bytes, filename, save_path=_SAVE_TO_DRIVE_GENERAL_PATH)
+            if path1 or path2:
+                if err1 and not loc1:
+                    logger.warning(f'MMR Save to Drive: CAFM path failed: {err1}')
+                if err2 and not loc2:
+                    logger.warning(f'MMR Save to Drive: General CAFM path failed: {err2}')
+                if path1 and path2 and not (loc1 or loc2):
+                    logger.info(f'MMR Save to Drive: saved to both network locations')
+                return jsonify({
+                    'success': True,
+                    'path': path1 or path2,
+                    'filename': filename,
+                    'saved_locally': loc1 or loc2,
+                    'saved_to_both': bool(path1 and path2 and not (loc1 or loc2)),
+                    'local_folder': _reports_folder() if (loc1 or loc2) else None
+                })
+            msg = err1 or err2 or 'Failed to save to drive. Check network access.'
+            logger.error(f'MMR Save to Drive: both paths failed. CAFM: {err1}; General: {err2}')
+            return jsonify({'error': msg}), 500
+
         msg = err or 'Failed to save to drive. Check network access to TrueNAS.'
         return jsonify({'error': msg}), 500
     except Exception as e:
@@ -756,10 +835,6 @@ def send_email_now():
     cc_raw = data.get('cc', '').strip()
     subject = data.get('subject', _DEFAULT_CONFIG['subject'])
     body    = data.get('body', '')
-    yesterday = datetime.now() - timedelta(days=1)
-    report_date = _format_report_date(yesterday)
-    subject = subject.replace(_REPORT_DATE_PLACEHOLDER, report_date)
-    body = body.replace(_REPORT_DATE_PLACEHOLDER, report_date)
 
     if not to_raw:
         return jsonify({'error': 'Recipient (To) email is required'}), 400
@@ -775,10 +850,19 @@ def send_email_now():
 
     # Generate report
     try:
-        from .mmr_service import parse_excel, generate_report_excel, format_chargeable_summary_for_email, format_per_tower_chargeable_html_for_email
+        from .mmr_service import parse_excel, generate_report_excel, get_report_date_range_from_df, format_chargeable_summary_for_email, format_per_tower_chargeable_html_for_email
         df = parse_excel(path)
         report_bytes = generate_report_excel(df)
-        filename = _report_filename()
+        date_range = get_report_date_range_from_df(df)
+        filename = _report_filename(report_date_range=date_range, upload_path=path)
+        # Build report_date string for subject/body (same format as filename date part)
+        report_date = _format_report_date_range_str(date_range)
+        if report_date is None:
+            from .mmr_service import get_report_date_from_excel
+            report_dt = get_report_date_from_excel(path) or (datetime.now() - timedelta(days=1))
+            report_date = _format_report_date(report_dt)
+        subject = subject.replace(_REPORT_DATE_PLACEHOLDER, report_date)
+        body = body.replace(_REPORT_DATE_PLACEHOLDER, report_date)
 
         # Intro for HTML (full body before chargeable summary)
         intro_for_html = body.rstrip()
@@ -831,6 +915,7 @@ def send_email_now():
         )
         if ok:
             _save_report_to_folder(report_bytes, filename, 'email')
+            _save_email_report_to_network(report_bytes, filename)
             try:
                 rc = len(to_list) + (len(cc_list) if cc_list else 0)
                 _complete_current_cycle(_get_caller_identity(), subject, rc, filename)

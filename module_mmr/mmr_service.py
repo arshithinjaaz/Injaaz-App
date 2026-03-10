@@ -41,6 +41,70 @@ LOGO_PATH = os.path.join(
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Report date extraction (from parmToDate or Reported Date)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def get_report_date_from_excel(file_path: str):
+    """Extract report date from CAFM Excel. Tries parmToDate first, else max(Reported Date).
+    Returns datetime or None."""
+    try:
+        df_raw = pd.read_excel(file_path, sheet_name='Reactive Workorder Details', header=None)
+        # parmToDate is in col 0, value in next row
+        for i in range(len(df_raw) - 1):
+            val = df_raw.iloc[i, 0]
+            if pd.notna(val) and str(val).strip().lower() == 'parmtodate':
+                next_val = df_raw.iloc[i + 1, 0]
+                if pd.notna(next_val):
+                    dt = pd.to_datetime(next_val, errors='coerce')
+                    if pd.notna(dt):
+                        return dt.to_pydatetime()
+                break
+        # Fallback: max Reported Date from parsed data
+        df = pd.read_excel(file_path, sheet_name='Reactive Workorder Details')
+        if 'Reported Date' in df.columns:
+            df['Reported Date'] = pd.to_datetime(df['Reported Date'], errors='coerce')
+            max_d = df['Reported Date'].max()
+            if pd.notna(max_d):
+                return max_d.to_pydatetime()
+    except Exception:
+        pass
+    return None
+
+
+def get_report_date_from_df(df: pd.DataFrame):
+    """Get report date from DataFrame (max of Reported Date). Returns datetime or None."""
+    r = get_report_date_range_from_df(df)
+    return r[1] if r else None  # max date
+
+
+def get_report_date_range_from_df(df: pd.DataFrame, exclude_today: bool = True) -> tuple | None:
+    """Get (min, max, n_unique) Reported Date from DataFrame. Excludes today (save date) by default.
+    Returns (min_dt, max_dt, count_of_unique_dates) or None."""
+    if df is None or df.empty or 'Reported Date' not in df.columns:
+        return None
+    try:
+        from datetime import date
+        work = df.copy()
+        work['Reported Date'] = pd.to_datetime(work['Reported Date'], errors='coerce')
+        work = work.dropna(subset=['Reported Date'])
+        if work.empty:
+            return None
+        if exclude_today:
+            today = date.today()
+            work = work[work['Reported Date'].dt.date < today]
+            if work.empty:
+                return None
+        min_d = work['Reported Date'].min()
+        max_d = work['Reported Date'].max()
+        n_unique = work['Reported Date'].dt.date.nunique()
+        if pd.notna(min_d) and pd.notna(max_d):
+            return (min_d.to_pydatetime(), max_d.to_pydatetime(), int(n_unique))
+    except Exception:
+        pass
+    return None
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Parsing
 # ──────────────────────────────────────────────────────────────────────────────
 

@@ -842,7 +842,7 @@
             <button class="btn btn-outline" id="btnSaveToFolder" onclick="saveToFolder()" disabled title="Save current report (filtered or full) to Report folder">
               📁 Save to Folder
             </button>
-            <button class="btn btn-outline" id="btnSaveToDrive" onclick="saveToDrive()" disabled title="Save report to \\172.25.70.137\Injaaz\CAFM\Daily Generated Report">
+            <button class="btn btn-outline" id="btnSaveToDrive" onclick="saveToDrive()" disabled title="Save report to General\CAFM and CAFM\Daily Generated Report">
               💾 Save to Drive
             </button>
             <button class="btn btn-outline" onclick="saveEmailConfig()">
@@ -1940,7 +1940,9 @@ async function saveToDrive() {
     if (resp.ok && data.success) {
       btn.textContent = '✓ Saved';
       const msg = data.saved_locally
-        ? `✓ Saved locally (drive unavailable): ${data.filename || 'report'}`
+        ? `✓ Saved locally (network drive unavailable): ${data.filename || 'report'}. Check Saved Report folder.`
+        : data.saved_to_both
+        ? `✓ Saved to both network locations: ${data.filename || 'report'}`
         : `✓ File saved: ${data.filename || 'report'}`;
       toast(msg, 'success');
       setTimeout(() => {

@@ -22,10 +22,10 @@ def _run_scheduled_report(app):
             import os
             from datetime import datetime, timedelta
             from .routes import (_upload_path, _load_config, _save_last_run,
-                                  _save_report_to_folder, _format_report_date,
-                                  _REPORT_DATE_PLACEHOLDER, _report_filename,
-                                  _complete_current_cycle)
-            from .mmr_service import parse_excel, generate_report_excel, format_chargeable_summary_for_email, format_per_tower_chargeable_html_for_email
+                                  _save_report_to_folder, _save_email_report_to_network,
+                                  _format_report_date, _format_report_date_range_str,
+                                  _REPORT_DATE_PLACEHOLDER, _report_filename, _complete_current_cycle)
+            from .mmr_service import parse_excel, generate_report_excel, get_report_date_range_from_df, get_report_date_from_excel, format_chargeable_summary_for_email, format_per_tower_chargeable_html_for_email
             from common.email_service import send_email
 
             config = _load_config()
@@ -51,11 +51,14 @@ def _run_scheduled_report(app):
 
             df = parse_excel(path)
             report_bytes = generate_report_excel(df)
-            filename = _report_filename()
+            date_range = get_report_date_range_from_df(df)
+            filename = _report_filename(report_date_range=date_range, upload_path=path)
 
             body = config.get('body', '')
-            yesterday = datetime.now() - timedelta(days=1)
-            report_date = _format_report_date(yesterday)
+            report_date = _format_report_date_range_str(date_range)
+            if report_date is None:
+                report_dt = get_report_date_from_excel(path) or (datetime.now() - timedelta(days=1))
+                report_date = _format_report_date(report_dt)
             subject = config.get('subject', 'Daily Report on Resolved and Pending Complaints for {{REPORT_DATE}}').replace(_REPORT_DATE_PLACEHOLDER, report_date)
             body = body.replace(_REPORT_DATE_PLACEHOLDER, report_date)
             intro_for_html = body.rstrip()
@@ -91,6 +94,7 @@ def _run_scheduled_report(app):
             recipient_count = len(to_list) + (len(cc_list) if cc_list else 0)
             _save_last_run('success', to_list, cc_list, subject, recipient_count)
             _save_report_to_folder(report_bytes, filename, 'email')
+            _save_email_report_to_network(report_bytes, filename)
             _complete_current_cycle('scheduler', subject, recipient_count, filename)
             logger.info('MMR scheduled report sent successfully')
         except Exception:

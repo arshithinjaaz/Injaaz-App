@@ -196,6 +196,8 @@ def _normalize_form_data_for_docx(form_data, form_type):
     if form_type == 'duty_resumption':
         if fd.get('company') and not fd.get('organization'):
             fd['organization'] = fd['company']
+        if not fd.get('job_title'):
+            fd['job_title'] = fd.get('position') or fd.get('designation') or '-'
 
     # --- Passport Release: purpose_of_release, release_date ---
     if form_type == 'passport_release':
@@ -204,6 +206,10 @@ def _normalize_form_data_for_docx(form_data, form_type):
 
     # --- Contract renewal: map sub-ratings to section ratings for DOCX ---
     if form_type == 'contract_renewal':
+        if fd.get('current_contract_end') and not fd.get('contract_end_date'):
+            fd['contract_end_date'] = fd['current_contract_end']
+        if fd.get('evaluator_name') and not fd.get('evaluation_by'):
+            fd['evaluation_by'] = fd['evaluator_name']
         for sn, keys in [
             ('01', ['rating_01a', 'rating_01b', 'rating_01c', 'rating_01d', 'rating_01e']),
             ('02', ['rating_02a', 'rating_02b', 'rating_02c', 'rating_02d', 'rating_02e']),
@@ -218,6 +224,16 @@ def _normalize_form_data_for_docx(form_data, form_type):
                 fd[f'rating_{sn}'] = '-'
         if fd.get('areas_for_improvement') and not fd.get('areas_for_improvement_display'):
             fd['areas_for_improvement_display'] = fd['areas_for_improvement']
+        if not fd.get('strength'):
+            fd['strength'] = fd.get('employee_strength') or fd.get('strengths') or '-'
+        if not fd.get('recommendation'):
+            fd['recommendation'] = fd.get('overall_recommendation') or fd.get('renewal_recommendation') or '-'
+        if not fd.get('overall_score'):
+            section_ratings = [fd.get(f'rating_{s}') for s in ('01', '02', '03', '04')]
+            numeric = [float(r) for r in section_ratings if r and r != '-']
+            if numeric:
+                avg = round(sum(numeric) / len(numeric), 1)
+                fd['overall_score'] = int(avg) if avg == int(avg) else avg
 
     # --- Interview Assessment: map rating values to display + field aliases ---
     if form_type == 'interview_assessment':
@@ -238,6 +254,8 @@ def _normalize_form_data_for_docx(form_data, form_type):
 
     # --- Station Clearance: type_of_departure display + field aliases ---
     if form_type == 'station_clearance':
+        if not fd.get('employment_date'):
+            fd['employment_date'] = fd.get('date_of_joining') or fd.get('joining_date') or '-'
         if fd.get('last_working_day') and not fd.get('last_working_date'):
             fd['last_working_date'] = fd['last_working_day']
         if fd.get('departure_reason') and not fd.get('type_of_departure'):
@@ -250,8 +268,10 @@ def _normalize_form_data_for_docx(form_data, form_type):
         else:
             fd['type_of_departure_display'] = fd.get('type_of_departure') or '-'
 
-    # --- Visa Renewal: decision display ---
+    # --- Visa Renewal: employer alias + decision display ---
     if form_type == 'visa_renewal':
+        if not fd.get('employer'):
+            fd['employer'] = fd.get('company') or fd.get('organization') or 'INJAAZ'
         dec_map = {'continue': 'Continue employment for next 2 years and willing to have visa renewed',
                    'discontinue': 'Discontinue service and require visa cancellation'}
         if fd.get('decision') in dec_map:
@@ -331,6 +351,95 @@ def _get_context_extra_for_form(form_type, fd):
     return extra
 
 
+_LEAVE_CHECKBOX_MAP = {
+    'annual': 'Annual Leave',
+    'ot_compensatory': 'OT Compensatory Off',
+    'examination': 'Examination Leave',
+    'study': 'Study Leave',
+    'sick': 'Sick Leave',
+    'compassionate': 'Compassionate Leave',
+    'hajj': 'Hajj Leave',
+    'unpaid': 'Unpaid Leave',
+    'other': 'Other',
+}
+
+_RATING_COL_MAP = {
+    'outstanding': 2,
+    'v_good': 3,
+    'v. good': 3,
+    'good': 4,
+    'fair': 5,
+    'low': 6,
+}
+
+
+def _post_render_leave_checkboxes(doc, ctx):
+    """Mark the selected leave type checkbox [X] in the rendered Leave Application DOCX."""
+    leave_type = ctx.get('leave_type') or ''
+    leave_type_key = (ctx.get('leave_type_display') or leave_type or '').strip()
+    if not leave_type_key or leave_type_key == '-':
+        return
+
+    try:
+        table = doc.tables[1]
+    except (IndexError, AttributeError):
+        return
+
+    for row in table.rows:
+        cell = row.cells[0]
+        cell_text = cell.text
+        if '[ ]' not in cell_text:
+            continue
+        label = cell_text.replace('[ ]', '').strip()
+        if leave_type_key.lower() in label.lower() or label.lower() in leave_type_key.lower():
+            for para in cell.paragraphs:
+                for run in para.runs:
+                    if run.text.strip() == '[':
+                        run.text = '[X'
+                        return
+
+
+def _post_render_interview_ratings(doc, ctx):
+    """Move rating values from last column to the correct rating column in Interview Assessment.
+    Columns: 2=Outstanding, 3=V. Good, 4=Good, 5=Fair, 6=Low.
+    After render, all rating display values land in col 6. Move each to its proper column."""
+    try:
+        table = doc.tables[2]
+    except (IndexError, AttributeError):
+        return
+
+    for ri, row in enumerate(table.rows):
+        if ri < 3 or len(row.cells) < 7:
+            continue
+        last_cell = row.cells[6]
+        val = last_cell.text.strip()
+        if not val or val == '-':
+            continue
+
+        target_col = _RATING_COL_MAP.get(val.lower())
+        if target_col is None:
+            continue
+
+        if target_col != 6:
+            target_cell = row.cells[target_col]
+            if target_cell.paragraphs:
+                if target_cell.paragraphs[0].runs:
+                    target_cell.paragraphs[0].runs[0].text = val
+                else:
+                    target_cell.paragraphs[0].add_run(val)
+            for para in last_cell.paragraphs:
+                for run in para.runs:
+                    run.text = ''
+
+
+def _apply_post_render(form_type, doc, ctx):
+    """Dispatch post-render fixups for specific form types."""
+    if form_type in ('leave', 'leave_application'):
+        _post_render_leave_checkboxes(doc, ctx)
+    elif form_type == 'interview_assessment':
+        _post_render_interview_ratings(doc, ctx)
+
+
 def _generate_filled_docx_generic(form_type, form_data, output_path_or_stream, submission_id=None,
                                    context_extra=None, signature_pairs=None):
     """Load template, build context (generic + extra), add signatures, render, save."""
@@ -351,18 +460,31 @@ def _generate_filled_docx_generic(form_type, form_data, output_path_or_stream, s
     if signature_pairs:
         tmp_paths = _add_signatures_to_context(tpl, ctx, form_data, signature_pairs)  # use original for signatures
     tpl.render(ctx)
-    try:
+
+    needs_post_render = form_type in ('leave', 'leave_application', 'interview_assessment')
+    if needs_post_render:
+        from docx import Document as DocxDoc
+        tmp_buf = BytesIO()
+        tpl.save(tmp_buf)
+        tmp_buf.seek(0)
+        post_doc = DocxDoc(tmp_buf)
+        _apply_post_render(form_type, post_doc, ctx)
+        if hasattr(output_path_or_stream, 'write'):
+            post_doc.save(output_path_or_stream)
+        else:
+            post_doc.save(output_path_or_stream)
+    else:
         if hasattr(output_path_or_stream, 'write'):
             tpl.save(output_path_or_stream)
         else:
             tpl.save(output_path_or_stream)
-    finally:
-        for p in tmp_paths:
-            try:
-                if os.path.exists(p):
-                    os.unlink(p)
-            except OSError:
-                pass
+
+    for p in tmp_paths:
+        try:
+            if os.path.exists(p):
+                os.unlink(p)
+        except OSError:
+            pass
 
 
 def _signature_to_transparent_png(data_url):

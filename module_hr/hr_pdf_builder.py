@@ -27,8 +27,8 @@ C_LIGHT = colors.HexColor("#cccccc")
 C_WHITE = colors.white
 
 _W, _H = A4
-_LM = 1.4 * cm
-_RM = 1.4 * cm
+_LM = 1.2 * cm
+_RM = 1.2 * cm
 CONTENT_W = _W - _LM - _RM
 
 LOGO_PATH = os.path.join(
@@ -187,10 +187,10 @@ def _header_table(form_name, styles):
         '<font size="8" color="#666666"><b>Injaaz Facility Management</b></font>',
         ParagraphStyle("HSub", fontSize=8, textColor=C_GRAY, fontName="Helvetica-Bold", alignment=TA_LEFT, spaceAfter=3),
     )
-    # Form name - headline, bold, suitable for page
+    # Form name - headline, compact
     ttl = Paragraph(
-        f'<font size="16" color="#000000"><b>{form_name.title()}</b></font>',
-        ParagraphStyle("HT", fontSize=16, textColor=C_BLACK, fontName="Helvetica-Bold", alignment=TA_LEFT, spaceAfter=0),
+        f'<font size="14" color="#000000"><b>{form_name.title()}</b></font>',
+        ParagraphStyle("HT", fontSize=14, textColor=C_BLACK, fontName="Helvetica-Bold", alignment=TA_LEFT, spaceAfter=0),
     )
     title_block = Table([[sub], [ttl]], colWidths=[CONTENT_W * 0.68])
     title_block.setStyle(TableStyle([
@@ -207,7 +207,7 @@ def _header_table(form_name, styles):
         ("RIGHTPADDING", (0, 0), (0, -1), 12),
         ("LEFTPADDING", (1, 0), (1, -1), 16),
         ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
         ("LINEBELOW", (0, 0), (-1, -1), 0.5, C_BLACK),
     ]))
     return t
@@ -243,9 +243,9 @@ def _section_bar(title, styles):
 
 
 def _section_bar_numbered(num, title, styles=None, large=False):
-    """Compact: number + title, thin underline. large=True for bigger section headers."""
+    """Compact: number + title, thin underline. large=True for slightly bigger section headers."""
     styles = styles or _get_styles()
-    fs, bp = (11, 12) if large else (9, 8)
+    fs, bp = (9, 6) if large else (8, 4)
     if num:
         txt = f"<b>{num}. {title}</b>"
         inner = Paragraph(txt, ParagraphStyle("Sec", fontSize=fs, textColor=C_BLACK, fontName="Helvetica-Bold", alignment=TA_LEFT))
@@ -271,11 +271,11 @@ def _section_bar_numbered(num, title, styles=None, large=False):
 
 
 def _data_table(pairs, cols=2, styles=None, large=False):
-    """Modern minimal: label | value, horizontal lines only. large=True for bigger text and spacing."""
+    """Compact: label | value, horizontal lines only. large=True for slightly bigger text."""
     if not pairs:
-        return Spacer(1, 0.05 * inch)
-    lf, vf, ld = (9, 10, 14) if large else (7, 8, 11)
-    cp = 10 if large else 6
+        return Spacer(1, 0.03 * inch)
+    lf, vf, ld = (8, 9, 12) if large else (7, 8, 10)
+    cp = 5 if large else 4
     lbl_style = ParagraphStyle("DTL", fontSize=lf, textColor=C_BLACK, fontName="Helvetica-Bold", alignment=TA_LEFT)
     val_style = ParagraphStyle("DTV", fontSize=vf, textColor=C_BLACK, fontName="Helvetica", alignment=TA_LEFT, leading=ld)
     if cols == 4:
@@ -299,7 +299,7 @@ def _data_table(pairs, cols=2, styles=None, large=False):
         ]
         cw = [CONTENT_W * 0.28, CONTENT_W * 0.72]
     t = Table(rows, colWidths=cw)
-    pad = 10 if large else 8
+    pad = 6 if large else 5
     style_cmds = [
         ("ALIGN", (0, 0), (-1, -1), "LEFT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -326,8 +326,8 @@ def _form_fields(pairs, styles=None):
 
 
 def _long_field(label, value, styles=None, large=False):
-    lf, vf, ld = (8, 10, 14) if large else (7, 8, 11)
-    pad, cp = (10, 8) if large else (8, 6)
+    lf, vf, ld = (8, 9, 12) if large else (7, 8, 10)
+    pad, cp = (6, 5) if large else (5, 4)
     lbl_style = ParagraphStyle("LFL", fontSize=lf, textColor=C_BLACK, fontName="Helvetica-Bold", alignment=TA_LEFT)
     val_style = ParagraphStyle("LFV", fontSize=vf, textColor=C_BLACK, fontName="Helvetica", alignment=TA_LEFT, leading=ld)
     t = Table([
@@ -377,10 +377,10 @@ def _rating_table(rows_data, styles=None):
         ("ALIGN", (0, 0), (0, -1), "LEFT"),
         ("ALIGN", (1, 0), (2, -1), "CENTER"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("LINEBELOW", (0, 1), (-1, -1), 0.25, C_LIGHT),
     ]))
     return t
@@ -426,10 +426,10 @@ def _checklist_table(items, styles=None, with_date=False):
         ("ALIGN", (0, 0), (0, -1), "LEFT"),
         ("ALIGN", (1, 0), (1, -1), "CENTER"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("LINEBELOW", (0, 1), (-1, -1), 0.25, C_LIGHT),
     ]
     if with_date:
@@ -491,7 +491,7 @@ def _footer_block(styles=None):
 
 def _build_leave(story, fd, styles):
     story.append(_header_table("Leave Application Form", styles))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("01", "Employee Information", styles, large=True))
     story.append(_data_table([
         ("Employee Name", _fd(fd, "employee_name")),
@@ -503,7 +503,7 @@ def _build_leave(story, fd, styles):
         ("Last Leave Date", _fmt(fd.get("last_leave_date"))),
         ("Today's Date", _fmt(fd.get("today_date"))),
     ], cols=4, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("02", "Leave Details", styles, large=True))
     lt = _fd(fd, "leave_type_display") or _fd(fd, "leave_type")
     if lt == "other":
@@ -518,14 +518,14 @@ def _build_leave(story, fd, styles):
         ("Reachable Telephone", _fd(fd, "telephone_reachable")),
         ("Replacement Name", _fd(fd, "replacement_name")),
     ], cols=4, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("03", "Signatures", styles, large=True))
     story.append(_signature_block([
         ("Employee", fd.get("employee_signature"), fd.get("today_date")),
         ("Replacement", fd.get("replacement_signature"), None),
         ("GM Approval", fd.get("gm_signature"), None),
     ], styles, large=True, center=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("04", "HR Use Only", styles, large=True))
     story.append(_data_table([
         ("HR Checked", _fd(fd, "hr_checked")),
@@ -542,12 +542,12 @@ def _build_leave(story, fd, styles):
 
 def _build_commencement(story, fd, styles):
     story.append(_header_table("Commencement Form", styles))
-    story.append(Spacer(1, 0.15 * inch))
+    story.append(Spacer(1, 0.08 * inch))
     story.append(_instruction_line(
         "To complete the administrative aspect of your employment, please complete this form within 5 days of joining and email it to joana@ajmanholding.ae",
         styles,
     ))
-    story.append(Spacer(1, 0.15 * inch))
+    story.append(Spacer(1, 0.08 * inch))
     story.append(_section_bar_numbered("01", "Personal Details", styles, large=True))
     story.append(_data_table([
         ("Full Name", _fd(fd, "employee_name")),
@@ -557,30 +557,30 @@ def _build_commencement(story, fd, styles):
         ("Contact Number", _fd(fd, "contacts")),
         ("Date of Joining (DD/MM/YYYY)", _fmt(fd.get("date_of_joining"))),
     ], cols=2, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("02", "Bank Account Details", styles, large=True))
     story.append(_data_table([
         ("Bank Name", _fd(fd, "bank_name")),
         ("Branch", _fd(fd, "bank_branch")),
         ("Account Number", _fd(fd, "account_number")),
     ], cols=2, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("03", "Employee Declaration", styles, large=True))
     story.append(_signature_block([
         ("Employee Signature", fd.get("employee_signature"), fd.get("employee_sign_date")),
     ], styles, large=True, center=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("04", "Reporting Manager", styles, large=True))
     story.append(_data_table([
         ("Manager Name", _fd(fd, "reporting_to_name")),
         ("Designation / Title", _fd(fd, "reporting_to_designation")),
         ("Contact Number", _fd(fd, "reporting_to_contact")),
     ], cols=2, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_signature_block([
         ("Reporting Officer Signature", fd.get("reporting_to_signature"), fd.get("reporting_sign_date")),
     ], styles, large=True, center=True))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_info_box(
         "Need a Salary Letter? If you require assistance with a salary letter to open a new bank account, "
         "please forward your request to the HR Department.",
@@ -591,7 +591,7 @@ def _build_commencement(story, fd, styles):
 def _build_duty_resumption(story, fd, styles):
     """Duty Resumption: larger text and spacing since content fits on one page."""
     story.append(_header_table("Duty Resumption Form", styles))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("01", "Employee Details", styles, large=True))
     story.append(_data_table([
         ("Requester", _fd(fd, "requester")),
@@ -600,7 +600,7 @@ def _build_duty_resumption(story, fd, styles):
         ("Job Title", _fd(fd, "job_title")),
         ("Company", _fd(fd, "company", "INJAAZ LLC")),
     ], cols=4, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("02", "Leave & Resumption Dates", styles, large=True))
     story.append(_data_table([
         ("Leave Started", _fmt(fd.get("leave_started"))),
@@ -612,7 +612,7 @@ def _build_duty_resumption(story, fd, styles):
     if fd.get("line_manager_remarks"):
         story.append(Spacer(1, 0.12 * inch))
         story.append(_long_field("Line Manager Remarks", fd.get("line_manager_remarks"), styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("03", "Signatures", styles, large=True))
     sigs = [("Employee", fd.get("employee_signature"), fd.get("sign_date"))]
     if fd.get("hr_signature"):
@@ -625,7 +625,7 @@ def _build_duty_resumption(story, fd, styles):
 def _build_passport_release(story, fd, styles):
     ft = _fd(fd, "passport_form_type", "release").replace("_", " ").title()
     story.append(_header_table(f"Passport {ft} Form", styles))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("01", "Request Details", styles, large=True))
     story.append(_data_table([
         ("Form Type", ft),
@@ -640,7 +640,7 @@ def _build_passport_release(story, fd, styles):
     if fd.get("purpose_of_release"):
         story.append(Spacer(1, 0.12 * inch))
         story.append(_long_field("Purpose of Release", fd.get("purpose_of_release"), styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("02", "Signatures", styles, large=True))
     sigs = [("Employee", fd.get("employee_signature"), fd.get("form_date"))]
     if fd.get("hr_signature"):
@@ -652,7 +652,7 @@ def _build_passport_release(story, fd, styles):
 
 def _build_grievance(story, fd, styles):
     story.append(_header_table("Employee Grievance / Disciplinary Action Form", styles))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("01", "First Party (Complainant)", styles, large=True))
     story.append(_data_table([
         ("Employee Name", _fd(fd, "complainant_name")),
@@ -663,7 +663,7 @@ def _build_grievance(story, fd, styles):
         ("Shift / Time", _fd(fd, "shift_time")),
         ("Location", _fd(fd, "issue_location", "").replace("_", " ").title()),
     ], cols=4, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("02", "Second Party", styles, large=True))
     story.append(_data_table([
         ("Employee Name", _fd(fd, "second_party_name")),
@@ -673,7 +673,7 @@ def _build_grievance(story, fd, styles):
         ("Shift / Time", _fd(fd, "second_party_shift")),
         ("Contact No.", _fd(fd, "second_party_contact")),
     ], cols=4, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("03", "Complaint Details", styles, large=True))
     story.append(_long_field("Description of Complaint", fd.get("complaint_description") or fd.get("complaint"), styles, large=True))
     story.append(_data_table([
@@ -681,7 +681,7 @@ def _build_grievance(story, fd, styles):
         ("Who Informed", _fd(fd, "who_informed")),
         ("Attachment", _fd(fd, "attachment")),
     ], cols=2, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("04", "HR Review", styles, large=True))
     story.append(_data_table([
         ("Statement 2nd Party", _fd(fd, "statement_2nd_party")),
@@ -692,7 +692,7 @@ def _build_grievance(story, fd, styles):
         story.append(_long_field("HR Remarks", fd.get("hr_remarks"), styles, large=True))
     if fd.get("gm_remarks"):
         story.append(_long_field("GM Remarks", fd.get("gm_remarks"), styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("05", "Signatures", styles, large=True))
     sigs = [("Complainant", fd.get("complainant_signature"), fd.get("date_of_incident"))]
     if fd.get("hr_signature"):
@@ -704,7 +704,7 @@ def _build_grievance(story, fd, styles):
 
 def _build_visa_renewal(story, fd, styles):
     story.append(_header_table("Visa Renewal Form", styles))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("01", "Employee Information", styles, large=True))
     dec = _fd(fd, "decision_display") or _fd(fd, "decision", "").replace("_", " ").title()
     story.append(_data_table([
@@ -716,14 +716,19 @@ def _build_visa_renewal(story, fd, styles):
         ("Years Completed", _fd(fd, "years_completed")),
         ("Decision", dec),
     ], cols=4, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
-    story.append(_section_bar_numbered("02", "Signature", styles, large=True))
-    story.append(_signature_block([("Employee", fd.get("employee_signature"), fd.get("form_date"))], styles, large=True, center=True))
+    story.append(Spacer(1, 0.12 * inch))
+    story.append(_section_bar_numbered("02", "Signatures", styles, large=True))
+    sigs = [("Employee", fd.get("employee_signature"), fd.get("form_date"))]
+    if fd.get("hr_signature"):
+        sigs.append(("HR", fd.get("hr_signature"), None))
+    if fd.get("gm_signature"):
+        sigs.append(("GM", fd.get("gm_signature"), None))
+    story.append(_signature_block(sigs, styles, large=True, center=True))
 
 
 def _build_interview_assessment(story, fd, styles):
     story.append(_header_table("Interview Assessment Form", styles))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("01", "Candidate Information", styles, large=True))
     story.append(_data_table([
         ("Candidate Name", _fd(fd, "candidate_name")),
@@ -741,7 +746,7 @@ def _build_interview_assessment(story, fd, styles):
         ("Interview Date", _fmt(fd.get("interview_date"))),
         ("Interview By", _fd(fd, "interview_by")),
     ], cols=4, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("02", "Assessment Ratings", styles, large=True))
     rating_map = {"outstanding": "Outstanding", "v_good": "V. Good", "good": "Good", "fair": "Fair", "low": "Low"}
     indicators = [
@@ -767,7 +772,7 @@ def _build_interview_assessment(story, fd, styles):
         ("Overall Rating", indicators[8], rating_map.get(_fd(fd, "rating_overall"), _fd(fd, "rating_overall")), "Outstanding\u2192Low"),
     ]
     story.append(_rating_table(rows, styles))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("03", "Overall Assessment / Comments", styles, large=True))
     if fd.get("assessment_professional"):
         story.append(_long_field("Professional", fd.get("assessment_professional"), styles, large=True))
@@ -778,7 +783,7 @@ def _build_interview_assessment(story, fd, styles):
     story.append(_data_table([("Eligible for Employment", _fd(fd, "eligibility", ""))], cols=2, styles=styles, large=True))
     if fd.get("job_recommended_for"):
         story.append(_data_table([("Job Recommended for", _fd(fd, "job_recommended_for"))], cols=2, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("04", "Interviewer Details", styles, large=True))
     story.append(_data_table([
         ("Interviewer's Name", _fd(fd, "interviewer_name", _fd(fd, "interview_by"))),
@@ -786,7 +791,7 @@ def _build_interview_assessment(story, fd, styles):
     ], cols=2, styles=styles, large=True))
     if fd.get("interviewer_signature"):
         story.append(_signature_block([("Interviewer", fd.get("interviewer_signature"), None)], styles, large=True, center=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("05", "Signatures", styles, large=True))
     sigs = []
     if fd.get("hr_signature"):
@@ -799,7 +804,7 @@ def _build_interview_assessment(story, fd, styles):
 
 def _build_staff_appraisal(story, fd, styles):
     story.append(_header_table("Staff Appraisal Form", styles))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("01", "Employee Information", styles, large=True))
     story.append(_data_table([
         ("Employee Name", _fd(fd, "employee_name")),
@@ -809,7 +814,7 @@ def _build_staff_appraisal(story, fd, styles):
         ("Appraisal Period", _fd(fd, "appraisal_period")),
         ("Reviewer", _fd(fd, "reviewer")),
     ], cols=4, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("02", "Performance Ratings (Scale 1\u20135)", styles, large=True))
     rows = [
         ("Punctuality (15%)", _fd(fd, "rating_punctuality"), "1-5"),
@@ -838,7 +843,7 @@ def _build_staff_appraisal(story, fd, styles):
         story.append(_data_table(comment_pairs, cols=2, styles=styles, large=True))
     if fd.get("employee_strengths"):
         story.append(_long_field("Employee Strengths", fd.get("employee_strengths"), styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("04", "Signatures", styles, large=True))
     sigs = [("Employee", fd.get("employee_signature"), None)]
     if fd.get("hr_signature"):
@@ -850,7 +855,7 @@ def _build_staff_appraisal(story, fd, styles):
 
 def _build_station_clearance(story, fd, styles):
     story.append(_header_table("Station Clearance Form", styles))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("01", "Employee Information", styles, large=True))
     dep_map = {"transfer": "Transfer", "resignation": "Resignation", "termination": "Termination", "end_of_contract": "End of Contract"}
     tdep = dep_map.get(_fd(fd, "type_of_departure"), _fd(fd, "type_of_departure"))
@@ -864,7 +869,7 @@ def _build_station_clearance(story, fd, styles):
         ("Type of Departure", tdep),
         ("Last Working Date", _fmt(fd.get("last_working_date"))),
     ], cols=4, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("02", "Department Clearance", styles, large=True))
     story.append(_checklist_table([
         ("Tasks handed over", fd.get("tasks_handed_over"), fd.get("dept_date_1")),
@@ -876,7 +881,7 @@ def _build_station_clearance(story, fd, styles):
     ], styles, with_date=True))
     if fd.get("dept_others"):
         story.append(_long_field("Department \u2013 Others", fd.get("dept_others"), styles, large=True))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("03", "IT Clearance", styles, large=True))
     story.append(_checklist_table([
         ("E-mail cancelled", fd.get("email_cancelled")),
@@ -885,7 +890,7 @@ def _build_station_clearance(story, fd, styles):
     ], styles))
     if fd.get("it_others"):
         story.append(_long_field("IT \u2013 Others", fd.get("it_others"), styles, large=True))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("04", "HR Clearance", styles, large=True))
     story.append(_checklist_table([
         ("Employee file shifted", fd.get("file_shifted")),
@@ -894,7 +899,7 @@ def _build_station_clearance(story, fd, styles):
     ], styles))
     if fd.get("hr_others"):
         story.append(_long_field("HR \u2013 Others", fd.get("hr_others"), styles, large=True))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("05", "Finance Clearance", styles, large=True))
     story.append(_checklist_table([
         ("EOS Benefits Transfer", fd.get("eos_transfer")),
@@ -903,7 +908,7 @@ def _build_station_clearance(story, fd, styles):
         story.append(_long_field("Finance \u2013 Others", fd.get("finance_others"), styles, large=True))
     if fd.get("remarks"):
         story.append(_long_field("Remarks", fd.get("remarks"), styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("06", "Signatures", styles, large=True))
     sigs = [("Employee", fd.get("employee_signature"), None)]
     if fd.get("hr_signature"):
@@ -913,7 +918,7 @@ def _build_station_clearance(story, fd, styles):
 
 def _build_performance_evaluation(story, fd, styles):
     story.append(_header_table("Performance Evaluation Form", styles))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("01", "Employee Information", styles, large=True))
     story.append(_data_table([
         ("Employee Name", _fd(fd, "employee_name")),
@@ -924,7 +929,7 @@ def _build_performance_evaluation(story, fd, styles):
         ("Date of Joining", _fmt(fd.get("date_of_joining"))),
         ("Evaluation By", _fd(fd, "evaluation_done_by")),
     ], cols=4, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("02", "Performance Scores (Scale 1\u201310)", styles, large=True))
     rows = [
         ("Score 01", _fd(fd, "score_01"), "10"),
@@ -959,7 +964,7 @@ def _build_performance_evaluation(story, fd, styles):
     ]:
         if fd.get(key):
             story.append(_long_field(lbl, fd.get(key), styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("04", "Signatures", styles, large=True))
     sigs = [
         ("Employee", fd.get("employee_signature"), fd.get("employee_sign_date")),
@@ -1002,7 +1007,7 @@ def _build_contract_renewal(story, fd, styles):
         ],
     }
     story.append(_header_table("Contract Renewal Assessment Form", styles))
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, 0.1 * inch))
     story.append(_section_bar_numbered("01", "Employee Information", styles, large=True))
     story.append(_data_table([
         ("Employee Name", _fd(fd, "employee_name")),
@@ -1010,11 +1015,11 @@ def _build_contract_renewal(story, fd, styles):
         ("Department", _fd(fd, "department")),
         ("Designation", _fd(fd, "designation")),
         ("Date of Joining", _fmt(fd.get("date_of_joining"))),
-        ("Contract End Date", _fmt(fd.get("contract_end_date"))),
-        ("Date of Evaluation", _fmt(fd.get("date_of_evaluation"))),
-        ("Evaluation By", _fd(fd, "evaluation_by")),
+        ("Contract End Date", _fmt(fd.get("contract_end_date")) or _fmt(fd.get("current_contract_end"))),
+        ("Date of Evaluation", _fmt(fd.get("date_of_evaluation")) or _fmt(fd.get("today_date"))),
+        ("Evaluation By", _fd(fd, "evaluation_by") or _fd(fd, "evaluator_name")),
     ], cols=4, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     for idx, (sn, title) in enumerate([
         ("01", "Job Performance"),
         ("02", "Attitude & Work Ethics"),
@@ -1032,7 +1037,7 @@ def _build_contract_renewal(story, fd, styles):
         story.append(_rating_table(rows, styles))
         if fd.get(f"comments_{sn}"):
             story.append(_long_field("Comments", fd.get(f"comments_{sn}"), styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
+    story.append(Spacer(1, 0.12 * inch))
     story.append(_section_bar_numbered("06", "Summary", styles, large=True))
     story.append(_data_table([
         ("Total Score", _fd(fd, "overall_score")),
@@ -1040,11 +1045,14 @@ def _build_contract_renewal(story, fd, styles):
         ("Strength", _fd(fd, "strength")),
         ("Areas for Improvement", _fd(fd, "areas_for_improvement")),
     ], cols=2, styles=styles, large=True))
-    story.append(Spacer(1, 0.25 * inch))
-    story.append(_section_bar_numbered("07", "Evaluator Signature", styles, large=True))
-    story.append(_signature_block([
-        ("Evaluator", fd.get("evaluator_signature"), fd.get("evaluator_date")),
-    ], styles, large=True, center=True))
+    story.append(Spacer(1, 0.12 * inch))
+    story.append(_section_bar_numbered("07", "Signatures", styles, large=True))
+    sigs = [("Evaluator", fd.get("evaluator_signature"), fd.get("evaluator_date"))]
+    if fd.get("hr_signature"):
+        sigs.append(("HR", fd.get("hr_signature"), None))
+    if fd.get("gm_signature"):
+        sigs.append(("GM", fd.get("gm_signature"), None))
+    story.append(_signature_block(sigs, styles, large=True, center=True))
 
 
 _BUILDERS = {
@@ -1081,7 +1089,7 @@ def build_hr_pdf(form_type, form_data, output_stream, submission_id=None):
     doc = SimpleDocTemplate(
         buf, pagesize=A4,
         leftMargin=_LM, rightMargin=_RM,
-        topMargin=0.7 * cm, bottomMargin=1.4 * cm,
+        topMargin=0.5 * cm, bottomMargin=1.0 * cm,
     )
     doc.build(story, canvasmaker=lambda *a, **k: HRPDFCanvas(*a, form_title=title, **k))
 
