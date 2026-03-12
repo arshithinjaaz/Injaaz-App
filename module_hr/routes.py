@@ -358,7 +358,10 @@ def hr_download_pdf(submission_id):
         buf.seek(0)
         form_title = get_form_type_display(submission.module_type).replace(' ', '_')
         filename = f"{form_title}_{submission_id}.pdf"
-        return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=filename)
+        resp = send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=filename)
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        return resp
     except Exception as e:
         current_app.logger.exception('PDF generation failed')
         return jsonify({'error': f'Failed to generate PDF: {str(e)}'}), 500

@@ -6,6 +6,8 @@ import os
 import base64
 import logging
 import tempfile
+import zipfile
+import re
 from datetime import datetime
 from io import BytesIO
 
@@ -98,15 +100,24 @@ def _get_docxtpl():
 
 
 def _get_hr_documents_path():
-    """Path to HR Documents folder (project root)"""
+    """Resolve authoritative HR template root (Main templates only)."""
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base, 'HR Documents')
+    # Optional override for deployments with external template mounts.
+    env_path = os.environ.get('HR_DOCX_TEMPLATE_DIR')
+    if env_path and os.path.isdir(env_path):
+        return env_path
+
+    main_path = os.path.join(base, 'HR Documents - Main')
+    if os.path.isdir(main_path):
+        return main_path
+
+    raise FileNotFoundError(
+        "HR template directory not found (expected 'HR Documents - Main')."
+    )
 
 
 def _get_template_path(form_type):
-    """Return template path for form type. Prefer shared file in HR Documents/ root, then templates/."""
-    folder = _get_hr_documents_path()
-    templates_sub = os.path.join(folder, 'templates')
+    """Return placeholder-ready template path from HR Documents - Main only."""
     templates = {
         'commencement': 'Commencement Form - INJAAZ.DOCX',
         'leave_application': 'Leave Application Form - INJAAZ.DOCX',
@@ -124,10 +135,39 @@ def _get_template_path(form_type):
     name = templates.get(form_type)
     if not name:
         return None
-    for base in (folder, templates_sub):
-        path = os.path.join(base, name)
-        if os.path.isfile(path):
+
+    root = _get_hr_documents_path()
+
+    def _template_has_docxtpl_placeholders(path):
+        try:
+            from docx import Document as DocxDocument
+            doc = DocxDocument(path)
+            for para in doc.paragraphs:
+                if '{{' in (para.text or '') and '}}' in (para.text or ''):
+                    return True
+            for table in doc.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        text = cell.text or ''
+                        if '{{' in text and '}}' in text:
+                            return True
+        except Exception:
+            return False
+        return False
+
+    candidates = [
+        os.path.join(root, 'templates', name),  # Prepared placeholder template from Main
+        os.path.join(root, name),               # Raw Main file (should contain placeholders only if explicitly prepared)
+    ]
+    for path in candidates:
+        if os.path.isfile(path) and _template_has_docxtpl_placeholders(path):
             return path
+
+    if any(os.path.isfile(p) for p in candidates):
+        raise FileNotFoundError(
+            f"Template '{name}' found in HR Documents - Main but has no placeholders. "
+            "Prepare placeholder templates under 'HR Documents - Main/templates'."
+        )
     return None
 
 
@@ -373,30 +413,169 @@ _RATING_COL_MAP = {
 }
 
 
+def _set_cell_text_preserve_style(cell, text):
+    """
+    Set cell content while preserving existing paragraph/run formatting.
+    Avoids replacing whole paragraphs (which resets style/alignment).
+    """
+    if not cell.paragraphs:
+        p = cell.add_paragraph()
+        p.add_run(text)
+        return
+
+    p = cell.paragraphs[0]
+    if p.runs:
+        p.runs[0].text = text
+        for run in p.runs[1:]:
+            run.text = ''
+    else:
+        p.add_run(text)
+
+
+def _replace_in_cell_runs(cell, old, new):
+    """Replace text inside existing runs to preserve native formatting."""
+    replaced = False
+    for para in cell.paragraphs:
+        for run in para.runs:
+            if old in (run.text or ''):
+                run.text = run.text.replace(old, new, 1)
+                replaced = True
+                break
+        if replaced:
+            break
+    if not replaced and old in (cell.text or ''):
+        _set_cell_text_preserve_style(cell, (cell.text or '').replace(old, new, 1))
+    return replaced
+
+
+def _tick_checkbox_in_cell_preserve_runs(cell):
+    """
+    Tick first checkbox in a cell while preserving run-level formatting.
+    Handles split-run pattern: '[', ' ', ']' used in HR templates.
+    """
+    for para in cell.paragraphs:
+        runs = para.runs
+        # Try split-run pattern first for exact style preservation.
+        for i in range(len(runs) - 2):
+            a = runs[i].text or ''
+            b = runs[i + 1].text or ''
+            c = runs[i + 2].text or ''
+            if a == '[' and b == ' ' and c == ']':
+                runs[i + 1].text = '✓'
+                return True
+        # Fallback if checkbox appears in a single run.
+        for run in runs:
+            if '[ ]' in (run.text or ''):
+                run.text = run.text.replace('[ ]', '[✓]', 1)
+                return True
+    # Last resort: do nothing (avoid full-cell rewrite that changes styling).
+    return False
+
+
 def _post_render_leave_checkboxes(doc, ctx):
     """Mark the selected leave type checkbox [X] in the rendered Leave Application DOCX."""
-    leave_type = ctx.get('leave_type') or ''
-    leave_type_key = (ctx.get('leave_type_display') or leave_type or '').strip()
+    leave_type = (ctx.get('leave_type') or '').strip().lower()
+    leave_type_key = (ctx.get('leave_type_display') or _LEAVE_CHECKBOX_MAP.get(leave_type) or leave_type or '').strip()
     if not leave_type_key or leave_type_key == '-':
         return
 
-    try:
-        table = doc.tables[1]
-    except (IndexError, AttributeError):
+    for table in getattr(doc, 'tables', []):
+        for row in table.rows:
+            if not row.cells:
+                continue
+            cell = row.cells[0]
+            cell_text = cell.text or ''
+            if '[ ]' not in cell_text:
+                continue
+            label = cell_text.replace('[ ]', '').strip()
+            if leave_type_key.lower() in label.lower() or label.lower() in leave_type_key.lower():
+                seen = set()
+                for rcell in row.cells:
+                    key = id(rcell._tc)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    _tick_checkbox_in_cell_preserve_runs(rcell)
+                return
+
+
+def _clone_leave_option_cell(src_cell, dst_cell, from_label, to_label):
+    """
+    Clone src_cell paragraph XML into dst_cell, replacing from_label with to_label in run text.
+    Preserves every run's font size, bold, family — guaranteed exact visual match.
+    """
+    import copy
+    from docx.oxml.ns import qn as _qn
+
+    if not src_cell.paragraphs or not dst_cell.paragraphs:
+        if dst_cell.paragraphs:
+            dst_cell.paragraphs[0].add_run(f'[ ] {to_label} Leave')
         return
 
-    for row in table.rows:
-        cell = row.cells[0]
-        cell_text = cell.text
-        if '[ ]' not in cell_text:
-            continue
-        label = cell_text.replace('[ ]', '').strip()
-        if leave_type_key.lower() in label.lower() or label.lower() in leave_type_key.lower():
-            for para in cell.paragraphs:
-                for run in para.runs:
-                    if run.text.strip() == '[':
-                        run.text = '[X'
-                        return
+    src_para = src_cell.paragraphs[0]
+    dst_para = dst_cell.paragraphs[0]
+
+    # Deep-clone the source paragraph XML, replace label text only
+    cloned_p = copy.deepcopy(src_para._p)
+    for r_el in cloned_p.findall(_qn('w:r')):
+        t_el = r_el.find(_qn('w:t'))
+        if t_el is not None and from_label in (t_el.text or ''):
+            t_el.text = (t_el.text or '').replace(from_label, to_label)
+
+    # Swap destination paragraph element with the clone
+    dst_para._p.getparent().replace(dst_para._p, cloned_p)
+
+
+def _post_render_leave_options_integrity(doc):
+    """
+    Ensure Unpaid Leave row visually matches other leave-type rows.
+    Clones the Compassionate Leave row (same sb, font, size, bold) and replaces the label.
+    This is the only way to guarantee identical visual rendering.
+    """
+    for table in getattr(doc, 'tables', []):
+        rows = list(table.rows)
+        for i, row in enumerate(rows):
+            if not row.cells:
+                continue
+            txt = (row.cells[0].text or '').strip().lower()
+            if 'compassionate leave' not in txt:
+                continue
+            unpaid_i = i + 1
+            if unpaid_i >= len(rows):
+                continue
+
+            comp_row   = rows[i]
+            unpaid_row = rows[unpaid_i]
+
+            seen_src, seen_dst = set(), set()
+            comp_cells   = [c for c in comp_row.cells   if not (id(c._tc) in seen_src   or seen_src.add(id(c._tc)))]
+            unpaid_cells = [c for c in unpaid_row.cells if not (id(c._tc) in seen_dst   or seen_dst.add(id(c._tc)))]
+
+            for src_cell, dst_cell in zip(comp_cells, unpaid_cells):
+                _clone_leave_option_cell(src_cell, dst_cell, 'Compassionate', 'Unpaid')
+            return
+
+
+def _post_render_leave_salary_advance(doc, ctx):
+    """Tick YES/NO boxes for leave salary advance — same [ ]/[✓] format as leave types."""
+    value = str(ctx.get('salary_advance') or '').strip().lower()
+    if value not in ('yes', 'no'):
+        return
+
+    for table in getattr(doc, 'tables', []):
+        for row in table.rows:
+            if not row.cells:
+                continue
+            if 'salary advance' not in (row.cells[0].text or '').lower():
+                continue
+
+            cell = row.cells[0]
+            # Replace [ ] YES or [✓] YES and [ ] NO or [✓] NO to match selected value.
+            _replace_in_cell_runs(cell, '[ ] YES', '[✓] YES' if value == 'yes' else '[ ] YES')
+            _replace_in_cell_runs(cell, '[✓] YES', '[✓] YES' if value == 'yes' else '[ ] YES')
+            _replace_in_cell_runs(cell, '[ ] NO', '[✓] NO' if value == 'no' else '[ ] NO')
+            _replace_in_cell_runs(cell, '[✓] NO', '[✓] NO' if value == 'no' else '[ ] NO')
+            return
 
 
 def _post_render_interview_ratings(doc, ctx):
@@ -422,20 +601,16 @@ def _post_render_interview_ratings(doc, ctx):
 
         if target_col != 6:
             target_cell = row.cells[target_col]
-            if target_cell.paragraphs:
-                if target_cell.paragraphs[0].runs:
-                    target_cell.paragraphs[0].runs[0].text = val
-                else:
-                    target_cell.paragraphs[0].add_run(val)
-            for para in last_cell.paragraphs:
-                for run in para.runs:
-                    run.text = ''
+            _set_cell_text_preserve_style(target_cell, val)
+            _set_cell_text_preserve_style(last_cell, '')
 
 
 def _apply_post_render(form_type, doc, ctx):
     """Dispatch post-render fixups for specific form types."""
     if form_type in ('leave', 'leave_application'):
+        _post_render_leave_options_integrity(doc)
         _post_render_leave_checkboxes(doc, ctx)
+        _post_render_leave_salary_advance(doc, ctx)
     elif form_type == 'interview_assessment':
         _post_render_interview_ratings(doc, ctx)
 

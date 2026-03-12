@@ -153,6 +153,21 @@
                     <div class="fld" style="margin-top:.5rem"><label class="fld-lbl">Date</label><input class="fld-inp" type="date" name="evaluator_sign_date" id="evalSignDate" required></div>
                   </div>
                   <div class="fld">
+                    <label class="fld-lbl">In-charge / Engineer Signature</label>
+                    {% if is_hr %}
+                    <div class="sig-wrap">
+                      <div class="sig-box" id="inchSigPrev"><span class="sig-ph">No signature</span><img id="inchSigImg" src="" style="display:none"></div>
+                      <div class="sig-actions">
+                        <button type="button" class="btn-plus" onclick="openSig('incharge')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m8-8H4"/></svg> Sign</button>
+                        <button type="button" class="btn-rm" id="inchSigRm" onclick="rmSig('incharge')">Remove</button>
+                      </div>
+                      <input type="hidden" name="incharge_signature" id="inchSigData">
+                    </div>
+                    {% else %}
+                    <em style="font-size:.85rem;color:var(--muted)">For In-charge / Engineer</em>
+                    {% endif %}
+                  </div>
+                  <div class="fld">
                     <label class="fld-lbl">GM Signature</label>
                     {% if is_gm %}
                     <div class="sig-wrap">
@@ -251,14 +266,20 @@ function closeSuccessBackToForm(){
 
 let pad=null,target=null;
 const bg=document.getElementById('sigBg'),cv=document.getElementById('sigCanvas');
-const sigCfg={employee:{prev:'empSigPrev',img:'empSigImg',data:'empSigData',rm:'empSigRm',title:'Employee Signature'},evaluator:{prev:'evalSigPrev',img:'evalSigImg',data:'evalSigData',rm:'evalSigRm',title:'Evaluator Signature'},gm:{prev:'gmSigPrev',img:'gmSigImg',data:'gmSigData',rm:'gmSigRm',title:'GM Signature'},hr:{prev:'hrSigPrev',img:'hrSigImg',data:'hrSigData',rm:'hrSigRm',title:'HR Signature'}};
+const sigCfg={
+  employee:{prev:'empSigPrev',img:'empSigImg',data:'empSigData',rm:'empSigRm',title:'Employee Signature'},
+  evaluator:{prev:'evalSigPrev',img:'evalSigImg',data:'evalSigData',rm:'evalSigRm',title:'Evaluator Signature'},
+  incharge:{prev:'inchSigPrev',img:'inchSigImg',data:'inchSigData',rm:'inchSigRm',title:'In-charge / Engineer Signature'},
+  gm:{prev:'gmSigPrev',img:'gmSigImg',data:'gmSigData',rm:'gmSigRm',title:'GM Signature'},
+  hr:{prev:'hrSigPrev',img:'hrSigImg',data:'hrSigData',rm:'hrSigRm',title:'HR Signature'}
+};
 
 function openSig(t){target=t;const c=sigCfg[t];if(!c)return;document.getElementById('sigTitle').textContent=c.title;bg.classList.add('open');document.body.style.overflow='hidden';requestAnimationFrame(()=>{const r=window.devicePixelRatio||1,w=cv.offsetWidth;cv.width=w*r;cv.height=180*r;cv.getContext('2d').scale(r,r);cv.style.height='180px';if(pad)pad.off();pad=new SignaturePad(cv,{backgroundColor:'rgb(250,250,250)',penColor:'#0d1f14',minWidth:1.2,maxWidth:2.8})})}
 function closeSig(){bg.classList.remove('open');document.body.style.overflow='';target=null}
 function clearModalPad(){if(pad)pad.clear()}
 function applySig(){if(!pad||pad.isEmpty()){alert('Please draw your signature first.');return}const url=pad.toDataURL('image/png'),c=sigCfg[target];if(!c)return;const img=document.getElementById(c.img),ph=document.querySelector('#'+c.prev+' .sig-ph'),inp=document.getElementById(c.data),rm=document.getElementById(c.rm);if(img){img.src=url;img.style.display='block'}if(ph)ph.style.display='none';if(inp)inp.value=url;if(rm)rm.style.display='inline-flex';closeSig()}
 function rmSig(t){const c=sigCfg[t];if(!c)return;const img=document.getElementById(c.img),ph=document.querySelector('#'+c.prev+' .sig-ph'),inp=document.getElementById(c.data),rm=document.getElementById(c.rm);if(img){img.src='';img.style.display='none'}if(ph)ph.style.display='block';if(inp)inp.value='';if(rm)rm.style.display='none'}
-function clearAllSigs(){['employee','evaluator','gm','hr'].forEach(t=>{const c=sigCfg[t];if(c&&document.getElementById(c.rm))rmSig(t)})}
+function clearAllSigs(){['employee','evaluator','incharge','gm','hr'].forEach(t=>{const c=sigCfg[t];if(c&&document.getElementById(c.rm))rmSig(t)})}
 bg.addEventListener('click',e=>{if(e.target===bg)closeSig()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&bg.classList.contains('open'))closeSig()});
 

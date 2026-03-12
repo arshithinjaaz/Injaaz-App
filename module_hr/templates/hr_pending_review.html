@@ -324,6 +324,68 @@
     const HR_SUPPORTED_PDF_FORMS = {{ (supported_pdf_forms or [])|tojson }};
     const token = localStorage.getItem('access_token');
     let currentSubmissionId = null;
+
+    async function downloadHrPdf(submissionId) {
+      if (!token) { alert('Please log in again.'); return; }
+      const btn = document.getElementById('pdfBtnPending');
+      const origText = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = '⏳ PDF…'; }
+      try {
+        const res = await fetch('/hr/download-pdf/' + encodeURIComponent(submissionId), {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert(err.error || 'PDF download failed. Please try again.');
+          return;
+        }
+        const blob = await res.blob();
+        const disp = res.headers.get('Content-Disposition');
+        const m = disp && disp.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i) || disp && disp.match(/filename=["']?([^"';]+)["']?/);
+        const name = (m && m[1]) ? m[1].trim() : ('Leave_Application_' + submissionId + '.pdf');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Download failed: ' + (e.message || 'Network error'));
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+      }
+    }
+
+    async function downloadHrDocx(submissionId) {
+      if (!token) { alert('Please log in again.'); return; }
+      const btn = document.getElementById('docxBtnPending');
+      const origText = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = '⏳ DOCX…'; }
+      try {
+        const res = await fetch('/hr/download-docx/' + encodeURIComponent(submissionId), {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert(err.error || 'DOCX download failed. Please try again.');
+          return;
+        }
+        const blob = await res.blob();
+        const disp = res.headers.get('Content-Disposition');
+        const m = disp && disp.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i) || disp && disp.match(/filename=["']?([^"';]+)["']?/);
+        const name = (m && m[1]) ? m[1].trim() : ('HR_Form_' + submissionId + '.docx');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Download failed: ' + (e.message || 'Network error'));
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+      }
+    }
     let signaturePad = null;
     let currentFormType = null;
     
@@ -604,14 +666,22 @@
         const formType = (submission.module_type || submission.form_type || '').replace('hr_', '');
         const supportsDocx = (HR_SUPPORTED_DOCX_FORMS || []).includes(formType);
         docxBtn.style.display = supportsDocx ? 'inline-block' : 'none';
-        docxBtn.href = supportsDocx ? ('/hr/download-docx/' + encodeURIComponent(submissionId)) : '#';
+        docxBtn.href = '#';
+        docxBtn.onclick = function(e) {
+          e.preventDefault();
+          if (currentSubmissionId && supportsDocx) downloadHrDocx(currentSubmissionId);
+        };
       }
       const pdfBtn = document.getElementById('pdfBtnPending');
       if (pdfBtn) {
         const formType = (submission.module_type || submission.form_type || '').replace('hr_', '');
         const supportsPdf = (HR_SUPPORTED_PDF_FORMS || []).includes(formType);
         pdfBtn.style.display = supportsPdf ? 'inline-block' : 'none';
-        pdfBtn.href = supportsPdf ? ('/hr/download-pdf/' + encodeURIComponent(submissionId)) : '#';
+        pdfBtn.href = '#';
+        pdfBtn.onclick = function(e) {
+          e.preventDefault();
+          if (currentSubmissionId && supportsPdf) downloadHrPdf(currentSubmissionId);
+        };
       }
       
       const details = document.getElementById('requestDetails');

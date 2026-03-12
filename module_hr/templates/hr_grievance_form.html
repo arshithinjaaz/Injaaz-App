@@ -108,13 +108,17 @@
                 </div>
               </section>
               <section class="sec sec-hr">
-                <h2 class="sec-hd">For Engineer, QHSE & Head of department (HOD) use</h2>
-                <p style="font-size:.9rem;margin-bottom:1rem;">The Engineer, QHSE or HOD handling the employee grievance needs to state the actions or recommendations taken.</p>
-                <div class="yn-row">
+                <h2 class="sec-hd">For Engineer, QHSE & Head of Department (HOD) Use</h2>
+                <p style="font-size:.9rem;margin-bottom:1rem;">The Engineer, QHSE or HOD handling the employee grievance needs to state the actions or recommendations taken to resolve the issues. Did both (disputing) parties reach a solution/agreement?</p>
+                <div class="yn-row" style="margin-bottom:1rem">
                   <label>Statement of 2nd party been taken & attached?</label>
                   <label><input type="radio" name="statement_2nd_party" value="yes" {% if not is_hr %}disabled{% endif %}> Yes</label>
                   <label><input type="radio" name="statement_2nd_party" value="no" {% if not is_hr %}disabled{% endif %}> No</label>
-                  <label><input type="radio" name="statement_2nd_party" value="na" {% if not is_hr %}disabled{% endif %}> N/A</label>
+                  <label><input type="radio" name="statement_2nd_party" value="na" {% if not is_hr %}disabled{% endif %}> Not Required</label>
+                </div>
+                <div class="fld">
+                  <label class="fld-lbl">HOD Actions / Recommendations</label>
+                  <textarea class="fld-inp" name="hod_actions" rows="3" {% if not is_hr %}readonly{% endif %} placeholder="State the actions or recommendations taken..."></textarea>
                 </div>
               </section>
               <section class="sec sec-hr">
@@ -159,6 +163,32 @@
                       </div>
                       <input type="hidden" name="complainant_signature" id="compSigData">
                     </div>
+                  </div>
+                  <div class="fld">
+                    <label class="fld-lbl">2nd Party Signature</label>
+                    <div class="sig-wrap">
+                      <div class="sig-box" id="sp2SigPrev"><span class="sig-ph">No signature</span><img id="sp2SigImg" src="" style="display:none"></div>
+                      <div class="sig-actions">
+                        <button type="button" class="btn-plus" onclick="openSig('second_party')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m8-8H4"/></svg> Sign</button>
+                        <button type="button" class="btn-rm" id="sp2SigRm" onclick="rmSig('second_party')">Remove</button>
+                      </div>
+                      <input type="hidden" name="second_party_signature" id="sp2SigData">
+                    </div>
+                  </div>
+                  <div class="fld">
+                    <label class="fld-lbl">HOD / Engineer Signature</label>
+                    {% if is_hr %}
+                    <div class="sig-wrap">
+                      <div class="sig-box" id="hodSigPrev"><span class="sig-ph">No signature</span><img id="hodSigImg" src="" style="display:none"></div>
+                      <div class="sig-actions">
+                        <button type="button" class="btn-plus" onclick="openSig('hod')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m8-8H4"/></svg> Sign</button>
+                        <button type="button" class="btn-rm" id="hodSigRm" onclick="rmSig('hod')">Remove</button>
+                      </div>
+                      <input type="hidden" name="hod_signature" id="hodSigData">
+                    </div>
+                    {% else %}
+                    <em style="font-size:.85rem;color:var(--muted)">For HOD / Engineer</em>
+                    {% endif %}
                   </div>
                   <div class="fld">
                     <label class="fld-lbl">HR Signature</label>
@@ -247,14 +277,20 @@ function closeSuccessBackToForm(){
 
 let pad=null,target=null;
 const bg=document.getElementById('sigBg'),cv=document.getElementById('sigCanvas');
-const sigCfg={complainant:{prev:'compSigPrev',img:'compSigImg',data:'compSigData',rm:'compSigRm',title:'Complainant Signature'},hr:{prev:'hrSigPrev',img:'hrSigImg',data:'hrSigData',rm:'hrSigRm',title:'HR Signature'},gm:{prev:'gmSigPrev',img:'gmSigImg',data:'gmSigData',rm:'gmSigRm',title:'GM Signature'}};
+const sigCfg={
+  complainant:{prev:'compSigPrev',img:'compSigImg',data:'compSigData',rm:'compSigRm',title:'Complainant Signature'},
+  second_party:{prev:'sp2SigPrev',img:'sp2SigImg',data:'sp2SigData',rm:'sp2SigRm',title:'2nd Party Signature'},
+  hod:{prev:'hodSigPrev',img:'hodSigImg',data:'hodSigData',rm:'hodSigRm',title:'HOD / Engineer Signature'},
+  hr:{prev:'hrSigPrev',img:'hrSigImg',data:'hrSigData',rm:'hrSigRm',title:'HR Signature'},
+  gm:{prev:'gmSigPrev',img:'gmSigImg',data:'gmSigData',rm:'gmSigRm',title:'GM Signature'}
+};
 
 function openSig(t){target=t;const c=sigCfg[t];if(!c)return;document.getElementById('sigTitle').textContent=c.title;bg.classList.add('open');document.body.style.overflow='hidden';requestAnimationFrame(()=>{const r=window.devicePixelRatio||1,w=cv.offsetWidth;cv.width=w*r;cv.height=180*r;cv.getContext('2d').scale(r,r);cv.style.height='180px';if(pad)pad.off();pad=new SignaturePad(cv,{backgroundColor:'rgb(250,250,250)',penColor:'#0d1f14',minWidth:1.2,maxWidth:2.8})})}
 function closeSig(){bg.classList.remove('open');document.body.style.overflow='';target=null}
 function clearModalPad(){if(pad)pad.clear()}
 function applySig(){if(!pad||pad.isEmpty()){alert('Please draw your signature first.');return}const url=pad.toDataURL('image/png'),c=sigCfg[target];if(!c)return;const img=document.getElementById(c.img),ph=document.querySelector('#'+c.prev+' .sig-ph'),inp=document.getElementById(c.data),rm=document.getElementById(c.rm);if(img){img.src=url;img.style.display='block'}if(ph)ph.style.display='none';if(inp)inp.value=url;if(rm)rm.style.display='inline-flex';closeSig()}
 function rmSig(t){const c=sigCfg[t];if(!c)return;const img=document.getElementById(c.img),ph=document.querySelector('#'+c.prev+' .sig-ph'),inp=document.getElementById(c.data),rm=document.getElementById(c.rm);if(img){img.src='';img.style.display='none'}if(ph)ph.style.display='block';if(inp)inp.value='';if(rm)rm.style.display='none'}
-function clearAllSigs(){['complainant','hr','gm'].forEach(t=>{const c=sigCfg[t];if(c&&document.getElementById(c.rm))rmSig(t)})}
+function clearAllSigs(){['complainant','second_party','hod','hr','gm'].forEach(t=>{const c=sigCfg[t];if(c&&document.getElementById(c.rm))rmSig(t)})}
 bg.addEventListener('click',e=>{if(e.target===bg)closeSig()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&bg.classList.contains('open'))closeSig()});
 
