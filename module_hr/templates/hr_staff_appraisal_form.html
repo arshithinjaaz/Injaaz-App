@@ -117,16 +117,33 @@
                 <span><strong>Step 2 of 2</strong> — Add employee signature and submit.</span>
               </div>
               <section class="sec">
-                <h2 class="sec-hd">Employee Signature</h2>
-                <div class="fld">
-                  <label class="fld-lbl">Employee Signature <span class="req">*</span></label>
-                  <div class="sig-wrap">
-                    <div class="sig-box" id="empSigPrev"><span class="sig-ph">No signature</span><img id="empSigImg" src="" style="display:none"></div>
-                    <div class="sig-actions">
-                      <button type="button" class="btn-plus" onclick="openSig('employee')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m8-8H4"/></svg> Sign</button>
-                      <button type="button" class="btn-rm" id="empSigRm" onclick="rmSig('employee')">Remove</button>
+                <h2 class="sec-hd">Signatures</h2>
+                <div class="grid-2">
+                  <div class="fld">
+                    <label class="fld-lbl">Employee Signature <span class="req">*</span></label>
+                    <div class="sig-wrap">
+                      <div class="sig-box" id="empSigPrev"><span class="sig-ph">No signature</span><img id="empSigImg" src="" style="display:none"></div>
+                      <div class="sig-actions">
+                        <button type="button" class="btn-plus" onclick="openSig('employee')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m8-8H4"/></svg> Sign</button>
+                        <button type="button" class="btn-rm" id="empSigRm" onclick="rmSig('employee')">Remove</button>
+                      </div>
+                      <input type="hidden" name="employee_signature" id="empSigData">
                     </div>
-                    <input type="hidden" name="employee_signature" id="empSigData">
+                  </div>
+                  <div class="fld">
+                    <label class="fld-lbl">Appraiser Signature</label>
+                    {% if is_hr %}
+                    <div class="sig-wrap">
+                      <div class="sig-box" id="hrSigPrev"><span class="sig-ph">No signature</span><img id="hrSigImg" src="" style="display:none"></div>
+                      <div class="sig-actions">
+                        <button type="button" class="btn-plus" onclick="openSig('hr')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m8-8H4"/></svg> Sign</button>
+                        <button type="button" class="btn-rm" id="hrSigRm" onclick="rmSig('hr')">Remove</button>
+                      </div>
+                      <input type="hidden" name="hr_signature" id="hrSigData">
+                    </div>
+                    {% else %}
+                    <em style="font-size:.85rem;color:var(--muted)">For HR / Appraiser</em>
+                    {% endif %}
                   </div>
                 </div>
               </section>
