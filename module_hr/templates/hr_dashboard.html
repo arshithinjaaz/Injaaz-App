@@ -24,10 +24,7 @@
       display: none;
     }
     .hr-hero {
-      padding: 9rem 0 5rem;
-    }
-    .hr-hero {
-      padding: 9rem 0 5rem;
+      padding: 2.5rem 0 5rem;
     }
     /* Remove divider line - match main dashboard clean look */
     .hr-modules-section::before {
@@ -237,6 +234,7 @@
   {% set active_page = 'hr' %}
   {% include 'partials/main_navbar.html' with context %}
 
+  <main class="hr-dashboard-content" style="padding-top: 5.5rem;">
   <!-- Hero: gradient at top only (no grid) -->
   <header class="hero hero-split hr-hero">
     <div class="hero-content hero-split-inner">
@@ -415,6 +413,8 @@
       </div>
     </div>
   </section>
+
+  </main>
 
   <footer class="footer">
     <div class="footer-inner">

@@ -240,6 +240,9 @@ def create_pdf_report(data, output_dir):
             f"Project: {data.get('project_name', 'N/A')}"
         )
         
+        # Compact separator (match HVAC formatting)
+        story.append(Spacer(1, 0.04*inch))
+        
         # PROJECT & CLIENT DETAILS
         add_section_heading(story, "Project & Client Details")
         
@@ -249,8 +252,8 @@ def create_pdf_report(data, output_dir):
             ['Supervisor:', data.get('technician_name', 'N/A')],
         ]
         
-        story.append(create_info_table(project_info_data))
-        story.append(Spacer(1, 0.3*inch))
+        story.append(create_info_table(project_info_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
         
         # FACILITY AREA COUNTS
         add_section_heading(story, "Facility Area Counts")
@@ -271,8 +274,8 @@ def create_pdf_report(data, output_dir):
             ['Floor Service Room:', str(data.get('facility_floor_service_room', 'N/A'))],
             ['Cleaner Count:', str(data.get('facility_cleaner_count', 'N/A'))],
         ]
-        story.append(create_info_table(facility_data))
-        story.append(Spacer(1, 0.3*inch))
+        story.append(create_info_table(facility_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
         
         # CLEANING REQUIREMENTS & SCOPE
         add_section_heading(story, "Cleaning Requirements & Scope")
@@ -284,8 +287,8 @@ def create_pdf_report(data, output_dir):
             ['Building Exterior:', '✓' if data.get('scope_exterior') == 'True' else '✗'],
             ['Special Care Areas:', '✓' if data.get('scope_special_care') == 'True' else '✗'],
         ]
-        story.append(create_info_table(scope_data))
-        story.append(Spacer(1, 0.3*inch))
+        story.append(create_info_table(scope_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
         
         # DEEP CLEANING
         add_section_heading(story, "Deep Cleaning")
@@ -293,8 +296,8 @@ def create_pdf_report(data, output_dir):
             ['Deep Cleaning Required:', data.get('deep_clean_required', 'No')],
             ['Areas to Deep Clean:', data.get('deep_clean_areas', 'N/A')],
         ]
-        story.append(create_info_table(deep_clean_data))
-        story.append(Spacer(1, 0.3*inch))
+        story.append(create_info_table(deep_clean_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
         
         # WASTE DISPOSAL
         add_section_heading(story, "Waste Disposal")
@@ -302,8 +305,8 @@ def create_pdf_report(data, output_dir):
             ['Waste Disposal Required:', data.get('waste_disposal_required', 'No')],
             ['Method of Disposal:', data.get('waste_disposal_method', 'N/A')],
         ]
-        story.append(create_info_table(waste_disposal_data))
-        story.append(Spacer(1, 0.3*inch))
+        story.append(create_info_table(waste_disposal_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
         
         # SPECIAL CONSIDERATIONS
         add_section_heading(story, "Special Considerations")
@@ -311,8 +314,8 @@ def create_pdf_report(data, output_dir):
             ['Restricted Access Areas:', data.get('restricted_access', 'N/A')],
             ['Pest Control Needed:', data.get('pest_control', 'N/A')],
         ]
-        story.append(create_info_table(special_considerations_data))
-        story.append(Spacer(1, 0.3*inch))
+        story.append(create_info_table(special_considerations_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
         
         # SAFETY & STAFFING
         add_section_heading(story, "Safety & Staffing")
@@ -321,14 +324,14 @@ def create_pdf_report(data, output_dir):
             ['Required Team Size:', str(data.get('required_team_size', 'N/A'))],
             ['Site Access Requirements:', data.get('site_access_requirements', 'N/A')],
         ]
-        story.append(create_info_table(safety_data))
-        story.append(Spacer(1, 0.3*inch))
+        story.append(create_info_table(safety_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
         
         # GENERAL COMMENTS
         add_section_heading(story, "General Comments")
         comments = data.get('general_comments', 'No comments provided.')
         add_paragraph(story, comments)
-        story.append(Spacer(1, 0.3*inch))
+        story.append(Spacer(1, 0.1*inch))
         
         # PHOTOS
         photos = data.get('photos', [])

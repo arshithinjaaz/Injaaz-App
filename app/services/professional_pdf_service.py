@@ -65,41 +65,55 @@ class NumberedCanvas(canvas.Canvas):
         
     def draw_page_decorations(self, page_count):
         """Draw compact header and footer on each page"""
-        # Compact header line
+        HDR_Y = A4[1] - 1.3*cm   # top of header band
+        LOGO_SZ = 0.9*cm
+
+        # Header background band
+        self.setFillColor(colors.white)
+        self.rect(0, HDR_Y, A4[0], 1.3*cm, fill=1, stroke=0)
+
+        # Green top rule
         self.setStrokeColor(PRIMARY_COLOR)
-        self.setLineWidth(1.5)
-        self.line(1.2*cm, A4[1] - 1.1*cm, A4[0] - 1.2*cm, A4[1] - 1.1*cm)
-        
-        # Logo in header (compact)
+        self.setLineWidth(2)
+        self.line(0, A4[1] - 1, A4[0], A4[1] - 1)
+
+        # Logo (single — not duplicated in content)
         if os.path.exists(LOGO_PATH):
             try:
-                self.drawImage(LOGO_PATH, 1.2*cm, A4[1] - 1.05*cm, 
-                             width=0.9*cm, height=0.9*cm, preserveAspectRatio=True, mask='auto')
+                self.drawImage(LOGO_PATH,
+                               1.4*cm, HDR_Y + (1.3*cm - LOGO_SZ) / 2,
+                               width=LOGO_SZ, height=LOGO_SZ,
+                               preserveAspectRatio=True, mask='auto')
             except Exception as e:
                 logger.warning(f"Could not load logo: {e}")
-        
-        # Company name in header
-        self.setFont('Helvetica-Bold', 9)
+
+        # Company name
+        self.setFont('Helvetica-Bold', 8)
         self.setFillColor(PRIMARY_COLOR)
-        self.drawString(2.4*cm, A4[1] - 0.95*cm, "INJAAZ PLATFORM")
-        
-        # Footer (compact)
+        self.drawString(1.4*cm + LOGO_SZ + 0.15*cm,
+                        HDR_Y + 0.5*cm, "INJAAZ PLATFORM")
+
+        # Report title (right-aligned)
+        self.setFont('Helvetica', 7.5)
+        self.setFillColor(colors.HexColor('#6b7280'))
+        self.drawRightString(A4[0] - 1.4*cm, HDR_Y + 0.5*cm, self.report_title)
+
+        # Thin separator below header
         self.setStrokeColor(BORDER_COLOR)
         self.setLineWidth(0.5)
-        self.line(1.2*cm, 1.1*cm, A4[0] - 1.2*cm, 1.1*cm)
-        
-        # Page number
+        self.line(1.4*cm, HDR_Y, A4[0] - 1.4*cm, HDR_Y)
+
+        # Footer separator
+        self.line(1.4*cm, 1.2*cm, A4[0] - 1.4*cm, 1.2*cm)
+
+        # Footer text
         self.setFont('Helvetica', 7)
-        self.setFillColor(colors.grey)
-        page_text = f"Page {self._pageNumber} of {page_count}"
-        self.drawRightString(A4[0] - 1.2*cm, 0.8*cm, page_text)
-        
-        # Timestamp
+        self.setFillColor(colors.HexColor('#9ca3af'))
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
-        self.drawString(1.2*cm, 0.8*cm, f"Generated: {timestamp}")
-        
-        # Report title in footer
-        self.drawCentredString(A4[0] / 2, 0.8*cm, self.report_title)
+        self.drawString(1.4*cm, 0.85*cm, f"Generated: {timestamp}")
+        self.drawCentredString(A4[0] / 2, 0.85*cm, self.report_title)
+        page_text = f"Page {self._pageNumber} of {page_count}"
+        self.drawRightString(A4[0] - 1.4*cm, 0.85*cm, page_text)
 
 
 def get_professional_styles():
@@ -110,100 +124,99 @@ def get_professional_styles():
         'MainTitle': ParagraphStyle(
             'MainTitle',
             parent=styles['Heading1'],
-            fontSize=15,
+            fontSize=13,
             textColor=PRIMARY_COLOR,
             spaceAfter=0.04*inch,
             spaceBefore=0,
             alignment=TA_LEFT,
-            fontName='Helvetica-Bold'
+            fontName='Helvetica-Bold',
+            leading=16,
+            leftIndent=0,
+            rightIndent=0,
         ),
         'Subtitle': ParagraphStyle(
             'Subtitle',
             parent=styles['Normal'],
             fontSize=9,
-            textColor=SECONDARY_COLOR,
-            spaceAfter=0.05*inch,
+            textColor=colors.HexColor('#6b7280'),
+            spaceAfter=0.04*inch,
             alignment=TA_LEFT,
-            fontName='Helvetica'
+            fontName='Helvetica',
+            leftIndent=0,
         ),
         'SectionHeading': ParagraphStyle(
             'SectionHeading',
             parent=styles['Heading2'],
-            fontSize=11,
+            fontSize=10,
             textColor=colors.white,
-            spaceAfter=0,
-            spaceBefore=0.06*inch,
+            spaceAfter=0.14*inch,
+            spaceBefore=0.08*inch,
             fontName='Helvetica-Bold',
-            borderPadding=4,
+            borderPadding=8,
             borderColor=PRIMARY_COLOR,
             borderWidth=0,
-            borderRadius=2,
+            borderRadius=0,
             backColor=HEADER_BG,
-            leftIndent=6,
+            leftIndent=0,
+            rightIndent=0,
+            leading=14,
         ),
         'ItemHeading': ParagraphStyle(
             'ItemHeading',
             parent=styles['Heading3'],
-            fontSize=10,
-            textColor=SECONDARY_COLOR,
+            fontSize=9.5,
+            textColor=PRIMARY_COLOR,
             spaceAfter=0.03*inch,
-            spaceBefore=0.05*inch,
-            fontName='Helvetica-Bold'
+            spaceBefore=0.08*inch,
+            fontName='Helvetica-Bold',
+            leading=13,
+            leftIndent=0,
+            rightIndent=0,
         ),
         'Normal': ParagraphStyle(
             'ProfessionalNormal',
             parent=styles['Normal'],
-            fontSize=9,
-            spaceAfter=0.03*inch,
+            fontSize=8.5,
+            textColor=colors.HexColor('#111827'),
+            spaceAfter=0.02*inch,
             leading=12
         ),
         'Small': ParagraphStyle(
             'Small',
             parent=styles['Normal'],
-            fontSize=8,
-            textColor=colors.grey,
-            alignment=TA_CENTER
-        )
+            fontSize=7.5,
+            textColor=colors.HexColor('#6b7280'),
+            alignment=TA_CENTER,
+            leading=10,
+        ),
+        'CommentLead': ParagraphStyle(
+            'CommentLead',
+            parent=styles['Normal'],
+            fontSize=9.5,
+            textColor=colors.HexColor('#111827'),
+            spaceAfter=0.06*inch,
+            fontName='Helvetica-Bold',
+            leading=13,
+        ),
     }
     
     return custom_styles
 
 
 def create_header_with_logo(story, title, subtitle=None):
-    """Add professional header with logo to PDF story"""
+    """Add document title header — logo is already in the running canvas header,
+    so we only show the title text here to avoid duplication."""
     styles = get_professional_styles()
-    
-    # Logo and title row - compact layout
-    header_data = []
-    
-    if os.path.exists(LOGO_PATH):
-        try:
-            logo = Image(LOGO_PATH, width=0.7*inch, height=0.7*inch)
-            title_para = Paragraph(f"<b>{title}</b>", styles['MainTitle'])
-            header_data.append([logo, title_para])
-        except Exception as e:
-            logger.warning(f"Could not load logo: {e}")
-            header_data.append([Paragraph(f"<b>{title}</b>", styles['MainTitle'])])
-    else:
-        header_data.append([Paragraph(f"<b>{title}</b>", styles['MainTitle'])])
-    
-    if header_data and len(header_data[0]) == 2:
-        header_table = Table(header_data, colWidths=[0.9*inch, 5.3*inch])
-        header_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 0),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-        ]))
-        story.append(header_table)
-    else:
-        story.append(Paragraph(f"<b>{title}</b>", styles['MainTitle']))
-    
+
+    story.append(Paragraph(f"<b>{title}</b>", styles['MainTitle']))
+
     if subtitle:
         story.append(Paragraph(subtitle, styles['Subtitle']))
-    
-    story.append(Spacer(1, 0.05*inch))
+
+    story.append(HRFlowable(
+        width="100%", thickness=1, color=PRIMARY_COLOR,
+        spaceBefore=0.06*inch, spaceAfter=0.08*inch
+    ))
     return story
 
 
@@ -232,25 +245,33 @@ def create_info_table(data_list, col_widths=None):
                 new_row.append(cell)
         table_data.append(new_row)
 
+    # Default: label col wide enough for "Specification", "Description", etc.
     if not col_widths:
-        col_widths = [2*inch, 4*inch]
-    
+        col_widths = [2.35*inch, 4.65*inch]
+
     table = Table(table_data, colWidths=col_widths)
+    n = len(table_data)
+    row_style = []
+    for i in range(n):
+        bg = ACCENT_COLOR if i % 2 == 0 else colors.white
+        row_style.append(('BACKGROUND', (0, i), (0, i), ACCENT_COLOR))
+        row_style.append(('BACKGROUND', (1, i), (1, i), bg))
+
     table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), ACCENT_COLOR),
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-        ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#111827')),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
         ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('GRID', (0, 0), (-1, -1), 0.75, PRIMARY_COLOR),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 5),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-    ]))
+        ('FONTSIZE', (0, 0), (-1, -1), 8.5),
+        ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
+        ('LINEAFTER', (0, 0), (0, -1), 1, PRIMARY_COLOR),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (0, -1), 6),
+        ('LEFTPADDING', (1, 0), (1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ] + row_style))
     
     return table
 
@@ -541,10 +562,10 @@ def create_professional_pdf(pdf_path, story, report_title="Injaaz Report"):
         doc = SimpleDocTemplate(
             pdf_path,
             pagesize=A4,
-            rightMargin=1.2*cm,
-            leftMargin=1.2*cm,
-            topMargin=1.6*cm,
-            bottomMargin=1.4*cm,
+            rightMargin=1.6*cm,
+            leftMargin=1.6*cm,
+            topMargin=1.7*cm,
+            bottomMargin=1.8*cm,
             title=report_title,
             author="Injaaz Platform"
         )

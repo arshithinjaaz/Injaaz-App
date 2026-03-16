@@ -88,8 +88,11 @@
     .gm-qa-icon.purple { background: linear-gradient(145deg, #8b5cf6, #7c3aed); box-shadow: 0 4px 12px rgba(124,58,237,0.35); }
     .gm-qa-icon.green { background: linear-gradient(145deg, #34d399, #10b981); box-shadow: 0 4px 12px rgba(16,185,129,0.35); }
   </style>
+  <style>body.has-main-nav { padding-top: 5.5rem; }</style>
 </head>
-<body>
+<body class="has-main-nav">
+  {% set active_page = 'pending-review' %}
+  {% include 'partials/main_navbar.html' with context %}
   <!-- Success Modal -->
   <div class="success-overlay" id="successModal">
     <div class="success-modal">
@@ -477,5 +480,7 @@
     
     loadPending();
   </script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

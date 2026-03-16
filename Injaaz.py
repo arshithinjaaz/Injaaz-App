@@ -745,6 +745,11 @@ def create_app():
     def admin_dashboard():
         """Admin dashboard - requires admin authentication"""
         return render_template('admin_dashboard.html')
+
+    @app.route('/admin/devices')
+    def admin_devices():
+        """Device management - admin only"""
+        return render_template('admin_device_management.html')
     
     # Root route: Show login page
     @app.route('/')

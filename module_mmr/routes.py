@@ -1,6 +1,7 @@
 """
-MMR Blueprint – admin-only routes for Report Generation.
+MMR Blueprint – Report Generation (available to all authenticated users).
 URL prefix: /admin/mmr
+Administrative module (user management, access control) stays admin-only.
 """
 import os
 import json
@@ -11,7 +12,6 @@ from io import BytesIO
 from flask import (Blueprint, request, jsonify, render_template,
                    current_app, send_file)
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.middleware import admin_required
 
 logger = logging.getLogger(__name__)
 
@@ -364,7 +364,6 @@ def _save_last_run(status: str, to_list: list, cc_list: list | None, subject: st
 
 @mmr_bp.route('/', methods=['GET'])
 @jwt_required()
-@admin_required
 def dashboard():
     return render_template('mmr_dashboard.html')
 
@@ -375,7 +374,6 @@ def dashboard():
 
 @mmr_bp.route('/api/upload', methods=['POST'])
 @jwt_required()
-@admin_required
 def upload():
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
@@ -427,7 +425,6 @@ def upload():
 
 @mmr_bp.route('/api/download-report', methods=['GET'])
 @jwt_required()
-@admin_required
 def download_report():
     path = _upload_path()
     if not os.path.exists(path):
@@ -456,7 +453,6 @@ def download_report():
 
 @mmr_bp.route('/api/save-to-folder', methods=['POST'])
 @jwt_required()
-@admin_required
 def save_to_folder():
     """Save current (optionally filtered) report to the report folder."""
     path = _upload_path()
@@ -489,7 +485,6 @@ def save_to_folder():
 
 @mmr_bp.route('/api/save-to-drive', methods=['POST'])
 @jwt_required()
-@admin_required
 def save_to_drive():
     """Save current (optionally filtered) report to TrueNAS CAFM drive (\\\\172.25.70.137\\Injaaz\\CAFM)."""
     path = _upload_path()
@@ -553,12 +548,11 @@ def save_to_drive():
 
 @mmr_bp.route('/api/report-folder', methods=['GET'])
 @jwt_required()
-@admin_required
 def list_report_folder():
     """List all saved reports in the report folder. Includes filter state for restoring dashboard."""
     folder = _reports_folder()
     files = []
-    for name in sorted(os.listdir(folder), reverse=True):
+    for name in os.listdir(folder):
         if name.lower().endswith('.xlsx'):
             path = os.path.join(folder, name)
             try:
@@ -581,12 +575,13 @@ def list_report_folder():
                 files.append(entry)
             except OSError:
                 pass
+    # Always sort by actual saved/modified time (newest first)
+    files.sort(key=lambda x: x.get('modified') or '', reverse=True)
     return jsonify({'files': files})
 
 
 @mmr_bp.route('/api/report-folder/download/<path:filename>', methods=['GET'])
 @jwt_required()
-@admin_required
 def download_report_folder_file(filename):
     """Download a saved report from the report folder."""
     if '..' in filename or '/' in filename or '\\' in filename:
@@ -605,7 +600,6 @@ def download_report_folder_file(filename):
 
 @mmr_bp.route('/api/report-folder/open/<path:filename>', methods=['GET'])
 @jwt_required()
-@admin_required
 def open_report_from_folder(filename):
     """Load a saved report's data for display in the dashboard."""
     if '..' in filename or '/' in filename or '\\' in filename:
@@ -644,14 +638,12 @@ def open_report_from_folder(filename):
 
 @mmr_bp.route('/api/email-config', methods=['GET'])
 @jwt_required()
-@admin_required
 def get_email_config():
     return jsonify(_load_config())
 
 
 @mmr_bp.route('/api/automation-status', methods=['GET'])
 @jwt_required()
-@admin_required
 def get_automation_status():
     """Return schedule state and last run info for the automation button."""
     config = _load_config()
@@ -722,7 +714,6 @@ def get_automation_status():
 
 @mmr_bp.route('/api/automation-pause', methods=['POST'])
 @jwt_required()
-@admin_required
 def pause_automation():
     """Pause the automation. Next run will not execute until resumed."""
     config = _load_config()
@@ -738,7 +729,6 @@ def pause_automation():
 
 @mmr_bp.route('/api/automation-resume', methods=['POST'])
 @jwt_required()
-@admin_required
 def resume_automation():
     """Resume the automation. Requires Excel file to be uploaded."""
     path = _upload_path()
@@ -761,7 +751,6 @@ def resume_automation():
 
 @mmr_bp.route('/api/cycles', methods=['GET'])
 @jwt_required()
-@admin_required
 def get_cycles():
     """Return full cycle log (current cycle + history)."""
     return jsonify(_load_cycle_log())
@@ -769,7 +758,6 @@ def get_cycles():
 
 @mmr_bp.route('/api/approve', methods=['POST'])
 @jwt_required()
-@admin_required
 def approve_cycle():
     """Mark the current cycle as reviewed/approved."""
     user = _get_caller_identity()
@@ -788,7 +776,6 @@ def approve_cycle():
 
 @mmr_bp.route('/api/email-config', methods=['POST'])
 @jwt_required()
-@admin_required
 def save_email_config():
     data = request.get_json() or {}
 
@@ -823,7 +810,6 @@ def save_email_config():
 
 @mmr_bp.route('/api/send-email', methods=['POST'])
 @jwt_required()
-@admin_required
 def send_email_now():
     data = request.get_json() or {}
     path = _upload_path()

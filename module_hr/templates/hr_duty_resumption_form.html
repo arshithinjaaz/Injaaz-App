@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Duty Resumption Form — INJAAZ</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/animations.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -27,7 +29,7 @@
       background:#fafafa;
     }
 
-    .page{width:100%;min-height:100vh;padding:0 0 3rem}
+    .page{width:100%;min-height:100vh;padding:5.5rem 0 3rem}
     .page-inner{max-width:1400px;margin:0 auto;padding:1.5rem 2rem 2rem}
     .back-btn{
       display:inline-flex;align-items:center;gap:.5rem;padding:.55rem 1.1rem;font-size:.875rem;font-weight:600;
@@ -186,6 +188,8 @@
   </style>
 </head>
 <body>
+  {% set active_page = 'hr' %}
+  {% include 'partials/main_navbar.html' with context %}
 
   <div class="success-bg" id="successModal">
     <div class="success-box">
@@ -408,5 +412,7 @@ document.getElementById('dutyFrm').addEventListener('submit',async e=>{
   }catch(err){alert('Network error: '+err.message);btn.disabled=false;btn.innerHTML='<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Submit Form'}
 });
 </script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

@@ -184,24 +184,31 @@ function loadUserWelcome() {
 
 // Function to check and show admin menu
 function checkAndShowAdminMenu(user) {
+  // Admin menu and Device Management: admin only
   if (user && user.role === 'admin') {
     const adminMenuItem = document.getElementById('admin-menu-item');
     if (adminMenuItem) {
       adminMenuItem.style.display = 'list-item';
-      console.log('Admin menu item shown');
     }
+    const deviceMgmtMenuItem = document.getElementById('device-management-menu-item');
+    if (deviceMgmtMenuItem) {
+      deviceMgmtMenuItem.style.display = 'list-item';
+    }
+  }
+  // Report Generation: all authenticated users
+  if (user) {
     const reportGenMenuItem = document.getElementById('report-gen-menu-item');
     if (reportGenMenuItem) {
       reportGenMenuItem.style.display = 'list-item';
     }
   }
   
-  const workflowDesignations = ['operations_manager', 'business_development', 'procurement', 'general_manager'];
-  if (user && (user.role === 'admin' || (user.designation && workflowDesignations.includes(user.designation)))) {
+  // Review History: admin, reviewers (OM/BD/Procurement/GM), and supervisors (replaces old "Submitted Forms")
+  const historyDesignations = ['supervisor', 'operations_manager', 'business_development', 'procurement', 'general_manager'];
+  if (user && (user.role === 'admin' || (user.designation && historyDesignations.includes(user.designation)))) {
     const historyMenuItem = document.getElementById('review-history-menu-item');
     if (historyMenuItem) {
       historyMenuItem.style.display = 'list-item';
-      console.log('Review History shown for:', user.designation || 'admin');
     }
   }
   
@@ -248,24 +255,24 @@ function updateModuleVisibility(user) {
     inspectionCard.style.visibility = hasInspectionAccess ? 'visible' : 'hidden';
   }
   
-  // Check Submitted Forms access (Supervisors only)
+  // Submitted Forms: deprecated in favor of Review History - hide for all (supervisors use Review History)
   const submittedFormsCard = document.getElementById('module-submitted-forms');
   const submittedFormsMenuItem = document.getElementById('submitted-forms-menu-item');
   if (submittedFormsCard) {
-    const isSupervisor = user.designation === 'supervisor';
-    submittedFormsCard.style.display = isSupervisor ? 'block' : 'none';
-    submittedFormsCard.style.visibility = isSupervisor ? 'visible' : 'hidden';
-    
-    // Also show/hide the nav menu item
-    if (submittedFormsMenuItem) {
-      submittedFormsMenuItem.style.display = isSupervisor ? 'inline-block' : 'none';
-    }
-    
-    if (isSupervisor) {
-      if (typeof loadSubmittedFormsCount === 'function') {
-        loadSubmittedFormsCount(user);
-      }
-    }
+    submittedFormsCard.style.display = 'none';
+    submittedFormsCard.style.visibility = 'hidden';
+  }
+  if (submittedFormsMenuItem) {
+    submittedFormsMenuItem.style.display = 'none';
+  }
+
+  // Review History card: show for admin, supervisors, and reviewers (OM, BD, Procurement, GM)
+  const reviewHistoryCard = document.getElementById('module-review-history');
+  const historyDesignations = ['supervisor', 'operations_manager', 'business_development', 'procurement', 'general_manager'];
+  const hasReviewHistoryAccess = isAdmin || (user.designation && historyDesignations.includes(user.designation));
+  if (reviewHistoryCard) {
+    reviewHistoryCard.style.display = hasReviewHistoryAccess ? 'block' : 'none';
+    reviewHistoryCard.style.visibility = hasReviewHistoryAccess ? 'visible' : 'hidden';
   }
 
   // Check BD Email Module access (BD only)
@@ -282,12 +289,18 @@ function updateModuleVisibility(user) {
     bdEmailMenuItem.style.display = isBD ? 'inline-block' : 'none';
   }
 
-  // Check HR Module access
+  // Check Device Management access (admin only)
+  const deviceMgmtCard = document.getElementById('module-device-management');
+  if (deviceMgmtCard) {
+    deviceMgmtCard.style.display = isAdmin ? 'block' : 'none';
+    deviceMgmtCard.style.visibility = isAdmin ? 'visible' : 'hidden';
+  }
+
+  // Check HR Module access (visible to all authenticated users)
   const hrCard = document.getElementById('module-hr');
   if (hrCard) {
-    const hasHrAccess = isAdmin || user.access_hr === true;
-    hrCard.style.display = hasHrAccess ? 'block' : 'none';
-    hrCard.style.visibility = hasHrAccess ? 'visible' : 'hidden';
+    hrCard.style.display = 'block';
+    hrCard.style.visibility = 'visible';
   }
 
   // Check Procurement Module access
@@ -302,11 +315,11 @@ function updateModuleVisibility(user) {
     procurementMenuItem.style.display = hasProcurementAccess ? 'list-item' : 'none';
   }
 
-  // Check Report Generation access (admin only)
+  // Check Report Generation access (all authenticated users)
   const reportGenCard = document.getElementById('module-report-generation');
   if (reportGenCard) {
-    reportGenCard.style.display = isAdmin ? 'block' : 'none';
-    reportGenCard.style.visibility = isAdmin ? 'visible' : 'hidden';
+    reportGenCard.style.display = 'block';
+    reportGenCard.style.visibility = 'visible';
   }
   
   // Update grid layout based on visible modules
@@ -469,23 +482,44 @@ async function loadPendingCount(user) {
   
   const reviewerDesignations = ['operations_manager', 'business_development', 'procurement', 'general_manager'];
   const isReviewer = user && (user.designation && reviewerDesignations.includes(user.designation));
+  const isSupervisor = user && user.designation === 'supervisor';
   const pendingReviewMenuItem = document.getElementById('pending-review-menu-item');
 
-  if (reviewHistoryModule) {
-    reviewHistoryModule.style.display = 'none';
-    reviewHistoryModule.style.visibility = 'hidden';
+  // Supervisors: show Review History (not Pending Review)
+  if (isSupervisor) {
+    if (pendingModule) {
+      pendingModule.style.display = 'none';
+      pendingModule.style.visibility = 'hidden';
+    }
+    if (reviewHistoryModule) {
+      reviewHistoryModule.style.display = 'block';
+      reviewHistoryModule.style.visibility = 'visible';
+    }
+    if (pendingReviewMenuItem) {
+      pendingReviewMenuItem.style.display = 'none';
+    }
+    return;
   }
 
-  if (pendingReviewMenuItem) {
-    pendingReviewMenuItem.style.display = isReviewer ? 'list-item' : 'none';
-  }
-  
+  // Non-reviewers (no designation): hide both
   if (!isReviewer) {
     if (pendingModule) {
       pendingModule.style.display = 'none';
       pendingModule.style.visibility = 'hidden';
     }
+    if (reviewHistoryModule) {
+      reviewHistoryModule.style.display = 'none';
+      reviewHistoryModule.style.visibility = 'hidden';
+    }
+    if (pendingReviewMenuItem) {
+      pendingReviewMenuItem.style.display = 'none';
+    }
     return;
+  }
+
+  // Reviewers: show both Pending Review and Review History (updateModuleVisibility already set Review History)
+  if (pendingReviewMenuItem) {
+    pendingReviewMenuItem.style.display = 'list-item';
   }
   
   try {
@@ -2182,8 +2216,9 @@ function loadDashboardStats() {
 // ===========================================
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Check if we're on the dashboard page (has modulesGrid or modules section)
-  const isDashboardPage = document.getElementById('modulesGrid') || document.getElementById('modules');
+  // Main dashboard only: modulesGrid. Module dashboards (HR, Inspection, etc.) use runNavVisibility for consistent nav
+  const hasModuleGrid = !!document.getElementById('hrFormsGrid') || !!document.getElementById('inspectionFormsGrid');
+  const isDashboardPage = !!document.getElementById('modulesGrid') && !hasModuleGrid;
   const isReviewHistoryPage = document.body.classList.contains('review-dashboard');
   const hasMainNav = document.getElementById('nav') && document.querySelector('#nav .nav-center');
 

@@ -652,15 +652,26 @@
     }
     .reportfolder-panel-title { font-size: 1rem; font-weight: 700; }
     .reportfolder-panel-body {
-      flex: 1; overflow-y: auto; padding: 1.5rem;
-      scrollbar-width: thin; scrollbar-color: rgba(18,84,53,.2) transparent;
+      flex: 1;
+      padding: 1.5rem;
       min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
     }
     .reportfolder-panel-body .report-folder-list {
       max-height: none;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(18,84,53,.2) transparent;
+      padding-right: .2rem;
     }
-    .reportfolder-panel-body::-webkit-scrollbar { width: 6px; }
-    .reportfolder-panel-body::-webkit-scrollbar-thumb { background: rgba(18,84,53,.2); border-radius: 3px; }
+    .reportfolder-panel-body .report-folder-list::-webkit-scrollbar { width: 6px; }
+    .reportfolder-panel-body .report-folder-list::-webkit-scrollbar-thumb { background: rgba(18,84,53,.2); border-radius: 3px; }
   </style>
 </head>
 <body class="mmr-dashboard">
@@ -1983,8 +1994,13 @@ function renderReportFolderList(files) {
     el.innerHTML = '<div class="report-folder-empty">No reports saved yet. Send an email or use Save to Folder.</div>';
     return;
   }
+  const sortedFiles = [...files].sort((a, b) => {
+    const ta = a?.modified ? new Date(a.modified).getTime() : 0;
+    const tb = b?.modified ? new Date(b.modified).getTime() : 0;
+    return tb - ta;
+  });
   const isOnMmrPage = !!document.getElementById('dashboardSection');
-  el.innerHTML = files.map(f => {
+  el.innerHTML = sortedFiles.map(f => {
     const dt = f.modified ? new Date(f.modified).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '';
     const size = f.size ? (f.size < 1024 ? f.size + ' B' : (f.size / 1024).toFixed(1) + ' KB') : '';
     const fn = (f.name || '').replace(/"/g, '&quot;');
@@ -2059,11 +2075,13 @@ function openReportFromAdmin(btn) {
 
 function openReportFolderPanel() {
   document.getElementById('reportFolderOverlay')?.classList.add('active');
+  document.body.style.overflow = 'hidden';
   loadReportFolder();
 }
 
 function closeReportFolderPanel() {
   document.getElementById('reportFolderOverlay')?.classList.remove('active');
+  document.body.style.overflow = '';
 }
 
 async function downloadReportFile(filename) {

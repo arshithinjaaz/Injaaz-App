@@ -227,8 +227,11 @@
     .review-modal-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .review-modal-body::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
+  <style>body.has-main-nav { padding-top: 5.5rem; }</style>
 </head>
-<body>
+<body class="has-main-nav">
+  {% set active_page = 'pending-review' %}
+  {% include 'partials/main_navbar.html' with context %}
   <!-- Success Modal -->
   <div class="success-overlay" id="successModal">
     <div class="success-modal">
@@ -810,5 +813,7 @@
     
     loadPending();
   </script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

@@ -253,8 +253,8 @@
           Back to Dashboard
         </a>
         <p class="hero-tagline">Review History</p>
-        <h1 class="hero-title">All <span class="hero-title-accent">Submissions</span></h1>
-        <p class="hero-subtitle">View and re-review all technician submissions, including completed ones.</p>
+        <h1 class="hero-title">{% if is_supervisor %}My Submissions{% else %}All Submissions{% endif %}</h1>
+        <p class="hero-subtitle">{% if is_supervisor %}View, edit, and track the status of your submitted forms.{% else %}View and re-review all technician submissions, including completed ones.{% endif %}</p>
       </div>
       <div class="hero-right">
         <div class="dashboard-widget">

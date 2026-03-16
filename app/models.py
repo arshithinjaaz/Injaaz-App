@@ -331,6 +331,57 @@ class Session(db.Model):
         return f'<Session {self.token_jti[:8]}... - User {self.user_id}>'
 
 
+class Device(db.Model):
+    """Registered devices for admin management"""
+    __tablename__ = 'devices'
+
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.String(50), unique=True, nullable=False, index=True)  # e.g. DEV-0001
+    name = db.Column(db.String(255), nullable=False)
+    device_type = db.Column(db.String(30), default='Laptop')  # Laptop, Desktop, Mobile, Server, Tablet
+    os = db.Column(db.String(80), default='Windows 11')  # macOS, Windows 11, iOS, Ubuntu, etc.
+    status = db.Column(db.String(20), default='idle', index=True)  # online, offline, idle, update
+    health = db.Column(db.Integer, default=100)  # 0-100
+    assigned_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    serial_or_asset_tag = db.Column(db.String(100), nullable=True)
+    last_active_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    assigned_user = db.relationship('User', backref='devices', foreign_keys=[assigned_user_id])
+
+    def to_dict(self):
+        last = 'Never'
+        if self.last_active_at:
+            delta = datetime.utcnow() - self.last_active_at
+            if delta.days > 0:
+                last = f'{delta.days}d ago'
+            elif delta.seconds >= 3600:
+                last = f'{delta.seconds // 3600}h ago'
+            elif delta.seconds >= 60:
+                last = f'{delta.seconds // 60}m ago'
+            else:
+                last = 'Just now'
+        return {
+            'id': self.id,
+            'device_id': self.device_id,
+            'name': self.name,
+            'device_type': self.device_type,
+            'os': self.os,
+            'status': self.status,
+            'health': self.health,
+            'assigned_user_id': self.assigned_user_id,
+            'assigned_user': self.assigned_user.email.split('@')[0] if self.assigned_user else None,
+            'serial_or_asset_tag': self.serial_or_asset_tag,
+            'last_active': last,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def __repr__(self):
+        return f'<Device {self.device_id} - {self.name}>'
+
+
 class Notification(db.Model):
     """User notifications for workflow updates"""
     __tablename__ = 'notifications'

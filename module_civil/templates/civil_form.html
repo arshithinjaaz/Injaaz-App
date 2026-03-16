@@ -1088,47 +1088,14 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/inspection-forms-unified.css') }}">
 </head>
 <body class="inspection-form">
   {% set active_page = 'inspection' %}
+  {% set show_inspection_save_draft = (not is_edit_mode or (submission_data and submission_data.workflow_status == 'draft')) %}
   {% include 'partials/main_navbar.html' with context %}
-  <!-- Form-specific bar -->
-  <div class="inspection-form-bar" style="background:#fff;border-bottom:1px solid #e5e7eb;padding:0.5rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
-    <span style="font-weight:600;color:var(--primary);">Civil Works</span>
-    <div style="display:flex;gap:0.5rem;">
-      {% if is_edit_mode %}
-      <a href="/dashboard" class="btn btn-outline-secondary btn-sm">← Back to Dashboard</a>
-      {% else %}
-      <a href="/hvac-mep/form" class="btn btn-outline-secondary btn-sm">← Previous</a>
-      <a href="/cleaning/form" class="btn btn-outline-secondary btn-sm">Next →</a>
-      {% endif %}
-    </div>
-  </div>
-  
+
   <div class="container">
-    <!-- Form Header with Save Draft -->
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-      <div>
-        <h2 class="mb-1">Site Inspection Report - Civil{% if is_edit_mode %} - Edit Mode{% endif %}</h2>
-        <p class="text-muted mb-0">
-          {% if is_supervisor_edit %}
-          Review the inspector's submission below. You can edit any fields, add new items, add your comments, verify, and sign to approve.
-          {% elif is_edit_mode %}
-          Review and edit the submission below. Signatures cannot be modified.
-          {% else %}
-          Complete the inspection form below
-          {% endif %}
-        </p>
-      </div>
-      {% if not is_edit_mode or (submission_data and submission_data.workflow_status == 'draft') %}
-      <button type="button" id="saveDraftBtn" class="btn btn-outline-secondary" style="font-weight: 500; border-radius: 6px; white-space: nowrap;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16" style="vertical-align: -2px;">
-          <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
-        </svg>
-        Save Draft
-      </button>
-      {% endif %}
-    </div>
 
     {% if is_edit_mode and can_edit == False %}
     <!-- Read-Only Mode Banner -->
@@ -1149,12 +1116,19 @@
     {% endif %}
 
     <form id="mainForm" novalidate>
+      <div class="if-form-hd">
+        <div class="if-form-hd-left">
+          <h1 class="if-form-title">Civil Works Inspection</h1>
+          <p class="if-form-subtitle">INJAAZ FACILITY MANAGEMENT</p>
+        </div>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="if-form-logo">
+      </div>
       <!-- Tab Navigation -->
       <ul class="nav nav-tabs" id="civilTabs" role="tablist">
-        <li class="nav-item" role="presentation"><button class="nav-link active" id="tab-1-link" data-bs-toggle="tab" data-bs-target="#tab-1" type="button" role="tab">1. Project Info</button></li>
-        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-2-link" data-bs-toggle="tab" data-bs-target="#tab-2" type="button" role="tab">2. Work Items</button></li>
-        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab">3. Photos & Time</button></li>
-        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-4-link" data-bs-toggle="tab" data-bs-target="#tab-4" type="button" role="tab"><span class="tab-label-full">4. Sign-off & Submit</span><span class="tab-label-short">4. Sign-off</span></button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link active" id="tab-1-link" data-bs-toggle="tab" data-bs-target="#tab-1" type="button" role="tab">Project Info</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-2-link" data-bs-toggle="tab" data-bs-target="#tab-2" type="button" role="tab">Work Items</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab">Photos &amp; Time</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-4-link" data-bs-toggle="tab" data-bs-target="#tab-4" type="button" role="tab">Sign-off &amp; Submit</button></li>
       </ul>
 
       <div class="tab-content" id="civilTabContent">

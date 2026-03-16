@@ -217,6 +217,33 @@ html {
 }
 
 /* ===========================================
+   Save Draft (inspection form - in main nav)
+   =========================================== */
+.nav-save-draft-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: rgba(18, 84, 53, 0.08);
+  border: 1px solid rgba(18, 84, 53, 0.25);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  margin-right: 0.5rem;
+}
+.nav-save-draft-btn:hover {
+  background: rgba(18, 84, 53, 0.12);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.nav-save-draft-btn svg { flex-shrink: 0; }
+
+/* ===========================================
    Logout Button
    =========================================== */
 .logout-btn {

@@ -3,7 +3,7 @@ Admin Routes - User management and access control
 """
 from flask import Blueprint, request, jsonify, render_template, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.models import db, User, AuditLog
+from app.models import db, User, AuditLog, Device
 from app.middleware import admin_required
 from common.error_responses import error_response, success_response
 from datetime import datetime
@@ -967,4 +967,117 @@ def get_valid_designations():
     except Exception as e:
         current_app.logger.error(f"Error getting designations: {str(e)}", exc_info=True)
         return error_response('Failed to get designations', status_code=500, error_code='DATABASE_ERROR')
+
+
+# ============== Device Management (Admin only) ==============
+
+@admin_bp.route('/devices', methods=['GET'])
+@jwt_required()
+@admin_required
+def list_devices():
+    """Get all registered devices"""
+    try:
+        devices = Device.query.order_by(Device.created_at.desc()).all()
+        devices_data = [d.to_dict() for d in devices]
+        return success_response({
+            'devices': devices_data,
+            'count': len(devices_data)
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error listing devices: {str(e)}", exc_info=True)
+        return error_response('Failed to fetch devices', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/devices', methods=['POST'])
+@jwt_required()
+@admin_required
+def create_device():
+    """Enroll a new device"""
+    try:
+        data = request.get_json() or {}
+        name = (data.get('name') or '').strip()
+        device_type = (data.get('device_type') or 'Laptop').strip()
+        os = (data.get('os') or 'Windows 11').strip()
+        user_email = (data.get('assigned_user_email') or '').strip()
+        serial = (data.get('serial_or_asset_tag') or '').strip()
+
+        if not name:
+            return error_response('Device name is required', status_code=400, error_code='VALIDATION_ERROR')
+
+        assigned_user_id = None
+        if user_email:
+            user = User.query.filter_by(email=user_email).first()
+            if user:
+                assigned_user_id = user.id
+
+        # Generate unique device_id
+        import random
+        existing_ids = {d.device_id for d in Device.query.with_entities(Device.device_id).all()}
+        for _ in range(50):
+            dev_id = 'DEV-' + str(random.randint(1000, 9999))
+            if dev_id not in existing_ids:
+                break
+        else:
+            dev_id = 'DEV-' + str(random.randint(10000, 99999))
+
+        device = Device(
+            device_id=dev_id,
+            name=name,
+            device_type=device_type,
+            os=os,
+            status='idle',
+            health=random.randint(80, 100),
+            assigned_user_id=assigned_user_id,
+            serial_or_asset_tag=serial or None,
+            last_active_at=datetime.utcnow()
+        )
+        db.session.add(device)
+        db.session.commit()
+
+        return success_response({
+            'device': device.to_dict(),
+            'message': f'Device "{name}" enrolled successfully'
+        }, status_code=201)
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating device: {str(e)}", exc_info=True)
+        return error_response('Failed to enroll device', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/devices/<int:id>', methods=['DELETE'])
+@jwt_required()
+@admin_required
+def delete_device(id):
+    """Remove a device"""
+    try:
+        device = Device.query.get_or_404(id)
+        name = device.name
+        db.session.delete(device)
+        db.session.commit()
+        return success_response({'message': f'Device "{name}" removed successfully'})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting device: {str(e)}", exc_info=True)
+        return error_response('Failed to remove device', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/devices/stats', methods=['GET'])
+@jwt_required()
+@admin_required
+def device_stats():
+    """Get device statistics for dashboard"""
+    try:
+        total = Device.query.count()
+        online = Device.query.filter_by(status='online').count()
+        offline = Device.query.filter_by(status='offline').count()
+        pending_updates = Device.query.filter_by(status='update').count()
+        return success_response({
+            'total': total,
+            'online': online,
+            'offline': offline,
+            'pending_updates': pending_updates
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error getting device stats: {str(e)}", exc_info=True)
+        return error_response('Failed to get statistics', status_code=500, error_code='DATABASE_ERROR')
 

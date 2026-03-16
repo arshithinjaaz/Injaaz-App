@@ -23,9 +23,13 @@
     
     .success-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; }
     .success-overlay.show { opacity: 1; visibility: visible; }
+    .container { padding-top: 5.5rem; }
   </style>
 </head>
 <body class="hr-form-page">
+  {% set active_page = 'hr' %}
+  {% include 'partials/main_navbar.html' with context %}
+
   <div class="success-overlay" id="successModal">
     <div class="success-modal">
       <div style="width:64px;height:64px;background:linear-gradient(135deg,#10b981,#059669);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;"><svg width="32" height="32" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>
@@ -211,5 +215,7 @@
       setTimeout(() => toast.remove(), 5000);
     }
   </script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

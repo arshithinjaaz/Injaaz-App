@@ -878,32 +878,38 @@
       opacity: 0.9;
     }
     
-    /* Minimal drop zone */
+    /* Enhanced drop zone */
     .drop-zone {
       border: 2px dashed var(--border-light);
-      border-radius: 4px;
-      padding: 2.5rem 1.5rem;
+      border-radius: 12px;
+      padding: 2rem 1.5rem;
       text-align: center;
-      background: #fafafa;
+      background: linear-gradient(180deg, #fafbfc 0%, #f5f7f6 100%);
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
+      position: relative;
     }
     
     .drop-zone:hover,
     .drop-zone.drag-over {
       border-color: var(--primary);
-      background: #f8faf9;
+      background: linear-gradient(180deg, #f0f9f4 0%, #e8f5ed 100%);
+      box-shadow: 0 0 0 4px rgba(18, 84, 53, 0.06);
     }
     
     .drop-zone-content {
       color: var(--text-secondary);
       font-size: 0.9375rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
     }
     
     .drop-zone-content strong {
       display: block;
       color: var(--text-primary);
-      margin-bottom: 0.375rem;
+      margin-bottom: 0;
       font-weight: 600;
       font-size: 1rem;
     }
@@ -911,9 +917,56 @@
     .drop-zone-content small {
       display: block;
       font-size: 0.8125rem;
-      margin-top: 0.375rem;
+      margin-top: 0;
       color: var(--text-light);
     }
+    
+    /* Add item form card */
+    .hvac-add-item-card {
+      background: linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(248,252,249,.95) 100%);
+      border: 1px solid var(--if-border-l);
+      border-radius: 14px;
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 4px rgba(18,84,53,.04);
+    }
+    
+    .hvac-section-title {
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid rgba(18,84,53,.15);
+      letter-spacing: -0.01em;
+    }
+    
+    .hvac-section-title-submitted {
+      color: #059669;
+      font-weight: 700;
+      border-bottom: 2px solid #059669;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .hvac-item-card {
+      border: 1px solid var(--if-border-l);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      background: linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(248,252,249,.98) 100%);
+      box-shadow: 0 1px 4px rgba(18,84,53,.04);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    
+    .hvac-item-card:hover {
+      border-color: rgba(18,84,53,.2);
+      box-shadow: 0 4px 12px rgba(18,84,53,.08);
+    }
+    
+    .hvac-btn-add { border-radius: 10px; font-weight: 600; padding: 0.6rem 1.25rem; }
+    .hvac-btn-clear { border-radius: 10px; font-weight: 500; }
+    .hvac-btn-danger { border-radius: 10px; font-weight: 500; }
     
     .upload-progress {
       margin-top: 0.875rem;
@@ -967,11 +1020,12 @@
     
     /* Empty state */
     .items-list .text-muted {
-      padding: 1.5rem;
+      padding: 2rem 1.5rem;
       text-align: center;
-      background: #fafafa;
+      background: linear-gradient(180deg, #fafbfc 0%, #f5f7f6 100%);
       border: 1px dashed var(--border-light);
-      border-radius: 4px;
+      border-radius: 12px;
+      color: var(--text-light) !important;
       font-size: 0.9375rem;
     }
     
@@ -1039,45 +1093,14 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/inspection-forms-unified.css') }}">
 </head>
 <body class="inspection-form">
   {% set active_page = 'inspection' %}
+  {% set show_inspection_save_draft = (not is_edit_mode or (submission_data and submission_data.workflow_status == 'draft')) %}
   {% include 'partials/main_navbar.html' with context %}
-  <div class="inspection-form-bar" style="background:#fff;border-bottom:1px solid #e5e7eb;padding:0.5rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
-    <span style="font-weight:600;color:var(--primary);">HVAC & MEP</span>
-    <div style="display:flex;gap:0.5rem;">
-      {% if is_edit_mode %}
-      <a href="/dashboard" class="btn btn-outline-secondary btn-sm">← Back to Dashboard</a>
-      {% else %}
-      <a href="/civil/form" class="btn btn-outline-secondary btn-sm">Next →</a>
-      {% endif %}
-    </div>
-  </div>
-  
+
   <div class="container">
-    <!-- Form Header with Save Draft -->
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-      <div>
-        <h2 class="mb-1">HVAC & MEP Inspection{% if is_edit_mode %} - Edit Mode{% endif %}</h2>
-        <p class="text-muted mb-0">
-          {% if is_supervisor_edit %}
-          Review the technician's submission below. You can edit any fields, add new items, add your comments, verify, and sign to approve.
-          {% elif is_edit_mode %}
-          Review and edit the submission below. Signatures cannot be modified.
-          {% else %}
-          Complete site visit documentation with photos and signatures
-          {% endif %}
-        </p>
-      </div>
-      {% if not is_edit_mode or (submission_data and submission_data.workflow_status == 'draft') %}
-      <button type="button" id="saveDraftBtn" class="btn btn-outline-secondary" style="font-weight: 500; border-radius: 6px; white-space: nowrap;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16" style="vertical-align: -2px;">
-          <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
-        </svg>
-        Save Draft
-      </button>
-      {% endif %}
-    </div>
 
     {% if is_edit_mode and can_edit == False %}
     <!-- Read-Only Mode Banner -->
@@ -1098,16 +1121,23 @@
     {% endif %}
 
     <form id="mainForm" enctype="multipart/form-data" onsubmit="return false;" novalidate>
+      <div class="if-form-hd">
+        <div class="if-form-hd-left">
+          <h1 class="if-form-title">HVAC &amp; MEP Inspection</h1>
+          <p class="if-form-subtitle">INJAAZ FACILITY MANAGEMENT</p>
+        </div>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="if-form-logo">
+      </div>
       <!-- Tab Navigation -->
       <ul class="nav nav-tabs" id="hvacTabs" role="tablist">
         <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="tab-1-link" data-bs-toggle="tab" data-bs-target="#tab-1" type="button" role="tab">1. Project Info</button>
+          <button class="nav-link active" id="tab-1-link" data-bs-toggle="tab" data-bs-target="#tab-1" type="button" role="tab">Project Info</button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link" id="tab-2-link" data-bs-toggle="tab" data-bs-target="#tab-2" type="button" role="tab">2. Work Items</button>
+          <button class="nav-link" id="tab-2-link" data-bs-toggle="tab" data-bs-target="#tab-2" type="button" role="tab">Work Items</button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab"><span class="tab-label-full">3. Sign-off & Submit</span><span class="tab-label-short">3. Sign-off</span></button>
+          <button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab">Sign-off &amp; Submit</button>
         </li>
       </ul>
 
@@ -1115,24 +1145,27 @@
         <!-- TAB 1: Project Info -->
         <div class="tab-pane fade show active" id="tab-1" role="tabpanel">
           <h4 class="section-heading">Project Information</h4>
-          <div class="row g-3">
-            <div class="col-md-6 mb-3">
-              <label for="site_name" class="form-label">Site Name</label>
-              <input id="site_name" name="site_name" class="form-control" 
-                     {% if is_edit_mode and submission_data %}value="{{ submission_data.site_name or (submission_data.form_data.site_name if submission_data.form_data else '') }}"{% endif %}
-                     {% if not is_supervisor_edit %}required{% endif %}>
-            </div>
+          <div class="hvac-add-item-card">
+            <div class="row g-3">
+              <div class="col-md-6 mb-3">
+                <label for="site_name" class="form-label">Site Name</label>
+                <input id="site_name" name="site_name" class="form-control" 
+                       {% if is_edit_mode and submission_data %}value="{{ submission_data.site_name or (submission_data.form_data.site_name if submission_data.form_data else '') }}"{% endif %}
+                       {% if not is_supervisor_edit %}required{% endif %}
+                       placeholder="Enter site or building name">
+              </div>
 
-            <div class="col-md-6 mb-3">
-              <label for="visit_date" class="form-label">Visit Date</label>
-              <input id="visit_date" name="visit_date" type="date" class="form-control" 
-                     {% if is_edit_mode and submission_data %}value="{{ submission_data.visit_date or (submission_data.form_data.visit_date if submission_data.form_data else '') }}"{% endif %}
-                     {% if not is_supervisor_edit %}required{% endif %} max="">
+              <div class="col-md-6 mb-3">
+                <label for="visit_date" class="form-label">Visit Date</label>
+                <input id="visit_date" name="visit_date" type="date" class="form-control" 
+                       {% if is_edit_mode and submission_data %}value="{{ submission_data.visit_date or (submission_data.form_data.visit_date if submission_data.form_data else '') }}"{% endif %}
+                       {% if not is_supervisor_edit %}required{% endif %} max="">
+              </div>
             </div>
           </div>
 
           <div class="d-flex mt-4">
-            <button type="button" class="btn btn-primary ms-auto" onclick="goToTab(2)">Next: Work Items &raquo;</button>
+            <button type="button" class="btn btn-primary ms-auto px-4 py-2" style="border-radius: 10px; font-weight: 600;" onclick="goToTab(2)">Next: Work Items &raquo;</button>
           </div>
         </div>
 
@@ -1154,14 +1187,14 @@
         
         <!-- Submitted Inspection Items (TOP for Supervisor/Manager) -->
         <div class="col-12 mb-section">
-          <h5 style="color: #059669; font-weight: 700; border-bottom: 2px solid #059669; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">SUBMITTED INSPECTION ITEMS</h5>
-          <p class="text-muted small" style="margin-top: -1rem; margin-bottom: 1.5rem;">Review and edit the items submitted by the technician below.</p>
+          <h5 class="hvac-section-title-submitted">Submitted Inspection Items</h5>
+          <p class="text-muted small mb-3">Review and edit the items submitted by the technician below.</p>
           
           <!-- Server-side rendered items for supervisor view (editable) -->
           {% if is_edit_mode and submission_data and submission_data.form_data and submission_data.form_data['items'] %}
           <div id="serverRenderedItems" class="items-list mb-3">
             {% for item in submission_data.form_data['items'] %}
-            <div class="item-card editable-item-card" data-item-index="{{ loop.index0 }}" data-edit-mode="false" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div class="item-card editable-item-card hvac-item-card" data-item-index="{{ loop.index0 }}" data-edit-mode="false">
               <div class="d-flex justify-content-between align-items-start mb-3">
                 <div class="d-flex align-items-center gap-2">
                   <h6 style="margin: 0; color: #059669; font-weight: 700;">Item {{ loop.index }}</h6>
@@ -1269,8 +1302,8 @@
         
         <!-- Add New Item Section (BELOW submitted items for Supervisor) -->
         <div class="col-12 mb-section">
-          <h5>Add New Item (Optional)</h5>
-          <p class="text-muted" style="font-size: 0.9rem;">If needed, you can add additional items to this submission.</p>
+          <h5 class="hvac-section-title">Add New Item (Optional)</h5>
+          <p class="text-muted small mb-3">If needed, you can add additional items to this submission.</p>
         </div>
         
         {% else %}
@@ -1280,10 +1313,13 @@
         
         <!-- Add Inspection Item Section (FIRST for Supervisor) -->
         <div class="col-12 mb-section">
-          <h5>Add Inspection Item</h5>
+          <h5 class="hvac-section-title">Add Inspection Item</h5>
         </div>
         {% endif %}
 
+        <div class="col-12">
+        <div class="hvac-add-item-card">
+        <div class="row g-3">
         <div class="col-md-4 mb-2">
           <label class="form-label">Asset</label>
           <select id="curAsset" class="form-select" disabled>
@@ -1332,8 +1368,9 @@
           
           <div id="dropZone" class="drop-zone">
             <div class="drop-zone-content">
+              <span style="font-size: 2rem; opacity: 0.7;">📷</span>
               <strong>Drag and drop images here</strong>
-              <small>or click to browse • Maximum 100 images • Auto-compressed to 1280px • Max 10MB per file</small>
+              <small>or click to browse • Max 100 images • Auto-compressed to 1280px • 10MB per file</small>
             </div>
           </div>
           
@@ -1354,15 +1391,18 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="col-12 mb-3 d-flex gap-2">
-          <button id="addItemBtn" type="button" class="btn btn-success">Add Item</button>
-          <button id="clearCurrentBtn" type="button" class="btn btn-outline-secondary">Clear Current</button>
-          <button id="clearItemsBtn" type="button" class="btn btn-outline-danger">Clear All Items</button>
+        <div class="col-12 mb-3 d-flex gap-2 flex-wrap">
+          <button id="addItemBtn" type="button" class="btn btn-success hvac-btn-add">➕ Add Item</button>
+          <button id="clearCurrentBtn" type="button" class="btn btn-outline-secondary hvac-btn-clear">Clear Current</button>
+          <button id="clearItemsBtn" type="button" class="btn btn-outline-danger hvac-btn-danger">Clear All Items</button>
+        </div>
+        </div>
+        </div>
         </div>
         
         <!-- Items List (Unified section for all views) -->
         <div class="col-12 mb-section">
-          <h5 id="itemsListTitle">{% if is_supervisor_edit %}Newly Added Items{% else %}Inspection Items{% endif %}</h5>
+          <h5 class="hvac-section-title" id="itemsListTitle">{% if is_supervisor_edit %}Newly Added Items{% else %}Inspection Items{% endif %}</h5>
           <div id="itemsList" class="items-list"></div>
         </div>
 
@@ -1387,9 +1427,9 @@
 
           </div>
 
-          <div class="d-flex justify-content-between mt-4">
-            <button type="button" class="btn btn-secondary" onclick="goToTab(1)">&laquo; Previous</button>
-            <button type="button" class="btn btn-primary" onclick="goToTab(3)">Next: Sign-off & Submit &raquo;</button>
+          <div class="d-flex justify-content-between mt-4 gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline-secondary px-4 py-2" style="border-radius: 10px; font-weight: 500;" onclick="goToTab(1)">&laquo; Previous</button>
+            <button type="button" class="btn btn-primary px-4 py-2" style="border-radius: 10px; font-weight: 600;" onclick="goToTab(3)">Next: Sign-off & Submit &raquo;</button>
           </div>
         </div>
 
@@ -3192,7 +3232,7 @@
           
           console.log(`  Rendering item ${idx}:`, it);
           const card = document.createElement('div');
-          card.className = 'item-card';
+          card.className = 'item-card hvac-item-card';
           
           const photoCount = it.photoUrls ? it.photoUrls.length : (it.photoCount || 0);
           const uploadStatus = it.photoUrls ? '☁️ Uploaded to cloud' : '⏳ Not uploaded';

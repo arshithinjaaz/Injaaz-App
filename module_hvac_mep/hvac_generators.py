@@ -213,7 +213,7 @@ def create_pdf_report(data, output_dir):
             ['Total Items Inspected:', str(len(data.get('items', [])))]
         ]
         
-        site_table = create_info_table(site_info_data)
+        site_table = create_info_table(site_info_data, col_widths=[2.35*inch, 4.65*inch])
         story.append(site_table)
         story.append(Spacer(1, 0.1*inch))
         
@@ -239,7 +239,7 @@ def create_pdf_report(data, output_dir):
                     ['Photos Attached:', str(len(item.get('photos', [])))]
                 ]
                 
-                item_table = create_info_table(item_details, col_widths=[1.8*inch, 4.2*inch])
+                item_table = create_info_table(item_details, col_widths=[2.35*inch, 4.65*inch])
                 story.append(item_table)
                 story.append(Spacer(1, 0.06*inch))
                 
@@ -251,9 +251,9 @@ def create_pdf_report(data, output_dir):
                     story.append(Spacer(1, 0.04*inch))
                     add_photo_grid(story, photos)
                 
-                # Add page break after each item (except last)
+                # Small spacer between items (no page break - avoids huge gaps)
                 if idx < len(items):
-                    story.append(PageBreak())
+                    story.append(Spacer(1, 0.15*inch))
         
         else:
             add_paragraph(story, "No inspection items recorded.")
@@ -844,12 +844,12 @@ def create_pdf_report(data, output_dir):
         
         # Always show supervisor section
         add_section_heading(story, "Supervisor Review")
-        
-        # Add comments section
+        styles = get_professional_styles()
+        # Add comments with more spacing and bold
         if supervisor_comments_display:
-            add_paragraph(story, supervisor_comments_display)
+            story.append(Paragraph(supervisor_comments_display, styles['CommentLead']))
         else:
-            add_paragraph(story, "<i>No comments provided</i>")
+            story.append(Paragraph("<i>No comments provided</i>", styles['CommentLead']))
         story.append(Spacer(1, 0.1*inch))
         
         # Add signature section

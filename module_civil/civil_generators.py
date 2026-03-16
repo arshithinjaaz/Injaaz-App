@@ -245,6 +245,9 @@ def create_pdf_report(data, output_dir):
             f"Project: {project_name}"
         )
         
+        # Compact separator (match HVAC formatting)
+        story.append(Spacer(1, 0.04*inch))
+        
         # PROJECT INFORMATION
         add_section_heading(story, "Project Information")
         
@@ -258,9 +261,9 @@ def create_pdf_report(data, output_dir):
             ['Total Photos:', str(len(all_photos))]
         ]
         
-        project_table = create_info_table(project_data)
+        project_table = create_info_table(project_data, col_widths=[2.35*inch, 4.65*inch])
         story.append(project_table)
-        story.append(Spacer(1, 0.3*inch))
+        story.append(Spacer(1, 0.1*inch))
         
         # WORK ITEMS - Use work_items array directly
         add_section_heading(story, "Work Items")
@@ -279,24 +282,24 @@ def create_pdf_report(data, output_dir):
                     ['Photos:', str(len(item.get('photos', [])))]
                 ]
                 
-                item_table = create_info_table(item_data, col_widths=[1.8*inch, 4.2*inch])
+                item_table = create_info_table(item_data, col_widths=[2.35*inch, 4.65*inch])
                 story.append(item_table)
+                story.append(Spacer(1, 0.06*inch))
                 
                 # Add photos for this work item
                 photos = item.get('photos', [])
                 logger.info(f"    Adding photos for work item {idx}: {len(photos)} photos")
                 if photos:
-                    story.append(Spacer(1, 0.15*inch))
-                    add_paragraph(story, f"<b>Photos for Work Item {idx} ({len(photos)} total):</b>")
-                    story.append(Spacer(1, 0.1*inch))
+                    add_paragraph(story, f"<b>Attached Photos ({len(photos)} total):</b>")
+                    story.append(Spacer(1, 0.04*inch))
                     logger.info(f"    Calling add_photo_grid with {len(photos)} photos")
                     add_photo_grid(story, photos)
                 else:
                     logger.warning(f"    ⚠️ No photos found for work item {idx}")
                 
-                # Add page break after each item (except last)
+                # Small spacer between items (no page break - avoids huge gaps)
                 if idx < len(work_items):
-                    story.append(PageBreak())
+                    story.append(Spacer(1, 0.15*inch))
         else:
             add_paragraph(story, "No work items recorded.")
         

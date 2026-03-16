@@ -365,9 +365,11 @@ def history_page():
                                      module='Workflow',
                                      message='You must have a valid designation to access workflow history.'), 403
         
+        is_supervisor = user.designation == 'supervisor'
         return render_template('workflow_history.html', 
                              user_designation=user.designation or 'admin',
-                             user_name=user.full_name or user.username)
+                             user_name=user.full_name or user.username,
+                             is_supervisor=is_supervisor)
     except Exception as e:
         current_app.logger.error(f"Error loading history page: {str(e)}", exc_info=True)
         return render_template('access_denied.html', module='Workflow', message='Error loading history page.'), 500

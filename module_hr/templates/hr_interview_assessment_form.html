@@ -5,11 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Interview Assessment Form — INJAAZ</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/animations.css">
-  <link rel="stylesheet" href="/static/css/hr-forms-unified.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hr-forms-unified.css') }}">
+  <style>.hr-form-unified .page { padding-top: 5.5rem; }</style>
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 </head>
 <body class="hr-form-unified">
+  {% set active_page = 'hr' %}
+  {% include 'partials/main_navbar.html' with context %}
 
   <div class="sig-modal-bg" id="sigBg">
     <div class="sig-modal">
@@ -187,5 +192,7 @@ document.getElementById('hrForm').addEventListener('submit',async e=>{
   }catch(err){alert('Network error: '+err.message);btn.disabled=false;btn.innerHTML='<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Submit Form'}
 });
 </script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>
