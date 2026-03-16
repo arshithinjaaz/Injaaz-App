@@ -5,7 +5,8 @@ Handles material lists, quantities, pricing, and Excel imports
 import uuid
 import json
 from datetime import datetime
-from flask import Blueprint, render_template, request, jsonify, current_app
+from io import BytesIO
+from flask import Blueprint, render_template, request, jsonify, current_app, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import db, User, Submission
 
@@ -90,6 +91,36 @@ def get_materials():
         'materials': materials,
         'total': len(materials)
     })
+
+
+@procurement_bp.route('/api/recent-activity', methods=['GET'])
+@jwt_required()
+def recent_activity():
+    """Get recent procurement material submissions for the dashboard activity log."""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    if user.role != 'admin' and not getattr(user, 'access_procurement_module', False):
+        return jsonify({'error': 'Access denied'}), 403
+    limit = max(1, min(50, request.args.get('limit', 15, type=int)))
+    submissions = Submission.query.filter(
+        Submission.module_type == 'procurement_material'
+    ).order_by(Submission.created_at.desc()).limit(limit).all()
+    activities = []
+    for sub in submissions:
+        name = (sub.form_data or {}).get('material_name') or (sub.form_data or {}).get('site_name') or 'Material'
+        added_by = (sub.form_data or {}).get('added_by') or ''
+        if not added_by and sub.user_id:
+            u = User.query.get(sub.user_id)
+            added_by = (u.full_name or u.username) if u else 'System'
+        if not added_by:
+            added_by = 'System Administrator'
+        activities.append({
+            'material_name': name,
+            'submitted_by': added_by,
+            'created_at': sub.created_at.isoformat() if sub.created_at else None,
+        })
+    return jsonify({'success': True, 'activities': activities})
 
 
 @procurement_bp.route('/api/materials', methods=['POST'])
@@ -305,6 +336,45 @@ def import_excel():
         return jsonify({
             'error': f'Error processing Excel file: {str(e)}'
         }), 500
+
+
+@procurement_bp.route('/api/sample-excel', methods=['GET'])
+@jwt_required()
+def download_sample_excel():
+    """Download a sample Excel file for procurement material import."""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    if user.role != 'admin' and not getattr(user, 'access_procurement_module', False):
+        return jsonify({'error': 'Access denied'}), 403
+    try:
+        import pandas as pd
+        rows = [
+            {'Material Name': 'Office Paper A4 Ream', 'Category': 'Stationery', 'Description': '500 sheets per ream', 'Unit': 'ream', 'Quantity': 50, 'Unit Price': 12.50, 'Supplier': 'Gulf Paper Co', 'Notes': 'Monthly supply'},
+            {'Material Name': 'Printer Toner Cartridge', 'Category': 'IT Supplies', 'Description': 'Laser printer compatible', 'Unit': 'pcs', 'Quantity': 10, 'Unit Price': 85.00, 'Supplier': 'Tech Supplies LLC', 'Notes': ''},
+            {'Material Name': 'Cleaning Detergent 5L', 'Category': 'Cleaning', 'Description': 'Multi-surface cleaner', 'Unit': 'bottle', 'Quantity': 20, 'Unit Price': 28.00, 'Supplier': 'CleanPro', 'Notes': 'Bulk order'},
+            {'Material Name': 'LED Bulb 18W', 'Category': 'Electrical', 'Description': 'E27 fitting, warm white', 'Unit': 'pcs', 'Quantity': 100, 'Unit Price': 4.25, 'Supplier': 'Lighting World', 'Notes': ''},
+            {'Material Name': 'Hand Soap Refill 5L', 'Category': 'Hygiene', 'Description': 'Dispenser refill', 'Unit': 'bottle', 'Quantity': 15, 'Unit Price': 22.00, 'Supplier': 'Hygiene Plus', 'Notes': 'Washrooms'},
+            {'Material Name': 'Safety Gloves Box', 'Category': 'PPE', 'Description': '100 pairs per box', 'Unit': 'box', 'Quantity': 5, 'Unit Price': 35.00, 'Supplier': 'Safety First', 'Notes': 'Site use'},
+            {'Material Name': 'Paint 20L White', 'Category': 'Paints', 'Description': 'Interior emulsion', 'Unit': 'can', 'Quantity': 8, 'Unit Price': 120.00, 'Supplier': 'Paint Depot', 'Notes': 'Tower A'},
+        ]
+        df = pd.DataFrame(rows)
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Materials')
+        output.seek(0)
+        filename = f'procurement_import_sample_{datetime.now().strftime("%Y%m%d")}.xlsx'
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+    except ImportError:
+        return jsonify({'error': 'Sample Excel requires pandas and openpyxl.'}), 500
+    except Exception as e:
+        current_app.logger.exception(f"Procurement sample Excel error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @procurement_bp.route('/api/export-excel', methods=['GET'])
@@ -564,6 +634,83 @@ def assign_material_to_property():
     return jsonify({
         'success': True,
         'message': f'Material assigned to {property_name}'
+    })
+
+
+@procurement_bp.route('/catalog/<department>')
+@jwt_required()
+def catalog_department(department):
+    """Show catalog materials for a specific department (HVAC/Cleaning/Electrical/Plumbing)."""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    allowed = ['HVAC', 'Cleaning', 'Electrical', 'Plumbing']
+    if department not in allowed:
+        return redirect('/procurement/')
+    dept_meta = {
+        'HVAC':       {'icon': '❄️',  'color': '#0284c7', 'gradient': 'linear-gradient(135deg,#0ea5e9,#0284c7)', 'desc': 'Compressors, refrigerants, AHUs, filters and air-conditioning spare parts.'},
+        'Cleaning':   {'icon': '🧹', 'color': '#047857', 'gradient': 'linear-gradient(135deg,#10b981,#047857)', 'desc': 'Mops, buckets, chemicals, trolleys, washroom supplies and cleaning equipment.'},
+        'Electrical': {'icon': '⚡', 'color': '#d97706', 'gradient': 'linear-gradient(135deg,#f59e0b,#d97706)', 'desc': 'Switches, sockets, breakers, cables, lights, fans and electrical fittings.'},
+        'Plumbing':   {'icon': '🔧', 'color': '#6d28d9', 'gradient': 'linear-gradient(135deg,#8b5cf6,#6d28d9)', 'desc': 'Mixers, WC sets, basins, pipes, traps, valves and all sanitary fittings.'},
+    }
+    return render_template(
+        'procurement_catalog_department.html',
+        user=user,
+        department=department,
+        meta=dept_meta[department],
+    )
+
+
+@procurement_bp.route('/api/catalog/materials', methods=['GET'])
+@jwt_required()
+def get_catalog_materials():
+    """
+    Return the materials catalog grouped by department.
+    Accessible to any authenticated user (inspection form users need this).
+    Optional query params:
+      ?department=HVAC|Cleaning|Plumbing|Electrical
+      ?q=search term
+    """
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    department = request.args.get('department', '').strip()
+    query_str = request.args.get('q', '').strip().lower()
+
+    submissions = Submission.query.filter_by(module_type='catalog_material').all()
+
+    result = {}
+    for sub in submissions:
+        fd = sub.form_data or {}
+        dept = fd.get('department', 'General')
+        if department and dept != department:
+            continue
+        name = fd.get('material_name', '')
+        if query_str and query_str not in name.lower() and query_str not in fd.get('brand', '').lower():
+            continue
+
+        if dept not in result:
+            result[dept] = []
+        result[dept].append({
+            'id': sub.submission_id,
+            'name': name,
+            'brand': fd.get('brand', ''),
+            'uom': fd.get('uom', 'PCS'),
+            'unit_price': fd.get('unit_price', 0),
+        })
+
+    # Sort each department's items alphabetically by name
+    for dept in result:
+        result[dept].sort(key=lambda x: x['name'])
+
+    departments = sorted(result.keys())
+    return jsonify({
+        'success': True,
+        'departments': departments,
+        'materials': result,
+        'total': sum(len(v) for v in result.values()),
     })
 
 

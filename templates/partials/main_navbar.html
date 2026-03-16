@@ -1,5 +1,5 @@
 {# Main dashboard navigation bar - use across all modules #}
-{# Optional: active_page = 'home' | 'about' | 'admin' | 'report' | 'hr' | 'inspection' | 'procurement' | 'all-submissions' | 'pending-review' | 'submitted-forms' | 'bd-email' #}
+{# Optional: active_page = 'home' | 'about' | 'admin' | 'report' | 'hr' | 'inspection' | 'procurement' | 'all-submissions' | 'pending-review' | 'submitted-forms' | 'bd-email' | 'dochub' #}
 <nav class="nav" id="nav">
   <div class="nav-container">
     <a href="/dashboard" class="logo" aria-label="Injaaz Home">
@@ -50,6 +50,12 @@
         </li>
         <li id="bd-email-menu-item" style="display: none;">
           <a href="/bd/email-module" {% if active_page == 'bd-email' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Email Module</a>
+        </li>
+        <li id="bd-module-menu-item" style="display: none;">
+          <a href="/admin/bd" {% if active_page == 'bd-module' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Business Development</a>
+        </li>
+        <li id="dochub-menu-item">
+          <a href="/dochub" {% if active_page == 'dochub' %}style="color: var(--primary); font-weight: 600;"{% endif %}>DocHub</a>
         </li>
       </ul>
     </div>

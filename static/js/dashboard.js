@@ -184,32 +184,43 @@ function loadUserWelcome() {
 
 // Function to check and show admin menu
 function checkAndShowAdminMenu(user) {
-  // Admin menu and Device Management: admin only
-  if (user && user.role === 'admin') {
-    const adminMenuItem = document.getElementById('admin-menu-item');
-    if (adminMenuItem) {
-      adminMenuItem.style.display = 'list-item';
-    }
-    const deviceMgmtMenuItem = document.getElementById('device-management-menu-item');
-    if (deviceMgmtMenuItem) {
-      deviceMgmtMenuItem.style.display = 'list-item';
-    }
+  const adminMenuItem = document.getElementById('admin-menu-item');
+  const deviceMgmtMenuItem = document.getElementById('device-management-menu-item');
+  const bdModuleMenuItem = document.getElementById('bd-module-menu-item');
+  const bdEmailMenuItem = document.getElementById('bd-email-menu-item');
+  const reportGenMenuItem = document.getElementById('report-gen-menu-item');
+  const historyMenuItem = document.getElementById('review-history-menu-item');
+  const submittedFormsMenuItem = document.getElementById('submitted-forms-menu-item');
+
+  // Submitted Forms: deprecated — always hidden (supervisors use Review History)
+  if (submittedFormsMenuItem) submittedFormsMenuItem.style.display = 'none';
+
+  // Admin menu and Device Management: admin only — explicitly hide for non-admin
+  if (adminMenuItem) {
+    adminMenuItem.style.display = (user && user.role === 'admin') ? 'list-item' : 'none';
   }
+  if (deviceMgmtMenuItem) {
+    deviceMgmtMenuItem.style.display = (user && user.role === 'admin') ? 'list-item' : 'none';
+  }
+  if (bdModuleMenuItem) {
+    bdModuleMenuItem.style.display = (user && user.role === 'admin') ? 'list-item' : 'none';
+  }
+
+  // BD Email: Business Development only — explicitly hide for non-BD
+  if (bdEmailMenuItem) {
+    bdEmailMenuItem.style.display = (user && user.designation === 'business_development') ? 'inline-block' : 'none';
+  }
+
   // Report Generation: all authenticated users
-  if (user) {
-    const reportGenMenuItem = document.getElementById('report-gen-menu-item');
-    if (reportGenMenuItem) {
-      reportGenMenuItem.style.display = 'list-item';
-    }
+  if (reportGenMenuItem && user) {
+    reportGenMenuItem.style.display = 'list-item';
   }
-  
+
   // Review History: admin, reviewers (OM/BD/Procurement/GM), and supervisors (replaces old "Submitted Forms")
   const historyDesignations = ['supervisor', 'operations_manager', 'business_development', 'procurement', 'general_manager'];
-  if (user && (user.role === 'admin' || (user.designation && historyDesignations.includes(user.designation)))) {
-    const historyMenuItem = document.getElementById('review-history-menu-item');
-    if (historyMenuItem) {
-      historyMenuItem.style.display = 'list-item';
-    }
+  const hasHistoryAccess = user && (user.role === 'admin' || (user.designation && historyDesignations.includes(user.designation)));
+  if (historyMenuItem) {
+    historyMenuItem.style.display = hasHistoryAccess ? 'list-item' : 'none';
   }
   
   if (user && !user.role) {
@@ -294,6 +305,13 @@ function updateModuleVisibility(user) {
   if (deviceMgmtCard) {
     deviceMgmtCard.style.display = isAdmin ? 'block' : 'none';
     deviceMgmtCard.style.visibility = isAdmin ? 'visible' : 'hidden';
+  }
+
+  // Check Business Development module access (admin only)
+  const bdCard = document.getElementById('module-bd');
+  if (bdCard) {
+    bdCard.style.display = isAdmin ? 'block' : 'none';
+    bdCard.style.visibility = isAdmin ? 'visible' : 'hidden';
   }
 
   // Check HR Module access (visible to all authenticated users)
@@ -2433,6 +2451,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!navMenu || !mobileMenuDrawerList) return;
     mobileMenuDrawerList.innerHTML = '';
     navMenu.querySelectorAll('li').forEach(function(li) {
+      if (getComputedStyle(li).display === 'none') return;
       var clone = li.cloneNode(true);
       clone.querySelectorAll('[id]').forEach(function(el) { el.removeAttribute('id'); });
       mobileMenuDrawerList.appendChild(clone);

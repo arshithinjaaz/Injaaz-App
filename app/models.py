@@ -382,6 +382,243 @@ class Device(db.Model):
         return f'<Device {self.device_id} - {self.name}>'
 
 
+class BDProject(db.Model):
+    """Business development projects/deals"""
+    __tablename__ = 'bd_projects'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, index=True)
+    company = db.Column(db.String(255), nullable=False, index=True)
+    stage = db.Column(db.String(30), default='prospecting', index=True)  # prospecting, qualifying, proposal, negotiation, closing
+    status = db.Column(db.String(20), default='active', index=True)  # active, prospect, proposal, won, lost
+    priority = db.Column(db.String(10), default='med')  # high, med, low
+    value_amount = db.Column(db.Float, default=0.0)
+    progress = db.Column(db.Integer, default=0)
+    owner = db.Column(db.String(120), nullable=True)
+    next_action = db.Column(db.String(255), nullable=True)
+    expected_close_date = db.Column(db.Date, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    primary_contact_name = db.Column(db.String(120), nullable=True)
+    primary_contact_email = db.Column(db.String(255), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        value_amount = float(self.value_amount or 0)
+        return {
+            'id': self.id,
+            'name': self.name,
+            'co': self.company,
+            'company': self.company,
+            'icon': '🏢',
+            'bg': '#e8f5ee',
+            'stage': self.stage,
+            'status': self.status,
+            'priority': self.priority,
+            'valueAmount': value_amount,
+            'value': f'${value_amount:,.0f}',
+            'progress': max(0, min(100, int(self.progress or 0))),
+            'owner': self.owner or 'Unassigned',
+            'next': self.next_action or 'No action',
+            'nextDate': self.expected_close_date.isoformat() if self.expected_close_date else '',
+            'expectedCloseDate': self.expected_close_date.isoformat() if self.expected_close_date else None,
+            'notes': self.notes,
+            'primaryContactName': self.primary_contact_name,
+            'primaryContactEmail': self.primary_contact_email,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def __repr__(self):
+        return f'<BDProject {self.id} - {self.name}>'
+
+
+class BDFollowUp(db.Model):
+    """Business development follow-up tasks"""
+    __tablename__ = 'bd_followups'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    company = db.Column(db.String(255), nullable=True, index=True)
+    followup_type = db.Column(db.String(20), default='call')  # call, email, meeting, note
+    due_at = db.Column(db.DateTime, nullable=True, index=True)
+    status = db.Column(db.String(20), default='open', index=True)  # open, done
+    details = db.Column(db.Text, nullable=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('bd_projects.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    project = db.relationship('BDProject', backref=db.backref('followups', lazy='dynamic'))
+
+    def to_dict(self):
+        icon_map = {'call': '📞', 'email': '📧', 'meeting': '🤝', 'note': '📝'}
+        return {
+            'id': self.id,
+            'icon': icon_map.get(self.followup_type, '📝'),
+            'title': self.title,
+            'co': self.company or (self.project.company if self.project else ''),
+            'date': self.due_at.isoformat() if self.due_at else '',
+            'type': self.followup_type,
+            'status': self.status,
+            'details': self.details,
+            'projectId': self.project_id,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def __repr__(self):
+        return f'<BDFollowUp {self.id} - {self.title}>'
+
+
+class BDContact(db.Model):
+    """Business development contacts"""
+    __tablename__ = 'bd_contacts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False, index=True)
+    title = db.Column(db.String(120), nullable=True)
+    company = db.Column(db.String(255), nullable=True, index=True)
+    email = db.Column(db.String(255), nullable=True)
+    phone = db.Column(db.String(50), nullable=True)
+    tags = db.Column(JSON, default=list)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        safe_name = (self.name or '').strip()
+        initials = ''.join([part[0] for part in safe_name.split() if part])[:2].upper() or 'NA'
+        return {
+            'id': self.id,
+            'initials': initials,
+            'name': self.name,
+            'title': self.title or 'Contact',
+            'co': self.company or '',
+            'company': self.company or '',
+            'email': self.email,
+            'phone': self.phone,
+            'tags': self.tags if isinstance(self.tags, list) else [],
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def __repr__(self):
+        return f'<BDContact {self.id} - {self.name}>'
+
+
+class BDActivity(db.Model):
+    """Business development activity timeline"""
+    __tablename__ = 'bd_activities'
+
+    id = db.Column(db.Integer, primary_key=True)
+    icon = db.Column(db.String(10), default='📝')
+    bg = db.Column(db.String(20), default='#e8f5ee')
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    badge = db.Column(db.String(120), nullable=True)
+    event_time = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'icon': self.icon or '📝',
+            'bg': self.bg or '#e8f5ee',
+            'title': self.title,
+            'desc': self.description or '',
+            'badge': self.badge or '',
+            'time': self.event_time.isoformat() if self.event_time else None,
+            'createdAt': self.created_at.isoformat() if self.created_at else None
+        }
+
+    def __repr__(self):
+        return f'<BDActivity {self.id} - {self.title}>'
+
+
+class DocHubDocument(db.Model):
+    """Document metadata for DocHub."""
+    __tablename__ = 'dochub_documents'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False, index=True)
+    filename = db.Column(db.String(255), nullable=False)
+    stored_path = db.Column(db.String(500), nullable=False)
+    file_type = db.Column(db.String(20), nullable=False, index=True)  # PDF, DOCX, XLSX, etc.
+    category = db.Column(db.String(50), default='Internal', index=True)  # API, Guide, Legal, Spec, Internal
+    status = db.Column(db.String(20), default='draft', index=True)  # draft, review, published, archived
+    size_bytes = db.Column(db.Integer, default=0)
+    is_starred = db.Column(db.Boolean, default=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
+
+    author = db.relationship('User', backref=db.backref('dochub_documents', lazy='dynamic'))
+
+    def to_dict(self):
+        author_name = 'Unknown'
+        if self.author:
+            author_name = self.author.full_name or self.author.username or 'Unknown'
+
+        size_mb = (self.size_bytes or 0) / (1024 * 1024)
+        if size_mb >= 1:
+            size_label = f"{size_mb:.1f} MB"
+        else:
+            size_kb = (self.size_bytes or 0) / 1024
+            size_label = f"{max(1, int(round(size_kb)))} KB"
+
+        date_label = self.updated_at.strftime('%b %d, %Y') if self.updated_at else ''
+
+        return {
+            'id': self.id,
+            'name': self.title,
+            'filename': self.filename,
+            'path': self.stored_path,
+            'type': self.file_type,
+            'tag': self.category,
+            'status': self.status,
+            'author': author_name,
+            'author_id': self.author_id,
+            'date': date_label,
+            'dateTs': int(self.updated_at.timestamp()) if self.updated_at else 0,
+            'size': size_label,
+            'sizeB': int(self.size_bytes or 0),
+            'starred': bool(self.is_starred),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def __repr__(self):
+        return f'<DocHubDocument {self.id} - {self.title}>'
+
+
+class DocHubAccess(db.Model):
+    """Per-user access control for DocHub."""
+    __tablename__ = 'dochub_access'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False, index=True)
+    can_access = db.Column(db.Boolean, default=True)
+    updated_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('dochub_access_entry', uselist=False))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'can_access': bool(self.can_access),
+            'updated_by': self.updated_by,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def __repr__(self):
+        return f'<DocHubAccess user={self.user_id} access={self.can_access}>'
+
+
 class Notification(db.Model):
     """User notifications for workflow updates"""
     __tablename__ = 'notifications'

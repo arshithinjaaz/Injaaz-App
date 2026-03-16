@@ -28,6 +28,7 @@ civil_bp = None
 cleaning_bp = None
 auth_bp = None
 bd_bp = None
+docs_bp = None
 
 try:
     from module_hvac_mep.routes import hvac_mep_bp  # noqa: F401
@@ -77,6 +78,13 @@ try:
 except Exception as e:
     logger.exception("Could not import app.bd.routes.bd_bp: %s", e)
     bd_bp = None
+
+try:
+    from app.docs.routes import docs_bp  # noqa: F401
+    logger.info("Imported app.docs.routes.docs_bp")
+except Exception as e:
+    logger.exception("Could not import app.docs.routes.docs_bp: %s", e)
+    docs_bp = None
 
 # HR Module
 hr_bp = None
@@ -624,6 +632,15 @@ def create_app():
         logger.info("✅ Registered BD blueprint at /bd")
     else:
         logger.warning("⚠️  BD blueprint not available - check imports")
+
+    # Register DocHub API blueprint
+    if docs_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(docs_bp)
+        app.register_blueprint(docs_bp)
+        logger.info("✅ Registered DocHub API blueprint at /api/docs")
+    else:
+        logger.warning("⚠️  DocHub API blueprint not available - check imports")
     
     # Register HR module blueprint
     if hr_bp:
@@ -750,7 +767,17 @@ def create_app():
     def admin_devices():
         """Device management - admin only"""
         return render_template('admin_device_management.html')
-    
+
+    @app.route('/admin/bd')
+    def admin_bd():
+        """Business Development module - admin only"""
+        return render_template('admin_bd_module.html')
+
+    @app.route('/dochub')
+    def dochub():
+        """DocHub module - all users with access"""
+        return render_template('dochub.html', active_page='dochub')
+
     # Root route: Show login page
     @app.route('/')
     def index():

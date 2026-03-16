@@ -1094,6 +1094,7 @@
     }
   </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/inspection-forms-unified.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/materials-picker.css') }}">
 </head>
 <body class="inspection-form">
   {% set active_page = 'inspection' %}
@@ -2054,6 +2055,15 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- ── Materials Required ──────────────────────────── -->
+        {% if can_edit != False or True %}
+        <div class="col-12 mb-4">
+          <div class="mp-section" id="hvac-mp-section">
+            <div id="hvac-mp-root"></div>
           </div>
         </div>
         {% endif %}
@@ -7954,5 +7964,27 @@
   </script>
   <script src="{{ url_for('static', filename='api-client.js') }}"></script>
   <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/materials-picker.js') }}"></script>
+  <script>
+    (function () {
+      const hvacPicker = new MaterialsPicker({
+        containerId: 'hvac-mp-root',
+        departments: ['HVAC', 'Electrical', 'Plumbing'],
+        fieldName: 'materials_required',
+      });
+      hvacPicker.init().then(() => {
+        // Re-populate if editing an existing submission
+        try {
+          const existing = {{ ((form_data.get('materials_required') if form_data else None) or 'null') | tojson }};
+          if (existing && Array.isArray(existing) && existing.length > 0) {
+            hvacPicker.setSelected(existing);
+            document.getElementById('hvac-mp-section').classList.add('is-open');
+          }
+        } catch(e) {}
+      });
+      // Expose for form submit collector
+      window.hvacMaterialsPicker = hvacPicker;
+    })();
+  </script>
 </body>
 </html>

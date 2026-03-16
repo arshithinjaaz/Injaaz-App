@@ -20,23 +20,30 @@
     .proc-dashboard { background: #F8FAF8; }
     .proc-modules-section::before { display: none; }
     
-    .proc-hero { padding: 9rem 0 5rem; }
+    .proc-hero { padding: 9rem 0 3.5rem; }
     .proc-hero .hero-content { max-width: 1400px; margin: 0 auto; padding: 0 3rem; }
+    .proc-hero .hero-subtitle { margin-top: 0.75rem; }
+    
+    /* Content section: generous gap below hero, then stats */
+    .proc-modules-section .modules-inner {
+      padding: 3.5rem 3rem 3rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
     
     /* Module Cards */
     .module-showcase {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 1.5rem;
+      gap: 2rem;
       margin-bottom: 2rem;
     }
     
     @media (max-width: 768px) {
-      .module-showcase {
-        grid-template-columns: 1fr;
-      }
+      .module-showcase { grid-template-columns: 1fr; gap: 1rem; }
+      .proc-modules-section .modules-inner { padding: 2rem 1rem 2rem !important; }
       .container.py-4 { padding: 1rem !important; }
-      .proc-hero { padding: 7rem 0 3rem !important; }
+      .proc-hero { padding: 7rem 0 2.5rem !important; }
       .proc-hero .hero-content { padding: 0 1rem !important; }
       .proc-hero h1 { font-size: 1.5rem !important; }
       .proc-hero .hero-subtitle { font-size: 0.85rem !important; }
@@ -46,6 +53,7 @@
       .module-card-body h3 { font-size: 1rem !important; }
       .stat-card { padding: 1rem !important; border-radius: 12px !important; }
       .stat-card h3 { font-size: 1.5rem !important; }
+      .stats-grid { margin-bottom: 2rem !important; }
     }
     
     .module-card {
@@ -88,6 +96,123 @@
     .module-property-wise .module-card-header {
       background: linear-gradient(135deg, #10b981, #047857);
     }
+
+    /* Department catalog cards */
+    .dept-catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.25rem;
+      margin-bottom: 2.5rem;
+    }
+    @media (max-width: 992px) { .dept-catalog-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 576px)  { .dept-catalog-grid { grid-template-columns: 1fr; } }
+
+    .dept-card {
+      background: #fff;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      text-decoration: none;
+      display: block;
+      transition: transform 0.25s, box-shadow 0.25s;
+    }
+    .dept-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.13);
+    }
+    .dept-card-header {
+      padding: 1.5rem 1.5rem 1.25rem;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    .dept-card-header::after {
+      content: '';
+      position: absolute;
+      top: -20px; right: -20px;
+      width: 100px; height: 100px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 50%;
+    }
+    .dept-card-header::before {
+      content: '';
+      position: absolute;
+      bottom: -30px; left: -10px;
+      width: 80px; height: 80px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 50%;
+    }
+    .dept-card-icon {
+      width: 52px; height: 52px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+      backdrop-filter: blur(8px);
+    }
+    .dept-card-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+    .dept-card-body {
+      padding: 1.1rem 1.5rem 1.4rem;
+    }
+    .dept-card-body h4 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0 0 0.35rem;
+    }
+    .dept-card-body p {
+      font-size: 0.82rem;
+      color: #64748b;
+      margin: 0 0 0.9rem;
+      line-height: 1.5;
+    }
+    .dept-card-stat {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid #f1f5f9;
+    }
+    .dept-card-count {
+      font-size: 1.75rem;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+    .dept-card-stat-label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .dept-link {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.82rem; font-weight: 700; margin-top: 0.75rem;
+      text-decoration: none;
+    }
+    .dept-link svg { width:14px; height:14px; stroke-width:2.5; }
+
+    .dept-hvac       .dept-card-header  { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+    .dept-hvac       .dept-card-count   { color: #0284c7; }
+    .dept-hvac       .dept-link         { color: #0284c7; }
+    .dept-cleaning   .dept-card-header  { background: linear-gradient(135deg, #10b981, #047857); }
+    .dept-cleaning   .dept-card-count   { color: #047857; }
+    .dept-cleaning   .dept-link         { color: #047857; }
+    .dept-electrical .dept-card-header  { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .dept-electrical .dept-card-count   { color: #d97706; }
+    .dept-electrical .dept-link         { color: #d97706; }
+    .dept-plumbing   .dept-card-header  { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+    .dept-plumbing   .dept-card-count   { color: #6d28d9; }
+    .dept-plumbing   .dept-link         { color: #6d28d9; }
     
     .module-icon {
       width: 70px;
@@ -199,28 +324,30 @@
     .icon-export { background: linear-gradient(135deg, #10b981, #059669); color: white; }
     .icon-property { background: linear-gradient(135deg, #ec4899, #be185d); color: white; }
     
-    /* Stats Overview */
+    /* Stats Overview: uniform spacing, substantial gap below */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-      margin-bottom: 2rem;
+      gap: 1.25rem;
+      margin-bottom: 3rem;
     }
     @media (max-width: 992px) {
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem; }
     }
     
     .stat-card {
       background: white;
       border-radius: 16px;
-      padding: 1.5rem;
+      padding: 1.5rem 1.25rem;
       text-align: center;
       border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
     .stat-card h3 {
       font-size: 2rem;
       font-weight: 700;
       margin-bottom: 0.25rem;
+      line-height: 1.2;
     }
     .stat-card p {
       color: #64748b;
@@ -231,6 +358,112 @@
     .stat-properties h3 { color: #10b981; }
     .stat-items h3 { color: #f59e0b; }
     .stat-value h3 { color: var(--purple); }
+    
+    /* Hero box: icon + label + value (reference style) */
+    .hero-boxes {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 992px) {
+      .hero-boxes { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 576px) {
+      .hero-boxes { grid-template-columns: 1fr; }
+    }
+    .hero-box {
+      background: #f1f5f9;
+      border-radius: 16px;
+      padding: 1.5rem 1.25rem;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .hero-box-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 0.75rem;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+    }
+    .hero-box-icon.materials { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    .hero-box-icon.properties { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .hero-box-icon.items { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+    .hero-box-icon.value { background: rgba(124, 58, 237, 0.12); color: var(--purple); }
+    .hero-box-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+    .hero-box-value {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+    .hero-box-value.materials { color: #3b82f6; }
+    .hero-box-value.properties { color: #10b981; }
+    .hero-box-value.items { color: #d97706; }
+    .hero-box-value.val { color: var(--purple); }
+    
+    /* Recent Activities */
+    .proc-activity-card {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      overflow: hidden;
+      margin-bottom: 3rem;
+    }
+    .proc-activity-card h3 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #64748b;
+      padding: 1rem 1.25rem;
+      margin: 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .proc-activity-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .proc-activity-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem 1.25rem;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.9rem;
+      color: #334155;
+    }
+    .proc-activity-item:last-child { border-bottom: none; }
+    .proc-activity-item .act-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .proc-activity-item .act-icon svg { width: 12px; height: 12px; }
+    .proc-activity-item .act-text { flex: 1; min-width: 0; }
+    .proc-activity-item .act-time { font-size: 0.8rem; color: #94a3b8; flex-shrink: 0; }
+    .proc-activity-empty { padding: 1.5rem 1.25rem; color: #94a3b8; font-size: 0.9rem; text-align: center; }
   </style>
 </head>
 <body class="proc-dashboard">
@@ -255,29 +488,50 @@
     </div>
   </header>
 
-  <!-- Stats & Modules (matches Inspection layout) -->
+  <!-- Stats & Modules -->
   <section class="modules-section proc-modules-section" id="modules" style="background: #F8FAF8;">
-    <div class="modules-inner" style="max-width: 1400px; margin: 0 auto; padding: 2rem 3rem 4rem;">
-    <div class="stats-grid">
-      <div class="stat-card stat-materials">
-        <h3 id="totalMaterials">-</h3>
-        <p>Total Materials</p>
+    <div class="modules-inner">
+    <!-- Hero boxes: KPIs with icons -->
+    <div class="hero-boxes">
+      <div class="hero-box">
+        <div class="hero-box-icon materials">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+        </div>
+        <div class="hero-box-label">Total Materials</div>
+        <div class="hero-box-value materials" id="totalMaterials">-</div>
       </div>
-      <div class="stat-card stat-properties">
-        <h3 id="totalProperties">-</h3>
-        <p>Properties</p>
+      <div class="hero-box">
+        <div class="hero-box-icon properties">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+        </div>
+        <div class="hero-box-label">Properties</div>
+        <div class="hero-box-value properties" id="totalProperties">-</div>
       </div>
-      <div class="stat-card stat-items">
-        <h3 id="totalQuantity">-</h3>
-        <p>Total Items</p>
+      <div class="hero-box">
+        <div class="hero-box-icon items">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="hero-box-label">Catalog Items</div>
+        <div class="hero-box-value items" id="totalQuantity">-</div>
       </div>
-      <div class="stat-card stat-value">
-        <h3 id="totalValue">-</h3>
-        <p>Total Value (AED)</p>
+      <div class="hero-box">
+        <div class="hero-box-icon value">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="hero-box-label">Total Value (AED)</div>
+        <div class="hero-box-value val" id="totalValue">-</div>
       </div>
     </div>
     
-    <h2 class="modules-section-label" style="margin-top: 2.5rem;">Inventory Modules</h2>
+    <!-- Recent Activities -->
+    <div class="proc-activity-card">
+      <h3>Recent Activity</h3>
+      <ul class="proc-activity-list" id="procActivityList">
+        <li class="proc-activity-empty">Loading…</li>
+      </ul>
+    </div>
+    
+    <h2 class="modules-section-label" style="margin-top: 0; margin-bottom: 1.25rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; color: #64748b;">INVENTORY MODULES</h2>
     <div class="module-showcase">
       <!-- All Materials Module -->
       <a href="/procurement/materials" class="module-card module-all-materials">
@@ -340,7 +594,93 @@
       </a>
     </div>
     
-    <h2 class="modules-section-label" style="margin-top: 2.5rem;">Quick Actions</h2>
+    <!-- ── Department Catalogs ─────────────────────────────────── -->
+    <h2 class="modules-section-label" style="margin-top: 2.5rem; margin-bottom: 1.25rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; color: #64748b;">DEPARTMENT CATALOGS</h2>
+    <div class="dept-catalog-grid">
+
+      <!-- HVAC -->
+      <a href="/procurement/catalog/HVAC" class="dept-card dept-hvac">
+        <div class="dept-card-header">
+          <div class="dept-card-icon">❄️</div>
+          <div class="dept-card-label">HVAC &amp; MEP</div>
+        </div>
+        <div class="dept-card-body">
+          <h4>HVAC Materials</h4>
+          <p>Compressors, refrigerants, AHUs, filters and all air-conditioning spare parts.</p>
+          <div class="dept-card-stat">
+            <div class="dept-card-count" id="deptCount-HVAC">-</div>
+            <div class="dept-card-stat-label">Items in catalog</div>
+          </div>
+          <span class="dept-link">
+            View Catalog
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </span>
+        </div>
+      </a>
+
+      <!-- Cleaning -->
+      <a href="/procurement/catalog/Cleaning" class="dept-card dept-cleaning">
+        <div class="dept-card-header">
+          <div class="dept-card-icon">🧹</div>
+          <div class="dept-card-label">Cleaning</div>
+        </div>
+        <div class="dept-card-body">
+          <h4>Cleaning Materials</h4>
+          <p>Mops, buckets, chemicals, trolleys, washroom supplies and cleaning equipment.</p>
+          <div class="dept-card-stat">
+            <div class="dept-card-count" id="deptCount-Cleaning">-</div>
+            <div class="dept-card-stat-label">Items in catalog</div>
+          </div>
+          <span class="dept-link">
+            View Catalog
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </span>
+        </div>
+      </a>
+
+      <!-- Electrical -->
+      <a href="/procurement/catalog/Electrical" class="dept-card dept-electrical">
+        <div class="dept-card-header">
+          <div class="dept-card-icon">⚡</div>
+          <div class="dept-card-label">Electrical</div>
+        </div>
+        <div class="dept-card-body">
+          <h4>Electrical Materials</h4>
+          <p>Switches, sockets, breakers, cables, lights, fans and electrical fittings.</p>
+          <div class="dept-card-stat">
+            <div class="dept-card-count" id="deptCount-Electrical">-</div>
+            <div class="dept-card-stat-label">Items in catalog</div>
+          </div>
+          <span class="dept-link">
+            View Catalog
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </span>
+        </div>
+      </a>
+
+      <!-- Plumbing -->
+      <a href="/procurement/catalog/Plumbing" class="dept-card dept-plumbing">
+        <div class="dept-card-header">
+          <div class="dept-card-icon">🔧</div>
+          <div class="dept-card-label">Plumbing</div>
+        </div>
+        <div class="dept-card-body">
+          <h4>Plumbing Materials</h4>
+          <p>Mixers, WC sets, basins, pipes, traps, valves and all sanitary fittings.</p>
+          <div class="dept-card-stat">
+            <div class="dept-card-count" id="deptCount-Plumbing">-</div>
+            <div class="dept-card-stat-label">Items in catalog</div>
+          </div>
+          <span class="dept-link">
+            View Catalog
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </span>
+        </div>
+      </a>
+
+    </div>
+
+    <h2 class="modules-section-label" style="margin-top: 2.5rem; margin-bottom: 1rem;">Quick Actions</h2>
     <div class="quick-actions">
       <a href="/procurement/add-material" class="quick-action">
         <div class="quick-action-icon icon-add">
@@ -357,6 +697,14 @@
           </svg>
         </div>
         <h6>Import Excel</h6>
+      </div>
+      <div class="quick-action" onclick="downloadSampleExcel()" style="cursor: pointer;">
+        <div class="quick-action-icon icon-export">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <h6>Sample Excel</h6>
       </div>
       <div class="quick-action" onclick="exportExcel()" style="cursor: pointer;">
         <div class="quick-action-icon icon-export">
@@ -452,48 +800,106 @@
     
     async function loadStats() {
       try {
-        // Load materials
-        const matResponse = await fetch('/procurement/api/materials', {
-          headers: { 'Authorization': `Bearer ${token}` }
+        // Fetch all three in parallel
+        const [matRes, propRes, catRes] = await Promise.all([
+          fetch('/procurement/api/materials',         { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('/procurement/api/properties',        { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('/procurement/api/catalog/materials', { headers: { 'Authorization': `Bearer ${token}` } }),
+        ]);
+
+        const matData  = await matRes.json();
+        const propData = await propRes.json();
+        const catData  = await catRes.json();
+
+        // ── Procurement materials (manually added) ──────────
+        const procMaterials = matData.materials || [];
+        let totalQty = 0, totalValue = 0;
+        const categories = new Set();
+        let assignedCount = 0;
+        procMaterials.forEach(m => {
+          totalQty   += parseFloat(m.quantity)    || 0;
+          totalValue += parseFloat(m.total_price) || 0;
+          if (m.category) categories.add(m.category);
+          if (m.property && m.property !== 'Unassigned') assignedCount++;
         });
-        const matData = await matResponse.json();
-        
-        // Load properties
-        const propResponse = await fetch('/procurement/api/properties', {
-          headers: { 'Authorization': `Bearer ${token}` }
+
+        // ── Catalog materials (seeded from Excel) ───────────
+        const catByDept = catData.materials || {};
+        let catalogTotal = 0;
+        ['HVAC', 'Cleaning', 'Electrical', 'Plumbing'].forEach(dept => {
+          const count = (catByDept[dept] || []).length;
+          catalogTotal += count;
+          const el = document.getElementById('deptCount-' + dept);
+          if (el) el.textContent = count;
         });
-        const propData = await propResponse.json();
-        
-        if (matData.materials) {
-          const materials = matData.materials;
-          document.getElementById('totalMaterials').textContent = materials.length;
-          document.getElementById('allMaterialsCount').textContent = materials.length;
-          
-          let totalQty = 0, totalValue = 0;
-          const categories = new Set();
-          let assignedCount = 0;
-          
-          materials.forEach(m => {
-            totalQty += parseFloat(m.quantity) || 0;
-            totalValue += parseFloat(m.total_price) || 0;
-            if (m.category) categories.add(m.category);
-            if (m.property && m.property !== 'Unassigned') assignedCount++;
-          });
-          
-          document.getElementById('totalQuantity').textContent = totalQty.toLocaleString();
-          document.getElementById('totalValue').textContent = totalValue.toLocaleString('en-AE', { maximumFractionDigits: 0 });
-          document.getElementById('allCategoriesCount').textContent = categories.size;
-          document.getElementById('assignedMaterials').textContent = assignedCount;
-        }
-        
+
+        // ── Update KPIs ─────────────────────────────────────
+        // Total Materials = procurement items + catalog items
+        const grandTotal = procMaterials.length + catalogTotal;
+        // grandTotal = manually-added proc items + all catalog items
+        document.getElementById('totalMaterials').textContent     = grandTotal.toLocaleString();
+        document.getElementById('allMaterialsCount').textContent  = grandTotal.toLocaleString();
+        // Total Items = sum of all 4 department catalog counts so it always matches the dept cards
+        document.getElementById('totalQuantity').textContent      = catalogTotal.toLocaleString();
+        document.getElementById('totalValue').textContent         = totalValue.toLocaleString('en-AE', { maximumFractionDigits: 0 });
+        document.getElementById('allCategoriesCount').textContent = categories.size + 4; // +4 dept catalogs
+
+        document.getElementById('assignedMaterials').textContent  = assignedCount;
+
+        // Properties
         if (propData.properties) {
           const uniqueProps = propData.properties.filter(p => p.name !== 'Unassigned');
           document.getElementById('totalProperties').textContent = uniqueProps.length;
-          document.getElementById('propertyCount').textContent = uniqueProps.length;
+          document.getElementById('propertyCount').textContent   = uniqueProps.length;
+        } else {
+          document.getElementById('totalProperties').textContent = '0';
+          document.getElementById('propertyCount').textContent   = '0';
         }
       } catch (error) {
         console.error('Error loading stats:', error);
       }
+    }
+    
+    function timeAgo(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const now = new Date();
+      const sec = Math.floor((now - d) / 1000);
+      if (sec < 60) return 'Just now';
+      if (sec < 3600) return Math.floor(sec / 60) + 'm ago';
+      if (sec < 86400) return Math.floor(sec / 3600) + 'h ago';
+      if (sec < 604800) return Math.floor(sec / 86400) + 'd ago';
+      return d.toLocaleDateString();
+    }
+    
+    async function loadRecentActivity() {
+      const listEl = document.getElementById('procActivityList');
+      if (!listEl) return;
+      try {
+        const res = await fetch('/procurement/api/recent-activity', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!data.activities || data.activities.length === 0) {
+          listEl.innerHTML = '<li class="proc-activity-empty">No recent activity</li>';
+          return;
+        }
+        listEl.innerHTML = data.activities.map(a => `
+          <li class="proc-activity-item">
+            <span class="act-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span>
+            <span class="act-text">${escapeHtml(a.material_name)} submitted by ${escapeHtml(a.submitted_by)}</span>
+            <span class="act-time">${timeAgo(a.created_at)}</span>
+          </li>
+        `).join('');
+      } catch (e) {
+        listEl.innerHTML = '<li class="proc-activity-empty">Unable to load activity</li>';
+      }
+    }
+    function escapeHtml(s) {
+      if (s == null) return '';
+      const div = document.createElement('div');
+      div.textContent = String(s);
+      return div.innerHTML;
     }
     
     function showAddPropertyModal() {
@@ -568,7 +974,38 @@
       window.open(`/procurement/api/export-excel`, '_blank');
     }
     
+    async function downloadSampleExcel() {
+      const token = localStorage.getItem('access_token');
+      try {
+        const res = await fetch('/procurement/api/sample-excel', {
+          method: 'GET',
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert('Error: ' + (err.error || 'Failed to download sample Excel'));
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const disp = res.headers.get('content-disposition') || '';
+        let filename = 'procurement_import_sample.xlsx';
+        const m = disp.match(/filename="?([^";]+)"?/i);
+        if (m && m[1]) filename = m[1].trim();
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+    
     loadStats();
+    loadRecentActivity();
   </script>
   <script src="{{ url_for('static', filename='api-client.js') }}"></script>
   <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
