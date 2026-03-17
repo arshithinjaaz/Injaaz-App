@@ -272,6 +272,7 @@ def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
                        service_group_val: str = '', contract_val: str = '') -> str:
     """
     Resolve Chargeable vs Non-Chargeable.
+    - Facade Cleaning service group: always Non-Chargeable.
     - Garden City only: all AC/HVAC complaints = Non-Chargeable.
     - Askaan, Ajman Holding, Injaaz: all base units = Chargeable.
     - Else: BaseUnit apartment = Chargeable; common area = Non-Chargeable; fallback to Space.
@@ -280,6 +281,10 @@ def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
     contract = (contract_val or '').strip().lower()
     combined = f'{client} {contract}'
     sg = (service_group_val or '').strip().lower()
+
+    # Facade Cleaning is always Non-Chargeable regardless of client or base unit
+    if 'facade cleaning' in sg:
+        return 'Non-Chargeable'
 
     # Garden City only: AC/HVAC complaints are always Non-Chargeable
     if any(p in combined for p in _AC_NON_CHARGEABLE_PROJECTS):

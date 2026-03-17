@@ -9,467 +9,104 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <style>
-    :root { 
-      --primary: #125435; 
-      --primary-light: #1a7a4c; 
-      --purple: #7c3aed;
-      --purple-light: #a78bfa;
-    }
-    :root { --text-light: #6b7280; }
+    /* ── Procurement page — scoped overrides on top of dashboard.css ── */
+    :root { --primary: #125435; --primary-light: #1a7a4c; }
     body { background: #F8FAF8; min-height: 100vh; }
     .proc-dashboard { background: #F8FAF8; }
     .proc-modules-section::before { display: none; }
-    
     .proc-hero { padding: 9rem 0 3.5rem; }
     .proc-hero .hero-content { max-width: 1400px; margin: 0 auto; padding: 0 3rem; }
     .proc-hero .hero-subtitle { margin-top: 0.75rem; }
-    
-    /* Content section: generous gap below hero, then stats */
-    .proc-modules-section .modules-inner {
-      padding: 3.5rem 3rem 3rem;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    
-    /* Module Cards */
-    .module-showcase {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 2rem;
-      margin-bottom: 2rem;
-    }
-    
-    @media (max-width: 768px) {
-      .module-showcase { grid-template-columns: 1fr; gap: 1rem; }
-      .proc-modules-section .modules-inner { padding: 2rem 1rem 2rem !important; }
-      .container.py-4 { padding: 1rem !important; }
-      .proc-hero { padding: 7rem 0 2.5rem !important; }
-      .proc-hero .hero-content { padding: 0 1rem !important; }
-      .proc-hero h1 { font-size: 1.5rem !important; }
-      .proc-hero .hero-subtitle { font-size: 0.85rem !important; }
-      .proc-hero .back-btn { font-size: 0.85rem !important; }
-      .module-card-header { padding: 1.25rem !important; }
-      .module-card-body { padding: 1rem !important; }
-      .module-card-body h3 { font-size: 1rem !important; }
-      .stat-card { padding: 1rem !important; border-radius: 12px !important; }
-      .stat-card h3 { font-size: 1.5rem !important; }
-      .stats-grid { margin-bottom: 2rem !important; }
-    }
-    
-    .module-card {
-      background: white;
-      border-radius: 20px;
-      padding: 0;
-      overflow: hidden;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-      transition: all 0.3s ease;
-      text-decoration: none;
-      display: block;
-      border: 1px solid #e2e8f0;
-    }
-    .module-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-    }
-    
-    .module-card-header {
-      padding: 2rem;
-      color: white;
-      position: relative;
-      overflow: hidden;
-    }
-    .module-card-header::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 150px;
-      height: 150px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 50%;
-      transform: translate(30%, -30%);
-    }
-    
-    .module-all-materials .module-card-header {
-      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-    }
-    .module-property-wise .module-card-header {
-      background: linear-gradient(135deg, #10b981, #047857);
-    }
+    /* Slightly tighter gap between hero and modules */
+    .proc-modules-section .modules-inner { padding: 2.4rem 3rem 3rem; max-width: 1400px; margin: 0 auto; }
 
-    /* Department catalog cards */
-    .dept-catalog-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.25rem;
-      margin-bottom: 2.5rem;
-    }
-    @media (max-width: 992px) { .dept-catalog-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 576px)  { .dept-catalog-grid { grid-template-columns: 1fr; } }
-
-    .dept-card {
-      background: #fff;
-      border-radius: 18px;
-      overflow: hidden;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-      text-decoration: none;
-      display: block;
-      transition: transform 0.25s, box-shadow 0.25s;
-    }
-    .dept-card:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.13);
-    }
-    .dept-card-header {
-      padding: 1.5rem 1.5rem 1.25rem;
-      color: #fff;
-      position: relative;
-      overflow: hidden;
-    }
-    .dept-card-header::after {
-      content: '';
-      position: absolute;
-      top: -20px; right: -20px;
-      width: 100px; height: 100px;
-      background: rgba(255,255,255,0.12);
-      border-radius: 50%;
-    }
-    .dept-card-header::before {
-      content: '';
-      position: absolute;
-      bottom: -30px; left: -10px;
-      width: 80px; height: 80px;
-      background: rgba(255,255,255,0.07);
-      border-radius: 50%;
-    }
-    .dept-card-icon {
-      width: 52px; height: 52px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.5rem;
-      margin-bottom: 0.75rem;
-      backdrop-filter: blur(8px);
-    }
-    .dept-card-label {
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      opacity: 0.85;
-    }
-    .dept-card-body {
-      padding: 1.1rem 1.5rem 1.4rem;
-    }
-    .dept-card-body h4 {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: #1e293b;
-      margin: 0 0 0.35rem;
-    }
-    .dept-card-body p {
-      font-size: 0.82rem;
-      color: #64748b;
-      margin: 0 0 0.9rem;
-      line-height: 1.5;
-    }
-    .dept-card-stat {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid #f1f5f9;
-    }
-    .dept-card-count {
-      font-size: 1.75rem;
-      font-weight: 800;
-      line-height: 1;
-      letter-spacing: -0.03em;
-    }
-    .dept-card-stat-label {
-      font-size: 0.75rem;
-      color: #94a3b8;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .dept-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      font-size: 0.82rem; font-weight: 700; margin-top: 0.75rem;
-      text-decoration: none;
-    }
-    .dept-link svg { width:14px; height:14px; stroke-width:2.5; }
-
-    .dept-hvac       .dept-card-header  { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
-    .dept-hvac       .dept-card-count   { color: #0284c7; }
-    .dept-hvac       .dept-link         { color: #0284c7; }
-    .dept-cleaning   .dept-card-header  { background: linear-gradient(135deg, #10b981, #047857); }
-    .dept-cleaning   .dept-card-count   { color: #047857; }
-    .dept-cleaning   .dept-link         { color: #047857; }
-    .dept-electrical .dept-card-header  { background: linear-gradient(135deg, #f59e0b, #d97706); }
-    .dept-electrical .dept-card-count   { color: #d97706; }
-    .dept-electrical .dept-link         { color: #d97706; }
-    .dept-plumbing   .dept-card-header  { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
-    .dept-plumbing   .dept-card-count   { color: #6d28d9; }
-    .dept-plumbing   .dept-link         { color: #6d28d9; }
-    
-    .module-icon {
-      width: 70px;
-      height: 70px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      margin-bottom: 1rem;
-      backdrop-filter: blur(10px);
-    }
-    
-    .module-card-body {
-      padding: 1.5rem 2rem 2rem;
-    }
-    .module-card-body h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #1e293b;
-      margin-bottom: 0.5rem;
-    }
-    .module-card-body p {
-      color: #64748b;
-      font-size: 0.9rem;
-      margin-bottom: 1rem;
-      line-height: 1.5;
-    }
-    
-    .module-stats {
-      display: flex;
-      gap: 1.5rem;
-      padding-top: 1rem;
-      border-top: 1px solid #f1f5f9;
-    }
-    .module-stat {
-      text-align: center;
-    }
-    .module-stat-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #1e293b;
-    }
-    .module-stat-label {
-      font-size: 0.75rem;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    
-    .module-arrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: var(--purple);
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-    
-    /* Quick Actions */
-    .quick-actions {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    @media (max-width: 992px) {
-      .quick-actions { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 576px) {
-      .quick-actions { grid-template-columns: 1fr; }
-    }
-    
-    .quick-action {
-      background: white;
-      border-radius: 12px;
-      padding: 1.25rem;
-      text-align: center;
-      border: 1px solid #e2e8f0;
-      transition: all 0.2s;
-      text-decoration: none;
-      display: block;
-    }
-    .quick-action:hover {
-      border-color: var(--purple);
-      box-shadow: 0 4px 12px rgba(124,58,237,0.15);
-      transform: translateY(-2px);
-    }
-    .quick-action-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 0.75rem;
-      font-size: 1.25rem;
-    }
-    .quick-action h6 {
-      font-weight: 600;
-      color: #1e293b;
-      margin: 0;
-      font-size: 0.9rem;
-    }
-    
-    .icon-add { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
-    .icon-import { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
-    .icon-export { background: linear-gradient(135deg, #10b981, #059669); color: white; }
-    .icon-property { background: linear-gradient(135deg, #ec4899, #be185d); color: white; }
-    
-    /* Stats Overview: uniform spacing, substantial gap below */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.25rem;
-      margin-bottom: 3rem;
-    }
-    @media (max-width: 992px) {
-      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem; }
-    }
-    
-    .stat-card {
-      background: white;
-      border-radius: 16px;
-      padding: 1.5rem 1.25rem;
-      text-align: center;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    .stat-card h3 {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 0.25rem;
-      line-height: 1.2;
-    }
-    .stat-card p {
-      color: #64748b;
-      font-size: 0.85rem;
-      margin: 0;
-    }
-    .stat-materials h3 { color: #3b82f6; }
-    .stat-properties h3 { color: #10b981; }
-    .stat-items h3 { color: #f59e0b; }
-    .stat-value h3 { color: var(--purple); }
-    
-    /* Hero box: icon + label + value (reference style) */
-    .hero-boxes {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.25rem;
-      margin-bottom: 2rem;
-    }
-    @media (max-width: 992px) {
-      .hero-boxes { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 576px) {
-      .hero-boxes { grid-template-columns: 1fr; }
-    }
-    .hero-box {
-      background: #f1f5f9;
-      border-radius: 16px;
-      padding: 1.5rem 1.25rem;
-      text-align: center;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    .hero-box-icon {
-      width: 48px;
-      height: 48px;
-      margin: 0 auto 0.75rem;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.35rem;
-    }
-    .hero-box-icon.materials { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-    .hero-box-icon.properties { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-    .hero-box-icon.items { background: rgba(245, 158, 11, 0.15); color: #d97706; }
-    .hero-box-icon.value { background: rgba(124, 58, 237, 0.12); color: var(--purple); }
-    .hero-box-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #64748b;
-      margin-bottom: 0.5rem;
-    }
-    .hero-box-value {
-      font-size: 2rem;
-      font-weight: 800;
-      line-height: 1.2;
-      letter-spacing: -0.02em;
-    }
-    .hero-box-value.materials { color: #3b82f6; }
-    .hero-box-value.properties { color: #10b981; }
-    .hero-box-value.items { color: #d97706; }
-    .hero-box-value.val { color: var(--purple); }
-    
-    /* Recent Activities */
-    .proc-activity-card {
-      background: white;
-      border-radius: 16px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-      overflow: hidden;
-      margin-bottom: 3rem;
-    }
-    .proc-activity-card h3 {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #64748b;
-      padding: 1rem 1.25rem;
-      margin: 0;
-      border-bottom: 1px solid #f1f5f9;
-    }
-    .proc-activity-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      max-height: 280px;
-      overflow-y: auto;
-    }
-    .proc-activity-item {
+    /* ── Section headers with visual separator ── */
+    .proc-section-header {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      padding: 0.875rem 1.25rem;
-      border-bottom: 1px solid #f1f5f9;
-      font-size: 0.9rem;
-      color: #334155;
+      margin-bottom: 1.25rem;
     }
-    .proc-activity-item:last-child { border-bottom: none; }
-    .proc-activity-item .act-icon {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: rgba(16, 185, 129, 0.15);
-      color: #10b981;
-      flex-shrink: 0;
-      display: flex;
+    .proc-section-header .modules-section-label { margin-bottom: 0; }
+    .proc-section-sep {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--border-color, #e5e7eb), transparent);
+    }
+
+    /* ── Stat pill on each card ── */
+    .proc-module-stat {
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
+      gap: 0.35rem;
+      font-size: 0.76rem;
+      font-weight: 500;
+      color: var(--text-muted, #9ca3af);
+      background: var(--bg-light, #f9fafb);
+      border: 1px solid var(--border-light, #f3f4f6);
+      border-radius: 6px;
+      padding: 0.25rem 0.55rem;
+      margin-bottom: 1rem;
     }
-    .proc-activity-item .act-icon svg { width: 12px; height: 12px; }
-    .proc-activity-item .act-text { flex: 1; min-width: 0; }
-    .proc-activity-item .act-time { font-size: 0.8rem; color: #94a3b8; flex-shrink: 0; }
-    .proc-activity-empty { padding: 1.5rem 1.25rem; color: #94a3b8; font-size: 0.9rem; text-align: center; }
+    .proc-module-stat strong {
+      color: var(--text-dark, #111827);
+      font-weight: 700;
+    }
+
+    /* ── Dept catalog: unique icon tints + accent top-bar ── */
+    .proc-card-hvac       .module-icon { background: rgba(14,165,233,0.10); }
+    .proc-card-hvac       .module-icon svg { stroke: #0284c7; }
+    .proc-card-hvac:hover { border-color: rgba(2,132,199,0.25) !important; }
+    .proc-card-hvac:hover .module-title { color: #0284c7 !important; }
+    .proc-card-hvac:hover .module-arrow { color: #0284c7 !important; }
+
+    .proc-card-cleaning   .module-icon { background: rgba(16,185,129,0.10); }
+    .proc-card-cleaning   .module-icon svg { stroke: #059669; }
+    .proc-card-cleaning:hover { border-color: rgba(5,150,105,0.25) !important; }
+    .proc-card-cleaning:hover .module-title { color: #047857 !important; }
+    .proc-card-cleaning:hover .module-arrow { color: #047857 !important; }
+
+    .proc-card-electrical .module-icon { background: rgba(245,158,11,0.12); }
+    .proc-card-electrical .module-icon svg { stroke: #d97706; }
+    .proc-card-electrical:hover { border-color: rgba(217,119,6,0.25) !important; }
+    .proc-card-electrical:hover .module-title { color: #b45309 !important; }
+    .proc-card-electrical:hover .module-arrow { color: #b45309 !important; }
+
+    .proc-card-plumbing   .module-icon { background: rgba(139,92,246,0.10); }
+    .proc-card-plumbing   .module-icon svg { stroke: #7c3aed; }
+    .proc-card-plumbing:hover { border-color: rgba(124,58,237,0.25) !important; }
+    .proc-card-plumbing:hover .module-title { color: #6d28d9 !important; }
+    .proc-card-plumbing:hover .module-arrow { color: #6d28d9 !important; }
+
+    /* Thin top accent bar per dept */
+    .proc-grid-dept .module-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+    }
+    .proc-card-hvac::after       { background: linear-gradient(90deg,#38bdf8,#0ea5e9); }
+    .proc-card-cleaning::after   { background: linear-gradient(90deg,#34d399,#10b981); }
+    .proc-card-electrical::after { background: linear-gradient(90deg,#fbbf24,#f59e0b); }
+    .proc-card-plumbing::after   { background: linear-gradient(90deg,#a78bfa,#8b5cf6); }
+
+    /* ── Inventory cards ── */
+    .proc-grid-inventory .module-card .module-icon { background: rgba(18,84,53,0.08); }
+
+    /* ── Quick action cards ── */
+    .proc-quick-action { cursor: pointer; }
+    .proc-grid-actions .module-card .module-number { color: var(--text-muted, #9ca3af); }
+    .proc-grid-actions .module-card .module-icon { background: rgba(18,84,53,0.07); }
+
+    /* ── Section rhythm ── */
+    .proc-section-block { margin-bottom: 3rem; }
   </style>
 </head>
 <body class="proc-dashboard">
   {% set active_page = 'procurement' %}
   {% include 'partials/main_navbar.html' with context %}
-  <!-- Hero: gradient at top (matches Inspection module - no grid) -->
+  <!-- Hero: split layout (matches main dashboard - left title, right stats widget) -->
   <header class="hero hero-split proc-hero">
     <div class="hero-content hero-split-inner">
       <div class="hero-left">
@@ -485,245 +122,178 @@
           Complete inventory management and property-wise material tracking
         </p>
       </div>
+      <div class="hero-right">
+        <div class="dashboard-widget">
+          <div class="dashboard-widget-header">
+            <div class="dashboard-widget-dots"><span></span><span></span><span></span></div>
+            <div class="dashboard-widget-bar"></div>
+          </div>
+          <div class="dashboard-widget-body">
+            <div class="dashboard-stats-grid">
+              <div class="dashboard-stat-card">
+                <div class="dashboard-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg></div>
+                <span class="dashboard-stat-label">Total Materials</span>
+                <span class="dashboard-stat-value" id="totalMaterials">—</span>
+              </div>
+              <div class="dashboard-stat-card">
+                <div class="dashboard-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></div>
+                <span class="dashboard-stat-label">Properties</span>
+                <span class="dashboard-stat-value" id="totalProperties">—</span>
+              </div>
+              <div class="dashboard-stat-card">
+                <div class="dashboard-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                <span class="dashboard-stat-label">Catalog Items</span>
+                <span class="dashboard-stat-value" id="totalQuantity">—</span>
+              </div>
+              <div class="dashboard-stat-card">
+                <div class="dashboard-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                <span class="dashboard-stat-label">Total Value (AED)</span>
+                <span class="dashboard-stat-value" id="totalValue">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 
   <!-- Stats & Modules -->
   <section class="modules-section proc-modules-section" id="modules" style="background: #F8FAF8;">
     <div class="modules-inner">
-    <!-- Hero boxes: KPIs with icons -->
-    <div class="hero-boxes">
-      <div class="hero-box">
-        <div class="hero-box-icon materials">
-          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+    <div class="proc-section-block">
+    <div class="proc-section-header">
+      <h2 class="modules-section-label">Department Catalogs</h2>
+      <div class="proc-section-sep"></div>
+    </div>
+    <div class="modules-grid proc-grid-dept">
+      <a href="/procurement/catalog/HVAC" class="module-card proc-card-hvac">
+        <div class="card-body">
+          <span class="module-number">Catalog</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l5.653-4.655m5.8-5.8 4.215-4.215a2.652 2.652 0 0 1 3.586 3.586l-4.215 4.215"/></svg></div>
+          <h2 class="module-title">HVAC Materials</h2>
+          <p class="module-description">Compressors, refrigerants, AHUs, filters and all air-conditioning spare parts.</p>
+          <p class="proc-module-stat"><strong id="deptCount-HVAC">-</strong> items · <strong id="deptValue-HVAC">-</strong> AED</p>
+          <span class="module-arrow">View Catalog <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
         </div>
-        <div class="hero-box-label">Total Materials</div>
-        <div class="hero-box-value materials" id="totalMaterials">-</div>
+      </a>
+      <a href="/procurement/catalog/Cleaning" class="module-card proc-card-cleaning">
+        <div class="card-body">
+          <span class="module-number">Catalog</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15"/></svg></div>
+          <h2 class="module-title">Cleaning Materials</h2>
+          <p class="module-description">Mops, buckets, chemicals, trolleys, washroom supplies and cleaning equipment.</p>
+          <p class="proc-module-stat"><strong id="deptCount-Cleaning">-</strong> items · <strong id="deptValue-Cleaning">-</strong> AED</p>
+          <span class="module-arrow">View Catalog <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+      <a href="/procurement/catalog/Electrical" class="module-card proc-card-electrical">
+        <div class="card-body">
+          <span class="module-number">Catalog</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg></div>
+          <h2 class="module-title">Electrical Materials</h2>
+          <p class="module-description">Switches, sockets, breakers, cables, lights, fans and electrical fittings.</p>
+          <p class="proc-module-stat"><strong id="deptCount-Electrical">-</strong> items · <strong id="deptValue-Electrical">-</strong> AED</p>
+          <span class="module-arrow">View Catalog <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+      <a href="/procurement/catalog/Plumbing" class="module-card proc-card-plumbing">
+        <div class="card-body">
+          <span class="module-number">Catalog</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 20V10M18 20V10M6 20a2 2 0 01-2 2H4a2 2 0 01-2-2V10a2 2 0 012-2h2a2 2 0 012 2v10zm12 0a2 2 0 01-2 2h-2a2 2 0 01-2-2V10a2 2 0 012-2h2a2 2 0 012 2v10zM6 10h.01M18 10h.01"/></svg></div>
+          <h2 class="module-title">Plumbing Materials</h2>
+          <p class="module-description">Mixers, WC sets, basins, pipes, traps, valves and all sanitary fittings.</p>
+          <p class="proc-module-stat"><strong id="deptCount-Plumbing">-</strong> items · <strong id="deptValue-Plumbing">-</strong> AED</p>
+          <span class="module-arrow">View Catalog <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+    </div>
+    </div>
+
+    <div class="proc-section-block">
+    <div class="proc-section-header">
+      <h2 class="modules-section-label">Inventory Modules</h2>
+      <div class="proc-section-sep"></div>
+    </div>
+    <div class="modules-grid proc-grid-inventory">
+      <a href="/procurement/materials" class="module-card">
+        <div class="card-body">
+          <span class="module-number">Master Inventory</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg></div>
+          <h2 class="module-title">All Materials</h2>
+          <p class="module-description">Complete inventory of all materials across all properties. Search, filter, add, edit and manage your entire material database.</p>
+          <p class="proc-module-stat"><strong id="allMaterialsCount">-</strong> materials · <strong id="allCategoriesCount">-</strong> categories</p>
+          <span class="module-arrow">View All Materials <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+      <a href="/procurement/properties" class="module-card">
+        <div class="card-body">
+          <span class="module-number">Site Management</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z"/></svg></div>
+          <h2 class="module-title">Property-wise Materials</h2>
+          <p class="module-description">Organize materials by property or site location. Track inventory for each building, project, or location separately.</p>
+          <p class="proc-module-stat"><strong id="propertyCount">-</strong> properties · <strong id="assignedMaterials">-</strong> assigned</p>
+          <span class="module-arrow">Manage Properties <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+    </div>
+    </div>
+
+    <div class="proc-section-block">
+    <div class="proc-section-header">
+      <h2 class="modules-section-label">Quick Actions</h2>
+      <div class="proc-section-sep"></div>
+    </div>
+    <div class="modules-grid proc-grid-actions">
+      <a href="/procurement/add-material" class="module-card">
+        <div class="card-body">
+          <span class="module-number">Action</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg></div>
+          <h2 class="module-title">Add Material</h2>
+          <p class="module-description">Add a new material to the inventory.</p>
+          <span class="module-arrow">Add <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+      <div class="module-card proc-quick-action" onclick="document.getElementById('excelInput').click()">
+        <div class="card-body">
+          <span class="module-number">Action</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></div>
+          <h2 class="module-title">Import Excel</h2>
+          <p class="module-description">Import materials from an Excel file.</p>
+          <span class="module-arrow">Import <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
       </div>
-      <div class="hero-box">
-        <div class="hero-box-icon properties">
-          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+      <div class="module-card proc-quick-action" onclick="downloadSampleExcel()">
+        <div class="card-body">
+          <span class="module-number">Action</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+          <h2 class="module-title">Sample Excel</h2>
+          <p class="module-description">Download a sample Excel template.</p>
+          <span class="module-arrow">Download <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
         </div>
-        <div class="hero-box-label">Properties</div>
-        <div class="hero-box-value properties" id="totalProperties">-</div>
       </div>
-      <div class="hero-box">
-        <div class="hero-box-icon items">
-          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <div class="module-card proc-quick-action" onclick="exportExcel()">
+        <div class="card-body">
+          <span class="module-number">Action</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></div>
+          <h2 class="module-title">Export Excel</h2>
+          <p class="module-description">Export materials to Excel.</p>
+          <span class="module-arrow">Export <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
         </div>
-        <div class="hero-box-label">Catalog Items</div>
-        <div class="hero-box-value items" id="totalQuantity">-</div>
       </div>
-      <div class="hero-box">
-        <div class="hero-box-icon value">
-          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <div class="module-card proc-quick-action" onclick="showAddPropertyModal()">
+        <div class="card-body">
+          <span class="module-number">Action</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21"/></svg></div>
+          <h2 class="module-title">Add Property</h2>
+          <p class="module-description">Add a new property or site location.</p>
+          <span class="module-arrow">Add <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
         </div>
-        <div class="hero-box-label">Total Value (AED)</div>
-        <div class="hero-box-value val" id="totalValue">-</div>
       </div>
     </div>
     
-    <!-- Recent Activities -->
-    <div class="proc-activity-card">
-      <h3>Recent Activity</h3>
-      <ul class="proc-activity-list" id="procActivityList">
-        <li class="proc-activity-empty">Loading…</li>
-      </ul>
     </div>
-    
-    <h2 class="modules-section-label" style="margin-top: 0; margin-bottom: 1.25rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; color: #64748b;">INVENTORY MODULES</h2>
-    <div class="module-showcase">
-      <!-- All Materials Module -->
-      <a href="/procurement/materials" class="module-card module-all-materials">
-        <div class="module-card-header">
-          <div class="module-icon">📦</div>
-          <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Master Inventory</span>
-        </div>
-        <div class="module-card-body">
-          <h3>All Materials</h3>
-          <p>Complete inventory of all materials across all properties. Search, filter, add, edit and manage your entire material database.</p>
-          <div class="module-stats">
-            <div class="module-stat">
-              <div class="module-stat-value" id="allMaterialsCount">-</div>
-              <div class="module-stat-label">Materials</div>
-            </div>
-            <div class="module-stat">
-              <div class="module-stat-value" id="allCategoriesCount">-</div>
-              <div class="module-stat-label">Categories</div>
-            </div>
-          </div>
-          <div class="mt-3">
-            <span class="module-arrow">
-              View All Materials
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
-            </span>
-          </div>
-        </div>
-      </a>
-      
-      <!-- Property-wise Module -->
-      <a href="/procurement/properties" class="module-card module-property-wise">
-        <div class="module-card-header">
-          <div class="module-icon">🏢</div>
-          <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Site Management</span>
-        </div>
-        <div class="module-card-body">
-          <h3>Property-wise Materials</h3>
-          <p>Organize materials by property or site location. Track inventory for each building, project, or location separately.</p>
-          <div class="module-stats">
-            <div class="module-stat">
-              <div class="module-stat-value" id="propertyCount">-</div>
-              <div class="module-stat-label">Properties</div>
-            </div>
-            <div class="module-stat">
-              <div class="module-stat-value" id="assignedMaterials">-</div>
-              <div class="module-stat-label">Assigned</div>
-            </div>
-          </div>
-          <div class="mt-3">
-            <span class="module-arrow" style="color: #059669;">
-              Manage Properties
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
-            </span>
-          </div>
-        </div>
-      </a>
-    </div>
-    
-    <!-- ── Department Catalogs ─────────────────────────────────── -->
-    <h2 class="modules-section-label" style="margin-top: 2.5rem; margin-bottom: 1.25rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; color: #64748b;">DEPARTMENT CATALOGS</h2>
-    <div class="dept-catalog-grid">
-
-      <!-- HVAC -->
-      <a href="/procurement/catalog/HVAC" class="dept-card dept-hvac">
-        <div class="dept-card-header">
-          <div class="dept-card-icon">❄️</div>
-          <div class="dept-card-label">HVAC &amp; MEP</div>
-        </div>
-        <div class="dept-card-body">
-          <h4>HVAC Materials</h4>
-          <p>Compressors, refrigerants, AHUs, filters and all air-conditioning spare parts.</p>
-          <div class="dept-card-stat">
-            <div class="dept-card-count" id="deptCount-HVAC">-</div>
-            <div class="dept-card-stat-label">Items in catalog</div>
-          </div>
-          <span class="dept-link">
-            View Catalog
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </span>
-        </div>
-      </a>
-
-      <!-- Cleaning -->
-      <a href="/procurement/catalog/Cleaning" class="dept-card dept-cleaning">
-        <div class="dept-card-header">
-          <div class="dept-card-icon">🧹</div>
-          <div class="dept-card-label">Cleaning</div>
-        </div>
-        <div class="dept-card-body">
-          <h4>Cleaning Materials</h4>
-          <p>Mops, buckets, chemicals, trolleys, washroom supplies and cleaning equipment.</p>
-          <div class="dept-card-stat">
-            <div class="dept-card-count" id="deptCount-Cleaning">-</div>
-            <div class="dept-card-stat-label">Items in catalog</div>
-          </div>
-          <span class="dept-link">
-            View Catalog
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </span>
-        </div>
-      </a>
-
-      <!-- Electrical -->
-      <a href="/procurement/catalog/Electrical" class="dept-card dept-electrical">
-        <div class="dept-card-header">
-          <div class="dept-card-icon">⚡</div>
-          <div class="dept-card-label">Electrical</div>
-        </div>
-        <div class="dept-card-body">
-          <h4>Electrical Materials</h4>
-          <p>Switches, sockets, breakers, cables, lights, fans and electrical fittings.</p>
-          <div class="dept-card-stat">
-            <div class="dept-card-count" id="deptCount-Electrical">-</div>
-            <div class="dept-card-stat-label">Items in catalog</div>
-          </div>
-          <span class="dept-link">
-            View Catalog
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </span>
-        </div>
-      </a>
-
-      <!-- Plumbing -->
-      <a href="/procurement/catalog/Plumbing" class="dept-card dept-plumbing">
-        <div class="dept-card-header">
-          <div class="dept-card-icon">🔧</div>
-          <div class="dept-card-label">Plumbing</div>
-        </div>
-        <div class="dept-card-body">
-          <h4>Plumbing Materials</h4>
-          <p>Mixers, WC sets, basins, pipes, traps, valves and all sanitary fittings.</p>
-          <div class="dept-card-stat">
-            <div class="dept-card-count" id="deptCount-Plumbing">-</div>
-            <div class="dept-card-stat-label">Items in catalog</div>
-          </div>
-          <span class="dept-link">
-            View Catalog
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </span>
-        </div>
-      </a>
-
     </div>
 
-    <h2 class="modules-section-label" style="margin-top: 2.5rem; margin-bottom: 1rem;">Quick Actions</h2>
-    <div class="quick-actions">
-      <a href="/procurement/add-material" class="quick-action">
-        <div class="quick-action-icon icon-add">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-          </svg>
-        </div>
-        <h6>Add Material</h6>
-      </a>
-      <div class="quick-action" onclick="document.getElementById('excelInput').click()" style="cursor: pointer;">
-        <div class="quick-action-icon icon-import">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-          </svg>
-        </div>
-        <h6>Import Excel</h6>
-      </div>
-      <div class="quick-action" onclick="downloadSampleExcel()" style="cursor: pointer;">
-        <div class="quick-action-icon icon-export">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-          </svg>
-        </div>
-        <h6>Sample Excel</h6>
-      </div>
-      <div class="quick-action" onclick="exportExcel()" style="cursor: pointer;">
-        <div class="quick-action-icon icon-export">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-          </svg>
-        </div>
-        <h6>Export Excel</h6>
-      </div>
-      <div class="quick-action" onclick="showAddPropertyModal()" style="cursor: pointer;">
-        <div class="quick-action-icon icon-property">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-          </svg>
-        </div>
-        <h6>Add Property</h6>
-      </div>
-    </div>
-    
     <input type="file" id="excelInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
     </div>
   </section>
@@ -827,21 +397,37 @@
         const catByDept = catData.materials || {};
         let catalogTotal = 0;
         ['HVAC', 'Cleaning', 'Electrical', 'Plumbing'].forEach(dept => {
-          const count = (catByDept[dept] || []).length;
+          const items = catByDept[dept] || [];
+          const count = items.length;
           catalogTotal += count;
           const el = document.getElementById('deptCount-' + dept);
           if (el) el.textContent = count;
+          // Per-dept total value
+          const deptVal = items.reduce((sum, item) => {
+            const qty = parseFloat(item.quantity) || 0;
+            const price = parseFloat(item.unit_price) || parseFloat(item.price) || 0;
+            return sum + (qty * price || parseFloat(item.total_price) || 0);
+          }, 0);
+          const valEl = document.getElementById('deptValue-' + dept);
+          if (valEl) valEl.textContent = deptVal > 0 ? deptVal.toLocaleString('en-AE', { maximumFractionDigits: 0 }) : '—';
         });
 
         // ── Update KPIs ─────────────────────────────────────
         // Total Materials = procurement items + catalog items
         const grandTotal = procMaterials.length + catalogTotal;
-        // grandTotal = manually-added proc items + all catalog items
         document.getElementById('totalMaterials').textContent     = grandTotal.toLocaleString();
         document.getElementById('allMaterialsCount').textContent  = grandTotal.toLocaleString();
         // Total Items = sum of all 4 department catalog counts so it always matches the dept cards
         document.getElementById('totalQuantity').textContent      = catalogTotal.toLocaleString();
-        document.getElementById('totalValue').textContent         = totalValue.toLocaleString('en-AE', { maximumFractionDigits: 0 });
+        // Total Value = procurement value + catalog value (summed during dept loop above)
+        const catalogValue = ['HVAC', 'Cleaning', 'Electrical', 'Plumbing'].reduce((sum, dept) => {
+          return sum + (catByDept[dept] || []).reduce((s, item) => {
+            const qty = parseFloat(item.quantity) || 0;
+            const price = parseFloat(item.unit_price) || parseFloat(item.price) || 0;
+            return s + (qty * price || parseFloat(item.total_price) || 0);
+          }, 0);
+        }, 0);
+        document.getElementById('totalValue').textContent         = (totalValue + catalogValue).toLocaleString('en-AE', { maximumFractionDigits: 0 });
         document.getElementById('allCategoriesCount').textContent = categories.size + 4; // +4 dept catalogs
 
         document.getElementById('assignedMaterials').textContent  = assignedCount;
@@ -860,48 +446,12 @@
       }
     }
     
-    function timeAgo(iso) {
-      if (!iso) return '';
-      const d = new Date(iso);
-      const now = new Date();
-      const sec = Math.floor((now - d) / 1000);
-      if (sec < 60) return 'Just now';
-      if (sec < 3600) return Math.floor(sec / 60) + 'm ago';
-      if (sec < 86400) return Math.floor(sec / 3600) + 'h ago';
-      if (sec < 604800) return Math.floor(sec / 86400) + 'd ago';
-      return d.toLocaleDateString();
-    }
-    
-    async function loadRecentActivity() {
-      const listEl = document.getElementById('procActivityList');
-      if (!listEl) return;
-      try {
-        const res = await fetch('/procurement/api/recent-activity', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (!data.activities || data.activities.length === 0) {
-          listEl.innerHTML = '<li class="proc-activity-empty">No recent activity</li>';
-          return;
-        }
-        listEl.innerHTML = data.activities.map(a => `
-          <li class="proc-activity-item">
-            <span class="act-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span>
-            <span class="act-text">${escapeHtml(a.material_name)} submitted by ${escapeHtml(a.submitted_by)}</span>
-            <span class="act-time">${timeAgo(a.created_at)}</span>
-          </li>
-        `).join('');
-      } catch (e) {
-        listEl.innerHTML = '<li class="proc-activity-empty">Unable to load activity</li>';
-      }
-    }
     function escapeHtml(s) {
       if (s == null) return '';
       const div = document.createElement('div');
       div.textContent = String(s);
       return div.innerHTML;
     }
-    
     function showAddPropertyModal() {
       const modal = new bootstrap.Modal(document.getElementById('addPropertyModal'));
       modal.show();
@@ -1005,7 +555,6 @@
     }
     
     loadStats();
-    loadRecentActivity();
   </script>
   <script src="{{ url_for('static', filename='api-client.js') }}"></script>
   <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
