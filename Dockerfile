@@ -31,7 +31,8 @@ COPY --from=builder /wheels /wheels
 COPY requirements-prods.txt /app/requirements-prods.txt
 
 RUN python -m pip install --upgrade pip setuptools wheel \
- && pip install --no-index --find-links=/wheels -r /app/requirements-prods.txt
+ && pip install --no-index --find-links=/wheels -r /app/requirements-prods.txt \
+ && python -c "import pkg_resources, gunicorn; print('runtime deps OK')"
 
 # Copy application code
 COPY . /app

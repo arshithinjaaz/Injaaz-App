@@ -3,7 +3,7 @@ setuptools>=65.0.0
 
 # Core Flask Framework
 Flask==2.2.5
-gunicorn==20.1.0
+gunicorn==21.2.0
 Werkzeug==2.2.3
 
 # Database
