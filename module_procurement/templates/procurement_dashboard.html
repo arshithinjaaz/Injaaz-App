@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <title>Procurement Module - Injaaz Application</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <style>
+    /* ── Procurement page — scoped overrides on top of dashboard.css ── */
+    :root { --primary: #125435; --primary-light: #1a7a4c; }
+    body { background: #F8FAF8; min-height: 100vh; }
+    .proc-dashboard { background: #F8FAF8; }
+    .proc-modules-section::before { display: none; }
+    .proc-hero { padding: 9rem 0 3.5rem; }
+    .proc-hero .hero-content { max-width: 1400px; margin: 0 auto; padding: 0 3rem; }
+    .proc-hero .hero-subtitle { margin-top: 0.75rem; }
+    /* Slightly tighter gap between hero and modules */
+    .proc-modules-section .modules-inner { padding: 2.4rem 3rem 3rem; max-width: 1400px; margin: 0 auto; }
+
+    /* ── Section headers with visual separator ── */
+    .proc-section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .proc-section-header .modules-section-label { margin-bottom: 0; }
+    .proc-section-sep {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--border-color, #e5e7eb), transparent);
+    }
+
+    /* ── Stat pill on each card ── */
+    .proc-module-stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.76rem;
+      font-weight: 500;
+      color: var(--text-muted, #9ca3af);
+      background: var(--bg-light, #f9fafb);
+      border: 1px solid var(--border-light, #f3f4f6);
+      border-radius: 6px;
+      padding: 0.25rem 0.55rem;
+      margin-bottom: 1rem;
+    }
+    .proc-module-stat strong {
+      color: var(--text-dark, #111827);
+      font-weight: 700;
+    }
+
+    /* ── Dept catalog: unique icon tints + accent top-bar ── */
+    .proc-card-hvac       .module-icon { background: rgba(14,165,233,0.10); }
+    .proc-card-hvac       .module-icon svg { stroke: #0284c7; }
+    .proc-card-hvac:hover { border-color: rgba(2,132,199,0.25) !important; }
+    .proc-card-hvac:hover .module-title { color: #0284c7 !important; }
+    .proc-card-hvac:hover .module-arrow { color: #0284c7 !important; }
+
+    .proc-card-cleaning   .module-icon { background: rgba(16,185,129,0.10); }
+    .proc-card-cleaning   .module-icon svg { stroke: #059669; }
+    .proc-card-cleaning:hover { border-color: rgba(5,150,105,0.25) !important; }
+    .proc-card-cleaning:hover .module-title { color: #047857 !important; }
+    .proc-card-cleaning:hover .module-arrow { color: #047857 !important; }
+
+    .proc-card-electrical .module-icon { background: rgba(245,158,11,0.12); }
+    .proc-card-electrical .module-icon svg { stroke: #d97706; }
+    .proc-card-electrical:hover { border-color: rgba(217,119,6,0.25) !important; }
+    .proc-card-electrical:hover .module-title { color: #b45309 !important; }
+    .proc-card-electrical:hover .module-arrow { color: #b45309 !important; }
+
+    .proc-card-plumbing   .module-icon { background: rgba(139,92,246,0.10); }
+    .proc-card-plumbing   .module-icon svg { stroke: #7c3aed; }
+    .proc-card-plumbing:hover { border-color: rgba(124,58,237,0.25) !important; }
+    .proc-card-plumbing:hover .module-title { color: #6d28d9 !important; }
+    .proc-card-plumbing:hover .module-arrow { color: #6d28d9 !important; }
+
+    /* Thin top accent bar per dept */
+    .proc-grid-dept .module-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+    }
+    .proc-card-hvac::after       { background: linear-gradient(90deg,#38bdf8,#0ea5e9); }
+    .proc-card-cleaning::after   { background: linear-gradient(90deg,#34d399,#10b981); }
+    .proc-card-electrical::after { background: linear-gradient(90deg,#fbbf24,#f59e0b); }
+    .proc-card-plumbing::after   { background: linear-gradient(90deg,#a78bfa,#8b5cf6); }
+
+    /* ── Inventory cards ── */
+    .proc-grid-inventory .module-card .module-icon { background: rgba(18,84,53,0.08); }
+
+    /* ── Quick action cards ── */
+    .proc-quick-action { cursor: pointer; }
+    .proc-grid-actions .module-card .module-number { color: var(--text-muted, #9ca3af); }
+    .proc-grid-actions .module-card .module-icon { background: rgba(18,84,53,0.07); }
+
+    /* ── Section rhythm ── */
+    .proc-section-block { margin-bottom: 3rem; }
+  </style>
+</head>
+<body class="proc-dashboard">
+  {% set active_page = 'procurement' %}
+  {% include 'partials/main_navbar.html' with context %}
+  <!-- Hero: split layout (matches main dashboard - left title, right stats widget) -->
+  <header class="hero hero-split proc-hero">
+    <div class="hero-content hero-split-inner">
+      <div class="hero-left">
+        <a href="/dashboard" class="back-btn">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Back to Dashboard
+        </a>
+        <p class="hero-tagline">Procurement Module</p>
+        <h1 class="hero-title">Procurement <span class="hero-title-accent">Module</span></h1>
+        <p class="hero-subtitle" style="margin: 0; font-size: 1.1rem; color: var(--text-light);">
+          Complete inventory management and property-wise material tracking
+        </p>
+      </div>
+      <div class="hero-right">
+        <div class="dashboard-widget">
+          <div class="dashboard-widget-header">
+            <div class="dashboard-widget-dots"><span></span><span></span><span></span></div>
+            <div class="dashboard-widget-bar"></div>
+          </div>
+          <div class="dashboard-widget-body">
+            <div class="dashboard-stats-grid">
+              <div class="dashboard-stat-card">
+                <div class="dashboard-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg></div>
+                <span class="dashboard-stat-label">Total Materials</span>
+                <span class="dashboard-stat-value" id="totalMaterials">—</span>
+              </div>
+              <div class="dashboard-stat-card">
+                <div class="dashboard-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></div>
+                <span class="dashboard-stat-label">Properties</span>
+                <span class="dashboard-stat-value" id="totalProperties">—</span>
+              </div>
+              <div class="dashboard-stat-card">
+                <div class="dashboard-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                <span class="dashboard-stat-label">Catalog Items</span>
+                <span class="dashboard-stat-value" id="totalQuantity">—</span>
+              </div>
+              <div class="dashboard-stat-card">
+                <div class="dashboard-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                <span class="dashboard-stat-label">Total Value (AED)</span>
+                <span class="dashboard-stat-value" id="totalValue">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Stats & Modules -->
+  <section class="modules-section proc-modules-section" id="modules" style="background: #F8FAF8;">
+    <div class="modules-inner">
+    <div class="proc-section-block">
+    <div class="proc-section-header">
+      <h2 class="modules-section-label">Department Catalogs</h2>
+      <div class="proc-section-sep"></div>
+    </div>
+    <div class="modules-grid proc-grid-dept">
+      <a href="/procurement/catalog/HVAC" class="module-card proc-card-hvac">
+        <div class="card-body">
+          <span class="module-number">Catalog</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l5.653-4.655m5.8-5.8 4.215-4.215a2.652 2.652 0 0 1 3.586 3.586l-4.215 4.215"/></svg></div>
+          <h2 class="module-title">HVAC Materials</h2>
+          <p class="module-description">Compressors, refrigerants, AHUs, filters and all air-conditioning spare parts.</p>
+          <p class="proc-module-stat"><strong id="deptCount-HVAC">-</strong> items · <strong id="deptValue-HVAC">-</strong> AED</p>
+          <span class="module-arrow">View Catalog <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+      <a href="/procurement/catalog/Cleaning" class="module-card proc-card-cleaning">
+        <div class="card-body">
+          <span class="module-number">Catalog</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15"/></svg></div>
+          <h2 class="module-title">Cleaning Materials</h2>
+          <p class="module-description">Mops, buckets, chemicals, trolleys, washroom supplies and cleaning equipment.</p>
+          <p class="proc-module-stat"><strong id="deptCount-Cleaning">-</strong> items · <strong id="deptValue-Cleaning">-</strong> AED</p>
+          <span class="module-arrow">View Catalog <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+      <a href="/procurement/catalog/Electrical" class="module-card proc-card-electrical">
+        <div class="card-body">
+          <span class="module-number">Catalog</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg></div>
+          <h2 class="module-title">Electrical Materials</h2>
+          <p class="module-description">Switches, sockets, breakers, cables, lights, fans and electrical fittings.</p>
+          <p class="proc-module-stat"><strong id="deptCount-Electrical">-</strong> items · <strong id="deptValue-Electrical">-</strong> AED</p>
+          <span class="module-arrow">View Catalog <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+      <a href="/procurement/catalog/Plumbing" class="module-card proc-card-plumbing">
+        <div class="card-body">
+          <span class="module-number">Catalog</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 20V10M18 20V10M6 20a2 2 0 01-2 2H4a2 2 0 01-2-2V10a2 2 0 012-2h2a2 2 0 012 2v10zm12 0a2 2 0 01-2 2h-2a2 2 0 01-2-2V10a2 2 0 012-2h2a2 2 0 012 2v10zM6 10h.01M18 10h.01"/></svg></div>
+          <h2 class="module-title">Plumbing Materials</h2>
+          <p class="module-description">Mixers, WC sets, basins, pipes, traps, valves and all sanitary fittings.</p>
+          <p class="proc-module-stat"><strong id="deptCount-Plumbing">-</strong> items · <strong id="deptValue-Plumbing">-</strong> AED</p>
+          <span class="module-arrow">View Catalog <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+    </div>
+    </div>
+
+    <div class="proc-section-block">
+    <div class="proc-section-header">
+      <h2 class="modules-section-label">Inventory Modules</h2>
+      <div class="proc-section-sep"></div>
+    </div>
+    <div class="modules-grid proc-grid-inventory">
+      <a href="/procurement/materials" class="module-card">
+        <div class="card-body">
+          <span class="module-number">Master Inventory</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg></div>
+          <h2 class="module-title">All Materials</h2>
+          <p class="module-description">Complete inventory of all materials across all properties. Search, filter, add, edit and manage your entire material database.</p>
+          <p class="proc-module-stat"><strong id="allMaterialsCount">-</strong> materials · <strong id="allCategoriesCount">-</strong> categories</p>
+          <span class="module-arrow">View All Materials <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+      <a href="/procurement/properties" class="module-card">
+        <div class="card-body">
+          <span class="module-number">Site Management</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z"/></svg></div>
+          <h2 class="module-title">Property-wise Materials</h2>
+          <p class="module-description">Organize materials by property or site location. Track inventory for each building, project, or location separately.</p>
+          <p class="proc-module-stat"><strong id="propertyCount">-</strong> properties · <strong id="assignedMaterials">-</strong> assigned</p>
+          <span class="module-arrow">Manage Properties <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+    </div>
+    </div>
+
+    <div class="proc-section-block">
+    <div class="proc-section-header">
+      <h2 class="modules-section-label">Quick Actions</h2>
+      <div class="proc-section-sep"></div>
+    </div>
+    <div class="modules-grid proc-grid-actions">
+      <a href="/procurement/add-material" class="module-card">
+        <div class="card-body">
+          <span class="module-number">Action</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg></div>
+          <h2 class="module-title">Add Material</h2>
+          <p class="module-description">Add a new material to the inventory.</p>
+          <span class="module-arrow">Add <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </a>
+      <div class="module-card proc-quick-action" onclick="document.getElementById('excelInput').click()">
+        <div class="card-body">
+          <span class="module-number">Action</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></div>
+          <h2 class="module-title">Import Excel</h2>
+          <p class="module-description">Import materials from an Excel file.</p>
+          <span class="module-arrow">Import <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </div>
+      <div class="module-card proc-quick-action" onclick="downloadSampleExcel()">
+        <div class="card-body">
+          <span class="module-number">Action</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+          <h2 class="module-title">Sample Excel</h2>
+          <p class="module-description">Download a sample Excel template.</p>
+          <span class="module-arrow">Download <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </div>
+      <div class="module-card proc-quick-action" onclick="exportExcel()">
+        <div class="card-body">
+          <span class="module-number">Action</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></div>
+          <h2 class="module-title">Export Excel</h2>
+          <p class="module-description">Export materials to Excel.</p>
+          <span class="module-arrow">Export <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </div>
+      <div class="module-card proc-quick-action" onclick="showAddPropertyModal()">
+        <div class="card-body">
+          <span class="module-number">Action</span>
+          <div class="module-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21"/></svg></div>
+          <h2 class="module-title">Add Property</h2>
+          <p class="module-description">Add a new property or site location.</p>
+          <span class="module-arrow">Add <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg></span>
+        </div>
+      </div>
+    </div>
+    
+    </div>
+    </div>
+
+    <input type="file" id="excelInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
+    </div>
+  </section>
+
+  <!-- Add Property Modal -->
+  <div class="modal fade" id="addPropertyModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content" style="border-radius: 16px;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #ec4899, #be185d); color: white; border: none; border-radius: 16px 16px 0 0;">
+          <h5 class="modal-title" style="font-weight: 600;">Add New Property</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" style="font-weight: 600;">Property Name *</label>
+            <input type="text" class="form-control" id="propertyName" placeholder="e.g., Tower A, Villa 12, Site B">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-weight: 600;">Address</label>
+            <input type="text" class="form-control" id="propertyAddress" placeholder="Full address (optional)">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-weight: 600;">Description</label>
+            <textarea class="form-control" id="propertyDescription" rows="2" placeholder="Brief description (optional)"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer" style="border: none;">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" style="background: linear-gradient(135deg, #ec4899, #be185d); border: none;" onclick="addProperty()">Add Property</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Excel Import Hint Modal -->
+  <div class="modal fade" id="importHintModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none;">
+          <h5 class="modal-title" style="font-weight: 600;">Excel Import Guide</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem;">
+          <div class="alert alert-info" style="border-radius: 10px; border: none; background: #eff6ff;">
+            <strong>File Format:</strong> Upload <code>.xlsx</code> or <code>.xls</code> files only
+          </div>
+          <h6 style="font-weight: 600; margin: 1rem 0 0.75rem;">Required & Optional Columns:</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+              <thead style="background: #f1f5f9;">
+                <tr><th>Field</th><th>Accepted Column Names</th></tr>
+              </thead>
+              <tbody>
+                <tr style="background: #fef2f2;"><td><strong>Material Name *</strong></td><td><code>Material Name</code>, <code>Material</code>, <code>Name</code>, <code>Item</code></td></tr>
+                <tr><td>Property</td><td><code>Property</code>, <code>Site</code>, <code>Location</code></td></tr>
+                <tr><td>Quantity</td><td><code>Quantity</code>, <code>Qty</code></td></tr>
+                <tr><td>Unit Price</td><td><code>Unit Price</code>, <code>Price</code>, <code>Rate</code></td></tr>
+                <tr><td>Category</td><td><code>Category</code>, <code>Cat</code></td></tr>
+                <tr><td>Supplier</td><td><code>Supplier</code>, <code>Vendor</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer" style="border: none;">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const token = localStorage.getItem('access_token');
+    
+    async function loadStats() {
+      try {
+        // Fetch all three in parallel
+        const [matRes, propRes, catRes] = await Promise.all([
+          fetch('/procurement/api/materials',         { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('/procurement/api/properties',        { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('/procurement/api/catalog/materials', { headers: { 'Authorization': `Bearer ${token}` } }),
+        ]);
+
+        const matData  = await matRes.json();
+        const propData = await propRes.json();
+        const catData  = await catRes.json();
+
+        // ── Procurement materials (manually added) ──────────
+        const procMaterials = matData.materials || [];
+        let totalQty = 0, totalValue = 0;
+        const categories = new Set();
+        let assignedCount = 0;
+        procMaterials.forEach(m => {
+          totalQty   += parseFloat(m.quantity)    || 0;
+          totalValue += parseFloat(m.total_price) || 0;
+          if (m.category) categories.add(m.category);
+          if (m.property && m.property !== 'Unassigned') assignedCount++;
+        });
+
+        // ── Catalog materials (seeded from Excel) ───────────
+        const catByDept = catData.materials || {};
+        let catalogTotal = 0;
+        ['HVAC', 'Cleaning', 'Electrical', 'Plumbing'].forEach(dept => {
+          const items = catByDept[dept] || [];
+          const count = items.length;
+          catalogTotal += count;
+          const el = document.getElementById('deptCount-' + dept);
+          if (el) el.textContent = count;
+          // Per-dept total value
+          const deptVal = items.reduce((sum, item) => {
+            const qty = parseFloat(item.quantity) || 0;
+            const price = parseFloat(item.unit_price) || parseFloat(item.price) || 0;
+            return sum + (qty * price || parseFloat(item.total_price) || 0);
+          }, 0);
+          const valEl = document.getElementById('deptValue-' + dept);
+          if (valEl) valEl.textContent = deptVal > 0 ? deptVal.toLocaleString('en-AE', { maximumFractionDigits: 0 }) : '—';
+        });
+
+        // ── Update KPIs ─────────────────────────────────────
+        // Total Materials = procurement items + catalog items
+        const grandTotal = procMaterials.length + catalogTotal;
+        document.getElementById('totalMaterials').textContent     = grandTotal.toLocaleString();
+        document.getElementById('allMaterialsCount').textContent  = grandTotal.toLocaleString();
+        // Total Items = sum of all 4 department catalog counts so it always matches the dept cards
+        document.getElementById('totalQuantity').textContent      = catalogTotal.toLocaleString();
+        // Total Value = procurement value + catalog value (summed during dept loop above)
+        const catalogValue = ['HVAC', 'Cleaning', 'Electrical', 'Plumbing'].reduce((sum, dept) => {
+          return sum + (catByDept[dept] || []).reduce((s, item) => {
+            const qty = parseFloat(item.quantity) || 0;
+            const price = parseFloat(item.unit_price) || parseFloat(item.price) || 0;
+            return s + (qty * price || parseFloat(item.total_price) || 0);
+          }, 0);
+        }, 0);
+        document.getElementById('totalValue').textContent         = (totalValue + catalogValue).toLocaleString('en-AE', { maximumFractionDigits: 0 });
+        document.getElementById('allCategoriesCount').textContent = categories.size + 4; // +4 dept catalogs
+
+        document.getElementById('assignedMaterials').textContent  = assignedCount;
+
+        // Properties
+        if (propData.properties) {
+          const uniqueProps = propData.properties.filter(p => p.name !== 'Unassigned');
+          document.getElementById('totalProperties').textContent = uniqueProps.length;
+          document.getElementById('propertyCount').textContent   = uniqueProps.length;
+        } else {
+          document.getElementById('totalProperties').textContent = '0';
+          document.getElementById('propertyCount').textContent   = '0';
+        }
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    }
+    
+    function escapeHtml(s) {
+      if (s == null) return '';
+      const div = document.createElement('div');
+      div.textContent = String(s);
+      return div.innerHTML;
+    }
+    function showAddPropertyModal() {
+      const modal = new bootstrap.Modal(document.getElementById('addPropertyModal'));
+      modal.show();
+    }
+    
+    async function addProperty() {
+      const name = document.getElementById('propertyName').value.trim();
+      const address = document.getElementById('propertyAddress').value.trim();
+      const description = document.getElementById('propertyDescription').value.trim();
+      
+      if (!name) {
+        alert('Property name is required');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/procurement/api/properties', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ name, address, description })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          alert('Property added successfully!');
+          bootstrap.Modal.getInstance(document.getElementById('addPropertyModal')).hide();
+          document.getElementById('propertyName').value = '';
+          document.getElementById('propertyAddress').value = '';
+          document.getElementById('propertyDescription').value = '';
+          loadStats();
+        } else {
+          alert('Error: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+    
+    async function importExcel(input) {
+      if (!input.files.length) return;
+      
+      const formData = new FormData();
+      formData.append('file', input.files[0]);
+      
+      try {
+        const response = await fetch('/procurement/api/import-excel', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          alert(`Successfully imported ${result.imported} materials!`);
+          loadStats();
+        } else {
+          alert('Error: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error importing file: ' + error.message);
+      }
+      
+      input.value = '';
+    }
+    
+    function exportExcel() {
+      window.open(`/procurement/api/export-excel`, '_blank');
+    }
+    
+    async function downloadSampleExcel() {
+      const token = localStorage.getItem('access_token');
+      try {
+        const res = await fetch('/procurement/api/sample-excel', {
+          method: 'GET',
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert('Error: ' + (err.error || 'Failed to download sample Excel'));
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const disp = res.headers.get('content-disposition') || '';
+        let filename = 'procurement_import_sample.xlsx';
+        const m = disp.match(/filename="?([^";]+)"?/i);
+        if (m && m[1]) filename = m[1].trim();
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+    
+    loadStats();
+  </script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

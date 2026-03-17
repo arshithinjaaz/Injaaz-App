@@ -4,7 +4,7 @@ import logging
 import traceback
 from datetime import datetime
 from flask import Blueprint, current_app, render_template, request, jsonify, url_for, send_from_directory
-from common.utils import random_id, save_uploaded_file_cloud, upload_base64_to_cloud
+from common.utils import random_id, save_uploaded_file_cloud, upload_base64_to_cloud, is_path_safe_for_directory
 from common.db_utils import create_submission_db, create_job_db, update_job_progress_db, complete_job_db, fail_job_db, get_job_status_db, get_submission_db
 from app.models import db, User
 from app.middleware import token_required
@@ -60,9 +60,10 @@ def app_paths():
 @civil_bp.route('/form', methods=['GET'])
 @jwt_required()
 def index():
-    """Civil form - requires authentication and module access"""
-    from flask import redirect, url_for
+    """Civil form - requires authentication and module access. Supports editing existing submissions."""
+    from flask import redirect, url_for, request
     from flask_jwt_extended import get_jwt_identity
+    from app.models import Submission
     
     try:
         user_id = get_jwt_identity()
@@ -73,12 +74,327 @@ def index():
                                  module='Civil Works',
                                  message='Your account is inactive. Please contact an administrator.'), 403
         
-        if not user.has_module_access('civil'):
-            return render_template('access_denied.html',
-                                 module='Civil Works',
-                                 message='You do not have access to this module. Please contact an administrator to grant access.'), 403
+        # Initialize variables
+        submission_data = None
+        is_edit_mode = False
         
-        return render_template('civil_form.html')
+        # Allow admins, supervisors, and managers to edit submissions even if they don't have module access
+        edit_submission_id = request.args.get('edit')
+        
+        if edit_submission_id:
+            # Check if user can edit (admin, or supervisor/manager of this submission)
+            submission = Submission.query.filter_by(submission_id=edit_submission_id).first()
+            if not submission:
+                return render_template('access_denied.html',
+                                     module='Civil Works',
+                                     message='Submission not found.'), 404
+            
+            # Allow editing/reviewing based on role and workflow status
+            can_edit = False
+            can_view = False
+            user_designation = user.designation if hasattr(user, 'designation') else None
+            workflow_status = submission.workflow_status if hasattr(submission, 'workflow_status') else None
+            
+            # Admin - always can edit/view
+            if user.role == 'admin':
+                can_edit = True
+                can_view = True
+            # Supervisor - can edit ONLY if form is still at their stage, otherwise read-only
+            elif user_designation == 'supervisor' and hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id:
+                # Supervisor can edit if form is still at operations_manager_review (pending OM approval)
+                # Once OM approves (status changes to bd_procurement_review or beyond), supervisor can only view
+                if workflow_status == 'operations_manager_review':
+                    # Form submitted but OM hasn't approved yet - supervisor can still edit/resubmit
+                    can_edit = True
+                    can_view = True
+                elif workflow_status in ['bd_procurement_review', 'general_manager_review', 'completed']:
+                    # Form has moved past OM - supervisor can only view (read-only)
+                    can_view = True
+                else:
+                    # Draft or initial state - supervisor can edit
+                    can_edit = True
+                    can_view = True
+            # Operations Manager - can review/edit while form is at their stage, 
+            # AND can still edit if form moved to bd_procurement_review but BD/Procurement haven't approved yet
+            elif user_designation == 'operations_manager':
+                if workflow_status == 'operations_manager_review':
+                    can_edit = True
+                    can_view = True
+                elif workflow_status == 'bd_procurement_review':
+                    # OM can still edit their review if BD and Procurement haven't started approving yet
+                    bd_started = hasattr(submission, 'business_dev_approved_at') and submission.business_dev_approved_at
+                    proc_started = hasattr(submission, 'procurement_approved_at') and submission.procurement_approved_at
+                    if not bd_started and not proc_started:
+                        can_edit = True
+                        can_view = True
+                    else:
+                        # BD or Procurement has started reviewing - OM can only view
+                        can_view = True
+                elif hasattr(submission, 'operations_manager_id') and submission.operations_manager_id == user.id:
+                    # Can view forms they've already reviewed (for history/document access)
+                    can_view = True
+            # Business Development - can edit while form is at bd_procurement_review stage
+            # Can re-sign even after signing, and also at general_manager_review if GM hasn't started yet
+            elif user_designation == 'business_development':
+                if workflow_status == 'bd_procurement_review':
+                    # BD can edit while form is at this stage (even after they've signed)
+                    can_edit = True
+                    can_view = True
+                elif workflow_status == 'general_manager_review':
+                    # BD can still edit if GM hasn't started reviewing yet
+                    gm_started = hasattr(submission, 'general_manager_approved_at') and submission.general_manager_approved_at
+                    if not gm_started:
+                        can_edit = True
+                        can_view = True
+                    else:
+                        can_view = True
+                elif workflow_status == 'completed':
+                    # Form is completed - BD can only view
+                    can_view = True
+                elif hasattr(submission, 'business_dev_id') and submission.business_dev_id == user.id:
+                    can_view = True
+            # Procurement - can edit while form is at bd_procurement_review stage
+            # Can re-sign even after signing, and also at general_manager_review if GM hasn't started yet
+            elif user_designation == 'procurement':
+                if workflow_status == 'bd_procurement_review':
+                    # Procurement can edit while form is at this stage (even after they've signed)
+                    can_edit = True
+                    can_view = True
+                elif workflow_status == 'general_manager_review':
+                    # Procurement can still edit if GM hasn't started reviewing yet
+                    gm_started = hasattr(submission, 'general_manager_approved_at') and submission.general_manager_approved_at
+                    if not gm_started:
+                        can_edit = True
+                        can_view = True
+                    else:
+                        can_view = True
+                elif workflow_status == 'completed':
+                    # Form is completed - Procurement can only view
+                    can_view = True
+                elif hasattr(submission, 'procurement_id') and submission.procurement_id == user.id:
+                    can_view = True
+            # General Manager - can edit while form is at general_manager_review stage
+            # Can also re-sign even after form is completed (they're the final approver)
+            elif user_designation == 'general_manager':
+                if workflow_status == 'general_manager_review':
+                    # GM can edit while form is at this stage (even after they've signed)
+                    can_edit = True
+                    can_view = True
+                elif workflow_status == 'completed':
+                    # GM can still edit their review even after form is completed
+                    # (as the final approver, they should be able to modify their decision)
+                    can_edit = True
+                    can_view = True
+                elif hasattr(submission, 'general_manager_id') and submission.general_manager_id == user.id:
+                    can_view = True
+
+            # Admin-closed submissions are read-only for all users
+            if workflow_status == 'closed_by_admin':
+                can_edit = False
+                if user.role == 'admin':
+                    can_view = True
+                elif (
+                    (hasattr(submission, 'supervisor_id') and submission.supervisor_id == user.id) or
+                    (hasattr(submission, 'operations_manager_id') and submission.operations_manager_id == user.id) or
+                    (hasattr(submission, 'business_dev_id') and submission.business_dev_id == user.id) or
+                    (hasattr(submission, 'procurement_id') and submission.procurement_id == user.id) or
+                    (hasattr(submission, 'general_manager_id') and submission.general_manager_id == user.id)
+                ):
+                    can_view = True
+            
+            if not can_view:
+                return render_template('access_denied.html',
+                                     module='Civil Works',
+                                     message=f'You do not have permission to review this submission. Current status: {workflow_status}, Your role: {user_designation}'), 403
+            
+            # Load submission data for editing
+            submission_dict = submission.to_dict()
+            # Parse form_data if it's a string
+            form_data = submission_dict.get('form_data', {})
+            if isinstance(form_data, str):
+                try:
+                    form_data = json.loads(form_data)
+                except:
+                    form_data = {}
+            
+            # Merge Supervisor data from nested form_data.data if not already present
+            # This ensures OM and other reviewers can see supervisor signature/comments
+            if not form_data.get('supervisor_signature') and not form_data.get('supervisor_signature_url'):
+                if isinstance(submission.form_data, dict):
+                    nested_data = submission.form_data.get('data') if isinstance(submission.form_data.get('data'), dict) else {}
+                    if nested_data and (nested_data.get('supervisor_signature') or nested_data.get('supervisor_signature_url')):
+                        form_data['supervisor_signature'] = nested_data.get('supervisor_signature') or nested_data.get('supervisor_signature_url')
+                        logger.info(f"✅ Found Supervisor signature in nested form_data.data structure")
+            if not form_data.get('supervisor_comments') and isinstance(submission.form_data, dict):
+                nested_data = submission.form_data.get('data') if isinstance(submission.form_data.get('data'), dict) else {}
+                if nested_data and nested_data.get('supervisor_comments'):
+                    form_data['supervisor_comments'] = nested_data.get('supervisor_comments')
+                    logger.info(f"✅ Found Supervisor comments in nested form_data.data structure")
+            
+            # Merge Operations Manager comments from model field into form_data if not already present
+            # This ensures BD and other reviewers can see OM comments even if not in form_data
+            if hasattr(submission, 'operations_manager_comments') and submission.operations_manager_comments:
+                if not form_data.get('operations_manager_comments'):
+                    form_data['operations_manager_comments'] = submission.operations_manager_comments
+                    logger.info(f"✅ Added Operations Manager comments from model field to form_data for display")
+            
+            # Operations Manager signature: check form_data first, then model field, then nested
+            if not form_data.get('operations_manager_signature') and not form_data.get('opMan_signature'):
+                # First check top-level form_data directly from submission
+                fd = submission.form_data if isinstance(submission.form_data, dict) else {}
+                if isinstance(fd, str):
+                    try:
+                        fd = json.loads(fd)
+                    except:
+                        fd = {}
+                sig = fd.get('operations_manager_signature') or fd.get('opMan_signature')
+                if sig:
+                    form_data['operations_manager_signature'] = sig
+                    logger.info(f"✅ Found Operations Manager signature in form_data for display")
+                elif fd.get('data') and isinstance(fd['data'], dict):
+                    nested = fd['data']
+                    sig = nested.get('operations_manager_signature') or nested.get('opMan_signature')
+                    if sig:
+                        form_data['operations_manager_signature'] = sig
+                        logger.info(f"✅ Found Operations Manager signature in nested form_data.data for display")
+                else:
+                    # If still not found, log for debugging
+                    logger.warning(f"⚠️ Operations Manager signature not found in form_data for submission {submission.submission_id}")
+                    logger.warning(f"  - form_data keys: {list(form_data.keys()) if isinstance(form_data, dict) else 'not a dict'}")
+                    logger.warning(f"  - submission.form_data type: {type(submission.form_data)}")
+                    if isinstance(submission.form_data, dict):
+                        logger.warning(f"  - submission.form_data keys: {list(submission.form_data.keys())[:20]}")
+            
+            # Merge Business Development comments from model field into form_data if not already present
+            # CRITICAL: Only use actual BD comments, never fall back to supervisor comments
+            existing_bd_comments = form_data.get('business_dev_comments')
+            supervisor_comments = form_data.get('supervisor_comments')
+            
+            # Check if BD comments are incorrectly set to supervisor comments
+            if existing_bd_comments and supervisor_comments and existing_bd_comments == supervisor_comments:
+                logger.warning(f"⚠️ WARNING: BD comments appear to be incorrectly set to supervisor comments for submission {submission.submission_id}!")
+                form_data['business_dev_comments'] = None
+                existing_bd_comments = None
+            
+            if hasattr(submission, 'business_dev_comments') and submission.business_dev_comments:
+                if not existing_bd_comments or existing_bd_comments == supervisor_comments:
+                    form_data['business_dev_comments'] = submission.business_dev_comments
+                    logger.info(f"✅ Added Business Development comments from model field to form_data for display")
+            
+            if not form_data.get('business_dev_signature') and not form_data.get('businessDevSignature'):
+                fd = submission.form_data if isinstance(submission.form_data, dict) else {}
+                sig = fd.get('business_dev_signature') or fd.get('businessDevSignature')
+                if sig:
+                    form_data['business_dev_signature'] = sig
+                    logger.info(f"✅ Found Business Development signature in form_data for display")
+                elif fd.get('data') and isinstance(fd['data'], dict):
+                    sig = (fd['data'].get('business_dev_signature') or fd['data'].get('businessDevSignature'))
+                    if sig:
+                        form_data['business_dev_signature'] = sig
+            
+            # CRITICAL: Only use actual Procurement comments, never fall back to supervisor/BD comments
+            existing_proc_comments = form_data.get('procurement_comments')
+            
+            # Check if Procurement comments are incorrectly set to supervisor or BD comments
+            if existing_proc_comments and supervisor_comments and existing_proc_comments == supervisor_comments:
+                logger.warning(f"⚠️ WARNING: Procurement comments appear to be incorrectly set to supervisor comments for submission {submission.submission_id}!")
+                form_data['procurement_comments'] = None
+                existing_proc_comments = None
+            
+            if hasattr(submission, 'procurement_comments') and submission.procurement_comments:
+                if not existing_proc_comments:
+                    form_data['procurement_comments'] = submission.procurement_comments
+                    logger.info(f"✅ Added Procurement comments from model field to form_data for display")
+            
+            if not form_data.get('procurement_signature') and not form_data.get('procurementSignature'):
+                fd = submission.form_data if isinstance(submission.form_data, dict) else {}
+                sig = fd.get('procurement_signature') or fd.get('procurementSignature')
+                if sig:
+                    form_data['procurement_signature'] = sig
+                    logger.info(f"✅ Found Procurement signature in form_data for display")
+                elif fd.get('data') and isinstance(fd['data'], dict):
+                    sig = (fd['data'].get('procurement_signature') or fd['data'].get('procurementSignature'))
+                    if sig:
+                        form_data['procurement_signature'] = sig
+            
+            # CRITICAL: Only use actual GM comments, never fall back to supervisor/BD/Proc comments
+            existing_gm_comments = form_data.get('general_manager_comments')
+            
+            # Check if GM comments are incorrectly set to supervisor comments
+            if existing_gm_comments and supervisor_comments and existing_gm_comments == supervisor_comments:
+                logger.warning(f"⚠️ WARNING: GM comments appear to be incorrectly set to supervisor comments for submission {submission.submission_id}!")
+                form_data['general_manager_comments'] = None
+                existing_gm_comments = None
+            
+            if hasattr(submission, 'general_manager_comments') and submission.general_manager_comments:
+                if not existing_gm_comments:
+                    form_data['general_manager_comments'] = submission.general_manager_comments
+                    logger.info(f"✅ Added General Manager comments from model field to form_data for display")
+            
+            if not form_data.get('general_manager_signature') and not form_data.get('generalManagerSignature'):
+                fd = submission.form_data if isinstance(submission.form_data, dict) else {}
+                sig = fd.get('general_manager_signature') or fd.get('generalManagerSignature')
+                if sig:
+                    form_data['general_manager_signature'] = sig
+                elif fd.get('data') and isinstance(fd['data'], dict):
+                    sig = (fd['data'].get('general_manager_signature') or fd['data'].get('generalManagerSignature'))
+                    if sig:
+                        form_data['general_manager_signature'] = sig
+            
+            submission_data = {
+                'submission_id': submission.submission_id,
+                'site_name': submission.site_name or '',
+                'visit_date': submission.visit_date.isoformat() if submission.visit_date else '',
+                'form_data': form_data,
+                'is_edit_mode': True,
+                'workflow_status': submission.workflow_status if hasattr(submission, 'workflow_status') else None,
+                'supervisor_id': submission.supervisor_id if hasattr(submission, 'supervisor_id') else None,
+                'can_edit': can_edit,  # Pass can_edit to JavaScript so it can show editable vs read-only UI
+                'operations_manager_approved_at': submission.operations_manager_approved_at.isoformat() if hasattr(submission, 'operations_manager_approved_at') and submission.operations_manager_approved_at else None,
+                'business_dev_approved_at': submission.business_dev_approved_at.isoformat() if hasattr(submission, 'business_dev_approved_at') and submission.business_dev_approved_at else None,
+                'procurement_approved_at': submission.procurement_approved_at.isoformat() if hasattr(submission, 'procurement_approved_at') and submission.procurement_approved_at else None,
+                'general_manager_approved_at': submission.general_manager_approved_at.isoformat() if hasattr(submission, 'general_manager_approved_at') and submission.general_manager_approved_at else None,
+                'operations_manager_comments': form_data.get('operations_manager_comments') or (submission.operations_manager_comments if hasattr(submission, 'operations_manager_comments') else None),
+                'operations_manager_signature': form_data.get('operations_manager_signature') or form_data.get('opMan_signature'),
+                'business_dev_comments': form_data.get('business_dev_comments') or (submission.business_dev_comments if hasattr(submission, 'business_dev_comments') else None),
+                'business_dev_signature': form_data.get('business_dev_signature') or form_data.get('businessDevSignature'),
+                'procurement_comments': form_data.get('procurement_comments') or (submission.procurement_comments if hasattr(submission, 'procurement_comments') else None),
+                'procurement_signature': form_data.get('procurement_signature') or form_data.get('procurementSignature'),
+                'general_manager_comments': form_data.get('general_manager_comments') or (submission.general_manager_comments if hasattr(submission, 'general_manager_comments') else None),
+                'general_manager_signature': form_data.get('general_manager_signature') or form_data.get('generalManagerSignature'),
+            }
+            is_edit_mode = True
+        else:
+            # Normal form access - check module access
+            if not user.has_module_access('civil'):
+                return render_template('access_denied.html',
+                                     module='Civil Works',
+                                     message='You do not have access to this module. Please contact an administrator to grant access.'), 403
+        
+        # Pass designation info so the template can adjust signature visibility
+        user_designation = user.designation if hasattr(user, 'designation') else None
+        
+        # Only supervisors (and admins acting as supervisors) should use the supervisor edit path
+        # Operations Manager, BD, Procurement, GM use their own workflow-specific paths
+        is_supervisor_edit = is_edit_mode and (user_designation == 'supervisor' or (user.role == 'admin' and request.args.get('review') != 'true'))
+        
+        # Pass can_edit to template so it knows if user can modify the form
+        can_edit_form = False
+        if edit_submission_id and 'can_edit' in locals():
+            can_edit_form = can_edit
+        elif not edit_submission_id:
+            # New form - supervisor can always create
+            can_edit_form = True
+        
+        return render_template(
+            'civil_form.html',
+            submission_data=submission_data,
+            is_edit_mode=is_edit_mode,
+            user_designation=user_designation,
+            is_supervisor_edit=is_supervisor_edit,
+            can_edit=can_edit_form,
+            user=user
+        )
     except Exception as e:
         logger.error(f"Error checking module access: {str(e)}")
         # If JWT check fails, redirect to login
@@ -122,11 +438,19 @@ def submit():
     
     # Validate date format
     try:
-        from datetime import datetime
+        from datetime import datetime, timedelta
         visit_date = datetime.strptime(fields.get('date'), '%Y-%m-%d').date()
-        if visit_date > datetime.now().date():
-            return error_response("Visit date cannot be in the future", status_code=400, error_code='VALIDATION_ERROR')
-    except ValueError:
+        # Only reject dates that are clearly in the future (more than 1 day ahead)
+        # This accounts for timezone differences while still catching obvious errors
+        today_utc = datetime.utcnow().date()
+        # Allow today and tomorrow to account for timezone differences (GST is UTC+4)
+        max_allowed_date = today_utc + timedelta(days=1)
+        logger.info(f"Date validation (/submit): visit_date={visit_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
+        if visit_date > max_allowed_date:
+            logger.warning(f"Rejected future date: {visit_date} > {max_allowed_date}")
+            return error_response(f"Visit date ({visit_date}) cannot be more than 1 day in the future", status_code=400, error_code='VALIDATION_ERROR')
+    except ValueError as e:
+        logger.error(f"Invalid date format: {fields.get('date')}, error: {e}")
         return error_response("Invalid date format. Use YYYY-MM-DD", status_code=400, error_code='VALIDATION_ERROR')
     
     saved_files = []
@@ -233,13 +557,13 @@ def status(job_id):
     try:
         job_data = get_job_status_db(job_id)
         if not job_data:
-            return jsonify({"error": "unknown job"}), 404
+            return error_response("Job not found", 404, "JOB_NOT_FOUND")
         return jsonify(job_data)
     except Exception as e:
         logger.error(f"Status check failed for {job_id}: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        return jsonify({"error": "Status check failed", "details": str(e)}), 500
+        return error_response("Status check failed", 500, "INTERNAL_ERROR", str(e))
 
 
 @civil_bp.route("/generated/<path:filename>", methods=["GET"])
@@ -270,7 +594,7 @@ def download_file(job_id, file_type):
         job_data = get_job_status_db(job_id)
         if not job_data:
             logger.error(f"Job not found: {job_id}")
-            return jsonify({"error": "Job not found"}), 404
+            return error_response("Job not found", 404, "JOB_NOT_FOUND")
         
         # Extract results
         results = {}
@@ -300,12 +624,54 @@ def download_file(job_id, file_type):
         if not file_url:
             return error_response(f"{file_type.upper()} file URL not found", status_code=404, error_code='NOT_FOUND')
         
-        # Check if it's a Cloudinary URL
-        if 'cloudinary.com' in file_url:
+        # Check if it's a localhost/local development URL
+        if file_url.startswith('http://127.0.0.1') or file_url.startswith('http://localhost') or file_url.startswith('http://0.0.0.0'):
+            # Local development URL - extract filename and serve from local storage
+            # URL might contain # which breaks URL parsing, so we need to handle it carefully
+            from urllib.parse import urlparse, unquote
+            # Reconstruct the full path including fragment (everything after #)
+            # Split by # to get path and fragment separately
+            if '#' in file_url:
+                url_parts = file_url.split('#', 1)
+                base_url = url_parts[0]
+                fragment = url_parts[1] if len(url_parts) > 1 else ''
+                parsed = urlparse(base_url)
+                # Reconstruct full filename: path + fragment
+                full_path = parsed.path
+                if fragment:
+                    # If fragment exists, it's part of the filename (not a URL fragment)
+                    full_path = full_path + '#' + fragment
+            else:
+                parsed = urlparse(file_url)
+                full_path = parsed.path
+            
+            # Extract filename from path
+            local_filename = unquote(full_path.lstrip('/').replace('generated/', ''))
+            local_path = os.path.join(GENERATED_DIR, local_filename)
+            
+            if not is_path_safe_for_directory(GENERATED_DIR, local_path):
+                logger.warning(f"Path traversal attempt blocked: {local_path}")
+                return error_response("Invalid file path", status_code=403, error_code='FORBIDDEN')
+            
+            logger.debug(f"Local URL detected, serving from filesystem: {local_path}")
+            
+            if not os.path.exists(local_path):
+                logger.error(f"File not found at local path: {local_path}")
+                return error_response("File not found locally", status_code=404, error_code='NOT_FOUND')
+            
+            from flask import send_file
+            return send_file(local_path, as_attachment=True, download_name=filename)
+        elif file_url.startswith('http://') or file_url.startswith('https://'):
+            # Cloudinary URL or other HTTP URL - fetch and serve
             try:
+                logger.debug(f"Fetching {file_type.upper()} file from URL: {file_url}")
+                # Remove ?attachment=true if present
                 clean_url = file_url.split('?')[0]
+                logger.debug(f"Clean URL (removed query params): {clean_url}")
+                
                 response = requests.get(clean_url, timeout=60, stream=True)
                 response.raise_for_status()
+                logger.debug(f"Successfully fetched {file_type.upper()} file, status: {response.status_code}, content-length: {response.headers.get('Content-Length', 'unknown')}")
                 
                 file_content = response.content
                 file_data = BytesIO(file_content)
@@ -314,7 +680,7 @@ def download_file(job_id, file_type):
                 mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if file_type == 'excel' else 'application/pdf'
                 
                 if len(file_content) == 0:
-                    logger.error(f"Empty file content received from Cloudinary")
+                    logger.error(f"Empty file content received")
                     return error_response("File content is empty", status_code=500, error_code='STORAGE_ERROR')
                 
                 from flask import send_file
@@ -325,13 +691,17 @@ def download_file(job_id, file_type):
                     download_name=filename
                 )
             except Exception as e:
-                logger.error(f"Error fetching from Cloudinary: {str(e)}")
+                logger.error(f"Error fetching file: {str(e)}")
                 logger.error(traceback.format_exc())
-                return error_response("Failed to fetch file from Cloudinary", status_code=500, error_code='STORAGE_ERROR')
+                return error_response("Failed to fetch file", status_code=500, error_code='STORAGE_ERROR')
         else:
             # Local URL
             local_filename = file_url.lstrip('/').replace('generated/', '')
             local_path = os.path.join(GENERATED_DIR, local_filename)
+            
+            if not is_path_safe_for_directory(GENERATED_DIR, local_path):
+                logger.warning(f"Path traversal attempt blocked: {local_path}")
+                return error_response("Invalid file path", status_code=403, error_code='FORBIDDEN')
             
             if not os.path.exists(local_path):
                 return error_response("File not found locally", status_code=404, error_code='NOT_FOUND')
@@ -391,21 +761,35 @@ def upload_photo():
 
 def save_signature_dataurl(dataurl, uploads_dir, prefix="signature"):
     """
-    Upload signature to cloud storage - CLOUD ONLY.
+    Upload signature to cloud storage with local fallback.
     Returns (saved_filename_or_none, file_path_or_none, public_url) tuple.
-    Raises exception if cloud upload fails.
     """
     if not dataurl:
         return None, None, None
     
-    # Cloud upload only - no fallback
-    cloud_url, is_cloud = upload_base64_to_cloud(dataurl, folder="signatures", prefix=prefix)
-    if is_cloud and cloud_url:
-        logger.info(f"✅ Signature uploaded to cloud: {cloud_url}")
-        return None, None, cloud_url  # No local file
-    
-    # Should never reach here due to exception in upload_base64_to_cloud
-    raise Exception("Cloud storage required but signature upload failed")
+    try:
+        # Try cloud upload first, with local fallback
+        url, is_cloud = upload_base64_to_cloud(dataurl, folder="signatures", prefix=prefix, uploads_dir=uploads_dir)
+        
+        if url:
+            if is_cloud:
+                logger.info(f"✅ Signature uploaded to cloud: {url}")
+                return None, None, url  # No local file for cloud uploads
+            else:
+                # Local storage - extract filename from URL
+                # URL format: /generated/uploads/signatures/filename.png
+                filename = url.split('/')[-1]
+                # Get the full path
+                from config import GENERATED_DIR
+                file_path = os.path.join(GENERATED_DIR, "uploads", "signatures", filename)
+                logger.info(f"✅ Signature saved locally: {url}")
+                return filename, file_path, url
+        
+        raise Exception("Upload succeeded but no URL returned")
+        
+    except Exception as e:
+        logger.error(f"❌ Signature upload failed: {e}")
+        raise Exception(f"Signature upload failed: {str(e)}")
 
 
 @civil_bp.route("/submit-with-urls", methods=["POST"])
@@ -426,18 +810,27 @@ def submit_with_urls():
         visit_date = payload.get("visit_date", "").strip()
         
         if not project_name:
-            return jsonify({"error": "Project name is required"}), 400
+            return error_response("Project name is required", 400, "VALIDATION_ERROR")
         if not location:
-            return jsonify({"error": "Location is required"}), 400
+            return error_response("Location is required", 400, "VALIDATION_ERROR")
         
         # Validate date format
         if visit_date:
             try:
                 parsed_date = datetime.strptime(visit_date, '%Y-%m-%d').date()
-                if parsed_date > datetime.now().date():
-                    return jsonify({"error": "Visit date cannot be in the future"}), 400
-            except ValueError:
-                return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+                # Only reject dates that are clearly in the future (more than 1 day ahead)
+                # This accounts for timezone differences while still catching obvious errors
+                from datetime import timedelta
+                today_utc = datetime.utcnow().date()
+                # Allow today and tomorrow to account for timezone differences (GST is UTC+4)
+                max_allowed_date = today_utc + timedelta(days=1)
+                logger.info(f"Date validation: parsed_date={parsed_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
+                if parsed_date > max_allowed_date:
+                    logger.warning(f"Rejected future date: {parsed_date} > {max_allowed_date}")
+                    return error_response(f"Visit date ({parsed_date}) cannot be more than 1 day in the future", 400, "VALIDATION_ERROR")
+            except ValueError as e:
+                logger.error(f"Invalid date format: {visit_date}, error: {e}")
+                return error_response("Invalid date format. Use YYYY-MM-DD", 400, "VALIDATION_ERROR")
         
         # Process signatures (data URLs)
         inspector_sig_dataurl = payload.get("inspector_signature", "")
@@ -483,12 +876,25 @@ def submit_with_urls():
                 "quantity": item_data.get("quantity", ""),
                 "material": item_data.get("material", ""),
                 "material_qty": item_data.get("material_qty", ""),
+                "specification": item_data.get("specification", ""),
+                "unit_price": item_data.get("unit_price", ""),
                 "price": item_data.get("price", ""),
                 "labour": item_data.get("labour", ""),
+                "comments": item_data.get("comments", ""),
                 "photos": photos_saved
             })
         
         logger.info(f"📸 Total photos processed: {total_photos}")
+        
+        # Process supervisor signature if present
+        supervisor_sig_dataurl = payload.get("supervisor_signature", "")
+        supervisor_comments = payload.get("supervisor_comments", "")
+        supervisor_sig_file = None
+        
+        if supervisor_sig_dataurl:
+            fname, fpath, url = save_signature_dataurl(supervisor_sig_dataurl, UPLOADS_DIR, prefix="supervisor_sig")
+            if url:
+                supervisor_sig_file = {"saved": fname, "path": fpath, "url": url, "is_cloud": True}
         
         # Create submission in database
         submission_data = {
@@ -497,24 +903,37 @@ def submit_with_urls():
             "visit_date": visit_date,
             "inspector_name": payload.get("inspector_name", ""),
             "inspector_signature": inspector_sig_file,
-            "manager_name": payload.get("manager_name", ""),
-            "manager_signature": manager_sig_file,
+            "supervisor_signature": supervisor_sig_file,
+            "supervisor_comments": supervisor_comments,
             "description_of_work": payload.get("description_of_work", ""),
-            "floor": payload.get("floor", ""),
-            "developer_client": payload.get("developer_client", ""),
-            "city_area": payload.get("city_area", ""),
-            "estimated_time": payload.get("estimated_time", ""),
-            "estimated_completion": payload.get("estimated_completion", ""),
+            "area": payload.get("area", ""),
+            "area_other": payload.get("area_other", ""),
             "work_items": processed_items,
             "base_url": request.host_url.rstrip('/'),
             "created_at": datetime.utcnow().isoformat()
         }
         
+        # Get user_id from JWT token if available
+        user_id = None
+        try:
+            from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+            try:
+                verify_jwt_in_request(optional=True)
+                user_id = get_jwt_identity()
+                if user_id:
+                    logger.info(f"✅ Submission will be associated with user_id: {user_id}")
+            except Exception as jwt_error:
+                logger.debug(f"JWT token not available or invalid: {jwt_error}")
+        except Exception as e:
+            logger.debug(f"JWT verification error: {e}")
+            pass  # JWT not available
+        
         submission = create_submission_db(
             module_type='civil',
             form_data=submission_data,
             site_name=project_name,
-            visit_date=visit_date
+            visit_date=visit_date,
+            user_id=user_id
         )
         sub_id = submission.submission_id
         

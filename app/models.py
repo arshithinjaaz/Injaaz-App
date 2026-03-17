@@ -20,18 +20,30 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     full_name = db.Column(db.String(120))
-    role = db.Column(db.String(20), default='user')  # 'admin', 'inspector', 'user'
+    role = db.Column(db.String(20), default='user')  # 'admin', 'user'
+    designation = db.Column(db.String(30), default=None)  # 'supervisor', 'operations_manager', 'business_development', 'procurement', 'general_manager'
     is_active = db.Column(db.Boolean, default=True)
     password_changed = db.Column(db.Boolean, default=False)  # Track if password was changed from default
+    default_signature = db.Column(db.Text, default=None)  # Base64 data URL for default signature
+    default_comment = db.Column(db.Text, default=None)  # Default comment for approvals
     # Module access permissions (admin has access to all by default)
     access_hvac = db.Column(db.Boolean, default=False)  # HVAC&MEP form access
     access_civil = db.Column(db.Boolean, default=False)  # Civil works form access
     access_cleaning = db.Column(db.Boolean, default=False)  # Cleaning form access
+    access_hr = db.Column(db.Boolean, default=False)  # HR module access
+    access_procurement_module = db.Column(db.Boolean, default=False)  # Procurement module access
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     
     # Relationships
-    submissions = db.relationship('Submission', backref='user', lazy='dynamic')
+    submissions = db.relationship('Submission', foreign_keys='Submission.user_id', backref='user', lazy='dynamic')
+    supervised_submissions = db.relationship('Submission', foreign_keys='Submission.supervisor_id', backref='supervisor', lazy='dynamic')
+    ops_manager_submissions = db.relationship('Submission', foreign_keys='Submission.operations_manager_id', backref='operations_manager', lazy='dynamic')
+    business_dev_submissions = db.relationship('Submission', foreign_keys='Submission.business_dev_id', backref='business_dev', lazy='dynamic')
+    procurement_submissions = db.relationship('Submission', foreign_keys='Submission.procurement_id', backref='procurement_user', lazy='dynamic')
+    general_manager_submissions = db.relationship('Submission', foreign_keys='Submission.general_manager_id', backref='general_manager', lazy='dynamic')
+    # Legacy
+    managed_submissions = db.relationship('Submission', foreign_keys='Submission.manager_id', backref='manager', lazy='dynamic')
     audit_logs = db.relationship('AuditLog', backref='user', lazy='dynamic')
     sessions = db.relationship('Session', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     
@@ -50,7 +62,9 @@ class User(db.Model):
         module_map = {
             'hvac_mep': self.access_hvac,
             'civil': self.access_civil,
-            'cleaning': self.access_cleaning
+            'cleaning': self.access_cleaning,
+            'hr': getattr(self, 'access_hr', False),
+            'procurement_module': getattr(self, 'access_procurement_module', False)
         }
         return module_map.get(module, False)
     
@@ -66,6 +80,12 @@ class User(db.Model):
             'access_hvac': self.access_hvac if self.role != 'admin' else True,
             'access_civil': self.access_civil if self.role != 'admin' else True,
             'access_cleaning': self.access_cleaning if self.role != 'admin' else True,
+            'access_hr': getattr(self, 'access_hr', False) if self.role != 'admin' else True,
+            'access_procurement_module': getattr(self, 'access_procurement_module', False) if self.role != 'admin' else True,
+            'password_changed': self.password_changed if hasattr(self, 'password_changed') else True,
+            'designation': self.designation if hasattr(self, 'designation') else None,
+            'default_signature': self.default_signature if hasattr(self, 'default_signature') else None,
+            'default_comment': self.default_comment if hasattr(self, 'default_comment') else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None
         }
@@ -86,6 +106,43 @@ class Submission(db.Model):
     site_name = db.Column(db.String(255))
     visit_date = db.Column(db.Date)
     status = db.Column(db.String(20), default='draft', index=True)  # 'draft', 'submitted', 'processing', 'completed'
+    workflow_status = db.Column(db.String(40), default='submitted', index=True)  # 'submitted', 'operations_manager_review', 'operations_manager_approved', 'bd_procurement_review', 'bd_approved', 'procurement_approved', 'general_manager_review', 'general_manager_approved', 'completed', 'rejected'
+    
+    # Workflow participants
+    supervisor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Original submitter
+    operations_manager_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    business_dev_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    procurement_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    general_manager_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    
+    # Legacy fields (kept for backwards compatibility, deprecated)
+    manager_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Deprecated - use operations_manager_id
+    supervisor_notified_at = db.Column(db.DateTime, nullable=True)  # Deprecated
+    supervisor_reviewed_at = db.Column(db.DateTime, nullable=True)  # Deprecated
+    manager_notified_at = db.Column(db.DateTime, nullable=True)  # Deprecated
+    manager_reviewed_at = db.Column(db.DateTime, nullable=True)  # Deprecated
+    
+    # New workflow timestamps
+    operations_manager_notified_at = db.Column(db.DateTime, nullable=True)
+    operations_manager_approved_at = db.Column(db.DateTime, nullable=True)
+    business_dev_notified_at = db.Column(db.DateTime, nullable=True)
+    business_dev_approved_at = db.Column(db.DateTime, nullable=True)
+    procurement_notified_at = db.Column(db.DateTime, nullable=True)
+    procurement_approved_at = db.Column(db.DateTime, nullable=True)
+    general_manager_notified_at = db.Column(db.DateTime, nullable=True)
+    general_manager_approved_at = db.Column(db.DateTime, nullable=True)
+    
+    # Approval comments and signatures
+    operations_manager_comments = db.Column(db.Text, nullable=True)
+    business_dev_comments = db.Column(db.Text, nullable=True)
+    procurement_comments = db.Column(db.Text, nullable=True)
+    general_manager_comments = db.Column(db.Text, nullable=True)
+    
+    # Rejection tracking
+    rejection_stage = db.Column(db.String(40), nullable=True)  # Which stage rejected
+    rejection_reason = db.Column(db.Text, nullable=True)
+    rejected_at = db.Column(db.DateTime, nullable=True)
+    rejected_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     form_data = db.Column(JSON, nullable=False)  # All form fields as JSON
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -96,17 +153,50 @@ class Submission(db.Model):
     
     def to_dict(self):
         """Convert to dictionary"""
+        # Get the latest completed job for this submission (for downloads)
+        latest_job = None
+        try:
+            # Use the jobs relationship (defined via db.relationship)
+            if hasattr(self, 'jobs'):
+                # Access the relationship - it will query Job model at runtime
+                completed_jobs = [j for j in self.jobs if hasattr(j, 'status') and j.status == 'completed']
+                if completed_jobs:
+                    # Sort by completed_at descending to get latest
+                    latest_job = max(completed_jobs, key=lambda j: j.completed_at if (hasattr(j, 'completed_at') and j.completed_at) else datetime.min)
+        except Exception:
+            # If query fails, skip - downloads won't be available
+            pass
+        
         return {
             'id': self.id,
             'submission_id': self.submission_id,
             'user_id': self.user_id,
             'module_type': self.module_type,
+            'module': self.module_type,  # Alias for frontend compatibility
             'site_name': self.site_name,
             'visit_date': self.visit_date.isoformat() if self.visit_date else None,
             'status': self.status,
+            'workflow_status': getattr(self, 'workflow_status', 'submitted'),
+            'supervisor_id': getattr(self, 'supervisor_id', None),
+            'operations_manager_id': getattr(self, 'operations_manager_id', None),
+            'business_dev_id': getattr(self, 'business_dev_id', None),
+            'procurement_id': getattr(self, 'procurement_id', None),
+            'general_manager_id': getattr(self, 'general_manager_id', None),
+            'manager_id': getattr(self, 'manager_id', None),
+            'rejection_reason': getattr(self, 'rejection_reason', None),
+            'rejected_at': getattr(self, 'rejected_at', None).isoformat() if hasattr(self, 'rejected_at') and getattr(self, 'rejected_at', None) else None,
+            'supervisor_notified_at': getattr(self, 'supervisor_notified_at', None).isoformat() if hasattr(self, 'supervisor_notified_at') and getattr(self, 'supervisor_notified_at', None) else None,
+            'supervisor_reviewed_at': getattr(self, 'supervisor_reviewed_at', None).isoformat() if hasattr(self, 'supervisor_reviewed_at') and getattr(self, 'supervisor_reviewed_at', None) else None,
+            'manager_notified_at': getattr(self, 'manager_notified_at', None).isoformat() if hasattr(self, 'manager_notified_at') and getattr(self, 'manager_notified_at', None) else None,
+            'manager_reviewed_at': getattr(self, 'manager_reviewed_at', None).isoformat() if hasattr(self, 'manager_reviewed_at') and getattr(self, 'manager_reviewed_at', None) else None,
+            'operations_manager_approved_at': getattr(self, 'operations_manager_approved_at', None).isoformat() if hasattr(self, 'operations_manager_approved_at') and getattr(self, 'operations_manager_approved_at', None) else None,
+            'business_dev_approved_at': getattr(self, 'business_dev_approved_at', None).isoformat() if hasattr(self, 'business_dev_approved_at') and getattr(self, 'business_dev_approved_at', None) else None,
+            'procurement_approved_at': getattr(self, 'procurement_approved_at', None).isoformat() if hasattr(self, 'procurement_approved_at') and getattr(self, 'procurement_approved_at', None) else None,
+            'general_manager_approved_at': getattr(self, 'general_manager_approved_at', None).isoformat() if hasattr(self, 'general_manager_approved_at') and getattr(self, 'general_manager_approved_at', None) else None,
             'form_data': self.form_data,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'latest_job_id': latest_job.job_id if latest_job else None  # Latest completed job for downloads
         }
     
     def __repr__(self):
@@ -239,3 +329,324 @@ class Session(db.Model):
     
     def __repr__(self):
         return f'<Session {self.token_jti[:8]}... - User {self.user_id}>'
+
+
+class Device(db.Model):
+    """Registered devices for admin management"""
+    __tablename__ = 'devices'
+
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.String(50), unique=True, nullable=False, index=True)  # e.g. DEV-0001
+    name = db.Column(db.String(255), nullable=False)
+    device_type = db.Column(db.String(30), default='Laptop')  # Laptop, Desktop, Mobile, Server, Tablet
+    os = db.Column(db.String(80), default='Windows 11')  # macOS, Windows 11, iOS, Ubuntu, etc.
+    status = db.Column(db.String(20), default='idle', index=True)  # online, offline, idle, update
+    health = db.Column(db.Integer, default=100)  # 0-100
+    assigned_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    serial_or_asset_tag = db.Column(db.String(100), nullable=True)
+    last_active_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    assigned_user = db.relationship('User', backref='devices', foreign_keys=[assigned_user_id])
+
+    def to_dict(self):
+        last = 'Never'
+        if self.last_active_at:
+            delta = datetime.utcnow() - self.last_active_at
+            if delta.days > 0:
+                last = f'{delta.days}d ago'
+            elif delta.seconds >= 3600:
+                last = f'{delta.seconds // 3600}h ago'
+            elif delta.seconds >= 60:
+                last = f'{delta.seconds // 60}m ago'
+            else:
+                last = 'Just now'
+        return {
+            'id': self.id,
+            'device_id': self.device_id,
+            'name': self.name,
+            'device_type': self.device_type,
+            'os': self.os,
+            'status': self.status,
+            'health': self.health,
+            'assigned_user_id': self.assigned_user_id,
+            'assigned_user': self.assigned_user.email.split('@')[0] if self.assigned_user else None,
+            'serial_or_asset_tag': self.serial_or_asset_tag,
+            'last_active': last,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def __repr__(self):
+        return f'<Device {self.device_id} - {self.name}>'
+
+
+class BDProject(db.Model):
+    """Business development projects/deals"""
+    __tablename__ = 'bd_projects'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, index=True)
+    company = db.Column(db.String(255), nullable=False, index=True)
+    stage = db.Column(db.String(30), default='prospecting', index=True)  # prospecting, qualifying, proposal, negotiation, closing
+    status = db.Column(db.String(20), default='active', index=True)  # active, prospect, proposal, won, lost
+    priority = db.Column(db.String(10), default='med')  # high, med, low
+    value_amount = db.Column(db.Float, default=0.0)
+    progress = db.Column(db.Integer, default=0)
+    owner = db.Column(db.String(120), nullable=True)
+    next_action = db.Column(db.String(255), nullable=True)
+    expected_close_date = db.Column(db.Date, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    primary_contact_name = db.Column(db.String(120), nullable=True)
+    primary_contact_email = db.Column(db.String(255), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        value_amount = float(self.value_amount or 0)
+        return {
+            'id': self.id,
+            'name': self.name,
+            'co': self.company,
+            'company': self.company,
+            'icon': '🏢',
+            'bg': '#e8f5ee',
+            'stage': self.stage,
+            'status': self.status,
+            'priority': self.priority,
+            'valueAmount': value_amount,
+            'value': f'${value_amount:,.0f}',
+            'progress': max(0, min(100, int(self.progress or 0))),
+            'owner': self.owner or 'Unassigned',
+            'next': self.next_action or 'No action',
+            'nextDate': self.expected_close_date.isoformat() if self.expected_close_date else '',
+            'expectedCloseDate': self.expected_close_date.isoformat() if self.expected_close_date else None,
+            'notes': self.notes,
+            'primaryContactName': self.primary_contact_name,
+            'primaryContactEmail': self.primary_contact_email,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def __repr__(self):
+        return f'<BDProject {self.id} - {self.name}>'
+
+
+class BDFollowUp(db.Model):
+    """Business development follow-up tasks"""
+    __tablename__ = 'bd_followups'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    company = db.Column(db.String(255), nullable=True, index=True)
+    followup_type = db.Column(db.String(20), default='call')  # call, email, meeting, note
+    due_at = db.Column(db.DateTime, nullable=True, index=True)
+    status = db.Column(db.String(20), default='open', index=True)  # open, done
+    details = db.Column(db.Text, nullable=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('bd_projects.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    project = db.relationship('BDProject', backref=db.backref('followups', lazy='dynamic'))
+
+    def to_dict(self):
+        icon_map = {'call': '📞', 'email': '📧', 'meeting': '🤝', 'note': '📝'}
+        return {
+            'id': self.id,
+            'icon': icon_map.get(self.followup_type, '📝'),
+            'title': self.title,
+            'co': self.company or (self.project.company if self.project else ''),
+            'date': self.due_at.isoformat() if self.due_at else '',
+            'type': self.followup_type,
+            'status': self.status,
+            'details': self.details,
+            'projectId': self.project_id,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def __repr__(self):
+        return f'<BDFollowUp {self.id} - {self.title}>'
+
+
+class BDContact(db.Model):
+    """Business development contacts"""
+    __tablename__ = 'bd_contacts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False, index=True)
+    title = db.Column(db.String(120), nullable=True)
+    company = db.Column(db.String(255), nullable=True, index=True)
+    email = db.Column(db.String(255), nullable=True)
+    phone = db.Column(db.String(50), nullable=True)
+    tags = db.Column(JSON, default=list)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        safe_name = (self.name or '').strip()
+        initials = ''.join([part[0] for part in safe_name.split() if part])[:2].upper() or 'NA'
+        return {
+            'id': self.id,
+            'initials': initials,
+            'name': self.name,
+            'title': self.title or 'Contact',
+            'co': self.company or '',
+            'company': self.company or '',
+            'email': self.email,
+            'phone': self.phone,
+            'tags': self.tags if isinstance(self.tags, list) else [],
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def __repr__(self):
+        return f'<BDContact {self.id} - {self.name}>'
+
+
+class BDActivity(db.Model):
+    """Business development activity timeline"""
+    __tablename__ = 'bd_activities'
+
+    id = db.Column(db.Integer, primary_key=True)
+    icon = db.Column(db.String(10), default='📝')
+    bg = db.Column(db.String(20), default='#e8f5ee')
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    badge = db.Column(db.String(120), nullable=True)
+    event_time = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'icon': self.icon or '📝',
+            'bg': self.bg or '#e8f5ee',
+            'title': self.title,
+            'desc': self.description or '',
+            'badge': self.badge or '',
+            'time': self.event_time.isoformat() if self.event_time else None,
+            'createdAt': self.created_at.isoformat() if self.created_at else None
+        }
+
+    def __repr__(self):
+        return f'<BDActivity {self.id} - {self.title}>'
+
+
+class DocHubDocument(db.Model):
+    """Document metadata for DocHub."""
+    __tablename__ = 'dochub_documents'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False, index=True)
+    filename = db.Column(db.String(255), nullable=False)
+    stored_path = db.Column(db.String(500), nullable=False)
+    file_type = db.Column(db.String(20), nullable=False, index=True)  # PDF, DOCX, XLSX, etc.
+    category = db.Column(db.String(50), default='Internal', index=True)  # API, Guide, Legal, Spec, Internal
+    status = db.Column(db.String(20), default='draft', index=True)  # draft, review, published, archived
+    size_bytes = db.Column(db.Integer, default=0)
+    is_starred = db.Column(db.Boolean, default=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
+
+    author = db.relationship('User', backref=db.backref('dochub_documents', lazy='dynamic'))
+
+    def to_dict(self):
+        author_name = 'Unknown'
+        if self.author:
+            author_name = self.author.full_name or self.author.username or 'Unknown'
+
+        size_mb = (self.size_bytes or 0) / (1024 * 1024)
+        if size_mb >= 1:
+            size_label = f"{size_mb:.1f} MB"
+        else:
+            size_kb = (self.size_bytes or 0) / 1024
+            size_label = f"{max(1, int(round(size_kb)))} KB"
+
+        date_label = self.updated_at.strftime('%b %d, %Y') if self.updated_at else ''
+
+        return {
+            'id': self.id,
+            'name': self.title,
+            'filename': self.filename,
+            'path': self.stored_path,
+            'type': self.file_type,
+            'tag': self.category,
+            'status': self.status,
+            'author': author_name,
+            'author_id': self.author_id,
+            'date': date_label,
+            'dateTs': int(self.updated_at.timestamp()) if self.updated_at else 0,
+            'size': size_label,
+            'sizeB': int(self.size_bytes or 0),
+            'starred': bool(self.is_starred),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def __repr__(self):
+        return f'<DocHubDocument {self.id} - {self.title}>'
+
+
+class DocHubAccess(db.Model):
+    """Per-user access control for DocHub."""
+    __tablename__ = 'dochub_access'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False, index=True)
+    can_access = db.Column(db.Boolean, default=True)
+    updated_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('dochub_access_entry', uselist=False))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'can_access': bool(self.can_access),
+            'updated_by': self.updated_by,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def __repr__(self):
+        return f'<DocHubAccess user={self.user_id} access={self.can_access}>'
+
+
+class Notification(db.Model):
+    """User notifications for workflow updates"""
+    __tablename__ = 'notifications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    notification_type = db.Column(db.String(50), default='info')  # 'info', 'success', 'warning', 'error', 'hr_approved', 'hr_rejected'
+    submission_id = db.Column(db.String(50), nullable=True)  # Reference to related submission
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    # Relationship
+    user = db.relationship('User', backref=db.backref('notifications', lazy='dynamic', cascade='all, delete-orphan'))
+    
+    def to_dict(self):
+        """Convert to dictionary"""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'title': self.title,
+            'message': self.message,
+            'notification_type': self.notification_type,
+            'submission_id': self.submission_id,
+            'is_read': self.is_read,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+    
+    def __repr__(self):
+        return f'<Notification {self.id} - User {self.user_id}>'

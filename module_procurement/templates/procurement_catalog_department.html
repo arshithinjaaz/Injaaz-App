@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <title>{{ department }} Catalog – Injaaz Procurement</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <style>
+    :root {
+      --dept-color:    {{ meta.color }};
+      --dept-gradient: {{ meta.gradient }};
+    }
+    body { background: #F8FAF8; min-height: 100vh; }
+
+    /* ── Hero ─────────────────────────────────────────────── */
+    .cat-hero { padding: 9rem 0 3rem; }
+    .cat-hero .hero-content { max-width: 1400px; margin: 0 auto; padding: 0 3rem; }
+    @media (max-width: 768px) {
+      .cat-hero { padding: 7rem 0 2rem; }
+      .cat-hero .hero-content { padding: 0 1rem; }
+    }
+
+    /* ── Body wrapper ─────────────────────────────────────── */
+    .cat-body { max-width: 1400px; margin: 0 auto; padding: 2.5rem 3rem 4rem; }
+    @media (max-width: 768px) { .cat-body { padding: 1.5rem 1rem 3rem; } }
+
+    /* ── KPI strip ────────────────────────────────────────── */
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.1rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 768px) { .kpi-strip { grid-template-columns: 1fr; } }
+    .kpi-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      border: 1px solid #e2e8f0;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .kpi-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+      background: color-mix(in srgb, var(--dept-color) 15%, white);
+    }
+    .kpi-label { font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em; }
+    .kpi-value { font-size: 1.8rem; font-weight: 800; color: var(--dept-color); line-height: 1; }
+
+    /* ── Toolbar ──────────────────────────────────────────── */
+    .cat-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+    .cat-search-wrap { flex: 1; min-width: 200px; position: relative; }
+    .cat-search-wrap svg {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      width: 16px; height: 16px; stroke: #94a3b8; fill: none; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round; pointer-events: none;
+    }
+    .cat-search {
+      width: 100%; padding: 9px 12px 9px 36px;
+      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      font-size: 0.875rem; outline: none;
+      transition: border-color 0.15s;
+    }
+    .cat-search:focus { border-color: var(--dept-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--dept-color) 12%, transparent); }
+
+    .cat-count-badge {
+      background: color-mix(in srgb, var(--dept-color) 12%, white);
+      color: var(--dept-color);
+      border: 1.5px solid color-mix(in srgb, var(--dept-color) 30%, white);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .btn-export-cat {
+      background: var(--dept-gradient);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-export-cat:hover { opacity: 0.88; }
+    .btn-export-cat svg { width: 15px; height: 15px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Table ────────────────────────────────────────────── */
+    .cat-table-wrap {
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    }
+    table.cat-table { width: 100%; border-collapse: collapse; }
+    table.cat-table thead th {
+      background: #f8fafc;
+      padding: 0.85rem 1rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #64748b;
+      border-bottom: 1.5px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    table.cat-table tbody td {
+      padding: 0.8rem 1rem;
+      font-size: 0.875rem;
+      color: #334155;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+    table.cat-table tbody tr:last-child td { border-bottom: none; }
+    table.cat-table tbody tr:hover { background: #f8fafc; }
+
+    .sno-cell { color: #94a3b8; font-size: 0.78rem; font-weight: 600; }
+    .name-cell { font-weight: 600; color: #1e293b; }
+    .brand-tag {
+      display: inline-block;
+      background: #ede9fe; color: #5b21b6;
+      font-size: 0.7rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 10px;
+    }
+    .uom-tag {
+      display: inline-block;
+      background: #e0f2fe; color: #0369a1;
+      font-size: 0.7rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 10px;
+    }
+    .price-cell { font-weight: 700; color: #1e293b; white-space: nowrap; }
+    .price-na { color: #94a3b8; font-style: italic; }
+
+    /* Pagination */
+    .cat-pagination {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem 1rem;
+      font-size: 0.82rem; color: #64748b;
+      border-top: 1px solid #f1f5f9;
+    }
+    .cat-page-btns { display: flex; gap: 0.4rem; }
+    .cat-page-btn {
+      padding: 4px 12px; border-radius: 8px;
+      border: 1.5px solid #e2e8f0; background: #fff;
+      font-size: 0.8rem; font-weight: 600; color: #475569;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .cat-page-btn:hover:not(:disabled) { border-color: var(--dept-color); color: var(--dept-color); }
+    .cat-page-btn:disabled { opacity: 0.4; cursor: default; }
+    .cat-page-btn.active { background: var(--dept-color); border-color: var(--dept-color); color: #fff; }
+
+    /* Empty / loading */
+    .cat-empty { text-align: center; padding: 4rem 1rem; color: #94a3b8; }
+    .cat-empty svg { width: 48px; height: 48px; stroke: #cbd5e1; fill: none; stroke-width: 1.5; margin-bottom: 0.75rem; }
+    .skeleton-row td { height: 42px; background: linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  </style>
+</head>
+<body>
+  {% set active_page = 'procurement' %}
+  {% include 'partials/main_navbar.html' with context %}
+
+  <!-- Hero -->
+  <header class="hero hero-split cat-hero">
+    <div class="hero-content hero-split-inner">
+      <div class="hero-left">
+        <a href="/procurement/" class="back-btn">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Back to Procurement
+        </a>
+        <p class="hero-tagline">Department Catalog</p>
+        <h1 class="hero-title">{{ meta.icon }} {{ department }} <span class="hero-title-accent">Catalog</span></h1>
+        <p class="hero-subtitle" style="margin: 0; font-size: 1rem; color: #6b7280;">{{ meta.desc }}</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="cat-body">
+
+    <!-- KPI strip -->
+    <div class="kpi-strip">
+      <div class="kpi-card">
+        <div class="kpi-icon">📦</div>
+        <div>
+          <div class="kpi-label">Total Items</div>
+          <div class="kpi-value" id="kpiTotal">-</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">💰</div>
+        <div>
+          <div class="kpi-label">Items with Price</div>
+          <div class="kpi-value" id="kpiPriced">-</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">🏷️</div>
+        <div>
+          <div class="kpi-label">Brands</div>
+          <div class="kpi-value" id="kpiBrands">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="cat-toolbar">
+      <div class="cat-search-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="cat-search" id="catSearch" type="text" placeholder="Search by name or brand…" autocomplete="off">
+      </div>
+      <span class="cat-count-badge" id="catBadge">Loading…</span>
+      <button class="btn-export-cat" onclick="exportCSV()">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div class="cat-table-wrap">
+      <div class="table-responsive">
+        <table class="cat-table">
+          <thead>
+            <tr>
+              <th style="width:48px">#</th>
+              <th>Item Name</th>
+              <th>Brand</th>
+              <th>UOM</th>
+              <th style="text-align:right">Unit Price (AED)</th>
+            </tr>
+          </thead>
+          <tbody id="catTableBody">
+            <!-- skeleton rows while loading -->
+            {% for _ in range(8) %}
+            <tr class="skeleton-row"><td></td><td></td><td></td><td></td><td></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="cat-pagination" id="catPagination" style="display:none">
+        <span id="paginationInfo">–</span>
+        <div class="cat-page-btns" id="pageButtons"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script>
+    const TOKEN     = localStorage.getItem('access_token');
+    const DEPT      = {{ department | tojson }};
+    const PAGE_SIZE = 50;
+
+    let allItems   = [];
+    let filtered   = [];
+    let currentPage = 1;
+
+    // ── Fetch ────────────────────────────────────────────────
+    async function loadCatalog() {
+      try {
+        const res = await fetch(`/procurement/api/catalog/materials?department=${encodeURIComponent(DEPT)}`, {
+          headers: { 'Authorization': `Bearer ${TOKEN}` }
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        allItems = (data.materials || {})[DEPT] || [];
+        filtered = allItems;
+        updateKPIs();
+        renderTable();
+        updateBadge();
+      } catch(e) {
+        document.getElementById('catTableBody').innerHTML = `
+          <tr><td colspan="5" class="cat-empty">
+            <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div style="font-weight:600;color:#475569">Failed to load catalog</div>
+            <div style="font-size:.8rem">${e.message}</div>
+          </td></tr>`;
+        document.getElementById('catBadge').textContent = 'Error';
+      }
+    }
+
+    // ── KPIs ─────────────────────────────────────────────────
+    function updateKPIs() {
+      document.getElementById('kpiTotal').textContent = allItems.length;
+      document.getElementById('kpiPriced').textContent = allItems.filter(i => i.unit_price > 0).length;
+      const brands = new Set(allItems.map(i => i.brand).filter(Boolean));
+      document.getElementById('kpiBrands').textContent = brands.size;
+    }
+
+    // ── Badge ────────────────────────────────────────────────
+    function updateBadge() {
+      const badge = document.getElementById('catBadge');
+      badge.textContent = filtered.length + ' item' + (filtered.length !== 1 ? 's' : '');
+    }
+
+    // ── Render table with pagination ─────────────────────────
+    function renderTable() {
+      const tbody = document.getElementById('catTableBody');
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      currentPage = Math.min(currentPage, totalPages);
+      const start  = (currentPage - 1) * PAGE_SIZE;
+      const page   = filtered.slice(start, start + PAGE_SIZE);
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr><td colspan="5">
+            <div class="cat-empty">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <div style="font-weight:600;color:#475569">No items match your search</div>
+              <div style="font-size:.8rem">Try a different keyword.</div>
+            </div>
+          </td></tr>`;
+        document.getElementById('catPagination').style.display = 'none';
+        return;
+      }
+
+      tbody.innerHTML = page.map((item, idx) => {
+        const globalIdx = start + idx + 1;
+        const price = item.unit_price > 0
+          ? `<span class="price-cell">AED ${parseFloat(item.unit_price).toFixed(2)}</span>`
+          : `<span class="price-na">—</span>`;
+        return `
+          <tr>
+            <td class="sno-cell">${globalIdx}</td>
+            <td class="name-cell">${esc(item.name)}</td>
+            <td>${item.brand ? `<span class="brand-tag">${esc(item.brand)}</span>` : '<span class="price-na">—</span>'}</td>
+            <td>${item.uom ? `<span class="uom-tag">${esc(item.uom)}</span>` : '—'}</td>
+            <td style="text-align:right">${price}</td>
+          </tr>`;
+      }).join('');
+
+      // Pagination
+      const pag = document.getElementById('catPagination');
+      pag.style.display = filtered.length > PAGE_SIZE ? 'flex' : 'none';
+      document.getElementById('paginationInfo').textContent =
+        `Showing ${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} of ${filtered.length}`;
+      renderPageButtons(totalPages);
+    }
+
+    function renderPageButtons(totalPages) {
+      const container = document.getElementById('pageButtons');
+      let html = `<button class="cat-page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹ Prev</button>`;
+      // Show up to 7 page buttons with ellipsis
+      const pages = [];
+      for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) pages.push(i);
+        else if (pages[pages.length-1] !== '…') pages.push('…');
+      }
+      pages.forEach(p => {
+        if (p === '…') html += `<span style="padding:4px 6px;color:#94a3b8">…</span>`;
+        else html += `<button class="cat-page-btn${p===currentPage?' active':''}" onclick="goPage(${p})">${p}</button>`;
+      });
+      html += `<button class="cat-page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>Next ›</button>`;
+      container.innerHTML = html;
+    }
+
+    function goPage(p) {
+      const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+      if (p < 1 || p > totalPages) return;
+      currentPage = p;
+      renderTable();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ── Search ───────────────────────────────────────────────
+    document.getElementById('catSearch').addEventListener('input', function() {
+      const q = this.value.trim().toLowerCase();
+      filtered = q
+        ? allItems.filter(i =>
+            i.name.toLowerCase().includes(q) ||
+            (i.brand || '').toLowerCase().includes(q)
+          )
+        : allItems;
+      currentPage = 1;
+      renderTable();
+      updateBadge();
+    });
+
+    // ── Export CSV ───────────────────────────────────────────
+    function exportCSV() {
+      const headers = ['#', 'Item Name', 'Brand', 'UOM', 'Unit Price (AED)'];
+      const rows = filtered.map((item, i) => [
+        i + 1,
+        `"${(item.name || '').replace(/"/g, '""')}"`,
+        `"${(item.brand || '').replace(/"/g, '""')}"`,
+        item.uom || '',
+        item.unit_price > 0 ? parseFloat(item.unit_price).toFixed(2) : ''
+      ]);
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${DEPT}_materials_catalog.csv`;
+      a.click();
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = String(s || '');
+      return d.innerHTML;
+    }
+
+    loadCatalog();
+  </script>
+</body>
+</html>

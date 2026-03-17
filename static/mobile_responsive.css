@@ -1,11 +1,441 @@
-/* Mobile Responsive Styles for Injaaz Forms */
+/* Mobile Responsive Styles for Injaaz
+   Mobile-first design - optimizes for phones and tablets */
+
+/* Tab labels: full on desktop, short on mobile */
+.tab-label-full { display: inline; }
+.tab-label-short { display: none; }
+
+/* ========================================
+   MOBILE-FIRST BASE
+   ======================================== */
+/* Safe area insets for notched phones (iPhone X+, etc.) */
+@supports (padding: env(safe-area-inset-bottom)) or (padding: constant(safe-area-inset-bottom)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Fixed nav: account for notch */
+  .nav,
+  .navbar {
+    padding-top: max(0.75rem, env(safe-area-inset-top)) !important;
+    padding-left: max(1rem, env(safe-area-inset-left)) !important;
+    padding-right: max(1rem, env(safe-area-inset-right)) !important;
+  }
+  
+  /* Footer / bottom spacing */
+  .footer {
+    padding-bottom: max(2rem, calc(2rem + env(safe-area-inset-bottom))) !important;
+  }
+  
+  /* Content area - add bottom padding for home indicator */
+  .hero-content,
+  .container,
+  .modules-section {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* Touch-friendly tap targets (min 44x44px per Apple HIG) */
+@media (hover: none) and (pointer: coarse) {
+  .module-card {
+    min-height: 64px !important;
+  }
+  
+  .main-content a,
+  .main-content button,
+  .main-content .btn,
+  form button,
+  form .btn,
+  .footer a {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+  
+  .module-card {
+    -webkit-tap-highlight-color: rgba(18, 84, 53, 0.15) !important;
+    tap-highlight-color: rgba(18, 84, 53, 0.15) !important;
+  }
+}
+
+/* ========================================
+   DASHBOARD - MOBILE FIXES
+   ======================================== */
+@media (max-width: 768px) {
+  /* Prevent horizontal scroll on mobile - allow vertical scroll */
+  html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+    overflow-y: auto !important;
+  }
+  
+  /* Clean background - content flows naturally */
+  body {
+    background: #ffffff !important;
+  }
+  
+  /* Dashboard Header */
+  .dashboard-header {
+    padding: 1rem !important;
+    text-align: center !important;
+  }
+  
+  .dashboard-header h1 {
+    font-size: 1.5rem !important;
+  }
+  
+  .dashboard-header p {
+    font-size: 0.9rem !important;
+  }
+  
+  /* Modules section label */
+  .modules-section-label {
+    font-size: 0.7rem !important;
+    letter-spacing: 0.12em !important;
+    margin-bottom: 0.75rem !important;
+    padding: 0 0.75rem !important;
+  }
+  
+  /* Module Cards Grid - compact on mobile (card layout in dashboard.css) */
+  .modules-grid, .dashboard-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.625rem !important;
+    padding: 0 0.75rem !important;
+  }
+  
+  /* Module cards - mobile polish (layout handled by dashboard.css) */
+  .module-card {
+    border: 1px solid var(--border-color, #e5e7eb) !important;
+    background: #ffffff !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+  }
+  
+  .module-card:active {
+    transform: scale(0.98) !important;
+  }
+  
+  .module-card .module-icon {
+    box-shadow: 0 2px 8px rgba(18, 84, 53, 0.2) !important;
+  }
+  
+  /* Nav - cleaner mobile look */
+  .nav, .navbar {
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06) !important;
+  }
+  
+  /* Modules section label - larger for readability */
+  .modules-section-label {
+    font-size: 0.8rem !important;
+  }
+  
+  /* Sidebar nav (forms) - bottom bar on mobile. Dashboard .nav-menu uses slide-out from dashboard.css */
+  .sidebar-nav {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08) !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+    z-index: 1000 !important;
+    padding: 0.5rem !important;
+    display: flex !important;
+    justify-content: space-around !important;
+  }
+  
+  /* Profile Modal - Mobile */
+  .contact-modal-content.profile-modal-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+  
+  .pro-container {
+    padding: 0 1rem 1.5rem !important;
+  }
+  
+  .pro-hero {
+    margin: 0 -1rem !important;
+    padding: 2rem 1rem 1.5rem !important;
+  }
+  
+  .pro-tabs {
+    margin: 0 -1rem !important;
+    padding: 0.625rem 0.75rem !important;
+    gap: 0.25rem !important;
+  }
+  
+  .pro-tab {
+    padding: 0.5rem 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+  
+  .pro-avatar {
+    width: 80px !important;
+    height: 80px !important;
+    font-size: 1.75rem !important;
+  }
+  
+  .pro-name {
+    font-size: 1.25rem !important;
+  }
+  
+  .pro-info-item {
+    padding: 0.75rem !important;
+    gap: 0.75rem !important;
+  }
+  
+  .pro-info-icon {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 1rem !important;
+  }
+  
+  .pro-info-label {
+    font-size: 0.65rem !important;
+  }
+  
+  .pro-info-value {
+    font-size: 0.875rem !important;
+  }
+  
+  /* Submitted Forms - Mobile */
+  .submission-card {
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .submission-card h4 {
+    font-size: 1rem !important;
+  }
+  
+  .submission-card .btn-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .submission-card .btn {
+    width: 100% !important;
+  }
+  
+  /* Email Module - Mobile */
+  .email-module-container {
+    padding: 1rem !important;
+  }
+  
+  .email-recipients-list {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .email-recipient-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  
+  /* Form Header with Save Draft - Mobile */
+  .d-flex.justify-content-between.align-items-start {
+    flex-direction: column !important;
+    gap: 1rem !important;
+    align-items: stretch !important;
+  }
+  
+  #saveDraftBtn {
+    width: 100% !important;
+    justify-content: center !important;
+    order: -1 !important;
+  }
+  
+  /* Bottom Submit Buttons - Mobile */
+  .col-12.mb-5.mt-4 .d-flex.justify-content-between {
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+  
+  .col-12.mb-5.mt-4 .d-flex.gap-2 {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  
+  .col-12.mb-5.mt-4 .btn {
+    width: 100% !important;
+  }
+  
+  /* Signature Container - Mobile */
+  .signature-container {
+    height: auto !important;
+    min-height: 120px !important;
+  }
+  
+  .signature-actions {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+  
+  .signature-actions .btn {
+    flex: 1 1 auto !important;
+    min-width: 120px !important;
+  }
+  
+  /* Tab Navigation - Mobile */
+  .nav-tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding-bottom: 2px !important;
+    gap: 0.25rem !important;
+  }
+  
+  .nav-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  .nav-tabs .nav-link {
+    white-space: nowrap !important;
+    font-size: 0.85rem !important;
+    padding: 0.625rem 0.875rem !important;
+    border-radius: 8px 8px 0 0 !important;
+    min-height: 44px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+  
+  .tab-label-full { display: none !important; }
+  .tab-label-short { display: inline !important; }
+  
+  /* Form section headings - cleaner hierarchy */
+  .section-heading,
+  .section-heading-no-border {
+    font-size: 1.15rem !important;
+    margin-bottom: 1rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  
+  /* Supervisor/Review sections - stack Comments + Signature on mobile */
+  .signature-container {
+    min-height: 140px !important;
+    border-radius: 8px !important;
+  }
+  
+  .signature-actions {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+  
+  .signature-actions .btn {
+    min-height: 40px !important;
+  }
+  
+  /* Item Cards - Mobile */
+  .editable-item-card {
+    padding: 1rem !important;
+  }
+  
+  .editable-item-card .d-flex.justify-content-between {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+  
+  .editable-item-card .d-flex.gap-2 {
+    flex-wrap: wrap !important;
+  }
+  
+  .editable-item-card .btn-sm {
+    width: 100% !important;
+  }
+  
+  /* Thumbs Row - Mobile */
+  .thumbs-row {
+    gap: 4px !important;
+  }
+  
+  .thumbs-row img {
+    width: 60px !important;
+    height: 45px !important;
+    border-radius: 8px !important;
+  }
+  
+  /* Buttons - mobile polish */
+  .btn-primary:active,
+  .btn-success:active {
+    transform: scale(0.98) !important;
+  }
+  
+  /* Form inputs - cleaner mobile look */
+  .form-control,
+  .form-select,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea {
+    border-radius: 12px !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  }
+  
+  .form-control:focus,
+  .form-select:focus {
+    box-shadow: 0 0 0 3px rgba(18, 84, 53, 0.15) !important;
+  }
+  
+  /* Submission cards - pending/submitted forms */
+  .submission-card,
+  .stat-card {
+    border-radius: 14px !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  }
+  
+  /* Container/card - forms */
+  .container,
+  .form-card,
+  .form-container {
+    border-radius: 16px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+  }
+  
+  /* Login & Register - mobile polish */
+  .login-container,
+  .register-container {
+    border-radius: 20px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+    padding: 1.5rem 1.25rem !important;
+  }
+  
+  .login-container input,
+  .register-container input {
+    border-radius: 12px !important;
+  }
+  
+  /* Footer - subtle mobile */
+  .footer {
+    background: #f8faf8 !important;
+  }
+}
 
 /* Base Mobile Improvements */
 @media (max-width: 768px) {
-  /* Better touch targets */
-  .btn, .form-control, .form-select, .form-check-input {
+  /* Better touch targets (forms and content only) */
+  .form-control, .form-select, .form-check-input {
     min-height: 44px;
     font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .main-content .btn,
+  form .btn,
+  .container .btn {
+    min-height: 44px;
+    font-size: 16px;
   }
   
   /* Container adjustments */
@@ -106,8 +536,10 @@
     max-width: 100% !important;
   }
   
-  /* Buttons - Mobile Optimized */
-  .btn {
+  /* Buttons - Mobile Optimized (only inside main content, not nav) */
+  .main-content .btn,
+  form .btn,
+  .container .btn {
     padding: 0.875rem 1.5rem !important;
     font-size: 1rem !important;
     width: 100% !important;
@@ -119,19 +551,22 @@
     -webkit-tap-highlight-color: rgba(18, 84, 53, 0.2) !important;
   }
   
-  .btn-lg {
+  .main-content .btn-lg,
+  form .btn-lg {
     padding: 1rem 1.5rem !important;
     font-size: 1.1rem !important;
     min-height: 52px !important;
   }
   
-  .btn-sm {
+  .main-content .btn-sm,
+  form .btn-sm {
     padding: 0.625rem 1rem !important;
     font-size: 0.9rem !important;
     min-height: 44px !important;
   }
   
-  .btn-group {
+  .main-content .btn-group,
+  form .btn-group {
     display: flex !important;
     flex-direction: column !important;
     gap: 0.5rem !important;
@@ -291,10 +726,11 @@
   #workItemsBody tr {
     display: flex !important;
     flex-direction: column !important;
-    border: 1px solid #dee2e6 !important;
-    border-radius: 8px !important;
-    padding: 0.75rem !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    border-radius: 12px !important;
+    padding: 0.875rem !important;
     margin-bottom: 0.75rem !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
   }
   
   #workItemsBody td {
@@ -318,7 +754,8 @@
   }
   
   .modal-content {
-    border-radius: 12px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
   }
   
   /* Alert Messages */
@@ -354,6 +791,112 @@
   .file-warning {
     font-size: 0.85rem !important;
     padding: 0.5rem !important;
+  }
+  
+  /* HR Module - Mobile */
+  .hr-header {
+    padding: 1.5rem 1rem !important;
+    border-radius: 12px !important;
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .hr-header h1 {
+    font-size: 1.5rem !important;
+  }
+  
+  .hr-card {
+    padding: 1.25rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .hr-card h3 {
+    font-size: 1rem !important;
+  }
+  
+  .hr-card-icon {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 1.5rem !important;
+  }
+  
+  .back-btn {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.9rem !important;
+    min-height: 44px !important;
+  }
+  
+  .detail-modal {
+    max-height: 95vh !important;
+    margin: 0.5rem !important;
+  }
+  
+  .detail-header {
+    padding: 1rem !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  
+  .detail-tabs {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    flex-wrap: nowrap !important;
+  }
+  
+  .detail-tab {
+    padding: 0.75rem 1rem !important;
+    font-size: 0.8rem !important;
+    white-space: nowrap !important;
+  }
+  
+  .detail-row {
+    flex-direction: column !important;
+    gap: 0.25rem !important;
+  }
+  
+  .detail-label {
+    width: 100% !important;
+  }
+  
+  .detail-value {
+    width: 100% !important;
+  }
+  
+  /* Procurement Module - Mobile */
+  .proc-header {
+    padding: 1.5rem 1rem !important;
+    border-radius: 16px !important;
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .proc-header h1 {
+    font-size: 1.5rem !important;
+  }
+  
+  .module-showcase {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  
+  .module-card-header {
+    padding: 1.5rem !important;
+  }
+  
+  .module-card-body {
+    padding: 1.25rem !important;
+  }
+  
+  .module-card-body h3 {
+    font-size: 1.1rem !important;
+  }
+  
+  /* Workflow History / Submitted Forms - Mobile tables */
+  .navbar-container {
+    flex-wrap: wrap !important;
+  }
+  
+  .table-responsive {
+    margin: 0 -0.5rem !important;
+    border-radius: 8px !important;
   }
 }
 
@@ -405,8 +948,10 @@
     text-overflow: ellipsis !important;
   }
   
-  /* Buttons even more prominent */
-  .btn {
+  /* Buttons even more prominent (content area only) */
+  .main-content .btn,
+  form .btn,
+  .container .btn {
     font-size: 1.05rem !important;
     padding: 1rem 1.5rem !important;
     min-height: 52px !important;
@@ -443,8 +988,12 @@
 
 /* Touch-specific improvements */
 @media (hover: none) and (pointer: coarse) {
-  /* Larger tap targets for touch devices */
-  .btn, button, a, .nav-btn {
+  /* Larger tap targets for touch devices (content area only) */
+  .main-content .btn,
+  .main-content button,
+  .main-content a,
+  form .btn,
+  form button {
     min-height: 44px !important;
     min-width: 44px !important;
   }
@@ -479,7 +1028,7 @@
   }
   
   /* Better touch feedback */
-  .btn:active,
+  .main-content .btn:active,
   .nav-btn:active {
     opacity: 0.8 !important;
     transform: scale(0.98) !important;
@@ -518,7 +1067,8 @@
     padding-bottom: max(1rem, env(safe-area-inset-bottom)) !important;
   }
   
-  .btn {
+  .main-content .btn,
+  form .btn {
     margin-bottom: max(0.5rem, env(safe-area-inset-bottom)) !important;
   }
 }

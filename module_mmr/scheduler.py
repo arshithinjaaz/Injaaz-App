@@ -1,0 +1,173 @@
+"""
+APScheduler wrapper for the MMR daily email.
+Runs a single cron job at the configured time (default 10:00 AM).
+"""
+import logging
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+logger = logging.getLogger(__name__)
+
+_scheduler: BackgroundScheduler | None = None
+_JOB_ID = 'mmr_daily_report'
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Job function (runs outside request context – needs its own app context)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _run_scheduled_report(app):
+    with app.app_context():
+        try:
+            import os
+            from datetime import datetime, timedelta
+            from .routes import (_upload_path, _load_config, _save_last_run,
+                                  _save_report_to_folder, _save_email_report_to_network,
+                                  _format_report_date, _format_report_date_range_str,
+                                  _REPORT_DATE_PLACEHOLDER, _report_filename, _complete_current_cycle)
+            from .mmr_service import parse_excel, generate_report_excel, get_report_date_range_from_df, get_report_date_from_excel, format_chargeable_summary_for_email, format_per_tower_chargeable_html_for_email
+            from common.email_service import send_email
+
+            config = _load_config()
+            if not config.get('schedule_enabled'):
+                return
+            if config.get('schedule_paused'):
+                logger.info('MMR scheduler: paused (upload new Excel to resume)')
+                return
+
+            path = _upload_path()
+            if not os.path.exists(path):
+                logger.info('MMR scheduler: no Excel file found, skipping')
+                return
+
+            to_raw = config.get('to', '').strip()
+            if not to_raw:
+                logger.warning('MMR scheduler: no recipient configured, skipping')
+                return
+
+            to_list = [e.strip() for e in to_raw.split(',') if e.strip()]
+            cc_raw  = config.get('cc', '').strip()
+            cc_list = [e.strip() for e in cc_raw.split(',') if e.strip()] if cc_raw else None
+
+            df = parse_excel(path)
+            report_bytes = generate_report_excel(df)
+            date_range = get_report_date_range_from_df(df)
+            filename = _report_filename(report_date_range=date_range, upload_path=path)
+
+            body = config.get('body', '')
+            report_date = _format_report_date_range_str(date_range)
+            if report_date is None:
+                report_dt = get_report_date_from_excel(path) or (datetime.now() - timedelta(days=1))
+                report_date = _format_report_date(report_dt)
+            subject = config.get('subject', 'Daily Report on Resolved and Pending Complaints for {{REPORT_DATE}}').replace(_REPORT_DATE_PLACEHOLDER, report_date)
+            body = body.replace(_REPORT_DATE_PLACEHOLDER, report_date)
+            intro_for_html = body.rstrip()
+            chargeable_summary = format_chargeable_summary_for_email(df)
+            if chargeable_summary:
+                body = (body.rstrip() + '\n\n' + chargeable_summary).rstrip()
+            body = (body.rstrip() + '\n\nFor full information, please refer to the attached Excel file.').rstrip()
+
+            html_tables = format_per_tower_chargeable_html_for_email(df)
+            html_body = None
+            if html_tables:
+                intro_escaped = intro_for_html.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', '<br>')
+                html_body = f'''<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;font-size:12px;color:#333">
+<p style="margin:0 0 12px 0;line-height:1.5">{intro_escaped}</p>
+{html_tables}
+<p style="margin:12px 0 8px 0;font-size:10px;color:#666;font-style:italic">* This is computer generated, please cross check at least once.</p>
+<p style="margin:0">For full information, please refer to the attached Excel file.</p>
+</body></html>'''
+
+            send_email(
+                recipient=to_list,
+                subject=subject,
+                body=body,
+                html_body=html_body,
+                cc=cc_list,
+                attachments=[{
+                    'content': report_bytes,
+                    'filename': filename,
+                    'mime_type': ('application/vnd.openxmlformats-'
+                                  'officedocument.spreadsheetml.sheet'),
+                }]
+            )
+            recipient_count = len(to_list) + (len(cc_list) if cc_list else 0)
+            _save_last_run('success', to_list, cc_list, subject, recipient_count)
+            _save_report_to_folder(report_bytes, filename, 'email')
+            _save_email_report_to_network(report_bytes, filename)
+            _complete_current_cycle('scheduler', subject, recipient_count, filename)
+            logger.info('MMR scheduled report sent successfully')
+        except Exception:
+            logger.exception('MMR scheduled report failed')
+            try:
+                from .routes import _load_config, _save_last_run
+                config = _load_config()
+                to_raw = config.get('to', '').strip()
+                to_list = [e.strip() for e in to_raw.split(',') if e.strip()] if to_raw else []
+                cc_raw = config.get('cc', '').strip()
+                cc_list = [e.strip() for e in cc_raw.split(',') if e.strip()] if cc_raw else None
+                _save_last_run('failed', to_list or [], cc_list or [], '', 0)
+            except Exception:
+                pass
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Public API
+# ──────────────────────────────────────────────────────────────────────────────
+
+def init_scheduler(app):
+    """Start the background scheduler and register a job if scheduling is enabled."""
+    global _scheduler
+
+    if _scheduler and _scheduler.running:
+        return
+
+    _scheduler = BackgroundScheduler(daemon=True)
+
+    try:
+        from .routes import _load_config
+        with app.app_context():
+            config = _load_config()
+        if config.get('schedule_enabled'):
+            _add_job(config, app)
+    except Exception:
+        logger.exception('MMR scheduler: error reading config during init')
+
+    _scheduler.start()
+    logger.info('MMR APScheduler started')
+
+
+def update_schedule(config: dict, app):
+    """Called after the admin saves email config – refreshes the cron job."""
+    global _scheduler
+
+    if not _scheduler:
+        init_scheduler(app)
+        return
+
+    # Remove existing job
+    if _scheduler.get_job(_JOB_ID):
+        _scheduler.remove_job(_JOB_ID)
+
+    if config.get('schedule_enabled'):
+        _add_job(config, app)
+        logger.info(
+            f"MMR scheduler: job set for "
+            f"{config.get('schedule_hour', 10):02d}:{config.get('schedule_minute', 0):02d}"
+        )
+    else:
+        logger.info('MMR scheduler: job disabled')
+
+
+def _add_job(config: dict, app):
+    global _scheduler
+    _scheduler.add_job(
+        _run_scheduled_report,
+        CronTrigger(
+            hour=int(config.get('schedule_hour', 10)),
+            minute=int(config.get('schedule_minute', 0))
+        ),
+        args=[app],
+        id=_JOB_ID,
+        replace_existing=True,
+    )

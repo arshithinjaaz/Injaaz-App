@@ -75,61 +75,62 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function showInstallButton() {
   // Create install button if it doesn't exist
   if (!document.getElementById('pwa-install-btn')) {
+    const installSlot = document.getElementById('pwa-install-slot');
+    const useNavSlot = !!installSlot;
+    
     const installBtn = document.createElement('button');
     installBtn.id = 'pwa-install-btn';
+    installBtn.type = 'button';
+    installBtn.title = 'Install App';
+    installBtn.setAttribute('aria-label', 'Install App');
     installBtn.innerHTML = `
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="7 10 12 15 17 10"></polyline>
         <line x1="12" y1="15" x2="12" y2="3"></line>
       </svg>
-      <span>Install App</span>
-    `;
-    installBtn.style.cssText = `
-      position: fixed;
-      top: 80px;
-      right: 15px;
-      background: linear-gradient(135deg, #125435 0%, #1a6b47 100%);
-      color: white;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      padding: 12px 20px;
-      border-radius: 12px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 4px 16px rgba(18, 84, 53, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
-      z-index: 9999;
-      transition: all 0.3s ease;
-      animation: slideInRight 0.5s ease, pulse 2s ease-in-out infinite;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
     `;
     
-    installBtn.addEventListener('touchstart', () => {
-      installBtn.style.transform = 'scale(0.95)';
-    });
-    
-    installBtn.addEventListener('touchend', () => {
-      installBtn.style.transform = 'scale(1)';
-    });
-    
-    installBtn.addEventListener('mouseenter', () => {
-      installBtn.style.transform = 'translateX(-2px) scale(1.05)';
-      installBtn.style.boxShadow = '0 6px 20px rgba(18, 84, 53, 0.5), 0 3px 10px rgba(0, 0, 0, 0.15)';
-    });
-    
-    installBtn.addEventListener('mouseleave', () => {
-      installBtn.style.transform = 'translateX(0) scale(1)';
-      installBtn.style.boxShadow = '0 4px 16px rgba(18, 84, 53, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1)';
-    });
+    if (useNavSlot) {
+      installBtn.classList.add('pwa-nav-icon');
+      installSlot.appendChild(installBtn);
+    } else {
+      installBtn.innerHTML = installBtn.innerHTML + '<span>Install App</span>';
+      installBtn.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 15px;
+        background: linear-gradient(135deg, #125435 0%, #1a6b47 100%);
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 16px rgba(18, 84, 53, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+        z-index: 9999;
+        transition: all 0.3s ease;
+        animation: slideInRight 0.5s ease, pulse 2s ease-in-out infinite;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      `;
+      installBtn.addEventListener('mouseenter', () => {
+        installBtn.style.transform = 'translateX(-2px) scale(1.05)';
+        installBtn.style.boxShadow = '0 6px 20px rgba(18, 84, 53, 0.5), 0 3px 10px rgba(0, 0, 0, 0.15)';
+      });
+      installBtn.addEventListener('mouseleave', () => {
+        installBtn.style.transform = 'translateX(0) scale(1)';
+        installBtn.style.boxShadow = '0 4px 16px rgba(18, 84, 53, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1)';
+      });
+      document.body.appendChild(installBtn);
+    }
     
     installBtn.addEventListener('click', installApp);
-    
-    document.body.appendChild(installBtn);
     installButton = installBtn;
     
     // Add animation keyframes
@@ -168,27 +169,28 @@ function showInstallButton() {
           animation: fadeOut 0.3s ease forwards;
         }
         
-        /* Mobile optimizations */
+        /* Mobile optimizations - only for floating button, not nav icon */
         @media (max-width: 768px) {
-          #pwa-install-btn {
-            top: 70px !important;
-            right: 10px !important;
+          #pwa-install-btn:not(.pwa-nav-icon) {
+            top: auto !important;
+            bottom: max(20px, env(safe-area-inset-bottom)) !important;
+            right: max(15px, env(safe-area-inset-right)) !important;
+            left: auto !important;
             padding: 10px 16px !important;
             font-size: 13px !important;
             border-radius: 10px !important;
           }
           
-          #pwa-install-btn svg {
+          #pwa-install-btn:not(.pwa-nav-icon) svg {
             width: 16px !important;
             height: 16px !important;
           }
         }
         
-        /* Small mobile screens */
         @media (max-width: 480px) {
-          #pwa-install-btn {
-            top: 60px !important;
-            right: 8px !important;
+          #pwa-install-btn:not(.pwa-nav-icon) {
+            bottom: max(16px, env(safe-area-inset-bottom)) !important;
+            right: max(12px, env(safe-area-inset-right)) !important;
             padding: 8px 14px !important;
             font-size: 12px !important;
           }
@@ -343,37 +345,50 @@ function showIOSInstallButton() {
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
   
   if (isIOS || isSafari || /Mobile/.test(navigator.userAgent)) {
+    const installSlot = document.getElementById('pwa-install-slot');
+    const useNavSlot = !!installSlot;
+    
     const installBtn = document.createElement('button');
     installBtn.id = 'pwa-install-btn';
+    installBtn.type = 'button';
+    installBtn.title = 'Install App';
+    installBtn.setAttribute('aria-label', 'Install App');
     installBtn.innerHTML = `
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="7 10 12 15 17 10"></polyline>
         <line x1="12" y1="15" x2="12" y2="3"></line>
       </svg>
-      <span>Install App</span>
     `;
-    installBtn.style.cssText = `
-      position: fixed;
-      top: 80px;
-      right: 15px;
-      background: linear-gradient(135deg, #125435 0%, #1a6b47 100%);
-      color: white;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      padding: 12px 20px;
-      border-radius: 12px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 4px 16px rgba(18, 84, 53, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
-      z-index: 9999;
-      transition: all 0.3s ease;
-      animation: slideInRight 0.5s ease, pulse 2s ease-in-out infinite;
-    `;
+    
+    if (useNavSlot) {
+      installBtn.classList.add('pwa-nav-icon');
+      installSlot.appendChild(installBtn);
+    } else {
+      installBtn.innerHTML = installBtn.innerHTML + '<span>Install App</span>';
+      installBtn.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 15px;
+        background: linear-gradient(135deg, #125435 0%, #1a6b47 100%);
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 16px rgba(18, 84, 53, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+        z-index: 9999;
+        transition: all 0.3s ease;
+        animation: slideInRight 0.5s ease, pulse 2s ease-in-out infinite;
+      `;
+      document.body.appendChild(installBtn);
+    }
     
     installBtn.addEventListener('click', () => {
       if (isIOS) {
@@ -382,8 +397,7 @@ function showIOSInstallButton() {
         showAndroidInstructions();
       }
     });
-    
-    document.body.appendChild(installBtn);
+    installButton = installBtn;
   }
 }
 

@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 from datetime import datetime
-from flask import Flask, send_from_directory, abort, render_template, jsonify, request
+from flask import Flask, send_from_directory, abort, render_template, jsonify, request, redirect
 from concurrent.futures import ThreadPoolExecutor
 from werkzeug.exceptions import HTTPException
 from flask_jwt_extended import JWTManager
@@ -27,6 +27,8 @@ hvac_mep_bp = None
 civil_bp = None
 cleaning_bp = None
 auth_bp = None
+bd_bp = None
+docs_bp = None
 
 try:
     from module_hvac_mep.routes import hvac_mep_bp  # noqa: F401
@@ -63,6 +65,63 @@ except Exception as e:
     logger.exception("Could not import app.admin.routes.admin_bp: %s", e)
     admin_bp = None
 
+try:
+    from app.workflow.routes import workflow_bp  # noqa: F401
+    logger.info("Imported app.workflow.routes.workflow_bp")
+except Exception as e:
+    logger.exception("Could not import app.workflow.routes.workflow_bp: %s", e)
+    workflow_bp = None
+
+try:
+    from app.bd.routes import bd_bp  # noqa: F401
+    logger.info("Imported app.bd.routes.bd_bp")
+except Exception as e:
+    logger.exception("Could not import app.bd.routes.bd_bp: %s", e)
+    bd_bp = None
+
+try:
+    from app.docs.routes import docs_bp  # noqa: F401
+    logger.info("Imported app.docs.routes.docs_bp")
+except Exception as e:
+    logger.exception("Could not import app.docs.routes.docs_bp: %s", e)
+    docs_bp = None
+
+# HR Module
+hr_bp = None
+try:
+    from module_hr.routes import hr_bp  # noqa: F401
+    logger.info("Imported module_hr.routes.hr_bp")
+except Exception as e:
+    logger.exception("Could not import module_hr.routes.hr_bp: %s", e)
+    hr_bp = None
+
+# Procurement Module
+procurement_module_bp = None
+try:
+    from module_procurement.routes import procurement_bp as procurement_module_bp  # noqa: F401
+    logger.info("Imported module_procurement.routes.procurement_bp")
+except Exception as e:
+    logger.exception("Could not import module_procurement.routes.procurement_bp: %s", e)
+    procurement_module_bp = None
+
+# Inspection Form Module (HVAC, Civil, Cleaning)
+inspection_bp = None
+try:
+    from module_inspection.routes import inspection_bp  # noqa: F401
+    logger.info("Imported module_inspection.routes.inspection_bp")
+except Exception as e:
+    logger.exception("Could not import module_inspection.routes.inspection_bp: %s", e)
+    inspection_bp = None
+
+# MMR (Report Generation) Module
+mmr_bp = None
+try:
+    from module_mmr.routes import mmr_bp  # noqa: F401
+    logger.info("Imported module_mmr.routes.mmr_bp")
+except Exception as e:
+    logger.exception("Could not import module_mmr.routes.mmr_bp: %s", e)
+    mmr_bp = None
+
 # Ensure required directories exist at startup
 os.makedirs(GENERATED_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -75,6 +134,9 @@ executor = ThreadPoolExecutor(max_workers=1)
 
 def create_app():
     app = Flask(__name__, static_folder='static', template_folder='templates')
+    
+    # Enable template auto-reload for development
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
 
     # Load configuration from config.py
     # Import config module and load all uppercase variables (config settings)
@@ -99,6 +161,10 @@ def create_app():
     db.init_app(app)
     bcrypt.init_app(app)
     
+    # Initialize Flask-Migrate for database migrations
+    from flask_migrate import Migrate
+    migrate = Migrate(app, db)
+    
     # Initialize JWT
     jwt = JWTManager(app)
     
@@ -111,10 +177,57 @@ def create_app():
     app.config.setdefault('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
     app.config.setdefault('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
     
+    # JWT Error Handlers - ensure proper error responses
+    @jwt.unauthorized_loader
+    def unauthorized_callback(callback):
+        """Handle missing or invalid JWT token"""
+        # Check if this is a page render route (returns HTML) vs API route (returns JSON)
+        # Page render routes: /api/workflow/history, /api/workflow/pending-reviews, etc.
+        page_render_routes = ['/api/workflow/history', '/api/workflow/pending-reviews']
+        if request.path in page_render_routes:
+            # For page render routes, redirect to login
+            from flask import redirect, url_for
+            return redirect(url_for('login_page')), 302
+        elif request.path.startswith('/api/') or '/api/' in request.path:
+            return jsonify({"success": False, "error": "Authentication required"}), 401
+        # For other HTML pages, redirect to login
+        from flask import redirect, url_for
+        return redirect(url_for('login_page')), 302
+    
+    @jwt.invalid_token_loader
+    def invalid_token_callback(callback):
+        """Handle invalid JWT token"""
+        # Check if this is a page render route
+        page_render_routes = ['/api/workflow/history', '/api/workflow/pending-reviews']
+        if request.path in page_render_routes:
+            from flask import redirect, url_for
+            return redirect(url_for('login_page')), 302
+        elif request.path.startswith('/api/') or '/api/' in request.path:
+            return jsonify({"success": False, "error": "Invalid token"}), 401
+        from flask import redirect, url_for
+        return redirect(url_for('login_page')), 302
+    
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        """Handle expired JWT token"""
+        # Check if this is a page render route
+        page_render_routes = ['/api/workflow/history', '/api/workflow/pending-reviews']
+        if request.path in page_render_routes:
+            from flask import redirect, url_for
+            return redirect(url_for('login_page')), 302
+        elif request.path.startswith('/api/') or '/api/' in request.path:
+            return jsonify({"success": False, "error": "Token has expired"}), 401
+        from flask import redirect, url_for
+        return redirect(url_for('login_page')), 302
+    
     # JWT token verification callback (check if token is revoked)
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload):
         from app.models import Session
+        # Refresh tokens are not stored in sessions table; only access tokens are tracked.
+        # Skipping the revocation check for refresh tokens allows access token refresh to work.
+        if jwt_payload.get('type') == 'refresh':
+            return False
         jti = jwt_payload['jti']
         session = Session.query.filter_by(token_jti=jti).first()
         return session is None or session.is_revoked
@@ -157,99 +270,116 @@ def create_app():
                 logger.warning(f"Table creation check: {create_error}")
                 # Continue anyway - tables might already exist
             
-            # Step 2: Check and migrate user permission columns
+            # Step 2: Database migrations are now handled by Flask-Migrate
+            # Run migrations manually using: flask db upgrade
+            # This ensures version-controlled, reversible migrations
+            logger.info("✅ Database tables verified. Use 'flask db upgrade' to apply migrations.")
+            
+            # Step 2.5: Add missing columns if tables exist (one-time migration for existing databases)
             inspector = inspect(db.engine)
             if 'users' in inspector.get_table_names():
                 columns = [col['name'] for col in inspector.get_columns('users')]
-                logger.info(f"Found users table with {len(columns)} columns")
-                
                 missing_columns = []
-                # Check for password_changed column
-                if 'password_changed' not in columns:
-                    missing_columns.append('password_changed')
-                if 'access_hvac' not in columns:
-                    missing_columns.append('access_hvac')
-                if 'access_civil' not in columns:
-                    missing_columns.append('access_civil')
-                if 'access_cleaning' not in columns:
-                    missing_columns.append('access_cleaning')
+                
+                # Check for designation column
+                if 'designation' not in columns:
+                    missing_columns.append(('designation', 'VARCHAR(20) DEFAULT NULL'))
                 
                 if missing_columns:
-                    logger.info(f"Missing columns detected: {', '.join(missing_columns)}. Adding them...")
-                    
-                    # Use a transaction to add all columns
-                    with db.engine.begin() as conn:  # begin() automatically commits or rolls back
-                        for col_name in missing_columns:
-                            try:
-                                logger.info(f"Adding {col_name} column to users table...")
-                                # Use FALSE for PostgreSQL compatibility (works for SQLite too)
-                                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} BOOLEAN DEFAULT FALSE"))
-                                logger.info(f"✅ Added {col_name} column")
-                            except Exception as col_error:
-                                # Column might already exist (race condition)
-                                error_str = str(col_error).lower()
-                                if 'already exists' in error_str or 'duplicate' in error_str or 'column' in error_str and 'exists' in error_str:
-                                    logger.info(f"Column {col_name} already exists, skipping")
-                                else:
-                                    logger.error(f"Failed to add {col_name}: {col_error}")
-                                    raise
-                    
-                    # Refresh inspector to see new columns
-                    inspector = inspect(db.engine)
-                    columns = [col['name'] for col in inspector.get_columns('users')]
-                    
-                    # If all columns now exist, grant full access to existing admin users
-                    if all(col in columns for col in ['access_hvac', 'access_civil', 'access_cleaning']):
-                        try:
-                            from app.models import User
-                            admin_users = User.query.filter_by(role='admin').all()
-                            for admin in admin_users:
-                                admin.access_hvac = True
-                                admin.access_civil = True
-                                admin.access_cleaning = True
-                            db.session.commit()
-                            if admin_users:
-                                logger.info(f"✅ Granted full access to {len(admin_users)} admin user(s)")
-                        except Exception as admin_error:
-                            logger.warning(f"Could not update admin users (non-critical): {admin_error}")
-                else:
-                    logger.info("✅ All permission columns already exist")
+                    logger.info(f"Adding missing columns to users table: {[col[0] for col in missing_columns]}")
+                    try:
+                        with db.engine.begin() as conn:
+                            for col_name, col_def in missing_columns:
+                                try:
+                                    conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
+                                    logger.info(f"✅ Added {col_name} column to users table")
+                                except Exception as col_error:
+                                    error_str = str(col_error).lower()
+                                    if 'already exists' in error_str or 'duplicate' in error_str:
+                                        logger.info(f"Column {col_name} already exists, skipping")
+                                    else:
+                                        logger.warning(f"Could not add {col_name}: {col_error}")
+                    except Exception as e:
+                        logger.warning(f"Could not add missing columns (non-critical): {e}")
+            
+            if 'submissions' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('submissions')]
+                missing_columns = []
                 
-                # Step 3: Ensure default admin user exists (fully automatic for Render)
-                try:
-                    from app.models import User
-                    admin = User.query.filter_by(username='admin').first()
-                    if not admin:
-                        logger.info("Creating default admin user...")
-                        admin = User(
-                            username='admin',
-                            email='admin@injaaz.com',
-                            full_name='System Administrator',
-                            role='admin',
-                            is_active=True,
-                            access_hvac=True,
-                            access_civil=True,
-                            access_cleaning=True
-                        )
-                        # Use environment variable for default password, or generate random one
-                        import secrets
-                        default_password = os.environ.get('DEFAULT_ADMIN_PASSWORD', None)
-                        if not default_password:
-                            # Generate a secure random password if not set
-                            default_password = secrets.token_urlsafe(16)
-                            logger.warning("⚠️  No DEFAULT_ADMIN_PASSWORD set - using generated password (check logs)")
-                        
-                        admin.set_password(default_password)
-                        admin.password_changed = False  # Force password change on first login
-                        db.session.add(admin)
-                        db.session.commit()
-                        logger.info("✅ Default admin user created")
-                        logger.warning(f"⚠️  Default admin credentials: username='admin', password='{default_password}' - CHANGE IMMEDIATELY!")
-                        logger.warning("⚠️  Password change will be required on first login")
+                # Check for workflow columns
+                workflow_fields = [
+                    ('workflow_status', "VARCHAR(30) DEFAULT 'submitted'"),
+                    ('supervisor_id', 'INTEGER'),
+                    ('manager_id', 'INTEGER'),
+                    ('supervisor_notified_at', 'TIMESTAMP DEFAULT NULL'),
+                    ('supervisor_reviewed_at', 'TIMESTAMP DEFAULT NULL'),
+                    ('manager_notified_at', 'TIMESTAMP DEFAULT NULL'),
+                    ('manager_reviewed_at', 'TIMESTAMP DEFAULT NULL')
+                ]
+                
+                for col_name, col_def in workflow_fields:
+                    if col_name not in columns:
+                        missing_columns.append((col_name, col_def))
+                
+                if missing_columns:
+                    logger.info(f"Adding missing workflow columns to submissions table: {[col[0] for col in missing_columns]}")
+                    try:
+                        with db.engine.begin() as conn:
+                            for col_name, col_def in missing_columns:
+                                try:
+                                    conn.execute(text(f"ALTER TABLE submissions ADD COLUMN {col_name} {col_def}"))
+                                    logger.info(f"✅ Added {col_name} column to submissions table")
+                                except Exception as col_error:
+                                    error_str = str(col_error).lower()
+                                    if 'already exists' in error_str or 'duplicate' in error_str:
+                                        logger.info(f"Column {col_name} already exists, skipping")
+                                    else:
+                                        logger.warning(f"Could not add {col_name}: {col_error}")
+                    except Exception as e:
+                        logger.warning(f"Could not add missing workflow columns (non-critical): {e}")
+            
+            # Step 3: Ensure default admin user exists (fully automatic for Render)
+            try:
+                from app.models import User
+                admin = User.query.filter_by(username='admin').first()
+                if not admin:
+                    logger.info("Creating default admin user...")
+                    admin = User(
+                        username='admin',
+                        email='admin@injaaz.com',
+                        full_name='System Administrator',
+                        role='admin',
+                        is_active=True,
+                        access_hvac=True,
+                        access_civil=True,
+                        access_cleaning=True
+                    )
+                    # Use environment variable for default password, or generate random one
+                    import secrets
+                    default_password = os.environ.get('DEFAULT_ADMIN_PASSWORD', None)
+                    if not default_password:
+                        # Generate a secure random password if not set
+                        default_password = secrets.token_urlsafe(16)
+                        logger.warning("⚠️  No DEFAULT_ADMIN_PASSWORD set - using generated password")
+                        # Log to a secure location (not just console)
+                        logger.critical(f"🔐 DEFAULT ADMIN PASSWORD GENERATED: {default_password}")
+                        logger.critical("⚠️  SECURITY: Change this password immediately after first login!")
+                    
+                    admin.set_password(default_password)
+                    admin.password_changed = False  # Force password change on first login
+                    db.session.add(admin)
+                    db.session.commit()
+                    logger.info("✅ Default admin user created")
+                    if not os.environ.get('DEFAULT_ADMIN_PASSWORD'):
+                        logger.critical(f"⚠️  CRITICAL: Default admin password is: {default_password}")
+                        logger.critical("⚠️  This password will be required on first login. CHANGE IT IMMEDIATELY!")
                     else:
-                        logger.info("✅ Admin user already exists")
-                except Exception as admin_create_error:
-                    logger.warning(f"Could not create admin user (non-critical): {admin_create_error}")
+                        logger.warning("⚠️  Default admin password set from DEFAULT_ADMIN_PASSWORD env var")
+                        logger.warning("⚠️  Password change will be required on first login")
+                else:
+                    logger.info("✅ Admin user already exists")
+            except Exception as admin_create_error:
+                logger.warning(f"Could not create admin user (non-critical): {admin_create_error}")
             else:
                 logger.info("Users table will be created when first user is registered")
             
@@ -411,6 +541,11 @@ def create_app():
     def pwa_manifest():
         """Serve PWA manifest"""
         return send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
+    
+    @app.route('/favicon.ico')
+    def favicon():
+        """Serve favicon"""
+        return send_from_directory('static', 'logo.png', mimetype='image/png')
 
     # Register blueprints only if they were imported successfully.
     if hvac_mep_bp:
@@ -480,6 +615,82 @@ def create_app():
     else:
         logger.warning("⚠️  Admin blueprint not available - check imports")
     
+    # Register workflow blueprint
+    if workflow_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(workflow_bp)
+        app.register_blueprint(workflow_bp)  # Already has /api/workflow prefix
+        logger.info("✅ Registered workflow blueprint at /api/workflow")
+    else:
+        logger.warning("⚠️  Workflow blueprint not available - check imports")
+
+    # Register BD email module blueprint
+    if bd_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(bd_bp)
+        app.register_blueprint(bd_bp)
+        logger.info("✅ Registered BD blueprint at /bd")
+    else:
+        logger.warning("⚠️  BD blueprint not available - check imports")
+
+    # Register DocHub API blueprint
+    if docs_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(docs_bp)
+        app.register_blueprint(docs_bp)
+        logger.info("✅ Registered DocHub API blueprint at /api/docs")
+    else:
+        logger.warning("⚠️  DocHub API blueprint not available - check imports")
+    
+    # Register HR module blueprint
+    if hr_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(hr_bp)
+        app.register_blueprint(hr_bp, url_prefix='/hr')
+        # So /hr (no trailing slash) works: redirect to /hr/
+        @app.route('/hr')
+        def redirect_hr_to_slash():
+            return redirect('/hr/', code=302)
+        logger.info("✅ Registered HR blueprint at /hr")
+    else:
+        logger.warning("⚠️  HR blueprint not available - check imports")
+    
+    # Register Procurement module blueprint
+    if procurement_module_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(procurement_module_bp)
+        app.register_blueprint(procurement_module_bp, url_prefix='/procurement')
+        logger.info("✅ Registered Procurement blueprint at /procurement")
+    else:
+        logger.warning("⚠️  Procurement blueprint not available - check imports")
+    
+    # Register Inspection Form blueprint
+    if inspection_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(inspection_bp)
+        app.register_blueprint(inspection_bp)
+        @app.route('/inspection')
+        def redirect_inspection_to_slash():
+            return redirect('/inspection/', code=302)
+        logger.info("✅ Registered Inspection blueprint at /inspection")
+    else:
+        logger.warning("⚠️  Inspection blueprint not available - check imports")
+
+    # Register MMR blueprint
+    if mmr_bp:
+        if hasattr(app, 'csrf') and app.csrf:
+            app.csrf.exempt(mmr_bp)
+        app.register_blueprint(mmr_bp)
+        logger.info("✅ Registered MMR blueprint at /admin/mmr")
+        # Start APScheduler for daily report emails
+        try:
+            from module_mmr.scheduler import init_scheduler as init_mmr_scheduler
+            init_mmr_scheduler(app)
+        except Exception as sched_err:
+            logger.warning(f"⚠️  MMR scheduler not started: {sched_err}")
+    else:
+        logger.warning("⚠️  MMR blueprint not available")
+
     # Register reports API blueprint for on-demand regeneration
     try:
         from app.reports_api import reports_bp
@@ -537,11 +748,36 @@ def create_app():
         """About page - accessible to all users"""
         return render_template('about.html')
     
+    @app.route('/workflow/pending-reviews')
+    def pending_reviews():
+        """Pending reviews page - requires reviewer authentication"""
+        return render_template('pending_reviews.html')
+    
+    @app.route('/workflow/submitted-forms')
+    def submitted_forms():
+        """Submitted forms page - supervisors can view their submissions"""
+        return render_template('submitted_forms.html')
+    
     @app.route('/admin/dashboard')
     def admin_dashboard():
         """Admin dashboard - requires admin authentication"""
         return render_template('admin_dashboard.html')
-    
+
+    @app.route('/admin/devices')
+    def admin_devices():
+        """Device management - admin only"""
+        return render_template('admin_device_management.html')
+
+    @app.route('/admin/bd')
+    def admin_bd():
+        """Business Development module - admin only"""
+        return render_template('admin_bd_module.html')
+
+    @app.route('/dochub')
+    def dochub():
+        """DocHub module - all users with access"""
+        return render_template('dochub.html', active_page='dochub')
+
     # Root route: Show login page
     @app.route('/')
     def index():

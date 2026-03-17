@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-  <title>Injaaz - Site Reporting Platform</title>
-  <meta name="description" content="Professional site visit inspection and reporting platform for HVAC, Civil, and Cleaning services">
+  <title>Injaaz Application - All Operations. One Platform.</title>
+  <meta name="description" content="Injaaz Application - All Operations. One Platform. Inspections, HR forms, and store keeping for your office.">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   
   <!-- PWA Meta Tags -->
@@ -12,1437 +12,234 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Injaaz">
+  <meta name="apple-mobile-web-app-title" content="Injaaz Application">
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
   <script src="{{ url_for('static', filename='pwa-install.js') }}" defer></script>
   
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    :root {
-      --primary: #125435;
-      --primary-light: #1a7a4d;
-      --primary-dark: #0d3d24;
-      --secondary: #D9D9D9;
-      --text-dark: #1a1a1a;
-      --text-light: #6b6b6b;
-      --bg-light: #fafafa;
-      --white: #ffffff;
-    }
-    
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--white);
-      color: var(--text-dark);
-      overflow-x: hidden;
-      line-height: 1.6;
-      position: relative;
-    }
-    
-    /* Animated gradient background overlay */
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: 
-        radial-gradient(circle at 20% 30%, rgba(18, 84, 53, 0.03) 0%, transparent 40%),
-        radial-gradient(circle at 80% 70%, rgba(26, 122, 77, 0.02) 0%, transparent 40%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    
-    /* Navigation with glassmorphism */
-    .nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 1000;
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(30px) saturate(180%);
-      border-bottom: 1px solid rgba(18, 84, 53, 0.08);
-      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.02);
-      transition: all 0.3s ease;
-    }
-    
-    .nav.scrolled {
-      background: rgba(255, 255, 255, 0.95);
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
-    }
-    
-    .nav-container {
-      max-width: 1600px;
-      margin: 0 auto;
-      padding: 2rem 4rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 1rem;
-    }
-    
-    /* Stunning logo with glow effect */
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      text-decoration: none;
-      transition: all 0.3s ease;
-      position: relative;
-    }
-    
-    .logo::after {
-      content: '';
-      position: absolute;
-      top: -10px;
-      left: -10px;
-      right: -10px;
-      bottom: -10px;
-      background: radial-gradient(circle, rgba(18, 84, 53, 0.1) 0%, transparent 70%);
-      opacity: 0;
-      transition: opacity 0.4s ease;
-      border-radius: 50%;
-      z-index: -1;
-    }
-    
-    .logo:hover::after {
-      opacity: 1;
-    }
-    
-    .logo img {
-      height: 55px;
-      width: auto;
-      filter: drop-shadow(0 2px 8px rgba(18, 84, 53, 0.15));
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .logo span {
-      font-size: 1.8rem;
-      font-weight: 700;
-      color: var(--primary);
-      letter-spacing: -1px;
-      transition: all 0.3s ease;
-      white-space: nowrap;
-    }
-    
-    #welcome-text {
-      font-size: 1.6rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
-    .nav-right {
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-      flex-shrink: 0;
-    }
-    
-    .logo:hover img {
-      filter: drop-shadow(0 6px 20px rgba(18, 84, 53, 0.3));
-      transform: scale(1.05);
-    }
-    
-    .logo:hover span {
-      letter-spacing: 0px;
-    }
-    
-    /* Elegant nav menu */
-    .nav-menu {
-      display: flex;
-      gap: 3rem;
-      list-style: none;
-    }
-    
-    .nav-menu a {
-      color: var(--text-light);
-      text-decoration: none;
-      font-size: 0.95rem;
-      font-weight: 500;
-      letter-spacing: 0.5px;
-      transition: all 0.3s ease;
-      position: relative;
-      padding: 0.5rem 0;
-    }
-    
-    .nav-menu a::before {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      width: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--primary-light), var(--primary));
-      transform: translateX(-50%);
-      transition: width 0.3s ease;
-    }
-    
-    .nav-menu a:hover {
-      color: var(--primary);
-    }
-    
-    .nav-menu a:hover::before {
-      width: 100%;
-    }
-    
-    /* Logout Button - Matching UI Style */
-    .logout-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.625rem 1.25rem;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: white;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-      border: none;
-      border-radius: 8px;
-      text-decoration: none;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(18, 84, 53, 0.2);
-      letter-spacing: 0.3px;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .logout-btn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transition: left 0.5s;
-    }
-    
-    .logout-btn:hover::before {
-      left: 100%;
-    }
-    
-    .logout-btn:hover {
-      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(18, 84, 53, 0.35);
-    }
-    
-    .logout-btn:active {
-      transform: translateY(0);
-      box-shadow: 0 2px 8px rgba(18, 84, 53, 0.2);
-    }
-    
-    .logout-btn svg {
-      width: 18px;
-      height: 18px;
-      stroke: currentColor;
-    }
-    
-    /* Hero Section with animated elements */
-    .hero {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      background: var(--white);
-      padding-top: 120px;
-      position: relative;
-      z-index: 1;
-    }
-    
-    .hero-content {
-      max-width: 1600px;
-      margin: 0 auto;
-      padding: 0 4rem;
-      width: 100%;
-    }
-    
-    /* Animated hero text */
-    .hero-text {
-      max-width: 900px;
-      margin-bottom: 6rem;
-      opacity: 0;
-      animation: fadeInUp 1s ease forwards 0.2s;
-    }
-    
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(40px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
-    .hero-title {
-      font-size: clamp(3.5rem, 10vw, 7rem);
-      font-weight: 700;
-      line-height: 0.95;
-      margin-bottom: 2rem;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      letter-spacing: -4px;
-      position: relative;
-    }
-    
-    /* Animated underline effect */
-    .hero-title::after {
-      content: '';
-      position: absolute;
-      bottom: -10px;
-      left: 0;
-      width: 120px;
-      height: 5px;
-      background: linear-gradient(90deg, var(--primary), transparent);
-      border-radius: 3px;
-      animation: expandWidth 1.5s ease forwards 0.8s;
-    }
-    
-    @keyframes expandWidth {
-      from { width: 0; }
-      to { width: 120px; }
-    }
-    
-    .hero-subtitle {
-      font-size: clamp(1.1rem, 2vw, 1.3rem);
-      color: var(--text-light);
-      font-weight: 400;
-      max-width: 550px;
-      line-height: 1.7;
-      letter-spacing: 0.2px;
-    }
-    
-    /* Premium module cards */
-    .modules-section {
-      margin-top: 4rem;
-      opacity: 0;
-      animation: fadeInUp 1s ease forwards 0.6s;
-      width: 100%;
-      display: block !important;
-    }
-    
-    .modules-grid {
-      display: grid !important;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2rem;
-      transition: grid-template-columns 0.3s ease;
-      width: 100%;
-      margin: 0;
-      padding: 0;
-    }
-    
-    @media (max-width: 1024px) {
-      .modules-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 1.5rem !important;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .modules-section {
-        margin-top: 3rem !important;
-        padding: 0 !important;
-        display: block !important;
-        opacity: 1 !important;
-      }
-      
-      .modules-grid {
-        grid-template-columns: 1fr !important;
-        gap: 1.25rem !important;
-        display: grid !important;
-        width: 100% !important;
-        max-width: 100% !important;
-      }
-    }
-    
-    .module-card {
-      background: var(--white);
-      border: 1px solid rgba(18, 84, 53, 0.08);
-      border-radius: 8px;
-      padding: 2.5rem 2rem;
-      text-decoration: none;
-      color: inherit;
-      display: block !important;
-      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-      width: 100%;
-      box-sizing: border-box;
-    }
-    
-    .module-card[style*="display: none"] {
-      display: none !important;
-    }
-    
-    .module-card:not([style*="display: none"]) {
-      display: block !important;
-    }
-    
-    /* Gradient overlay on hover */
-    .module-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--primary), var(--primary-light));
-      transform: scaleX(0);
-      transform-origin: left;
-      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .module-card::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(circle at center, rgba(18, 84, 53, 0.03) 0%, transparent 70%);
-      opacity: 0;
-      transition: opacity 0.5s ease;
-      pointer-events: none;
-    }
-    
-    .module-card:hover {
-      border-color: var(--primary);
-      transform: translateY(-8px);
-      box-shadow: 
-        0 20px 50px rgba(18, 84, 53, 0.12),
-        0 5px 15px rgba(0, 0, 0, 0.05);
-    }
-    
-    .module-card:hover::before {
-      transform: scaleX(1);
-    }
-    
-    .module-card:hover::after {
-      opacity: 1;
-    }
-    
-    .module-number {
-      font-size: 0.75rem;
-      color: var(--text-light);
-      font-weight: 600;
-      letter-spacing: 2px;
-      margin-bottom: 1.5rem;
-      display: block;
-      text-transform: uppercase;
-      opacity: 0.7;
-      transition: all 0.3s ease;
-    }
-    
-    .module-card:hover .module-number {
-      color: var(--primary);
-      opacity: 1;
-    }
-    
-    /* Premium icon with gradient */
-    .module-icon {
-      width: 56px;
-      height: 56px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      margin-bottom: 1.5rem;
-      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 15px rgba(18, 84, 53, 0.2);
-      position: relative;
-    }
-    
-    .module-icon::before {
-      content: '';
-      position: absolute;
-      top: -5px;
-      left: -5px;
-      right: -5px;
-      bottom: -5px;
-      background: linear-gradient(135deg, var(--primary-light), var(--primary));
-      border-radius: 10px;
-      opacity: 0;
-      transition: opacity 0.5s ease;
-      z-index: -1;
-      filter: blur(10px);
-    }
-    
-    .module-card:hover .module-icon {
-      transform: scale(1.1) rotate(-5deg);
-      box-shadow: 0 8px 25px rgba(18, 84, 53, 0.3);
-    }
-    
-    .module-card:hover .module-icon::before {
-      opacity: 0.6;
-    }
-    
-    .module-title {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin-bottom: 0.75rem;
-      color: var(--text-dark);
-      letter-spacing: -0.5px;
-      transition: color 0.3s ease;
-    }
-    
-    .module-card:hover .module-title {
-      color: var(--primary);
-    }
-    
-    .module-description {
-      color: var(--text-light);
-      font-size: 0.95rem;
-      line-height: 1.6;
-      margin-bottom: 1.5rem;
-      transition: color 0.3s ease;
-    }
-    
-    .module-card:hover .module-description {
-      color: var(--text-dark);
-    }
-    
-    /* Animated arrow */
-    .module-arrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: var(--primary);
-      font-weight: 600;
-      font-size: 0.85rem;
-      letter-spacing: 0.5px;
-      transition: all 0.3s ease;
-    }
-    
-    .module-arrow::after {
-      content: '→';
-      transition: transform 0.3s ease;
-      display: inline-block;
-    }
-    
-    .module-card:hover .module-arrow {
-      gap: 0.75rem;
-    }
-    
-    .module-card:hover .module-arrow::after {
-      transform: translateX(5px);
-    }
-    
-    /* Premium footer */
-    .footer {
-      background: linear-gradient(180deg, var(--white) 0%, var(--bg-light) 100%);
-      border-top: 1px solid rgba(18, 84, 53, 0.08);
-      text-align: center;
-      padding: 4rem 4rem;
-      margin-top: 10rem;
-      position: relative;
-    }
-    
-    .footer::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 60px;
-      height: 3px;
-      background: linear-gradient(90deg, var(--primary), var(--primary-light));
-      border-radius: 2px;
-    }
-    
-    .footer p {
-      font-size: 0.85rem;
-      color: var(--text-light);
-      letter-spacing: 0.5px;
-      margin-top: 2rem;
-    }
-    
-    /* Contact Modal */
-    .contact-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(10px);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-      animation: fadeIn 0.3s ease;
-    }
-    
-    .contact-modal.active {
-      display: flex;
-    }
-    
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
-    }
-    
-    .contact-modal-content {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(20px);
-      border-radius: 24px;
-      padding: 3rem;
-      max-width: 600px;
-      width: 100%;
-      max-height: 90vh;
-      overflow-y: auto;
-      position: relative;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      animation: slideUp 0.3s ease;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-    
-    @keyframes slideUp {
-      from {
-        transform: translateY(50px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-    
-    .contact-modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-      padding-bottom: 1.5rem;
-      border-bottom: 2px solid var(--primary);
-    }
-    
-    .contact-modal-header h2 {
-      font-size: 2.5rem;
-      font-weight: 800;
-      color: var(--primary);
-      margin: 0;
-    }
-    
-    .contact-modal-close {
-      background: none;
-      border: none;
-      font-size: 2rem;
-      color: var(--text-light);
-      cursor: pointer;
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      transition: all 0.3s ease;
-    }
-    
-    .contact-modal-close:hover {
-      background: var(--primary);
-      color: var(--white);
-      transform: rotate(90deg);
-    }
-    
-    .contact-modal-info {
-      display: grid;
-      gap: 2rem;
-    }
-    
-    .contact-modal-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 1.5rem;
-      padding: 1.5rem;
-      background: rgba(18, 84, 53, 0.05);
-      border-radius: 16px;
-      transition: all 0.3s ease;
-    }
-    
-    .contact-modal-item:hover {
-      background: rgba(18, 84, 53, 0.08);
-      transform: translateX(5px);
-    }
-    
-    .contact-modal-icon {
-      font-size: 2.5rem;
-      flex-shrink: 0;
-    }
-    
-    .contact-modal-details h4 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--primary);
-      margin: 0 0 0.5rem 0;
-    }
-    
-    .contact-modal-details p,
-    .contact-modal-details a {
-      font-size: 1.1rem;
-      color: var(--text-dark);
-      text-decoration: none;
-      margin: 0.25rem 0;
-      display: block;
-      line-height: 1.6;
-    }
-    
-    .contact-modal-details a {
-      color: var(--primary);
-      font-weight: 600;
-      transition: color 0.3s ease;
-    }
-    
-    .contact-modal-details a:hover {
-      color: var(--primary-light);
-      text-decoration: underline;
-    }
-    
-    .contact-modal-note {
-      font-size: 0.95rem;
-      color: var(--text-light);
-      margin-top: 0.5rem;
-      font-style: italic;
-    }
-    
-    /* Responsive */
-    @media (max-width: 1024px) {
-      .nav-container {
-        padding: 1.5rem 2rem;
-      }
-      
-      .hero-content {
-        padding: 0 2rem;
-      }
-      
-      .hero {
-        padding-top: 100px;
-      }
-      
-      .modules-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .hero {
-        padding-top: 80px !important;
-        min-height: auto !important;
-        padding-bottom: 3rem !important;
-        overflow-x: hidden !important;
-      }
-      
-      .hero-content {
-        padding: 0 1.5rem !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-      }
-      
-      .hero-text {
-        margin-bottom: 3rem !important;
-      }
-      
-      .modules-section {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        margin-top: 3rem !important;
-        padding: 0 !important;
-        width: 100% !important;
-        animation: none !important;
-      }
-      
-      .footer {
-        padding: 3rem 1.5rem !important;
-        margin-top: 5rem !important;
-      }
-    }
-    
-    @media (max-width: 480px) {
-      .hero {
-        padding-top: 70px !important;
-      }
-      
-      .hero-content {
-        padding: 0 1rem !important;
-      }
-      
-      .modules-section {
-        margin-top: 2rem !important;
-      }
-      
-      .footer {
-        padding: 2rem 1rem !important;
-        margin-top: 3rem !important;
-      }
-      
-      .footer p {
-        font-size: 0.8rem !important;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .nav-container {
-        padding: 0.875rem 1rem !important;
-        flex-wrap: nowrap !important;
-        gap: 0.75rem !important;
-        align-items: center !important;
-        min-height: 60px !important;
-      }
-      
-      .logo {
-        flex: 0 0 auto !important;
-        gap: 0.5rem !important;
-        min-width: 0 !important;
-      }
-      
-      .logo img {
-        height: 32px !important;
-        flex-shrink: 0 !important;
-        width: auto !important;
-      }
-      
-      .logo span {
-        font-size: 1.1rem !important;
-        display: none !important; /* Hide "Injaaz" text on mobile, show welcome instead */
-      }
-      
-      #welcome-text {
-        font-size: 0.9rem !important;
-        font-weight: 500 !important;
-        flex: 1 1 auto !important;
-        min-width: 0 !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        white-space: nowrap !important;
-        margin: 0 0.5rem !important;
-        display: block !important;
-      }
-      
-      .nav-right {
-        flex: 0 0 auto !important;
-        gap: 0.5rem !important;
-        align-items: center !important;
-      }
-      
-      .nav-menu {
-        display: none !important; /* Hide menu links on mobile - keep it simple */
-      }
-      
-      .logout-btn {
-        font-size: 0.8rem !important;
-        padding: 0.5rem 0.75rem !important;
-        min-height: 36px !important;
-        flex-shrink: 0 !important;
-      }
-      
-      .logout-btn svg {
-        width: 16px !important;
-        height: 16px !important;
-      }
-      
-      .logout-btn span {
-        display: none !important; /* Icon only on mobile */
-      }
-      
-      .module-card {
-        padding: 1.75rem 1.5rem !important;
-        margin-bottom: 1.25rem !important;
-        display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-      }
-      
-      .module-title {
-        font-size: 1.75rem !important;
-        margin-bottom: 0.75rem !important;
-        line-height: 1.3 !important;
-      }
-      
-      .module-description {
-        font-size: 0.95rem !important;
-        line-height: 1.6 !important;
-        margin-bottom: 1rem !important;
-      }
-      
-      .module-number {
-        font-size: 0.7rem !important;
-        margin-bottom: 0.75rem !important;
-      }
-      
-      .module-icon {
-        width: 60px !important;
-        height: 60px !important;
-        font-size: 2rem !important;
-        margin-bottom: 1rem !important;
-      }
-      
-      .module-arrow {
-        font-size: 0.9rem !important;
-        margin-top: 1rem !important;
-      }
-      
-      .modules-grid {
-        grid-template-columns: 1fr !important;
-        gap: 1.25rem !important;
-        padding: 0 !important;
-        display: grid !important;
-        width: 100% !important;
-      }
-    }
-    
-    @media (max-width: 480px) {
-      .nav-container {
-        padding: 0.75rem 0.875rem !important;
-        gap: 0.5rem !important;
-        min-height: 56px !important;
-      }
-      
-      .logo {
-        gap: 0.375rem !important;
-      }
-      
-      .logo img {
-        height: 28px !important;
-      }
-      
-      #welcome-text {
-        font-size: 0.8rem !important;
-        margin: 0 0.375rem !important;
-      }
-      
-      .logout-btn {
-        padding: 0.5rem !important;
-        min-width: 36px !important;
-        min-height: 36px !important;
-        font-size: 0.75rem !important;
-      }
-      
-      .logout-btn svg {
-        width: 18px !important;
-        height: 18px !important;
-      }
-      
-      .module-card {
-        padding: 1.5rem 1.25rem !important;
-        margin-bottom: 1rem !important;
-        display: block !important;
-        width: 100% !important;
-      }
-      
-      .module-title {
-        font-size: 1.5rem !important;
-        line-height: 1.3 !important;
-      }
-      
-      .module-description {
-        font-size: 0.9rem !important;
-        line-height: 1.5 !important;
-      }
-      
-      .module-icon {
-        width: 50px !important;
-        height: 50px !important;
-        font-size: 1.75rem !important;
-      }
-      
-      .modules-section {
-        margin-top: 2rem !important;
-      }
-      
-      .modules-grid {
-        gap: 1rem !important;
-      }
-    }
-    
-    /* Smooth scroll behavior */
-    html {
-      scroll-behavior: smooth;
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- External Stylesheets -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 </head>
 <body>
-  <nav class="nav" id="nav">
-    <div class="nav-container">
-      <a href="/" class="logo">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz Logo">
-        <span id="welcome-text">Injaaz</span>
-      </a>
-      <div class="nav-right">
-        <ul class="nav-menu">
-          <li><a href="#modules">Modules</a></li>
-          <li><a href="/about">About</a></li>
-          <li><a href="#" id="contactLink">Contact</a></li>
-          <li id="admin-menu-item" style="display: none;">
-            <a href="/admin/dashboard" style="color: var(--primary); font-weight: 600;">Administrative</a>
-          </li>
-        </ul>
-        <button class="logout-btn" id="logoutBtn" type="button">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3h12.75" />
-          </svg>
-          <span>Logout</span>
-        </button>
-      </div>
-    </div>
-  </nav>
+  {% include 'partials/main_navbar.html' with context %}
 
-  <div class="hero">
-    <div class="hero-content">
-      <div class="hero-text">
-        <h1 class="hero-title">Professional Site Reporting</h1>
-        <p class="hero-subtitle">
-          Streamline your inspection workflows with intelligent reporting, 
-          real-time collaboration, and automated documentation.
-        </p>
-      </div>
-
-      <section class="modules-section" id="modules">
-        <div class="modules-grid" id="modulesGrid">
-          <a href="/hvac-mep/form" class="module-card" id="module-hvac" style="display: none;">
-            <span class="module-number">01 — Module</span>
-            <div class="module-icon">🔧</div>
-            <h2 class="module-title">HVAC & MEP</h2>
-            <p class="module-description">
-              Heating, Ventilation, Air Conditioning, and Mechanical, Electrical & Plumbing systems inspection and reporting.
-            </p>
-            <span class="module-arrow">Start Inspection →</span>
-          </a>
-
-          <a href="/civil/form" class="module-card" id="module-civil" style="display: none;">
-            <span class="module-number">02 — Module</span>
-            <div class="module-icon">🏢</div>
-            <h2 class="module-title">Civil Works</h2>
-            <p class="module-description">
-              Construction site inspections, structural assessments, and civil engineering documentation.
-            </p>
-            <span class="module-arrow">Start Inspection →</span>
-          </a>
-
-          <a href="/cleaning/form" class="module-card" id="module-cleaning" style="display: none;">
-            <span class="module-number">03 — Module</span>
-            <div class="module-icon">🧹</div>
-            <h2 class="module-title">Cleaning Services</h2>
-            <p class="module-description">
-              Facility cleaning inspections, maintenance checklists, and service quality reports.
-            </p>
-            <span class="module-arrow">Start Inspection →</span>
-          </a>
+  <!-- Dashboard: left hero + right stats widget -->
+  <header class="hero hero-split">
+    <div class="hero-content hero-split-inner">
+      <div class="hero-left">
+        <p class="hero-tagline">Injaaz Platform</p>
+        <h1 class="hero-title">All Operations.<br><span class="hero-title-accent">One Platform.</span></h1>
+        <p class="hero-subtitle">Inspections, HR forms, and store keeping — streamlined in one place for your office.</p>
+        <div class="hero-cta-row">
+          <span class="hero-cta-stat">
+            <span class="hero-cta-stat-dot"></span>
+            Live &amp; active
+          </span>
+          <span class="hero-cta-divider"></span>
+          <span class="hero-cta-stat">All modules in one place</span>
         </div>
-      </section>
-
+      </div>
+      <div class="hero-right">
+        <a href="/api/workflow/history" class="dashboard-widget-link" title="View all submissions">
+        <div class="dashboard-widget">
+          <div class="dashboard-widget-header">
+            <div class="dashboard-widget-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="dashboard-widget-bar"></div>
+          </div>
+          <div class="dashboard-widget-body">
+            <div class="dashboard-stats-grid">
+              <div class="dashboard-stat-card">
+                <div class="dashboard-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+                <span class="dashboard-stat-label">Forms Submitted</span>
+                <span class="dashboard-stat-value" id="stat-forms-submitted">—</span>
+              </div>
+              <div class="dashboard-stat-card">
+                <div class="dashboard-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></div>
+                <span class="dashboard-stat-label">Pending Review</span>
+                <span class="dashboard-stat-value" id="stat-pending-review">—</span>
+              </div>
+              <div class="dashboard-stat-card">
+                <div class="dashboard-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg></div>
+                <span class="dashboard-stat-label">Active Users</span>
+                <span class="dashboard-stat-value" id="stat-active-users">—</span>
+              </div>
+              <div class="dashboard-stat-card">
+                <div class="dashboard-stat-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
+                <span class="dashboard-stat-label">Completion Rate</span>
+                <span class="dashboard-stat-value" id="stat-completion-rate">—</span>
+              </div>
+            </div>
+            <div class="dashboard-activity">
+              <div class="dashboard-activity-item" id="dashboard-activity-item">
+                <span class="dashboard-activity-icon">✓</span>
+                <span class="dashboard-activity-text" id="dashboard-activity-text">Loading activity…</span>
+                <span class="dashboard-activity-time" id="dashboard-activity-time"></span>
+              </div>
+              <div class="dashboard-activity-list" id="dashboard-activity-list"></div>
+            </div>
+          </div>
+        </div>
+        </a>
+      </div>
     </div>
-  </div>
+  </header>
+
+  <!-- Modules Section -->
+  <section class="modules-section" id="modules">
+    <div class="modules-inner">
+      <h2 class="modules-section-label">Modules</h2>
+
+      <div class="modules-grid" id="modulesGrid">
+
+        <!-- HR Module -->
+        <a href="/hr/" class="module-card" id="module-hr" style="display: none;">
+          <div class="card-body">
+            <span class="module-number">06 &mdash; HR</span>
+            <div class="module-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" /></svg>
+            </div>
+            <h2 class="module-title">HR Module</h2>
+            <p class="module-description">Leave requests, termination forms, long vacation applications, and asset management.</p>
+            <span class="module-arrow">Open HR <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+          </div>
+        </a>
+
+        <!-- Report Generation -->
+        <a href="/admin/mmr/" class="module-card" id="module-report-generation" style="display: none;">
+          <div class="card-body">
+            <span class="module-number">Reports</span>
+            <div class="module-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+            </div>
+            <h2 class="module-title">Report Generation</h2>
+            <p class="module-description">Generate Excel and PDF reports from inspection data. Schedule automated emails and save reports to folder.</p>
+            <span class="module-arrow">Open Reports <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+          </div>
+        </a>
+
+        <!-- Inspection Form (HVAC, Civil, Cleaning) -->
+        <a href="/inspection/" class="module-card" id="module-inspection" style="display: none;">
+          <div class="card-body">
+            <span class="module-number">Inspection</span>
+            <div class="module-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </div>
+            <h2 class="module-title">Inspection Form</h2>
+            <p class="module-description">HVAC &amp; MEP, Civil Works, and Cleaning Services inspection forms — all in one place.</p>
+            <span class="module-arrow">Open Forms <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+          </div>
+        </a>
+
+        <!-- Procurement -->
+        <a href="/procurement/" class="module-card" id="module-procurement" style="display: none;">
+          <div class="card-body">
+            <span class="module-number">07 &mdash; Procurement</span>
+            <div class="module-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>
+            </div>
+            <h2 class="module-title">Procurement</h2>
+            <p class="module-description">Material lists, quantity tracking, pricing management, and Excel import/export.</p>
+            <span class="module-arrow">Open Procurement <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+          </div>
+        </a>
+
+        <!-- Review History -->
+        <a href="/api/workflow/history" class="module-card" id="module-review-history" style="display: none;">
+          <div class="card-body">
+            <span class="module-number">Workflow</span>
+            <div class="module-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+            </div>
+            <h2 class="module-title">Review History</h2>
+            <p class="module-description">View complete review history of all submissions with all reviewer comments and approval statuses.</p>
+            <span class="module-arrow">View History <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+          </div>
+        </a>
+
+        <!-- Pending Review (reviewers only) -->
+        <a href="/workflow/pending-reviews" class="module-card" id="module-pending-review" style="display: none;">
+          <div class="card-body">
+            <span class="module-number">Workflow</span>
+            <div class="module-icon" style="position: relative;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" /></svg>
+              <span class="module-badge" id="modulePendingBadge" style="display: none;">0</span>
+            </div>
+            <h2 class="module-title">Pending Review</h2>
+            <p class="module-description">Review and approve submissions awaiting your signature and approval in the workflow process.</p>
+            <span class="module-arrow">View Pending <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+          </div>
+        </a>
+
+        <!-- Device Management (admin only) -->
+        <a href="/admin/devices" class="module-card" id="module-device-management" style="display: none;">
+          <div class="card-body">
+            <span class="module-number">Admin</span>
+            <div class="module-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            </div>
+            <h2 class="module-title">Device Management</h2>
+            <p class="module-description">Track and manage enrolled devices. Enroll new devices, view status, and export device lists.</p>
+            <span class="module-arrow">Open Devices <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+          </div>
+        </a>
+
+        <!-- Business Development (admin only) -->
+        <a href="/admin/bd" class="module-card" id="module-bd" style="display: none;">
+          <div class="card-body">
+            <span class="module-number">04 &mdash; BD</span>
+            <div class="module-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" /></svg>
+            </div>
+            <h2 class="module-title">Business Development</h2>
+            <p class="module-description">Pipeline, projects, follow-ups, contacts, and BD analytics — manage deals and relationships.</p>
+            <span class="module-arrow">Open BizFlow <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+          </div>
+        </a>
+
+        <!-- Email Module (BD only) -->
+        <a href="/bd/email-module" class="module-card" id="module-bd-email" style="display: none;">
+          <div class="card-body">
+            <span class="module-number">05 &mdash; BD</span>
+            <div class="module-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>
+            </div>
+            <h2 class="module-title">Email Module</h2>
+            <p class="module-description">Compose and send General Manager notifications with custom To and CC details.</p>
+            <span class="module-arrow">Send Email <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+          </div>
+        </a>
+
+      </div>
+    </div>
+  </section>
 
   <footer class="footer">
-    <p>© 2026 Injaaz • Professional Site Reporting Platform</p>
+    <div class="footer-inner">
+      <div class="footer-brand">Injaaz</div>
+      <nav class="footer-links">
+        <a href="/about">About</a>
+        <a href="#" id="footerContactLink">Contact</a>
+      </nav>
+      <p class="footer-copy">© 2026 Injaaz Application / built by Arshith</p>
+    </div>
   </footer>
 
-  <!-- Contact Modal -->
-  <div id="contactModal" class="contact-modal">
-    <div class="contact-modal-content">
-      <div class="contact-modal-header">
-        <h2>Contact Us</h2>
-        <button class="contact-modal-close" onclick="closeContactModal()" aria-label="Close">×</button>
-      </div>
-      <div class="contact-modal-info">
-        <div class="contact-modal-item">
-          <span class="contact-modal-icon">📍</span>
-          <div class="contact-modal-details">
-            <h4>Address</h4>
-            <p>Sheik Khalifa Bin Zayed St<br>Ajman, United Arab Emirates</p>
-          </div>
-        </div>
-        <div class="contact-modal-item">
-          <span class="contact-modal-icon">📞</span>
-          <div class="contact-modal-details">
-            <h4>Phone</h4>
-            <a href="tel:+97167123456">+971 6 712 3456</a>
-            <p class="contact-modal-note">Available 24/7</p>
-          </div>
-        </div>
-        <div class="contact-modal-item">
-          <span class="contact-modal-icon">📧</span>
-          <div class="contact-modal-details">
-            <h4>Email</h4>
-            <a href="mailto:info@injaaz.ae">info@injaaz.ae</a>
-            <p class="contact-modal-note">We'll respond within 24 hours</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Profile & Contact modals are in main_navbar partial -->
 
-  <script>
-    // Load and display user welcome message
-    function loadUserWelcome() {
-      try {
-        const userData = localStorage.getItem('user');
-        if (userData) {
-          const user = JSON.parse(userData);
-          // Use full_name if available, otherwise username
-          const displayName = user.full_name || user.username;
-          
-          // Update welcome text
-          const welcomeText = document.getElementById('welcome-text');
-          if (welcomeText) {
-            welcomeText.textContent = `Injaaz welcomes, ${displayName}!`;
-          }
-          
-          // Show admin menu if user is admin
-          checkAndShowAdminMenu(user);
-          // Update module visibility based on access
-          updateModuleVisibility(user);
-        } else {
-          // Try to fetch user from API if not in localStorage
-          const token = localStorage.getItem('access_token');
-          if (token) {
-            fetch('/api/auth/me', {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            })
-            .then(response => response.json())
-            .then(data => {
-              if (data.user) {
-                localStorage.setItem('user', JSON.stringify(data.user));
-                const displayName = data.user.full_name || data.user.username;
-                const welcomeText = document.getElementById('welcome-text');
-                if (welcomeText) {
-                  welcomeText.textContent = `Injaaz welcomes, ${displayName}!`;
-                }
-                
-                // Show admin menu if user is admin
-                checkAndShowAdminMenu(data.user);
-                // Update module visibility based on access
-                updateModuleVisibility(data.user);
-              }
-            })
-            .catch(error => {
-              console.error('Failed to fetch user:', error);
-            });
-          } else {
-            // Check localStorage for user role
-            const userStr = localStorage.getItem('user');
-            if (userStr) {
-              try {
-                const user = JSON.parse(userStr);
-                checkAndShowAdminMenu(user);
-                updateModuleVisibility(user);
-              } catch (e) {
-                console.error('Error parsing user from localStorage:', e);
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error loading user welcome:', error);
-      }
-    }
-    
-    // Function to check and show admin menu
-    function checkAndShowAdminMenu(user) {
-      if (user && user.role === 'admin') {
-        const adminMenuItem = document.getElementById('admin-menu-item');
-        if (adminMenuItem) {
-          adminMenuItem.style.display = 'list-item';
-          console.log('Admin menu item shown');
-        }
-      } else if (user && !user.role) {
-        // If user object doesn't have role, fetch fresh data
-        const token = localStorage.getItem('access_token');
-        if (token) {
-          fetch('/api/auth/me', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.user) {
-              localStorage.setItem('user', JSON.stringify(data.user));
-              checkAndShowAdminMenu(data.user);
-              updateModuleVisibility(data.user);
-            }
-          })
-          .catch(error => {
-            console.error('Failed to fetch user role:', error);
-          });
-        }
-      }
-    }
-    
-    // Function to show/hide modules based on user access
-    function updateModuleVisibility(user) {
-      if (!user) return;
-      
-      // Admins have access to all modules
-      const isAdmin = user.role === 'admin';
-      
-      // Check HVAC access
-      const hvacCard = document.getElementById('module-hvac');
-      if (hvacCard) {
-        const hasHvacAccess = isAdmin || user.access_hvac === true;
-        hvacCard.style.display = hasHvacAccess ? 'block' : 'none';
-        hvacCard.style.visibility = hasHvacAccess ? 'visible' : 'hidden';
-      }
-      
-      // Check Civil access
-      const civilCard = document.getElementById('module-civil');
-      if (civilCard) {
-        const hasCivilAccess = isAdmin || user.access_civil === true;
-        civilCard.style.display = hasCivilAccess ? 'block' : 'none';
-        civilCard.style.visibility = hasCivilAccess ? 'visible' : 'hidden';
-      }
-      
-      // Check Cleaning access
-      const cleaningCard = document.getElementById('module-cleaning');
-      if (cleaningCard) {
-        const hasCleaningAccess = isAdmin || user.access_cleaning === true;
-        cleaningCard.style.display = hasCleaningAccess ? 'block' : 'none';
-        cleaningCard.style.visibility = hasCleaningAccess ? 'visible' : 'hidden';
-      }
-      
-      // Update grid layout based on visible modules
-      const modulesGrid = document.getElementById('modulesGrid');
-      const modulesSection = document.getElementById('modules');
-      
-      if (modulesGrid) {
-        const visibleModules = Array.from(modulesGrid.children).filter(card => 
-          card.style.display !== 'none' && card.style.visibility !== 'hidden'
-        );
-        
-        // Force mobile to always use single column
-        const isMobile = window.innerWidth <= 768;
-        
-        if (isMobile) {
-          modulesGrid.style.gridTemplateColumns = '1fr';
-          modulesGrid.style.maxWidth = '100%';
-          modulesGrid.style.margin = '0';
-        } else {
-          // Adjust grid columns based on number of visible modules for desktop
-          if (visibleModules.length === 1) {
-            modulesGrid.style.gridTemplateColumns = '1fr';
-            modulesGrid.style.maxWidth = '600px';
-            modulesGrid.style.margin = '0 auto';
-          } else if (visibleModules.length === 2) {
-            modulesGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
-            modulesGrid.style.maxWidth = 'none';
-            modulesGrid.style.margin = '0';
-          } else {
-            modulesGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-            modulesGrid.style.maxWidth = 'none';
-            modulesGrid.style.margin = '0';
-          }
-        }
-        
-        // Show message if no modules are accessible
-        if (modulesSection && visibleModules.length === 0) {
-          // Remove existing no-access message if any
-          const existingMsg = modulesSection.querySelector('.no-access-message');
-          if (existingMsg) {
-            existingMsg.remove();
-          }
-          
-          const noAccessMsg = document.createElement('div');
-          noAccessMsg.className = 'no-access-message';
-          noAccessMsg.style.cssText = 'text-align: center; padding: 3rem; color: var(--text-light);';
-          noAccessMsg.innerHTML = `
-            <h3 style="margin-bottom: 1rem; color: var(--text-dark);">No Module Access</h3>
-            <p>You don't have access to any modules yet. Please contact an administrator to grant access.</p>
-          `;
-          modulesSection.appendChild(noAccessMsg);
-        } else if (modulesSection) {
-          // Remove no-access message if modules are visible
-          const existingMsg = modulesSection.querySelector('.no-access-message');
-          if (existingMsg) {
-            existingMsg.remove();
-          }
-        }
-      }
-    }
-    
-    // Load welcome message on page load
-    document.addEventListener('DOMContentLoaded', function() {
-      // Ensure modules section is visible on load
-      const modulesSection = document.getElementById('modules');
-      if (modulesSection) {
-        modulesSection.style.display = 'block';
-        modulesSection.style.visibility = 'visible';
-        modulesSection.style.opacity = '1';
-      }
-      
-      const modulesGrid = document.getElementById('modulesGrid');
-      if (modulesGrid) {
-        modulesGrid.style.display = 'grid';
-        modulesGrid.style.visibility = 'visible';
-      }
-      
-      loadUserWelcome();
-      
-      // Also check immediately if user data exists
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          checkAndShowAdminMenu(user);
-          updateModuleVisibility(user);
-        } catch (e) {
-          console.error('Error parsing user from localStorage:', e);
-        }
-      } else {
-        // If no user data, fetch it
-        const token = localStorage.getItem('access_token');
-        if (token) {
-          fetch('/api/auth/me', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.user) {
-              localStorage.setItem('user', JSON.stringify(data.user));
-              checkAndShowAdminMenu(data.user);
-              updateModuleVisibility(data.user);
-            }
-          })
-          .catch(error => {
-            console.error('Failed to fetch user data:', error);
-          });
-        }
-      }
-      
-      // Enhanced scroll effect
-      const nav = document.getElementById('nav');
-      window.addEventListener('scroll', () => {
-        if (window.pageYOffset > 50) {
-          nav.classList.add('scrolled');
-        } else {
-          nav.classList.remove('scrolled');
-        }
-      });
-      
-      // Contact Modal Functions (make them global)
-      window.openContactModal = function() {
-        const modal = document.getElementById('contactModal');
-        if (modal) {
-          modal.classList.add('active');
-          document.body.style.overflow = 'hidden';
-        }
-      };
-      
-      window.closeContactModal = function() {
-        const modal = document.getElementById('contactModal');
-        if (modal) {
-          modal.classList.remove('active');
-          document.body.style.overflow = '';
-        }
-      };
-      
-      // Contact link click handler
-      const contactLink = document.getElementById('contactLink');
-      if (contactLink) {
-        contactLink.addEventListener('click', function(e) {
-          e.preventDefault();
-          openContactModal();
-        });
-      }
-      
-      // Close modal when clicking outside
-      const contactModal = document.getElementById('contactModal');
-      if (contactModal) {
-        contactModal.addEventListener('click', function(e) {
-          if (e.target === this) {
-            closeContactModal();
-          }
-        });
-      }
-      
-      // Close modal with Escape key
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-          closeContactModal();
-        }
-      });
-      
-      // Smooth scroll for anchor links
-      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-          e.preventDefault();
-          const target = document.querySelector(this.getAttribute('href'));
-          if (target) {
-            target.scrollIntoView({
-              behavior: 'smooth',
-              block: 'start'
-            });
-          }
-        });
-      });
-      
-      // Logout functionality
-      const logoutBtn = document.getElementById('logoutBtn');
-      
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', async function() {
-          try {
-            // Get token from localStorage
-            const token = localStorage.getItem('access_token');
-            
-            if (!token) {
-              // No token, just redirect to login
-              localStorage.clear();
-              window.location.href = '/login';
-              return;
-            }
-            
-            // Call logout API
-            const response = await fetch('/api/auth/logout', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              }
-            });
-            
-            // Clear local storage regardless of API response
-            localStorage.clear();
-            sessionStorage.clear();
-            
-            // Redirect to login page
-            window.location.href = '/login';
-            
-          } catch (error) {
-            console.error('Logout error:', error);
-            // Clear storage and redirect even if API call fails
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.href = '/login';
-          }
-        });
-      }
-    });
-  </script>
+  <!-- External Scripts -->
+  <script src="{{ url_for('static', filename='mobile_utils.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='signature_pad.umd.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocHub | Injaaz</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <style>
+    :root{--brand:#125435;--brand-light:#1a7a4e;--brand-xlight:#e8f5ee;--gray-50:#f7f8f7;--gray-100:#f0f2f0;--gray-200:#e2e6e2;--gray-300:#cdd3cd;--gray-400:#9ea89e;--gray-600:#5a6b5a;--gray-800:#2c3a2c;--radius:10px;--radius-sm:7px}
+    body.has-main-nav{padding-top:5.5rem;background:var(--gray-50);font-family:'DM Sans',sans-serif}
+    .dh-wrap{max-width:1320px;margin:0 auto;padding:24px 26px 36px}
+    .dh-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
+    .dh-title{font-size:24px;font-weight:700;color:var(--gray-800)}
+    .dh-sub{font-size:13px;color:var(--gray-400);margin-top:4px}
+    .dh-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .dh-btn{border:1px solid var(--gray-200);background:#fff;color:var(--gray-600);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer}
+    .dh-btn:hover{border-color:var(--gray-300);background:var(--gray-100)}
+    .dh-btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+    .dh-btn.primary:hover{background:var(--brand-light);border-color:var(--brand-light)}
+    .dh-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+    .dh-kpi{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);padding:14px 16px}
+    .dh-kpi .l{font-size:11px;color:var(--gray-400);text-transform:uppercase;font-weight:700;letter-spacing:.4px}
+    .dh-kpi .v{font-size:28px;font-weight:800;color:var(--gray-800);line-height:1.1;margin-top:8px}
+    .dh-tools{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+    .dh-search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-sm);padding:7px 10px;min-width:250px}
+    .dh-search input{border:none;outline:none;background:none;width:100%;font-size:13px}
+    .dh-filters{display:flex;gap:6px;flex-wrap:wrap}
+    .dh-chip{font-size:12px;font-weight:600;padding:6px 10px;border:1px solid var(--gray-200);background:#fff;border-radius:999px;cursor:pointer;color:var(--gray-600)}
+    .dh-chip.active{background:var(--brand-xlight);color:var(--brand);border-color:rgba(18,84,53,.2)}
+    .dh-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);overflow:hidden}
+    .dh-table{width:100%;border-collapse:collapse}
+    .dh-table th{background:var(--gray-50);font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--gray-400);font-weight:700;padding:10px 12px;text-align:left;border-bottom:1px solid var(--gray-200)}
+    .dh-table td{padding:11px 12px;border-bottom:1px solid var(--gray-100);font-size:13px;color:var(--gray-800)}
+    .dh-table tr:hover td{background:#fafbfa}
+    .dh-file{display:flex;align-items:center;gap:9px}
+    .dh-type{font-family:'DM Mono',monospace;font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;background:var(--gray-100);color:var(--gray-600)}
+    .dh-muted{font-size:12px;color:var(--gray-400)}
+    .dh-tag{font-size:11px;padding:3px 8px;border-radius:999px;background:var(--brand-xlight);color:var(--brand);font-weight:600}
+    .dh-status{font-size:12px;font-weight:700}
+    .dh-status.published{color:#16a34a}.dh-status.review{color:#1d4ed8}.dh-status.draft{color:#b45309}.dh-status.archived{color:#7b7b7b}
+    .dh-row-actions{display:flex;gap:6px}
+    .dh-icon{border:1px solid var(--gray-200);background:#fff;color:var(--gray-600);width:28px;height:28px;border-radius:6px;cursor:pointer}
+    .dh-icon:hover{background:var(--gray-100)}
+    .dh-empty{padding:30px;text-align:center;color:var(--gray-400)}
+    .dh-modal{position:fixed;inset:0;background:rgba(0,0,0,.38);display:none;align-items:center;justify-content:center;z-index:210}
+    .dh-modal.open{display:flex}
+    .dh-box{background:#fff;border-radius:12px;max-width:560px;width:96vw;border:1px solid var(--gray-200);overflow:hidden}
+    .dh-mh{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--gray-100)}
+    .dh-mt{font-size:15px;font-weight:700}
+    .dh-mb{padding:14px 16px}
+    .dh-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .dh-field label{display:block;font-size:11px;color:var(--gray-600);font-weight:700;margin-bottom:5px}
+    .dh-field input,.dh-field select{width:100%;padding:8px 10px;border:1px solid var(--gray-200);border-radius:7px;font-size:13px}
+    .dh-field input:focus,.dh-field select:focus{outline:none;border-color:var(--brand)}
+    .dh-mf{padding:12px 16px;border-top:1px solid var(--gray-100);display:flex;justify-content:flex-end;gap:8px}
+    .dh-toast{position:fixed;right:22px;bottom:22px;z-index:260;background:#2c3a2c;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transform:translateY(12px);transition:.2s}
+    .dh-toast.show{opacity:1;transform:translateY(0)}
+    @media(max-width:900px){.dh-kpis{grid-template-columns:1fr 1fr}.dh-grid{grid-template-columns:1fr}.dh-table{display:block;overflow-x:auto;white-space:nowrap}}
+  </style>
+</head>
+<body class="has-main-nav">
+  {% include 'partials/main_navbar.html' with context %}
+
+  <div class="dh-wrap">
+    <div class="dh-top">
+      <div>
+        <div class="dh-title">DocHub</div>
+        <div class="dh-sub">Manage documents across teams</div>
+      </div>
+      <div class="dh-actions">
+        <button class="dh-btn" id="dhAdminAccessBtn" style="display:none">Access Control</button>
+        <button class="dh-btn primary" id="dhUploadBtn">Upload Document</button>
+      </div>
+    </div>
+
+    <div class="dh-kpis">
+      <div class="dh-kpi"><div class="l">Total Documents</div><div class="v" id="kTotal">0</div></div>
+      <div class="dh-kpi"><div class="l">Published</div><div class="v" id="kPublished">0</div></div>
+      <div class="dh-kpi"><div class="l">In Review</div><div class="v" id="kReview">0</div></div>
+      <div class="dh-kpi"><div class="l">Storage Used</div><div class="v" id="kSize">0 MB</div></div>
+    </div>
+
+    <div class="dh-tools">
+      <div class="dh-search"><span>🔍</span><input id="dhSearch" placeholder="Search by name, tag, author"></div>
+      <div class="dh-filters">
+        <button class="dh-chip active" data-status="all">All</button>
+        <button class="dh-chip" data-status="published">Published</button>
+        <button class="dh-chip" data-status="review">In Review</button>
+        <button class="dh-chip" data-status="draft">Draft</button>
+        <button class="dh-chip" data-status="archived">Archived</button>
+      </div>
+    </div>
+
+    <div class="dh-card">
+      <table class="dh-table">
+        <thead>
+          <tr><th>Document</th><th>Category</th><th>Status</th><th>Author</th><th>Updated</th><th>Size</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="dhBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="dh-modal" id="dhUploadModal" onclick="if(event.target===this)closeUploadModal()">
+    <div class="dh-box">
+      <div class="dh-mh"><div class="dh-mt">Upload Document</div><button class="dh-btn" onclick="closeUploadModal()">✕</button></div>
+      <div class="dh-mb">
+        <div class="dh-grid">
+          <div class="dh-field"><label>Document Name</label><input id="uName" placeholder="e.g. API Reference v3.3"></div>
+          <div class="dh-field"><label>Category</label><select id="uCategory"><option>API</option><option>Guide</option><option>Legal</option><option>Spec</option><option>Internal</option></select></div>
+          <div class="dh-field"><label>Status</label><select id="uStatus"><option value="draft">Draft</option><option value="review">In Review</option><option value="published">Published</option></select></div>
+          <div class="dh-field"><label>File</label><input type="file" id="uFile" accept=".pdf,.docx,.xlsx,.xls,.pptx,.md,.zip"></div>
+        </div>
+      </div>
+      <div class="dh-mf"><button class="dh-btn" onclick="closeUploadModal()">Cancel</button><button class="dh-btn primary" onclick="submitUpload()">Upload</button></div>
+    </div>
+  </div>
+
+  <div class="dh-modal" id="dhAccessModal" onclick="if(event.target===this)closeAccessModal()">
+    <div class="dh-box" style="max-width:720px">
+      <div class="dh-mh"><div class="dh-mt">DocHub Access Control</div><button class="dh-btn" onclick="closeAccessModal()">✕</button></div>
+      <div class="dh-mb">
+        <div class="dh-muted" style="margin-bottom:10px">Admin can grant/revoke DocHub access per user.</div>
+        <table class="dh-table">
+          <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Access</th></tr></thead>
+          <tbody id="dhAccessBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="dh-toast" id="dhToast"></div>
+
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  <script>
+    (() => {
+      let docs = [];
+      let visible = [];
+      let activeStatus = 'all';
+      let me = null;
+
+      const h = () => ({'Content-Type':'application/json','Authorization':'Bearer ' + (localStorage.getItem('access_token') || '')});
+      const show = (msg, bad=false) => { const t = document.getElementById('dhToast'); t.textContent = msg; t.style.background = bad ? '#c5221f' : '#2c3a2c'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); };
+      const esc = (v) => { const d=document.createElement('div'); d.textContent = v == null ? '' : String(v); return d.innerHTML; };
+
+      async function getMe() {
+        const r = await fetch('/api/auth/me',{headers:h()});
+        if (r.ok) { const j = await r.json(); me = j.user || null; }
+      }
+
+      function statusClass(s){return s==='published'?'published':s==='review'?'review':s==='draft'?'draft':'archived'}
+      function typeFromName(name){const p=(name||'').split('.');return p.length>1?p[p.length-1].toUpperCase():'FILE'}
+
+      function updateKpis() {
+        const total = docs.length;
+        const published = docs.filter(d => d.status === 'published').length;
+        const review = docs.filter(d => d.status === 'review').length;
+        const sizeB = docs.reduce((a,d)=>a + Number(d.sizeB || 0), 0);
+        const sizeMB = (sizeB / (1024*1024)).toFixed(1);
+        document.getElementById('kTotal').textContent = total;
+        document.getElementById('kPublished').textContent = published;
+        document.getElementById('kReview').textContent = review;
+        document.getElementById('kSize').textContent = `${sizeMB} MB`;
+      }
+
+      function renderRows() {
+        const body = document.getElementById('dhBody');
+        if (!visible.length) {
+          body.innerHTML = '<tr><td colspan="7" class="dh-empty">No documents found</td></tr>';
+          return;
+        }
+        body.innerHTML = visible.map(d => `
+          <tr>
+            <td><div class="dh-file"><span class="dh-type">${esc(typeFromName(d.filename || d.name))}</span><div><div>${esc(d.name)}</div><div class="dh-muted">${esc(d.filename || '')}</div></div></div></td>
+            <td><span class="dh-tag">${esc(d.tag || 'Internal')}</span></td>
+            <td><span class="dh-status ${statusClass(d.status)}">${esc((d.status || '').replace(/^./, c=>c.toUpperCase()))}</span></td>
+            <td>${esc(d.author || '')}</td>
+            <td>${esc(d.date || '')}</td>
+            <td>${esc(d.size || '')}</td>
+            <td><div class="dh-row-actions">
+              <button class="dh-icon" onclick="downloadDoc(${Number(d.id)})">⬇</button>
+              <button class="dh-icon" onclick="toggleStar(${Number(d.id)}, ${d.starred ? 'false' : 'true'})">${d.starred ? '★' : '☆'}</button>
+              <button class="dh-icon" onclick="deleteDoc(${Number(d.id)})">🗑</button>
+            </div></td>
+          </tr>
+        `).join('');
+      }
+
+      function applyFilters() {
+        const q = (document.getElementById('dhSearch').value || '').toLowerCase().trim();
+        visible = docs.filter(d => {
+          const statusMatch = activeStatus === 'all' || d.status === activeStatus;
+          const qMatch = !q || (d.name || '').toLowerCase().includes(q) || (d.tag || '').toLowerCase().includes(q) || (d.author || '').toLowerCase().includes(q);
+          return statusMatch && qMatch;
+        });
+        renderRows();
+      }
+
+      async function loadDocs() {
+        const a = await fetch('/api/docs/access-check',{headers:h()});
+        if (a.status === 401) { window.location.href = '/login'; return; }
+        const aj = await a.json().catch(()=>({}));
+        const allow = aj?.data?.allowed;
+        const isAdmin = aj?.data?.is_admin;
+        if (!allow) {
+          document.getElementById('dhBody').innerHTML = '<tr><td colspan="7" class="dh-empty">Access denied. Contact your admin.</td></tr>';
+          return;
+        }
+        document.getElementById('dhAdminAccessBtn').style.display = isAdmin ? 'inline-flex' : 'none';
+
+        const r = await fetch('/api/docs',{headers:h()});
+        const j = await r.json().catch(()=>({}));
+        if (!r.ok || j.success === false) { show(j.error || 'Failed to load docs', true); return; }
+        docs = j.data?.documents || j.documents || [];
+        updateKpis();
+        applyFilters();
+      }
+
+      async function submitUpload() {
+        const file = document.getElementById('uFile').files[0];
+        if (!file) { show('Select a file first', true); return; }
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('name', document.getElementById('uName').value || '');
+        fd.append('category', document.getElementById('uCategory').value || 'Internal');
+        fd.append('status', document.getElementById('uStatus').value || 'draft');
+        const token = localStorage.getItem('access_token') || '';
+        const r = await fetch('/api/docs/upload',{method:'POST',headers:{'Authorization':'Bearer ' + token},body:fd});
+        const j = await r.json().catch(()=>({}));
+        if (!r.ok || j.success === false) { show(j.error || 'Upload failed', true); return; }
+        closeUploadModal();
+        show('Document uploaded', false);
+        await loadDocs();
+      }
+
+      async function toggleStar(id, starred) {
+        const r = await fetch(`/api/docs/${id}`,{method:'PATCH',headers:h(),body:JSON.stringify({starred: starred === 'true'})});
+        const j = await r.json().catch(()=>({}));
+        if (!r.ok || j.success === false) { show(j.error || 'Failed to update', true); return; }
+        await loadDocs();
+      }
+
+      async function deleteDoc(id) {
+        if (!confirm('Delete this document?')) return;
+        const r = await fetch(`/api/docs/${id}`,{method:'DELETE',headers:h()});
+        const j = await r.json().catch(()=>({}));
+        if (!r.ok || j.success === false) { show(j.error || 'Delete failed', true); return; }
+        show('Document deleted');
+        await loadDocs();
+      }
+
+      async function downloadDoc(id) {
+        const token = localStorage.getItem('access_token') || '';
+        const r = await fetch(`/api/docs/${id}/download`,{headers:{'Authorization':'Bearer ' + token}});
+        if (!r.ok) { show('Download failed', true); return; }
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      async function openAccessModal() {
+        const r = await fetch('/api/admin/dochub/access-users',{headers:h()});
+        const j = await r.json().catch(()=>({}));
+        if (!r.ok || j.success === false) { show(j.error || 'Failed to load access users', true); return; }
+        const users = j.data?.users || [];
+        const body = document.getElementById('dhAccessBody');
+        body.innerHTML = users.map(u => `
+          <tr>
+            <td>${esc(u.full_name || u.username)}</td>
+            <td>${esc(u.email)}</td>
+            <td>${esc(u.role)}</td>
+            <td>${u.role === 'admin' ? '<span class="dh-tag">Always Allowed</span>' : `<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" ${u.can_access_dochub ? 'checked' : ''} onchange="setUserAccess(${u.id}, this.checked)"> <span>${u.can_access_dochub ? 'Allowed' : 'Blocked'}</span></label>`}</td>
+          </tr>
+        `).join('');
+        document.getElementById('dhAccessModal').classList.add('open');
+      }
+
+      function closeAccessModal(){ document.getElementById('dhAccessModal').classList.remove('open'); }
+      function openUploadModal(){ document.getElementById('dhUploadModal').classList.add('open'); }
+      function closeUploadModal(){ document.getElementById('dhUploadModal').classList.remove('open'); }
+
+      async function setUserAccess(userId, canAccess) {
+        const r = await fetch(`/api/admin/dochub/access-users/${userId}`,{
+          method:'POST',
+          headers:h(),
+          body:JSON.stringify({can_access:!!canAccess})
+        });
+        const j = await r.json().catch(()=>({}));
+        if (!r.ok || j.success === false) { show(j.error || 'Failed to update access', true); return; }
+        show('Access updated');
+      }
+
+      document.getElementById('dhUploadBtn').addEventListener('click', openUploadModal);
+      document.getElementById('dhAdminAccessBtn').addEventListener('click', openAccessModal);
+      document.getElementById('dhSearch').addEventListener('input', applyFilters);
+      document.querySelectorAll('.dh-chip[data-status]').forEach(chip => {
+        chip.addEventListener('click', () => {
+          document.querySelectorAll('.dh-chip[data-status]').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          activeStatus = chip.dataset.status || 'all';
+          applyFilters();
+        });
+      });
+
+      window.submitUpload = submitUpload;
+      window.openUploadModal = openUploadModal;
+      window.closeUploadModal = closeUploadModal;
+      window.downloadDoc = downloadDoc;
+      window.toggleStar = toggleStar;
+      window.deleteDoc = deleteDoc;
+      window.closeAccessModal = closeAccessModal;
+      window.setUserAccess = setUserAccess;
+
+      getMe().then(loadDocs).catch(() => loadDocs());
+    })();
+  </script>
+</body>
+</html>

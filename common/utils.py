@@ -8,6 +8,26 @@ from werkzeug.utils import secure_filename
 
 logger = logging.getLogger(__name__)
 
+
+def is_path_safe_for_directory(base_dir, file_path):
+    """
+    Verify that the resolved file_path is inside base_dir (prevents path traversal).
+    
+    Args:
+        base_dir: Base directory that file_path must be under
+        file_path: Path to validate (may contain .. or symlinks)
+    
+    Returns:
+        bool: True if file_path resolves to a path under base_dir, False otherwise
+    """
+    try:
+        base_real = os.path.realpath(os.path.abspath(base_dir))
+        path_real = os.path.realpath(os.path.abspath(file_path))
+        # Ensure path_real is under base_real (commonpath trick works for containment)
+        return os.path.commonpath([base_real, path_real]) == base_real
+    except (ValueError, OSError):
+        return False
+
 # Try importing fcntl for file locking (Unix only)
 try:
     import fcntl
@@ -309,23 +329,21 @@ def save_uploaded_file_cloud(file_storage, uploads_dir, folder="uploads"):
             logger.error(f"Final fallback failed: {final_error}")
             raise Exception(f"Complete file upload failure: {str(e)}")
 
-def upload_base64_to_cloud(base64_string, folder="base64_uploads", prefix=None):
+def upload_base64_to_cloud(base64_string, folder="base64_uploads", prefix=None, uploads_dir=None):
     """
-    Upload a base64-encoded image to Cloudinary with retry logic.
+    Upload a base64-encoded image to Cloudinary with retry logic and local fallback.
     
     Args:
         base64_string: Base64 data URI string (e.g., "data:image/png;base64,...")
-        folder: Cloudinary folder name
+        folder: Cloudinary folder name (also used as subdirectory for local storage)
         prefix: Optional filename prefix for the uploaded file
+        uploads_dir: Local directory for fallback storage (optional)
         
     Returns:
-        tuple: (cloudinary_url, True) if successful
-        
-    Raises:
-        Exception: If upload fails (cloud-only mode)
+        tuple: (url, is_cloud) where url is either cloudinary_url or local URL
     """
-    import cloudinary.uploader
-    from .retry_utils import upload_to_cloudinary_with_retry
+    import io
+    import base64 as b64_module
     
     if not base64_string or not isinstance(base64_string, str):
         raise Exception("Invalid base64 string provided")
@@ -334,7 +352,11 @@ def upload_base64_to_cloud(base64_string, folder="base64_uploads", prefix=None):
     if not base64_string.startswith('data:'):
         raise Exception("Base64 string doesn't start with 'data:' - invalid format")
     
+    # Try cloud upload first if Cloudinary is available
     try:
+        import cloudinary.uploader
+        from .retry_utils import upload_to_cloudinary_with_retry
+        
         upload_options = {
             "folder": folder,
             "resource_type": "image"
@@ -353,11 +375,76 @@ def upload_base64_to_cloud(base64_string, folder="base64_uploads", prefix=None):
         if not cloud_url:
             raise Exception("Cloudinary upload succeeded but no URL returned")
         
+        logger.info(f"✅ Base64 image uploaded to cloud: {cloud_url}")
         return cloud_url, True
         
+    except ImportError:
+        # Cloudinary not available - use local fallback
+        logger.info("Cloudinary not available, using local storage for base64 image")
     except Exception as e:
-        logger.error(f"Failed to upload base64 to cloud: {e}")
-        raise Exception(f"Cloud upload failed: {str(e)}")
+        # Cloud upload failed - fall back to local storage
+        logger.warning(f"Cloud upload failed for base64 image: {e}. Falling back to local storage.")
+    
+    # Fallback to local storage
+    if not uploads_dir:
+        # Try to get uploads directory from config
+        try:
+            from config import UPLOADS_DIR
+            uploads_dir = UPLOADS_DIR
+        except ImportError:
+            # Fallback: create uploads directory in current directory
+            uploads_dir = os.path.join(os.getcwd(), "generated", "uploads")
+            ensure_dir(uploads_dir)
+    
+    try:
+        # Parse the data URI
+        header, encoded = base64_string.split(',', 1)
+        
+        # Extract mime type from header (e.g., "data:image/png;base64")
+        mime_type = header.split(';')[0].split(':')[1] if ':' in header else 'image/png'
+        ext_map = {
+            'image/png': '.png',
+            'image/jpeg': '.jpg',
+            'image/jpg': '.jpg',
+            'image/gif': '.gif',
+            'image/webp': '.webp'
+        }
+        ext = ext_map.get(mime_type, '.png')
+        
+        # Decode base64
+        image_data = b64_module.b64decode(encoded)
+        
+        # Generate filename
+        if prefix:
+            filename = f"{prefix}_{random_id('img')}{ext}"
+        else:
+            filename = f"{random_id('img')}{ext}"
+        
+        # Create subdirectory if needed (mirror Cloudinary folder structure)
+        if folder:
+            save_dir = os.path.join(uploads_dir, folder)
+            ensure_dir(save_dir)
+        else:
+            save_dir = uploads_dir
+        
+        # Save file
+        file_path = os.path.join(save_dir, filename)
+        with open(file_path, 'wb') as f:
+            f.write(image_data)
+        
+        # Generate URL (relative to generated directory)
+        from config import GENERATED_DIR, BASE_DIR
+        relative_path = os.path.relpath(file_path, GENERATED_DIR)
+        # Normalize path separators for URL
+        url_path = relative_path.replace('\\', '/')
+        local_url = f"/generated/{url_path}"
+        
+        logger.info(f"✅ Base64 image saved locally: {local_url}")
+        return local_url, False
+        
+    except Exception as e:
+        logger.error(f"Failed to save base64 image locally: {e}")
+        raise Exception(f"Both cloud and local storage failed: {str(e)}")
 
 def get_image_for_pdf(image_info):
     """
@@ -387,6 +474,29 @@ def get_image_for_pdf(image_info):
                 logger.error(f"Failed to decode data URI: {e}")
                 return None, False
         
+        # Check if it's a relative URL path like /generated/uploads/...
+        if image_info.startswith('/generated/'):
+            try:
+                from config import GENERATED_DIR
+                # Remove /generated/ prefix and convert to local path
+                relative_path = image_info.replace('/generated/', '')
+                local_path = os.path.join(GENERATED_DIR, relative_path)
+                if os.path.exists(local_path):
+                    logger.info(f"Found local image at: {local_path}")
+                    return local_path, False
+            except Exception as e:
+                logger.warning(f"Failed to resolve local path for {image_info}: {e}")
+        
+        # Check if it's a full URL (http/https)
+        if image_info.startswith('http://') or image_info.startswith('https://'):
+            try:
+                response = fetch_url_with_retry(image_info, timeout=10)
+                return io.BytesIO(response.content), True
+            except Exception as e:
+                logger.error(f"Failed to fetch URL {image_info}: {e}")
+                return None, False
+        
+        # Try as direct file path
         if os.path.exists(image_info):
             return image_info, False
         return None, False
@@ -405,8 +515,21 @@ def get_image_for_pdf(image_info):
                 logger.error(f"Failed to decode data URI: {e}")
                 return None, False
         
-        # Try cloud URL with retry
-        if url and image_info.get('is_cloud'):
+        # Try to resolve relative URL paths like /generated/uploads/...
+        if url and url.startswith('/generated/'):
+            try:
+                from config import GENERATED_DIR
+                # Remove /generated/ prefix and convert to local path
+                relative_path = url.replace('/generated/', '')
+                local_path = os.path.join(GENERATED_DIR, relative_path)
+                if os.path.exists(local_path):
+                    logger.info(f"Found local image at: {local_path}")
+                    return local_path, False
+            except Exception as e:
+                logger.warning(f"Failed to resolve local path for {url}: {e}")
+        
+        # Try cloud URL with retry (for full URLs or when is_cloud is True)
+        if url and (image_info.get('is_cloud') or url.startswith('http://') or url.startswith('https://')):
             try:
                 response = fetch_url_with_retry(url, timeout=10)
                 return io.BytesIO(response.content), True

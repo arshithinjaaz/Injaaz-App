@@ -53,9 +53,16 @@ DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 # REDIS (for rate limiting and background tasks)
 REDIS_URL = os.getenv("REDIS_URL")
 
-# JWT Settings
-JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 3600))  # 1 hour
-JWT_REFRESH_TOKEN_EXPIRES = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES", 2592000))  # 30 days
+# JWT Settings - Token expiry times (configurable via environment variables)
+# JWT_ACCESS_HOURS: Number of hours for access token validity (default: 1 hour)
+# JWT_REFRESH_DAYS: Number of days for refresh token validity (default: 7 days)
+from datetime import timedelta
+
+_jwt_access_hours = int(os.getenv("JWT_ACCESS_HOURS", 1))
+_jwt_refresh_days = int(os.getenv("JWT_REFRESH_DAYS", 7))
+
+JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=_jwt_access_hours)
+JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=_jwt_refresh_days)
 # JWT Cookie Settings - Enable cookie-based authentication for HTML links
 JWT_TOKEN_LOCATION = ['headers', 'cookies']  # Read from both headers and cookies
 JWT_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"  # HTTPS only in production
@@ -83,7 +90,11 @@ SESSION_COOKIE_SAMESITE = "Lax"
 # SQLALCHEMY
 SQLALCHEMY_DATABASE_URI = DATABASE_URL
 SQLALCHEMY_TRACK_MODIFICATIONS = False
+# SQLite does not support pool_size, max_overflow, pool_timeout - use minimal options
+_use_sqlite = DATABASE_URL and 'sqlite' in DATABASE_URL.lower()
 SQLALCHEMY_ENGINE_OPTIONS = {
+    'echo': False,                   # Don't log all SQL queries (set to True for debugging)
+} if _use_sqlite else {
     'pool_pre_ping': True,           # Check connections before using
     'pool_recycle': 300,             # Recycle connections every 5 minutes
     'pool_size': 5,                  # Number of connections to maintain (reduced for free tier)

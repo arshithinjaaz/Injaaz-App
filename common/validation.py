@@ -9,6 +9,10 @@ class HVACItemSchema(Schema):
     asset = fields.Str(required=True, validate=validate.Length(min=1, max=200))
     system = fields.Str(required=True, validate=validate.Length(min=1, max=200))
     description = fields.Str(required=True, validate=validate.Length(min=1, max=1000))
+    quantity = fields.Str(required=False, allow_none=True, validate=validate.Length(max=50))
+    brand = fields.Str(required=False, allow_none=True, validate=validate.Length(max=200))
+    specification = fields.Str(required=False, allow_none=True, validate=validate.Length(max=500))
+    comments = fields.Str(required=False, allow_none=True, validate=validate.Length(max=1000))
     photo_urls = fields.List(fields.URL(), required=False)
 
 class HVACSubmissionSchema(Schema):
@@ -17,6 +21,8 @@ class HVACSubmissionSchema(Schema):
     visit_date = fields.Date(required=True)
     tech_signature = fields.Str(required=False, allow_none=True)
     opMan_signature = fields.Str(required=False, allow_none=True)
+    supervisor_signature = fields.Str(required=False, allow_none=True)
+    supervisor_comments = fields.Str(required=False, allow_none=True, validate=validate.Length(max=2000))
     items = fields.List(fields.Nested(HVACItemSchema), required=True, validate=validate.Length(min=1))
     
     @validates('visit_date')

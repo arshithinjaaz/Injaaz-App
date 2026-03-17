@@ -6,7 +6,32 @@ import logging
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
+
+# Dubai timezone offset (Gulf Standard Time, UTC+4)
+DUBAI_OFFSET = timedelta(hours=4)
+
+def get_dubai_time():
+    """Get current time in Dubai timezone (GST - Gulf Standard Time, UTC+4)"""
+    utc_now = datetime.utcnow()
+    return utc_now + DUBAI_OFFSET
+
+def format_dubai_datetime(dt=None, format_str='%Y-%m-%d %H:%M:%S'):
+    """Format datetime in Dubai timezone (GST, UTC+4)"""
+    if dt is None:
+        dt = get_dubai_time()
+    elif isinstance(dt, datetime):
+        # Assume UTC if naive, add Dubai offset
+        if dt.tzinfo is None:
+            dt = dt + DUBAI_OFFSET
+        else:
+            # Convert to UTC first, then add Dubai offset
+            from datetime import timezone as dt_timezone
+            utc_dt = dt.astimezone(dt_timezone.utc).replace(tzinfo=None)
+            dt = utc_dt + DUBAI_OFFSET
+    else:
+        dt = get_dubai_time()
+    return dt.strftime(format_str)
 from io import BytesIO
 
 import base64
@@ -22,6 +47,14 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from common.utils import get_image_for_pdf
 
 logger = logging.getLogger(__name__)
+
+# Try importing PIL for better image handling
+try:
+    from PIL import Image as PILImage
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+    logger.warning("PIL/Pillow not available - signature aspect ratio may not be perfectly preserved")
 
 # Try importing professional PDF service, fall back if unavailable
 try:
@@ -61,9 +94,9 @@ def create_excel_report(data, output_dir):
         logger.info(f"Creating professional Cleaning Excel report in {output_dir}")
         
         # Generate filename
-        site_name = data.get('client_name', 'Unknown_Client').replace(' ', '_')
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        excel_filename = f"Cleaning_Assessment_{site_name}_{timestamp}.xlsx"
+        project_name = data.get('project_name', 'Unknown_Project').replace(' ', '_')
+        timestamp = get_dubai_time().strftime('%Y%m%d_%H%M%S')
+        excel_filename = f"Cleaning_Assessment_{project_name}_{timestamp}.xlsx"
         excel_path = os.path.join(output_dir, excel_filename)
         
         # Create professional workbook
@@ -72,45 +105,24 @@ def create_excel_report(data, output_dir):
             sheet_name="Assessment Report"
         )
         
-        # Add logo and title
+        # Add logo and title (span across all columns)
         current_row = add_logo_and_title(
             ws,
-            title="SITE ASSESSMENT REPORT - CLEANING",
-            subtitle=f"Client: {site_name.replace('_', ' ')}"
+            title="CLEANING ASSESSMENT REPORT",
+            subtitle=f"Project: {project_name.replace('_', ' ')}",
+            max_columns=4
         )
         
-        # Site Information Section
-        site_info = [
-            ('Client Name', data.get('client_name', 'N/A')),
-            ('Site Location', data.get('site_location', 'N/A')),
-            ('Assessment Date', data.get('assessment_date', 'N/A')),
-            ('Report Generated', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        ]
-        
-        current_row = add_info_section(ws, site_info, current_row, title="Site Information")
-        
-        # Project & Client Details Section
-        client_details = [
+        # Project & Client Details Section (span across all columns)
+        project_info = [
             ('Project Name', data.get('project_name', 'N/A')),
-            ('Site Address', data.get('site_address', 'N/A')),
             ('Date of Visit', data.get('date_of_visit', 'N/A')),
-            ('Key Person', data.get('key_person_name', 'N/A')),
-            ('Contact Number', data.get('contact_number', 'N/A'))
+            ('Report Generated', format_dubai_datetime() + ' (GST)')
         ]
         
-        current_row = add_info_section(ws, client_details, current_row, title="Project & Client Details")
+        current_row = add_info_section(ws, project_info, current_row, title="Project & Client Details", max_columns=4)
         
-        # Site Count & Operations Section
-        operations_data = [
-            ('Room Count', str(data.get('room_count', 'N/A'))),
-            ('Current Team Size', str(data.get('current_team_size', 'N/A'))),
-            ('Lift Count', str(data.get('lift_count_total', 'N/A'))),
-            ('Team Description', data.get('current_team_desc', 'N/A'))
-        ]
-        
-        current_row = add_info_section(ws, operations_data, current_row, title="Site Count & Current Operations")
-        
-        # Facility Areas Section
+        # Facility Areas Section (span across all columns)
         facility_data = [
             ('Floor', data.get('facility_floor', 'N/A')),
             ('Ground Parking', data.get('facility_ground_parking', 'N/A')),
@@ -129,9 +141,9 @@ def create_excel_report(data, output_dir):
             ('Cleaner Count', data.get('facility_cleaner_count', 'N/A'))
         ]
         
-        current_row = add_info_section(ws, facility_data, current_row, title="Facility Area Counts")
+        current_row = add_info_section(ws, facility_data, current_row, title="Facility Area Counts", max_columns=4)
         
-        # Cleaning Scope Section
+        # Cleaning Scope Section (span across all columns)
         scope_data = [
             ('Offices', '✓' if data.get('scope_offices') == 'True' else '✗'),
             ('Toilets/Washrooms', '✓' if data.get('scope_toilets') == 'True' else '✗'),
@@ -141,37 +153,50 @@ def create_excel_report(data, output_dir):
             ('Special Care Areas', '✓' if data.get('scope_special_care') == 'True' else '✗')
         ]
         
-        current_row = add_info_section(ws, scope_data, current_row, title="Cleaning Requirements & Scope")
+        current_row = add_info_section(ws, scope_data, current_row, title="Cleaning Requirements & Scope", max_columns=4)
         
-        # Deep Cleaning Section
+        # Deep Cleaning Section (span across all columns)
         deep_clean_data = [
             ('Deep Cleaning Required', data.get('deep_clean_required', 'No')),
             ('Areas to Deep Clean', data.get('deep_clean_areas', 'N/A'))
         ]
         
-        current_row = add_info_section(ws, deep_clean_data, current_row, title="Deep Cleaning")
+        current_row = add_info_section(ws, deep_clean_data, current_row, title="Deep Cleaning", max_columns=4)
         
-        # Safety & Staffing Section
-        safety_data = [
-            ('Working Hours', data.get('working_hours', 'N/A')),
-            ('Required Team Size', data.get('required_team_size', 'N/A')),
-            ('Site Access Requirements', data.get('site_access_requirements', 'N/A')),
-            ('Equipment Condition', data.get('facility_equipment_condition', 'N/A')),
-            ('Required Equipment', data.get('required_equipment', 'N/A')),
-            ('High-Risk Areas', data.get('high_risk_areas', 'N/A')),
-            ('Safety Measures/PPE', data.get('suggested_safety_ppe', 'N/A'))
+        # Waste Disposal Section (span across all columns)
+        waste_disposal_data = [
+            ('Waste Disposal Required', data.get('waste_disposal_required', 'No')),
+            ('Method of Disposal', data.get('waste_disposal_method', 'N/A'))
         ]
         
-        current_row = add_info_section(ws, safety_data, current_row, title="Safety & Staffing")
+        current_row = add_info_section(ws, waste_disposal_data, current_row, title="Waste Disposal", max_columns=4)
         
-        # General Comments Section
+        # Special Considerations Section (span across all columns)
+        special_considerations_data = [
+            ('Restricted Access Areas', data.get('restricted_access', 'N/A')),
+            ('Pest Control Needed', data.get('pest_control', 'N/A'))
+        ]
+        
+        current_row = add_info_section(ws, special_considerations_data, current_row, title="Special Considerations", max_columns=4)
+        
+        # Safety & Staffing Section (span across all columns)
+        safety_data = [
+            ('Working Hours', data.get('working_hours', 'N/A')),
+            ('Required Team Size', str(data.get('required_team_size', 'N/A'))),
+            ('Site Access Requirements', data.get('site_access_requirements', 'N/A'))
+        ]
+        
+        current_row = add_info_section(ws, safety_data, current_row, title="Safety & Staffing", max_columns=4)
+        
+        # General Comments Section (span across all columns)
         comments_data = [
             ('Comments', data.get('general_comments', 'N/A'))
         ]
         
-        current_row = add_info_section(ws, comments_data, current_row, title="General Comments")
+        current_row = add_info_section(ws, comments_data, current_row, title="General Comments", max_columns=4)
         
         # Signatures Section - REMOVED from Excel (images/signatures not needed in Excel)
+        # Excel reports should only contain data, not images or signatures
         
         # Finalize formatting
         finalize_workbook(ws)
@@ -188,43 +213,21 @@ def create_excel_report(data, output_dir):
     except Exception as e:
         logger.error(f"❌ Cleaning Excel generation error: {str(e)}")
         raise
-        ws.merge_cells(f'A{row}:D{row}')
-        row += 1
-        
-        ws[f'A{row}'] = data.get('general_comments', 'No comments provided.')
-        ws.merge_cells(f'A{row}:D{row}')
-        ws[f'A{row}'].alignment = Alignment(wrap_text=True, vertical='top')
-        ws.row_dimensions[row].height = 60
-        
-        # Adjust column widths
-        ws.column_dimensions['A'].width = 25
-        ws.column_dimensions['B'].width = 20
-        ws.column_dimensions['C'].width = 20
-        ws.column_dimensions['D'].width = 20
-        
-        # Save workbook
-        wb.save(excel_path)
-        
-        if not os.path.exists(excel_path):
-            raise Exception(f"Excel file not created at {excel_path}")
-        
-        logger.info(f"✅ Excel report created: {excel_path}")
-        return excel_path
-        
-    except Exception as e:
-        logger.error(f"❌ Excel generation error: {str(e)}")
-        raise
 
 
 def create_pdf_report(data, output_dir):
     """Generate comprehensive professional Cleaning Assessment PDF report."""
     try:
         logger.info(f"Creating professional Cleaning PDF report in {output_dir}")
+        logger.info(f"📊 PDF Generator - Data keys: {list(data.keys())}")
+        logger.info(f"📸 PDF Generator - Photos key exists: {'photos' in data}")
+        logger.info(f"📸 PDF Generator - Photos value type: {type(data.get('photos', None))}")
+        logger.info(f"📸 PDF Generator - Photos count: {len(data.get('photos', [])) if data.get('photos') else 0}")
         
         # Generate filename
-        site_name = data.get('client_name', 'Unknown_Client').replace(' ', '_')
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        pdf_filename = f"Cleaning_Assessment_{site_name}_{timestamp}.pdf"
+        project_name = data.get('project_name', 'Unknown_Project').replace(' ', '_')
+        timestamp = get_dubai_time().strftime('%Y%m%d_%H%M%S')
+        pdf_filename = f"Cleaning_Assessment_{project_name}_{timestamp}.pdf"
         pdf_path = os.path.join(output_dir, pdf_filename)
         
         story = []
@@ -233,69 +236,102 @@ def create_pdf_report(data, output_dir):
         # HEADER WITH LOGO
         create_header_with_logo(
             story,
-            "SITE ASSESSMENT REPORT",
-            "Cleaning Services"
+            "CLEANING ASSESSMENT REPORT",
+            f"Project: {data.get('project_name', 'N/A')}"
         )
+        
+        # Compact separator (match HVAC formatting)
+        story.append(Spacer(1, 0.04*inch))
         
         # PROJECT & CLIENT DETAILS
         add_section_heading(story, "Project & Client Details")
         
-        client_info = [
-            ['Client Name:', data.get('client_name', 'N/A')],
+        project_info_data = [
             ['Project Name:', data.get('project_name', 'N/A')],
-            ['Site Address:', data.get('site_address', 'N/A')],
             ['Date of Visit:', data.get('date_of_visit', 'N/A')],
-            ['Key Person:', data.get('key_person_name', 'N/A')],
-            ['Contact Number:', data.get('contact_number', 'N/A')],
+            ['Supervisor:', data.get('technician_name', 'N/A')],
         ]
         
-        client_table = Table(client_info, colWidths=[4*cm, 12*cm])
-        client_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E8F5E9')),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 6),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ]))
-        story.append(client_table)
-        story.append(Spacer(1, 0.3*inch))
+        story.append(create_info_table(project_info_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
         
-        # SITE COUNT & OPERATIONS
-        add_section_heading(story, "Site Count & Current Operations")
-        operations_data = [
-            ['Room Count:', str(data.get('room_count', 'N/A'))],
-            ['Current Team Size:', str(data.get('current_team_size', 'N/A'))],
-            ['Lift Count:', str(data.get('lift_count_total', 'N/A'))],
-            ['Team Description:', str(data.get('current_team_desc', 'N/A'))],
+        # FACILITY AREA COUNTS
+        add_section_heading(story, "Facility Area Counts")
+        facility_data = [
+            ['Floor:', data.get('facility_floor', 'N/A')],
+            ['Ground Parking:', str(data.get('facility_ground_parking', 'N/A'))],
+            ['Basement:', str(data.get('facility_basement', 'N/A'))],
+            ['Podium:', str(data.get('facility_podium', 'N/A'))],
+            ['Gym Room:', str(data.get('facility_gym_room', 'N/A'))],
+            ['Swimming Pool:', str(data.get('facility_swimming_pool', 'N/A'))],
+            ['Washroom (Male):', str(data.get('facility_washroom_male', 'N/A'))],
+            ['Washroom (Female):', str(data.get('facility_washroom_female', 'N/A'))],
+            ['Changing Room:', str(data.get('facility_changing_room', 'N/A'))],
+            ['Kids Play Area:', str(data.get('facility_play_kids_place', 'N/A'))],
+            ['Garbage Room:', str(data.get('facility_garbage_room', 'N/A'))],
+            ['Floor Chute Room:', str(data.get('facility_floor_chute_room', 'N/A'))],
+            ['Staircase:', str(data.get('facility_staircase', 'N/A'))],
+            ['Floor Service Room:', str(data.get('facility_floor_service_room', 'N/A'))],
+            ['Cleaner Count:', str(data.get('facility_cleaner_count', 'N/A'))],
         ]
+        story.append(create_info_table(facility_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
         
-        ops_table = Table(operations_data, colWidths=[4*cm, 12*cm])
-        ops_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E8F5E9')),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 6),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ]))
-        story.append(ops_table)
-        story.append(Spacer(1, 0.3*inch))
+        # CLEANING REQUIREMENTS & SCOPE
+        add_section_heading(story, "Cleaning Requirements & Scope")
+        scope_data = [
+            ['Offices:', '✓' if data.get('scope_offices') == 'True' else '✗'],
+            ['Toilets/Washrooms:', '✓' if data.get('scope_toilets') == 'True' else '✗'],
+            ['Corridors/Hallways:', '✓' if data.get('scope_hallways') == 'True' else '✗'],
+            ['Kitchen/Pantry:', '✓' if data.get('scope_kitchen') == 'True' else '✗'],
+            ['Building Exterior:', '✓' if data.get('scope_exterior') == 'True' else '✗'],
+            ['Special Care Areas:', '✓' if data.get('scope_special_care') == 'True' else '✗'],
+        ]
+        story.append(create_info_table(scope_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
+        
+        # DEEP CLEANING
+        add_section_heading(story, "Deep Cleaning")
+        deep_clean_data = [
+            ['Deep Cleaning Required:', data.get('deep_clean_required', 'No')],
+            ['Areas to Deep Clean:', data.get('deep_clean_areas', 'N/A')],
+        ]
+        story.append(create_info_table(deep_clean_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
+        
+        # WASTE DISPOSAL
+        add_section_heading(story, "Waste Disposal")
+        waste_disposal_data = [
+            ['Waste Disposal Required:', data.get('waste_disposal_required', 'No')],
+            ['Method of Disposal:', data.get('waste_disposal_method', 'N/A')],
+        ]
+        story.append(create_info_table(waste_disposal_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
+        
+        # SPECIAL CONSIDERATIONS
+        add_section_heading(story, "Special Considerations")
+        special_considerations_data = [
+            ['Restricted Access Areas:', data.get('restricted_access', 'N/A')],
+            ['Pest Control Needed:', data.get('pest_control', 'N/A')],
+        ]
+        story.append(create_info_table(special_considerations_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
+        
+        # SAFETY & STAFFING
+        add_section_heading(story, "Safety & Staffing")
+        safety_data = [
+            ['Working Hours:', data.get('working_hours', 'N/A')],
+            ['Required Team Size:', str(data.get('required_team_size', 'N/A'))],
+            ['Site Access Requirements:', data.get('site_access_requirements', 'N/A')],
+        ]
+        story.append(create_info_table(safety_data, col_widths=[2.35*inch, 4.65*inch]))
+        story.append(Spacer(1, 0.1*inch))
         
         # GENERAL COMMENTS
         add_section_heading(story, "General Comments")
         comments = data.get('general_comments', 'No comments provided.')
         add_paragraph(story, comments)
-        story.append(Spacer(1, 0.3*inch))
+        story.append(Spacer(1, 0.1*inch))
         
         # PHOTOS
         photos = data.get('photos', [])
@@ -332,40 +368,348 @@ def create_pdf_report(data, output_dir):
         else:
             logger.warning("📸 PDF Generator: No photos found in data")
         
-        # SIGNATURES - Professional format
-        tech_sig = data.get('tech_signature', {})
-        contact_sig = data.get('contact_signature', {})
-        
+        # SIGNATURES PAGE - Professional format with all reviewer signatures
+        # Extract all reviewer data similar to HVAC module
         signatures = {}
         
-        # Handle tech signature - can be dict with url or string
-        if tech_sig:
-            if isinstance(tech_sig, dict) and tech_sig.get('url'):
-                signatures['Technician'] = tech_sig
-            elif isinstance(tech_sig, str) and tech_sig.startswith('data:image'):
-                signatures['Technician'] = {'url': tech_sig, 'is_cloud': False}
+        # Get nested data dict if it exists
+        nested_data = data.get('data') if isinstance(data.get('data'), dict) else {}
         
-        # Handle contact signature - can be dict with url or string
-        if contact_sig:
-            if isinstance(contact_sig, dict) and contact_sig.get('url'):
-                signatures['Contact Person'] = contact_sig
-            elif isinstance(contact_sig, str) and contact_sig.startswith('data:image'):
-                signatures['Contact Person'] = {'url': contact_sig, 'is_cloud': False}
+        # Extract supervisor signature - try multiple paths
+        supervisor_sig = data.get('supervisor_signature', '') or data.get('tech_signature', '')
+        if not supervisor_sig:
+            supervisor_sig_raw = data.get('supervisor_signature')
+            if supervisor_sig_raw is not None and supervisor_sig_raw != '' and supervisor_sig_raw != 'None':
+                supervisor_sig = supervisor_sig_raw
+            elif nested_data and nested_data.get('supervisor_signature'):
+                supervisor_sig = nested_data.get('supervisor_signature')
+            elif isinstance(data.get('form_data'), dict):
+                form_data_dict = data.get('form_data', {})
+                if form_data_dict.get('supervisor_signature'):
+                    supervisor_sig = form_data_dict.get('supervisor_signature')
         
-        # Always show signature section
-        if not signatures:
-            signatures = {
-                'Technician': None,
-                'Contact Person': None
-            }
+        # Extract supervisor comments
+        supervisor_comments = data.get('supervisor_comments', '')
+        if not supervisor_comments:
+            supervisor_comments_raw = data.get('supervisor_comments')
+            if supervisor_comments_raw is not None and supervisor_comments_raw != 'None':
+                supervisor_comments = supervisor_comments_raw
+            elif nested_data and nested_data.get('supervisor_comments'):
+                supervisor_comments = nested_data.get('supervisor_comments')
+            elif isinstance(data.get('form_data'), dict):
+                form_data_dict = data.get('form_data', {})
+                if form_data_dict.get('supervisor_comments'):
+                    supervisor_comments = form_data_dict.get('supervisor_comments')
         
-        add_signatures_section(story, signatures)
+        if supervisor_comments is None:
+            supervisor_comments = ''
+        
+        # Handle supervisor signature format
+        if supervisor_sig:
+            if isinstance(supervisor_sig, dict) and supervisor_sig.get('url'):
+                signatures['Supervisor'] = supervisor_sig
+            elif isinstance(supervisor_sig, str) and (supervisor_sig.startswith('data:image') or supervisor_sig.startswith('http') or supervisor_sig.startswith('/')):
+                signatures['Supervisor'] = supervisor_sig
+        
+        # Extract Operations Manager data
+        operations_manager_comments = None
+        operations_manager_comments_raw = data.get('operations_manager_comments')
+        if operations_manager_comments_raw is not None and operations_manager_comments_raw != 'None' and operations_manager_comments_raw != '':
+            operations_manager_comments = operations_manager_comments_raw
+        elif nested_data and nested_data.get('operations_manager_comments'):
+            operations_manager_comments = nested_data.get('operations_manager_comments')
+        elif isinstance(data.get('form_data'), dict):
+            form_data_dict = data.get('form_data', {})
+            if form_data_dict.get('operations_manager_comments'):
+                operations_manager_comments = form_data_dict.get('operations_manager_comments')
+        
+        if operations_manager_comments is None:
+            operations_manager_comments = ''
+        
+        # Extract Operations Manager signature
+        opman_sig = None
+        opman_sig_raw = data.get('operations_manager_signature') or data.get('opMan_signature')
+        if opman_sig_raw is not None and opman_sig_raw != '' and opman_sig_raw != 'None':
+            opman_sig = opman_sig_raw
+        elif nested_data:
+            opman_sig_raw = nested_data.get('operations_manager_signature') or nested_data.get('opMan_signature')
+            if opman_sig_raw is not None and opman_sig_raw != '' and opman_sig_raw != 'None':
+                opman_sig = opman_sig_raw
+        elif isinstance(data.get('form_data'), dict):
+            form_data_dict = data.get('form_data', {})
+            opman_sig_raw = form_data_dict.get('operations_manager_signature') or form_data_dict.get('opMan_signature')
+            if opman_sig_raw is not None and opman_sig_raw != '' and opman_sig_raw != 'None':
+                opman_sig = opman_sig_raw
+        
+        if opman_sig:
+            if isinstance(opman_sig, dict) and opman_sig.get('url'):
+                signatures['Operations Manager'] = opman_sig
+            elif isinstance(opman_sig, str) and (opman_sig.startswith('data:image') or opman_sig.startswith('http') or opman_sig.startswith('/')):
+                signatures['Operations Manager'] = opman_sig
+        
+        # Extract Business Development data
+        business_dev_comments = None
+        supervisor_comments_for_validation = supervisor_comments
+        business_dev_comments_raw = data.get('business_dev_comments') or data.get('business_development_comments')
+        if business_dev_comments_raw is not None and business_dev_comments_raw != 'None' and business_dev_comments_raw != '':
+            if business_dev_comments_raw != supervisor_comments_for_validation:
+                business_dev_comments = business_dev_comments_raw
+        elif nested_data:
+            business_dev_comments_raw = nested_data.get('business_dev_comments') or nested_data.get('business_development_comments')
+            if business_dev_comments_raw is not None and business_dev_comments_raw != 'None' and business_dev_comments_raw != '':
+                if business_dev_comments_raw != supervisor_comments_for_validation:
+                    business_dev_comments = business_dev_comments_raw
+        elif isinstance(data.get('form_data'), dict):
+            form_data_dict = data.get('form_data', {})
+            business_dev_comments_raw = form_data_dict.get('business_dev_comments') or form_data_dict.get('business_development_comments')
+            if business_dev_comments_raw is not None and business_dev_comments_raw != 'None' and business_dev_comments_raw != '':
+                if business_dev_comments_raw != supervisor_comments_for_validation:
+                    business_dev_comments = business_dev_comments_raw
+        
+        if business_dev_comments is None:
+            business_dev_comments = ''
+        
+        # Extract Business Development signature
+        business_dev_sig = None
+        business_dev_sig_raw = data.get('business_dev_signature') or data.get('businessDevSignature')
+        if business_dev_sig_raw is not None and business_dev_sig_raw != 'None' and business_dev_sig_raw != '':
+            business_dev_sig = business_dev_sig_raw
+        elif nested_data:
+            business_dev_sig_raw = nested_data.get('business_dev_signature') or nested_data.get('businessDevSignature')
+            if business_dev_sig_raw is not None and business_dev_sig_raw != 'None' and business_dev_sig_raw != '':
+                business_dev_sig = business_dev_sig_raw
+        elif isinstance(data.get('form_data'), dict):
+            form_data_dict = data.get('form_data', {})
+            business_dev_sig_raw = form_data_dict.get('business_dev_signature') or form_data_dict.get('businessDevSignature')
+            if business_dev_sig_raw is not None and business_dev_sig_raw != 'None' and business_dev_sig_raw != '':
+                business_dev_sig = business_dev_sig_raw
+        
+        if business_dev_sig:
+            if isinstance(business_dev_sig, dict) and business_dev_sig.get('url'):
+                signatures['Business Development'] = business_dev_sig
+            elif isinstance(business_dev_sig, str) and (business_dev_sig.startswith('data:image') or business_dev_sig.startswith('http') or business_dev_sig.startswith('/')):
+                signatures['Business Development'] = business_dev_sig
+        
+        # Extract Procurement data
+        procurement_comments = None
+        procurement_comments_raw = data.get('procurement_comments')
+        if procurement_comments_raw is not None and procurement_comments_raw != 'None' and procurement_comments_raw != '':
+            procurement_comments = procurement_comments_raw
+        elif nested_data:
+            procurement_comments_raw = nested_data.get('procurement_comments')
+            if procurement_comments_raw is not None and procurement_comments_raw != 'None' and procurement_comments_raw != '':
+                procurement_comments = procurement_comments_raw
+        elif isinstance(data.get('form_data'), dict):
+            form_data_dict = data.get('form_data', {})
+            procurement_comments_raw = form_data_dict.get('procurement_comments')
+            if procurement_comments_raw is not None and procurement_comments_raw != 'None' and procurement_comments_raw != '':
+                procurement_comments = procurement_comments_raw
+        
+        if procurement_comments is None:
+            procurement_comments = ''
+        
+        # Extract Procurement signature
+        procurement_sig = None
+        procurement_sig_raw = data.get('procurement_signature') or data.get('procurementSignature')
+        if procurement_sig_raw is not None and procurement_sig_raw != 'None' and procurement_sig_raw != '':
+            procurement_sig = procurement_sig_raw
+        elif nested_data:
+            procurement_sig_raw = nested_data.get('procurement_signature') or nested_data.get('procurementSignature')
+            if procurement_sig_raw is not None and procurement_sig_raw != 'None' and procurement_sig_raw != '':
+                procurement_sig = procurement_sig_raw
+        elif isinstance(data.get('form_data'), dict):
+            form_data_dict = data.get('form_data', {})
+            procurement_sig_raw = form_data_dict.get('procurement_signature') or form_data_dict.get('procurementSignature')
+            if procurement_sig_raw is not None and procurement_sig_raw != 'None' and procurement_sig_raw != '':
+                procurement_sig = procurement_sig_raw
+        
+        if procurement_sig:
+            if isinstance(procurement_sig, dict) and procurement_sig.get('url'):
+                signatures['Procurement'] = procurement_sig
+            elif isinstance(procurement_sig, str) and (procurement_sig.startswith('data:image') or procurement_sig.startswith('http') or procurement_sig.startswith('/')):
+                signatures['Procurement'] = procurement_sig
+        
+        # Extract General Manager data
+        general_manager_comments = data.get('general_manager_comments', '') or (nested_data.get('general_manager_comments') if nested_data else '') or ''
+        general_manager_sig = data.get('general_manager_signature', '') or data.get('generalManagerSignature', '')
+        if general_manager_sig:
+            if isinstance(general_manager_sig, dict) and general_manager_sig.get('url'):
+                signatures['General Manager'] = general_manager_sig
+            elif isinstance(general_manager_sig, str) and (general_manager_sig.startswith('data:image') or general_manager_sig.startswith('http')):
+                signatures['General Manager'] = general_manager_sig
+        
+        # Helper function to add comment and signature together for a reviewer (same as HVAC)
+        def add_reviewer_section(role_name, comments, signature_data, always_show_signature=False):
+            """Add comments and signature together for a reviewer with aspect-ratio-preserved signatures"""
+            has_content = False
+            
+            if comments and comments.strip():
+                add_section_heading(story, f"{role_name} Comments")
+                add_paragraph(story, comments)
+                story.append(Spacer(1, 0.1*inch))
+                has_content = True
+            
+            if signature_data or always_show_signature:
+                styles = get_professional_styles()
+                sig_rows = []
+                
+                if signature_data:
+                    try:
+                        from common.utils import get_image_for_pdf
+                        from PIL import Image as PILImage
+                        
+                        img_data, is_url = get_image_for_pdf(signature_data)
+                        if img_data:
+                            max_width = 2.5 * inch
+                            max_height = 1.2 * inch
+                            
+                            try:
+                                if is_url:
+                                    img_data.seek(0)
+                                    pil_img = PILImage.open(img_data)
+                                else:
+                                    pil_img = PILImage.open(img_data)
+                                
+                                orig_width, orig_height = pil_img.size
+                                
+                                width_ratio = max_width / orig_width
+                                height_ratio = max_height / orig_height
+                                scale_ratio = min(width_ratio, height_ratio)
+                                
+                                final_width = orig_width * scale_ratio
+                                final_height = orig_height * scale_ratio
+                                
+                                original_ratio = orig_width / orig_height if orig_height > 0 else 1
+                                final_ratio = final_width / final_height if final_height > 0 else 1
+                                
+                                if is_url:
+                                    img_data.seek(0)
+                                    sig_img = Image(img_data, width=final_width, height=final_height)
+                                else:
+                                    sig_img = Image(img_data, width=final_width, height=final_height)
+                                
+                                logger.info(f"✅ {role_name} signature aspect ratio: Original={orig_width}x{orig_height} (ratio={original_ratio:.3f}), Final={final_width:.2f}x{final_height:.2f} (ratio={final_ratio:.3f}), Scale={scale_ratio:.3f}")
+                                
+                                if abs(original_ratio - final_ratio) > 0.01:
+                                    logger.warning(f"⚠️ {role_name} signature aspect ratio mismatch! Original={original_ratio:.3f}, Final={final_ratio:.3f}")
+                            except Exception as pil_error:
+                                logger.warning(f"PIL image processing failed for {role_name}, using fallback: {pil_error}")
+                                if is_url:
+                                    img_data.seek(0)
+                                    sig_img = Image(img_data)
+                                else:
+                                    sig_img = Image(img_data)
+                                
+                                if hasattr(sig_img, 'imageWidth') and hasattr(sig_img, 'imageHeight'):
+                                    orig_width = sig_img.imageWidth
+                                    orig_height = sig_img.imageHeight
+                                    if orig_width > 0 and orig_height > 0:
+                                        width_ratio = max_width / orig_width
+                                        height_ratio = max_height / orig_height
+                                        scale_ratio = min(width_ratio, height_ratio)
+                                        final_width = orig_width * scale_ratio
+                                        final_height = orig_height * scale_ratio
+                                        sig_img.drawWidth = final_width
+                                        sig_img.drawHeight = final_height
+                                    else:
+                                        sig_img.drawWidth = max_width
+                                else:
+                                    sig_img.drawWidth = max_width
+                            
+                            sig_rows.append([
+                                Paragraph(f"<b>{role_name} Signature:</b>", styles['Normal']),
+                                sig_img
+                            ])
+                        else:
+                            sig_rows.append([
+                                Paragraph(f"<b>{role_name} Signature:</b>", styles['Normal']),
+                                Paragraph("Signature not available", styles['Small'])
+                            ])
+                    except Exception as e:
+                        logger.error(f"Error processing {role_name} signature: {str(e)}")
+                        sig_rows.append([
+                            Paragraph(f"<b>{role_name} Signature:</b>", styles['Normal']),
+                            Paragraph("Error loading signature", styles['Small'])
+                        ])
+                else:
+                    sig_rows.append([
+                        Paragraph(f"<b>{role_name} Signature:</b>", styles['Normal']),
+                        Paragraph("<i>Not signed</i>", styles['Small'])
+                    ])
+                
+                if sig_rows:
+                    sig_table = Table(sig_rows, colWidths=[2*inch, 3.5*inch])
+                    sig_table.setStyle(TableStyle([
+                        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                        ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ('GRID', (0, 0), (-1, -1), 0.75, colors.HexColor('#125435')),
+                        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E8F5E9')),
+                        ('TOPPADDING', (0, 0), (-1, -1), 8),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                    ]))
+                    story.append(sig_table)
+                    story.append(Spacer(1, 0.15*inch))
+                    has_content = True
+            
+            return has_content
+        
+        # Check if Operations Manager has approved
+        om_has_approved = False
+        if data.get('operations_manager_approved_at') or data.get('operations_manager_id'):
+            om_has_approved = True
+        if data.get('workflow_status'):
+            workflow_status = str(data.get('workflow_status'))
+            if 'operations_manager_approved' in workflow_status or 'bd_procurement' in workflow_status:
+                om_has_approved = True
+        
+        # Check if BD has approved
+        bd_has_approved = False
+        if data.get('business_dev_approved_at') or data.get('business_dev_id'):
+            bd_has_approved = True
+        if data.get('workflow_status'):
+            workflow_status = str(data.get('workflow_status'))
+            if 'bd_procurement' in workflow_status or 'general_manager' in workflow_status:
+                bd_has_approved = True
+        
+        # Check if Procurement has approved
+        procurement_has_approved = False
+        if data.get('procurement_approved_at') or data.get('procurement_id'):
+            procurement_has_approved = True
+        if data.get('workflow_status'):
+            workflow_status = str(data.get('workflow_status'))
+            if 'bd_procurement' in workflow_status or 'general_manager' in workflow_status:
+                procurement_has_approved = True
+        
+        # Add reviewer sections in workflow order
+        # 1. Supervisor - ALWAYS show
+        supervisor_comments_display = supervisor_comments if supervisor_comments and supervisor_comments.strip() else None
+        supervisor_sig_display = signatures.get('Supervisor')
+        add_reviewer_section("Supervisor", supervisor_comments_display, supervisor_sig_display, always_show_signature=True)
+        
+        # 2. Operations Manager - show if approved or has data
+        if operations_manager_comments or signatures.get('Operations Manager') or om_has_approved:
+            add_reviewer_section("Operations Manager", operations_manager_comments, signatures.get('Operations Manager'), always_show_signature=True)
+        
+        # 3. Business Development - show if approved or has data
+        if business_dev_comments or signatures.get('Business Development') or bd_has_approved:
+            add_reviewer_section("Business Development", business_dev_comments, signatures.get('Business Development'), always_show_signature=True)
+        
+        # 4. Procurement - show if approved or has data
+        if procurement_comments or signatures.get('Procurement') or procurement_has_approved:
+            add_reviewer_section("Procurement", procurement_comments, signatures.get('Procurement'), always_show_signature=True)
+        
+        # 5. General Manager - show if has data
+        if general_manager_comments or signatures.get('General Manager'):
+            add_reviewer_section("General Manager", general_manager_comments, signatures.get('General Manager'), always_show_signature=True)
         
         # Build professional PDF with logo and branding
         create_professional_pdf(
             pdf_path, 
             story, 
-            report_title=f"Cleaning Assessment - {data.get('client_name', 'N/A')}"
+            report_title=f"Cleaning Assessment - {data.get('project_name', 'N/A')}"
         )
         
         logger.info(f"✅ Professional Cleaning PDF created successfully: {pdf_path}")
