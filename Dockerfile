@@ -12,7 +12,7 @@ WORKDIR /wheels
 # NOTE: repo contains requirements-prods.txt (plural) — use that file so COPY succeeds.
 COPY requirements-prods.txt /wheels/requirements-prods.txt
 
-RUN python -m pip install --upgrade pip setuptools wheel \
+RUN python -m pip install --upgrade pip "setuptools<81" wheel \
  && pip wheel --wheel-dir=/wheels -r /wheels/requirements-prods.txt
 
 # Stage 2: runtime image
@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /wheels /wheels
 COPY requirements-prods.txt /app/requirements-prods.txt
 
-RUN python -m pip install --upgrade pip setuptools wheel \
+RUN python -m pip install --upgrade pip "setuptools<81" wheel \
  && pip install --no-index --find-links=/wheels -r /app/requirements-prods.txt \
  && python -c "import pkg_resources, gunicorn; print('runtime deps OK')"
 

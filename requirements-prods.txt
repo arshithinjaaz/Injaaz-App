@@ -1,5 +1,5 @@
-# Build/runtime (gunicorn needs pkg_resources from setuptools)
-setuptools>=65.0.0
+# Build/runtime: gunicorn still imports pkg_resources, so keep setuptools below 81
+setuptools<81
 
 # Core Flask Framework
 Flask==2.2.5
