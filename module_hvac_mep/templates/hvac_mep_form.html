@@ -1138,7 +1138,10 @@
           <button class="nav-link" id="tab-2-link" data-bs-toggle="tab" data-bs-target="#tab-2" type="button" role="tab">Work Items</button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab">Sign-off &amp; Submit</button>
+          <button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab">Materials Required</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="tab-4-link" data-bs-toggle="tab" data-bs-target="#tab-4" type="button" role="tab">Sign-off &amp; Submit</button>
         </li>
       </ul>
 
@@ -1430,12 +1433,31 @@
 
           <div class="d-flex justify-content-between mt-4 gap-2 flex-wrap">
             <button type="button" class="btn btn-outline-secondary px-4 py-2" style="border-radius: 10px; font-weight: 500;" onclick="goToTab(1)">&laquo; Previous</button>
-            <button type="button" class="btn btn-primary px-4 py-2" style="border-radius: 10px; font-weight: 600;" onclick="goToTab(3)">Next: Sign-off & Submit &raquo;</button>
+            <button type="button" class="btn btn-primary px-4 py-2" style="border-radius: 10px; font-weight: 600;" onclick="goToTab(3)">Next: Materials Required &raquo;</button>
           </div>
         </div>
 
-        <!-- TAB 3: Sign-off & Submit -->
+        <!-- TAB 3: Materials Required -->
         <div class="tab-pane fade" id="tab-3" role="tabpanel">
+          <div class="row">
+            <div class="col-12 mb-2">
+              <h4 class="section-heading-no-border">Materials Required</h4>
+              <p class="text-muted small mb-3">Select all materials used or required for this inspection. Choose the department, then search and pick materials with their quantities.</p>
+            </div>
+            <div class="col-12 mb-4">
+              <div class="mp-section is-open mp-standalone" id="hvac-mp-section">
+                <div id="hvac-mp-root"></div>
+              </div>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between mt-4 gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline-secondary px-4 py-2" style="border-radius: 10px; font-weight: 500;" onclick="goToTab(2)">&laquo; Previous</button>
+            <button type="button" class="btn btn-primary px-4 py-2" style="border-radius: 10px; font-weight: 600;" onclick="goToTab(4)">Next: Sign-off &amp; Submit &raquo;</button>
+          </div>
+        </div>
+
+        <!-- TAB 4: Sign-off & Submit -->
+        <div class="tab-pane fade" id="tab-4" role="tabpanel">
           {% if user_designation == 'supervisor' %}
           <h4 class="section-heading-no-border">Supervisor Sign-off</h4>
           {% elif user_designation == 'operations_manager' %}
@@ -2059,19 +2081,10 @@
         </div>
         {% endif %}
 
-        <!-- ── Materials Required ──────────────────────────── -->
-        {% if can_edit != False or True %}
-        <div class="col-12 mb-4">
-          <div class="mp-section" id="hvac-mp-section">
-            <div id="hvac-mp-root"></div>
-          </div>
-        </div>
-        {% endif %}
-
         <!-- Submit Section -->
         <div class="col-12 mb-5 mt-4">
           <div class="d-flex justify-content-between align-items-center">
-            <button type="button" class="btn btn-secondary" onclick="goToTab(2)">&laquo; Previous</button>
+            <button type="button" class="btn btn-secondary" onclick="goToTab(3)">&laquo; Previous</button>
             {% if can_edit != False %}
             <div class="d-flex gap-2">
               {% if user_designation == 'supervisor' or (user and user.role == 'admin') %}
@@ -3691,7 +3704,8 @@
             specification: it.specification || '',
             comments: it.comments || '',
             photo_urls: it.photoUrls || [] // Cloud URLs
-          }))
+          })),
+          materials_required: window.hvacMaterialsPicker ? window.hvacMaterialsPicker.getSelected() : []
         };
 
         // Only attach supervisor data when supervisor is actually editing/submitting

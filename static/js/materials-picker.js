@@ -72,7 +72,7 @@ class MaterialsPicker {
   }
 
   async _fetchCatalog() {
-    const list = this._el('.mp-list');
+    const list = this._el('-list');
     list.innerHTML = this._skeletonHTML();
     try {
       const params = new URLSearchParams();
@@ -222,9 +222,6 @@ class MaterialsPicker {
   _itemHTML(item) {
     const sel = !!this._selected[item.id];
     const qty = this._selected[item.id]?.quantity ?? 1;
-    const priceLabel = item.unit_price > 0
-      ? `AED ${parseFloat(item.unit_price).toFixed(2)}`
-      : '';
     return `
       <div class="mp-item${sel ? ' selected' : ''}" data-id="${item.id}">
         <div class="mp-item-check">
@@ -233,9 +230,8 @@ class MaterialsPicker {
         <div class="mp-item-info">
           <div class="mp-item-name">${this._esc(item.name)}</div>
           <div class="mp-item-meta">
-            ${item.brand  ? `<span class="mp-item-tag brand">${this._esc(item.brand)}</span>` : ''}
-            ${item.uom    ? `<span class="mp-item-tag uom">${this._esc(item.uom)}</span>` : ''}
-            ${priceLabel  ? `<span class="mp-item-tag price">${priceLabel}</span>` : ''}
+            ${item.brand ? `<span class="mp-item-tag brand">${this._esc(item.brand)}</span>` : ''}
+            ${item.uom   ? `<span class="mp-item-tag uom">${this._esc(item.uom)}</span>` : ''}
           </div>
         </div>
         <div class="mp-item-qty">

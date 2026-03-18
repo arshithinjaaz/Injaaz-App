@@ -900,7 +900,8 @@
         <li class="nav-item" role="presentation"><button class="nav-link" id="tab-2-link" data-bs-toggle="tab" data-bs-target="#tab-2" type="button" role="tab">Cleaning &amp; Scope</button></li>
         <li class="nav-item" role="presentation"><button class="nav-link" id="tab-3-link" data-bs-toggle="tab" data-bs-target="#tab-3" type="button" role="tab">Staffing</button></li>
         <li class="nav-item" role="presentation"><button class="nav-link" id="tab-4-link" data-bs-toggle="tab" data-bs-target="#tab-4" type="button" role="tab">Visual Evidence</button></li>
-        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-5-link" data-bs-toggle="tab" data-bs-target="#tab-5" type="button" role="tab">Sign-off &amp; Submit</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-5-link" data-bs-toggle="tab" data-bs-target="#tab-5" type="button" role="tab">Materials Required</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="tab-6-link" data-bs-toggle="tab" data-bs-target="#tab-6" type="button" role="tab">Sign-off &amp; Submit</button></li>
       </ul>
 
       <div class="tab-content" id="assessmentTabContent">
@@ -1080,12 +1081,31 @@
 
                             <div class="d-flex justify-content-between mt-4">
                                 <button type="button" class="btn btn-secondary" onclick="goToTab(3)">&laquo; Previous</button>
-                                <button type="button" class="btn btn-primary" onclick="goToTab(5)">Next: Sign-off &raquo;</button>
+                                <button type="button" class="btn btn-primary" onclick="goToTab(5)">Next: Materials Required &raquo;</button>
                             </div>
                         </div>
 
-                        <!-- TAB 5: Sign-off & Submit -->
+                        <!-- TAB 5: Materials Required -->
                         <div class="tab-pane fade" id="tab-5" role="tabpanel">
+                            <div class="row">
+                              <div class="col-12 mb-2">
+                                <h4 class="section-heading-no-border">Materials Required</h4>
+                                <p class="text-muted small mb-3">Select all materials used or required for this inspection. Choose the department, then search and pick materials with their quantities.</p>
+                              </div>
+                              <div class="col-12 mb-4">
+                                <div class="mp-section is-open mp-standalone" id="cleaning-mp-section">
+                                  <div id="cleaning-mp-root"></div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-4">
+                              <button type="button" class="btn btn-outline-secondary" onclick="goToTab(4)">&#8592; Previous</button>
+                              <button type="button" class="btn btn-primary" onclick="goToTab(6)">Next: Sign-off &amp; Submit &raquo;</button>
+                            </div>
+                        </div>
+
+                        <!-- TAB 6: Sign-off & Submit -->
+                        <div class="tab-pane fade" id="tab-6" role="tabpanel">
                             {% if user_designation == 'supervisor' %}
                             <h4 class="section-heading-no-border">Supervisor Sign-off</h4>
                             {% elif user_designation == 'operations_manager' %}
@@ -1730,13 +1750,8 @@
                             </div>
                             {% endif %}
                             
-                            <!-- ── Materials Required ──────────────────────── -->
-                            <div class="mp-section mb-4" id="cleaning-mp-section">
-                              <div id="cleaning-mp-root"></div>
-                            </div>
-
                             <div class="d-flex justify-content-between mt-4">
-                                <button type="button" class="btn btn-outline-secondary" onclick="goToTab(4)">&#8592; Previous</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="goToTab(5)">&#8592; Previous</button>
                                 {% if can_edit != False %}
                                 <div class="d-flex gap-2">
                                     {% if user_designation == 'supervisor' or (user and user.role == 'admin') %}
@@ -5208,8 +5223,14 @@
                 business_dev_signature: existingBDSignature || '',
                 business_dev_comments: existingBDComments || '',
                 procurement_signature: existingProcSignature || '',
-                procurement_comments: existingProcComments || ''
+                procurement_comments: existingProcComments || '',
+                materials_required: window.cleaningMaterialsPicker ? window.cleaningMaterialsPicker.getSelected() : []
             };
+            // If materials_required came in as JSON string via FormData spread, replace with picker data
+            if (!window.cleaningMaterialsPicker && typeof payload.materials_required === 'string') {
+                try { payload.materials_required = JSON.parse(payload.materials_required); }
+                catch (e) { payload.materials_required = []; }
+            }
 
             const submitButton = form.querySelector('button[type="submit"]');
             

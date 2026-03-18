@@ -96,6 +96,19 @@
   max-height: 9999px;
 }
 
+/* Standalone tab mode — hide the toggle header, show body always */
+.mp-section.mp-standalone .mp-section-header {
+  display: none;
+}
+.mp-section.mp-standalone .mp-body {
+  border-top: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  max-height: 9999px;
+}
+.mp-section.mp-standalone .mp-list {
+  max-height: 520px;
+}
+
 /* ── Toolbar ────────────────────────────────────────────── */
 .mp-toolbar {
   display: flex;
