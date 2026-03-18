@@ -693,12 +693,16 @@ def get_catalog_materials():
 
         if dept not in result:
             result[dept] = []
+        try:
+            unit_price = float(fd.get('unit_price') or 0)
+        except Exception:
+            unit_price = 0.0
         result[dept].append({
             'id': sub.submission_id,
             'name': name,
             'brand': fd.get('brand', ''),
             'uom': fd.get('uom', 'PCS'),
-            'unit_price': fd.get('unit_price', 0),
+            'unit_price': unit_price,
         })
 
     # Sort each department's items alphabetically by name
@@ -712,6 +716,159 @@ def get_catalog_materials():
         'materials': result,
         'total': sum(len(v) for v in result.values()),
     })
+
+
+@procurement_bp.route('/api/catalog/materials', methods=['POST'])
+@jwt_required()
+def create_catalog_material():
+    """Create a new catalog material (department catalog)."""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if user.role != 'admin' and not getattr(user, 'access_procurement_module', False):
+        return jsonify({'error': 'Access denied'}), 403
+
+    data = request.get_json() or {}
+    department = (data.get('department') or '').strip()
+    material_name = (data.get('material_name') or data.get('name') or '').strip()
+    brand = (data.get('brand') or '').strip()
+    uom = (data.get('uom') or 'PCS').strip()
+    unit_price_raw = data.get('unit_price', 0)
+
+    allowed = ['HVAC', 'Cleaning', 'Electrical', 'Plumbing']
+    if department not in allowed:
+        return jsonify({'error': 'Invalid department'}), 400
+    if not material_name:
+        return jsonify({'error': 'Material name is required'}), 400
+
+    try:
+        unit_price = float(unit_price_raw or 0)
+        if unit_price < 0:
+            return jsonify({'error': 'Unit price cannot be negative'}), 400
+    except Exception:
+        return jsonify({'error': 'Invalid unit price'}), 400
+
+    submission_id = f"CAT-MAT-{uuid.uuid4().hex[:8].upper()}"
+    submission = Submission(
+        submission_id=submission_id,
+        user_id=user.id,
+        module_type='catalog_material',
+        site_name=material_name,
+        visit_date=datetime.now().date(),
+        status='submitted',
+        workflow_status='submitted',
+        supervisor_id=user.id,
+        form_data={
+            'department': department,
+            'material_name': material_name,
+            'brand': brand,
+            'uom': uom,
+            'unit_price': unit_price,
+        }
+    )
+    db.session.add(submission)
+    db.session.commit()
+
+    return jsonify({'success': True, 'id': submission_id, 'message': 'Catalog material created'})
+
+
+@procurement_bp.route('/api/catalog/materials/<material_id>', methods=['PUT'])
+@jwt_required()
+def update_catalog_material(material_id):
+    """Update an existing catalog material."""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if user.role != 'admin' and not getattr(user, 'access_procurement_module', False):
+        return jsonify({'error': 'Access denied'}), 403
+
+    submission = Submission.query.filter_by(submission_id=material_id, module_type='catalog_material').first()
+    if not submission:
+        return jsonify({'error': 'Catalog material not found'}), 404
+
+    data = request.get_json() or {}
+    # Make a copy so SQLAlchemy reliably detects JSON changes
+    fd = dict(submission.form_data or {})
+
+    # Department is fixed by where the user is editing from, but keep validation if sent.
+    if 'department' in data:
+        dept = (data.get('department') or '').strip()
+        allowed = ['HVAC', 'Cleaning', 'Electrical', 'Plumbing']
+        if dept and dept not in allowed:
+            return jsonify({'error': 'Invalid department'}), 400
+        if dept:
+            fd['department'] = dept
+
+    if 'material_name' in data or 'name' in data:
+        name = (data.get('material_name') or data.get('name') or '').strip()
+        if not name:
+            return jsonify({'error': 'Material name is required'}), 400
+        fd['material_name'] = name
+        submission.site_name = name
+
+    if 'brand' in data:
+        fd['brand'] = (data.get('brand') or '').strip()
+
+    if 'uom' in data:
+        fd['uom'] = (data.get('uom') or 'PCS').strip()
+
+    if 'unit_price' in data:
+        try:
+            unit_price = float(data.get('unit_price') or 0)
+            if unit_price < 0:
+                return jsonify({'error': 'Unit price cannot be negative'}), 400
+            fd['unit_price'] = unit_price
+        except Exception:
+            return jsonify({'error': 'Invalid unit price'}), 400
+
+    new_site_name = fd.get('material_name') or submission.site_name
+
+    # Persist via direct UPDATE to avoid any ORM JSON mutation edge cases.
+    Submission.query.filter_by(id=submission.id).update(
+        {
+            Submission.form_data: fd,
+            Submission.site_name: new_site_name,
+            Submission.updated_at: datetime.utcnow(),
+        },
+        synchronize_session=False
+    )
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Catalog material updated',
+        'route_version': 2,
+        'material': {
+            'id': submission.submission_id,
+            'name': fd.get('material_name', ''),
+            'brand': fd.get('brand', ''),
+            'uom': fd.get('uom', 'PCS'),
+            'unit_price': float(fd.get('unit_price') or 0),
+        }
+    })
+
+
+@procurement_bp.route('/api/catalog/materials/<material_id>', methods=['DELETE'])
+@jwt_required()
+def delete_catalog_material(material_id):
+    """Delete a catalog material by its submission_id."""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    if user.role != 'admin' and not getattr(user, 'access_procurement_module', False):
+        return jsonify({'error': 'Access denied'}), 403
+
+    submission = Submission.query.filter_by(
+        submission_id=material_id, module_type='catalog_material'
+    ).first()
+    if not submission:
+        return jsonify({'error': 'Catalog material not found'}), 404
+
+    db.session.delete(submission)
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Catalog material deleted'})
 
 
 @procurement_bp.route('/api/registered-properties', methods=['GET'])

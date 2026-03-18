@@ -436,14 +436,55 @@ def download_report():
         report_bytes = generate_report_excel(df)
         date_range = get_report_date_range_from_df(df)
         filename = _report_filename(report_date_range=date_range, upload_path=path)
-        return send_file(
+        from flask import make_response
+        resp = make_response(send_file(
             BytesIO(report_bytes),
             as_attachment=True,
             download_name=filename,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
+        ))
+        resp.headers['Content-Length'] = len(report_bytes)
+        return resp
     except Exception as e:
         logger.error(f'MMR report generation error: {e}', exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@mmr_bp.route('/api/download-report-monthly', methods=['GET'])
+@jwt_required()
+def download_report_monthly():
+    """Generate one Excel per calendar month and stream them as a single ZIP."""
+    path = _upload_path()
+    if not os.path.exists(path):
+        return jsonify({'error': 'No file uploaded yet. Please upload an Excel file first.'}), 404
+
+    try:
+        from .mmr_service import parse_excel, generate_monthly_zip, get_report_date_range_from_df
+        df = parse_excel(path)
+        zip_bytes, filenames = generate_monthly_zip(df)
+
+        date_range = get_report_date_range_from_df(df)
+        if date_range:
+            min_d, max_d = date_range[0], date_range[1]
+            min_m = min_d.strftime('%b %Y')
+            max_m = max_d.strftime('%b %Y')
+            zip_name = (f'Reports {min_m}.zip' if min_m == max_m
+                        else f'Reports {min_m} – {max_m}.zip')
+        else:
+            zip_name = 'Reports.zip'
+
+        logger.info(f'MMR monthly ZIP: {len(filenames)} file(s) → {zip_name}')
+        from flask import make_response
+        resp = make_response(send_file(
+            BytesIO(zip_bytes),
+            as_attachment=True,
+            download_name=zip_name,
+            mimetype='application/zip'
+        ))
+        resp.headers['Content-Length'] = len(zip_bytes)
+        return resp
+    except Exception as e:
+        logger.error(f'MMR monthly report generation error: {e}', exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 

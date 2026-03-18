@@ -73,6 +73,51 @@ except Exception as e:
     logger.warning(f"⚠️ Professional PDF service not available: {e}. Using basic PDF generation.")
     USE_PROFESSIONAL_PDF = False
 
+def _write_materials_sheet(ws, materials):
+    """Write a 'Materials Used' sheet into the given openpyxl worksheet."""
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    header_fill  = PatternFill('solid', fgColor='125435')
+    alt_fill     = PatternFill('solid', fgColor='F0FAF5')
+    header_font  = Font(name='Calibri', bold=True, color='FFFFFF', size=10)
+    body_font    = Font(name='Calibri', size=10)
+    center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    left_align   = Alignment(horizontal='left',   vertical='center', wrap_text=True)
+    thin         = Side(style='thin', color='BBDEFB')
+    border       = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    headers = ['#', 'Material Name', 'Brand', 'Department', 'UOM', 'Quantity']
+    col_widths = [6, 35, 20, 16, 12, 12]
+
+    ws.row_dimensions[1].height = 30
+    for col_idx, (h, w) in enumerate(zip(headers, col_widths), 1):
+        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell.font      = header_font
+        cell.fill      = header_fill
+        cell.alignment = center_align
+        cell.border    = border
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+
+    for row_idx, m in enumerate(materials, 2):
+        row_fill = PatternFill('solid', fgColor='FFFFFF') if row_idx % 2 == 0 else alt_fill
+        row_data = [
+            row_idx - 1,
+            str(m.get('name', '')),
+            str(m.get('brand', '') or ''),
+            str(m.get('department', '') or ''),
+            str(m.get('uom', '') or ''),
+            m.get('quantity', 1),
+        ]
+        for col_idx, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            cell.font      = body_font
+            cell.fill      = row_fill
+            cell.border    = border
+            cell.alignment = center_align if col_idx in (1, 5, 6) else left_align
+        ws.row_dimensions[row_idx].height = 22
+
+
 def create_excel_report(data, output_dir):
     """Generate HVAC/MEP Excel report with professional formatting."""
     try:
@@ -160,11 +205,15 @@ def create_excel_report(data, output_dir):
                 title=None, col_widths=col_widths
             )
         
-        # Signatures Section - REMOVED from Excel (images/signatures not needed in Excel)
-        
-        # Finalize formatting
+        # Finalize main sheet formatting
         finalize_workbook(ws)
-        
+
+        # Materials Used — separate sheet
+        materials = data.get('materials_required', [])
+        if materials and isinstance(materials, list) and len(materials) > 0:
+            ws_mat = wb.create_sheet(title="Materials Used")
+            _write_materials_sheet(ws_mat, materials)
+
         # Save workbook
         wb.save(excel_path)
         
@@ -257,7 +306,45 @@ def create_pdf_report(data, output_dir):
         
         else:
             add_paragraph(story, "No inspection items recorded.")
-        
+
+        # MATERIALS REQUIRED SECTION
+        materials = data.get('materials_required', [])
+        if materials and isinstance(materials, list) and len(materials) > 0:
+            add_section_heading(story, "Materials Required")
+            mat_headers = ['#', 'Material Name', 'Brand', 'Department', 'UOM', 'Quantity']
+            mat_data = []
+            for idx, m in enumerate(materials, 1):
+                mat_data.append([
+                    str(idx),
+                    str(m.get('name', 'N/A')),
+                    str(m.get('brand', '') or '—'),
+                    str(m.get('department', '') or '—'),
+                    str(m.get('uom', '') or '—'),
+                    str(m.get('quantity', 1)),
+                ])
+            mat_col_widths = [0.4*inch, 2.1*inch, 1.2*inch, 1.0*inch, 0.8*inch, 0.7*inch]
+            mat_table_data = [mat_headers] + mat_data
+            mat_table = Table(mat_table_data, colWidths=mat_col_widths, repeatRows=1)
+            mat_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#125435')),
+                ('TEXTCOLOR',  (0, 0), (-1, 0), colors.white),
+                ('FONTNAME',   (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE',   (0, 0), (-1, 0), 8),
+                ('ALIGN',      (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME',   (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE',   (0, 1), (-1, -1), 8),
+                ('ALIGN',      (0, 1), (0, -1), 'CENTER'),
+                ('ALIGN',      (5, 1), (5, -1), 'CENTER'),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F0FAF5')]),
+                ('GRID',       (0, 0), (-1, -1), 0.5, colors.HexColor('#BBDEFB')),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            story.append(mat_table)
+            story.append(Spacer(1, 0.15*inch))
+
         # SIGNATURES PAGE - Professional format with all signatures
         signatures = {}
         

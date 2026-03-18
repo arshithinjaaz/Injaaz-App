@@ -337,6 +337,118 @@
       font-weight: 500;
       color: rgba(255,255,255,.95);
     }
+    /* Download mode modal – pinned near the top */
+    .modal-dl-picker {
+      align-items: flex-start;
+      padding-top: 80px;
+    }
+
+    /* ── Top download progress bar ── */
+    #dlTopBar {
+      position: fixed;
+      top: 72px; /* sits flush under the navbar */
+      left: 0; right: 0;
+      z-index: 9990;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 2px 12px rgba(0,0,0,.10);
+      padding: .55rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .85rem;
+      transform: translateY(-110%);
+      transition: transform .28s cubic-bezier(.4,0,.2,1), opacity .28s;
+      opacity: 0;
+    }
+    #dlTopBar.visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    #dlTopBar .dl-bar-icon {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      animation: dl-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes dl-pulse {
+      0%,100% { opacity:1; } 50% { opacity:.45; }
+    }
+    #dlTopBar.dl-done .dl-bar-icon { animation: none; }
+    #dlTopBar .dl-bar-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: .2rem;
+    }
+    #dlTopBar .dl-bar-label {
+      font-size: .8125rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #dlTopBar .dl-bar-sub {
+      font-size: .7rem;
+      color: var(--text-muted);
+    }
+    #dlTopBar .dl-bar-track {
+      flex: 0 0 200px;
+      height: 6px;
+      background: #e5e7eb;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    #dlTopBar .dl-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+      border-radius: 99px;
+      transition: width .25s ease;
+    }
+    #dlTopBar.dl-indeterminate .dl-bar-fill {
+      width: 40% !important;
+      animation: dl-indeterminate 1.4s ease-in-out infinite;
+    }
+    @keyframes dl-indeterminate {
+      0%   { margin-left: -40%; }
+      100% { margin-left: 100%; }
+    }
+    #dlTopBar .dl-bar-pct {
+      font-size: .8125rem;
+      font-weight: 700;
+      color: var(--primary);
+      min-width: 36px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    #dlTopBar .dl-bar-cancel {
+      flex-shrink: 0;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: .9rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    #dlTopBar .dl-bar-cancel:hover {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: var(--danger);
+    }
+    #dlTopBar.dl-done .dl-bar-cancel {
+      border-color: #6ee7b7;
+      color: var(--success);
+      background: #d1fae5;
+      pointer-events: none;
+    }
+    @media (max-width: 600px) {
+      #dlTopBar .dl-bar-track { flex: 0 0 100px; }
+      #dlTopBar .dl-bar-sub   { display: none; }
+    }
     .kpi {
       background: var(--white);
       border: 1px solid var(--border);
@@ -678,6 +790,18 @@
   {% set active_page = 'report' %}
   {% include 'partials/main_navbar.html' with context %}
 
+<!-- Top download progress bar -->
+<div id="dlTopBar" role="status" aria-live="polite" aria-label="Download progress">
+  <span class="dl-bar-icon">📥</span>
+  <div class="dl-bar-info">
+    <span class="dl-bar-label" id="dlBarLabel">Preparing download…</span>
+    <span class="dl-bar-sub" id="dlBarSub">Click × to cancel</span>
+  </div>
+  <div class="dl-bar-track"><div class="dl-bar-fill" id="dlBarFill"></div></div>
+  <span class="dl-bar-pct" id="dlBarPct"></span>
+  <button type="button" class="dl-bar-cancel" id="dlBarCancel" title="Cancel download" onclick="cancelDownload()">✕</button>
+</div>
+
 <div class="page">
   <!-- Alert -->
   <div id="alertBox"></div>
@@ -720,7 +844,7 @@
     <div class="kpi-row">
       <div class="kpi-grid" id="kpiGrid"></div>
       <div class="kpi-download-wrap">
-        <button type="button" class="kpi-download" id="btnDownloadReport" onclick="downloadReport()" disabled title="Download Excel report">
+        <button type="button" class="kpi-download" id="btnDownloadReport" onclick="handleDownloadClick()" disabled title="Download Excel report">
           <span class="kpi-value">📥</span>
           <span class="kpi-label">Download Report</span>
         </button>
@@ -935,6 +1059,30 @@
     </div>
     <div class="modal-automation-body" id="automationModalBody">
       <p style="color:var(--text-muted)">Loading…</p>
+    </div>
+  </div>
+</div>
+
+<!-- Download mode picker modal (shown when data spans multiple months) -->
+<div id="downloadModeModal" class="modal-overlay modal-dl-picker" onclick="if(event.target===this)closeDownloadModeModal()">
+  <div class="modal-automation" onclick="event.stopPropagation()" style="max-width:420px">
+    <div class="modal-automation-header">
+      <h3 class="modal-automation-title">📥 Download Report</h3>
+      <button type="button" class="modal-automation-close" onclick="closeDownloadModeModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-automation-body">
+      <p style="color:var(--text-muted);margin-bottom:1rem;line-height:1.6">
+        The data spans <strong id="dlModalMonthCount"></strong>.
+        How would you like to download the report?
+      </p>
+      <div style="display:flex;flex-direction:column;gap:.65rem">
+        <button type="button" class="btn btn-primary" style="justify-content:center" onclick="closeDownloadModeModal();downloadReport()">
+          📄 As a whole (single file)
+        </button>
+        <button type="button" class="btn btn-outline" style="justify-content:center" onclick="closeDownloadModeModal();downloadReportMonthly()">
+          📦 Month by month (ZIP archive)
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -1483,22 +1631,294 @@ function getReportFilename() {
   return `Daily Report on Resolved and Pending Complaints for ${dateStr}.xlsx`;
 }
 
-async function downloadReport() {
-  toast('Generating Excel report…', 'info');
-  try {
-    const token = await getToken();
-    const resp = await authFetch('/admin/mmr/api/download-report');
-    if (!resp.ok) { const d = await resp.json(); throw new Error(d.error); }
+/** Count how many distinct calendar months (YYYY-MM) are present in allRows. */
+function getDistinctMonths(rows) {
+  if (!rows || !rows.length) return [];
+  const seen = new Set();
+  for (const r of rows) {
+    const rd = r['Reported Date'];
+    if (!rd) continue;
+    // rd may be 'YYYY-MM-DD' string or a Date-like value
+    const s = String(rd).slice(0, 7); // 'YYYY-MM'
+    if (s.length === 7 && s[4] === '-') seen.add(s);
+  }
+  return [...seen].sort();
+}
+
+function closeDownloadModeModal() {
+  document.getElementById('downloadModeModal').classList.remove('active');
+}
+
+function handleDownloadClick() {
+  const months = getDistinctMonths(allRows);
+  if (months.length <= 1) {
+    downloadReport();
+    return;
+  }
+  // Build a readable label: "3 months (Jan 2026 – Mar 2026)"
+  const fmt = ym => {
+    const [y, m] = ym.split('-');
+    const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${names[parseInt(m, 10) - 1]} ${y}`;
+  };
+  const first = fmt(months[0]), last = fmt(months[months.length - 1]);
+  const label = months.length === 2
+    ? `2 months (${first} & ${last})`
+    : `${months.length} months (${first} – ${last})`;
+  document.getElementById('dlModalMonthCount').textContent = label;
+  document.getElementById('downloadModeModal').classList.add('active');
+}
+
+// ── Top-bar download progress controller ──────────────────────────────────
+let _dlAbortCtrl = null;
+
+const _dlBar = {
+  el:     () => document.getElementById('dlTopBar'),
+  label:  () => document.getElementById('dlBarLabel'),
+  sub:    () => document.getElementById('dlBarSub'),
+  fill:   () => document.getElementById('dlBarFill'),
+  pct:    () => document.getElementById('dlBarPct'),
+
+  /** Phase 1 – indeterminate bounce: server is building the file */
+  generating(labelText, subText = 'Click × to cancel') {
+    const bar = this.el(); if (!bar) return;
+    bar.classList.remove('dl-done');
+    bar.classList.add('dl-indeterminate');
+    if (this.label()) this.label().textContent = labelText;
+    if (this.sub())   this.sub().textContent   = subText;
+    if (this.pct())   this.pct().textContent   = '';
+    bar.classList.add('visible');
+  },
+
+  /** Phase 2 – determinate: we know the total size, bytes are flowing */
+  startProgress(labelText) {
+    const bar = this.el(); if (!bar) return;
+    bar.classList.remove('dl-indeterminate');
+    if (this.label()) this.label().textContent = labelText;
+    if (this.fill())  this.fill().style.width  = '0%';
+    if (this.pct())   this.pct().textContent   = '0%';
+  },
+
+  update(pct) {
+    if (this.fill()) this.fill().style.width = `${pct}%`;
+    if (this.pct())  this.pct().textContent  = `${pct}%`;
+  },
+
+  done(labelText = 'Download complete') {
+    const bar = this.el(); if (!bar) return;
+    bar.classList.remove('dl-indeterminate');
+    bar.classList.add('dl-done');
+    if (this.fill())  this.fill().style.width  = '100%';
+    if (this.pct())   this.pct().textContent   = '100%';
+    if (this.label()) this.label().textContent = labelText;
+    if (this.sub())   this.sub().textContent   = 'Saved to your Downloads folder';
+    const cancel = document.getElementById('dlBarCancel');
+    if (cancel) {
+      cancel.textContent = '✓'; cancel.title = 'Close';
+      cancel.onclick = () => _dlBar.hide(); cancel.style.pointerEvents = 'auto';
+    }
+    setTimeout(() => _dlBar.hide(), 3500);
+  },
+
+  hide() {
+    const bar = this.el(); if (!bar) return;
+    bar.classList.remove('visible');
+    setTimeout(() => bar.classList.remove('dl-done', 'dl-indeterminate'), 350);
+    const cancel = document.getElementById('dlBarCancel');
+    if (cancel) {
+      cancel.textContent = '✕'; cancel.title = 'Cancel download';
+      cancel.onclick = () => cancelDownload(); cancel.style.pointerEvents = '';
+    }
+  },
+
+  error(msg) {
+    const bar = this.el(); if (!bar) return;
+    bar.classList.remove('dl-indeterminate', 'dl-done');
+    if (this.label()) this.label().textContent = 'Download failed';
+    if (this.sub())   this.sub().textContent   = msg || 'An error occurred';
+    if (this.pct())   this.pct().textContent   = '';
+    const fill = this.fill();
+    if (fill) { fill.style.background = 'var(--danger)'; fill.style.width = '100%'; }
+    setTimeout(() => {
+      if (fill) fill.style.background = '';
+      _dlBar.hide();
+    }, 3000);
+  }
+};
+
+function cancelDownload() {
+  if (_dlAbortCtrl) { _dlAbortCtrl.abort(); _dlAbortCtrl = null; }
+  _dlBar.hide();
+  const btn = document.getElementById('btnDownloadReport');
+  if (btn) btn.disabled = false;
+}
+
+/**
+ * Build the correct report filename from the data currently in allRows,
+ * matching the server-side naming convention:
+ *   Single date  → "Daily Report … for 17th of March 2026.xlsx"
+ *   Two dates    → "Daily Report … for 1st of March 2026 & 17th of March 2026.xlsx"
+ *   Range        → "Daily Report … for 1st of March 2026 - 17th of March 2026.xlsx"
+ */
+function getReportFilenameFromRows(rows) {
+  const fmtDay = d => {
+    const n = d.getDate();
+    const sfx = (n >= 11 && n <= 13) ? 'th'
+      : { 1:'st', 2:'nd', 3:'rd' }[n % 10] || 'th';
+    const mo = ['January','February','March','April','May','June',
+                 'July','August','September','October','November','December'][d.getMonth()];
+    return `${n}${sfx} of ${mo} ${d.getFullYear()}`;
+  };
+
+  const dates = new Set();
+  for (const r of (rows || [])) {
+    const raw = r['Reported Date'];
+    if (!raw) continue;
+    const s = String(raw).slice(0, 10);   // 'YYYY-MM-DD'
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) dates.add(s);
+  }
+
+  if (!dates.size) {
+    // absolute fallback – yesterday
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    return `Daily Report on Resolved and Pending Complaints for ${fmtDay(y)}.xlsx`;
+  }
+
+  const sorted = [...dates].sort();
+  const min = new Date(sorted[0] + 'T00:00:00');
+  const max = new Date(sorted[sorted.length - 1] + 'T00:00:00');
+
+  let datePart;
+  if (sorted.length === 1) {
+    datePart = fmtDay(min);
+  } else if (sorted.length === 2) {
+    datePart = `${fmtDay(min)} & ${fmtDay(max)}`;
+  } else {
+    datePart = `${fmtDay(min)} - ${fmtDay(max)}`;
+  }
+  return `Daily Report on Resolved and Pending Complaints for ${datePart}.xlsx`;
+}
+
+/**
+ * Parse the filename out of a Content-Disposition response header.
+ * Handles both plain and UTF-8 encoded forms.
+ */
+function _filenameFromCD(cd) {
+  if (!cd) return null;
+  // RFC 5987 encoded: filename*=UTF-8''name
+  const star = cd.match(/filename\*\s*=\s*UTF-8''([^;\r\n]+)/i);
+  if (star) return decodeURIComponent(star[1].trim());
+  // Plain: filename="name" or filename=name
+  const plain = cd.match(/filename\s*=\s*["']?([^"';\r\n]+)["']?/i);
+  return plain ? plain[1].trim() : null;
+}
+
+/**
+ * Fetch a download endpoint with a two-phase progress bar:
+ *   1. Indeterminate bounce while the server generates the file.
+ *   2. Determinate fill as bytes stream in (requires Content-Length).
+ * Returns { blob, filename } – filename from Content-Disposition or null.
+ */
+async function _fetchWithProgress(url, genLabel, dlLabel, subLabel = 'Click × to cancel') {
+  _dlAbortCtrl = new AbortController();
+  const btn = document.getElementById('btnDownloadReport');
+  if (btn) btn.disabled = true;
+
+  // Phase 1 – indeterminate while server builds the file
+  _dlBar.generating(genLabel, subLabel);
+
+  const resp = await authFetch(url, { signal: _dlAbortCtrl.signal });
+  if (!resp.ok) {
+    const d = await resp.json().catch(() => ({}));
+    throw new Error(d.error || `Server error ${resp.status}`);
+  }
+
+  const serverFilename = _filenameFromCD(resp.headers.get('Content-Disposition'));
+  const total = parseInt(resp.headers.get('Content-Length') || '0', 10);
+
+  if (!resp.body || !total) {
+    // No size info – stay indeterminate, update label to download phase
+    const lbl = document.getElementById('dlBarLabel');
+    if (lbl) lbl.textContent = dlLabel;
     const blob = await resp.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url;
-    a.download = getReportFilename();
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('Report downloaded!', 'success');
+    return { blob, filename: serverFilename };
+  }
+
+  // Phase 2 – determinate streaming
+  _dlBar.startProgress(dlLabel);
+
+  const reader = resp.body.getReader();
+  const chunks = [];
+  let received = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    _dlBar.update(Math.min(99, Math.round((received / total) * 100)));
+  }
+
+  const all = new Uint8Array(received);
+  let pos = 0;
+  for (const c of chunks) { all.set(c, pos); pos += c.length; }
+  return { blob: new Blob([all]), filename: serverFilename };
+}
+
+function _triggerBlobDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
+}
+
+async function downloadReport() {
+  try {
+    const { blob, filename } = await _fetchWithProgress(
+      '/admin/mmr/api/download-report',
+      'Generating report on server…',
+      'Downloading report…'
+    );
+    const name = filename || getReportFilenameFromRows(allRows);
+    _triggerBlobDownload(blob, name);
+    _dlBar.done('Report downloaded');
   } catch(e) {
+    if (e.name === 'AbortError') return;
+    _dlBar.error(e.message);
     toast(e.message, 'error');
+  } finally {
+    _dlAbortCtrl = null;
+    const btn = document.getElementById('btnDownloadReport');
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function downloadReportMonthly() {
+  try {
+    const { blob, filename } = await _fetchWithProgress(
+      '/admin/mmr/api/download-report-monthly',
+      'Building monthly ZIP on server…',
+      'Downloading ZIP archive…',
+      'This may take a moment – click × to cancel'
+    );
+    const months = getDistinctMonths(allRows);
+    const fmt = ym => {
+      const [y, m] = ym.split('-');
+      return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m - 1] + ' ' + y;
+    };
+    const fallbackZip = months.length
+      ? `Reports ${fmt(months[0])}${months.length > 1 ? ' – ' + fmt(months[months.length - 1]) : ''}.zip`
+      : 'Reports.zip';
+    _triggerBlobDownload(blob, filename || fallbackZip);
+    _dlBar.done(`${months.length} monthly report${months.length !== 1 ? 's' : ''} downloaded`);
+  } catch(e) {
+    if (e.name === 'AbortError') return;
+    _dlBar.error(e.message);
+    toast(e.message, 'error');
+  } finally {
+    _dlAbortCtrl = null;
+    const btn = document.getElementById('btnDownloadReport');
+    if (btn) btn.disabled = false;
   }
 }
 

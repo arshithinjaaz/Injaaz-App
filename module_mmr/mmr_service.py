@@ -7,6 +7,7 @@ Handles: Reactive Workorder Details sheet with columns:
 """
 import os
 import logging
+import zipfile
 from io import BytesIO
 from datetime import datetime
 
@@ -102,6 +103,58 @@ def get_report_date_range_from_df(df: pd.DataFrame, exclude_today: bool = True) 
     except Exception:
         pass
     return None
+
+
+def split_df_by_month(df: pd.DataFrame) -> list[tuple[str, pd.DataFrame]]:
+    """Split a DataFrame into (month_label, sub_df) chunks by Reported Date year-month.
+
+    Returns a list sorted chronologically, e.g.:
+      [('January 2026', <df>), ('February 2026', <df>), ...]
+    Rows with no parseable Reported Date are grouped under 'Unknown'.
+    """
+    if df is None or df.empty:
+        return []
+
+    work = df.copy()
+    work['Reported Date'] = pd.to_datetime(work['Reported Date'], errors='coerce')
+
+    known = work.dropna(subset=['Reported Date']).copy()
+    unknown = work[work['Reported Date'].isna()].copy()
+
+    chunks: list[tuple[str, pd.DataFrame]] = []
+    if not known.empty:
+        known['_ym'] = known['Reported Date'].dt.to_period('M')
+        for period, grp in known.groupby('_ym', sort=True):
+            label = period.strftime('%B %Y')
+            grp = grp.drop(columns=['_ym'])
+            chunks.append((label, grp.reset_index(drop=True)))
+    if not unknown.empty:
+        chunks.append(('Unknown', unknown.reset_index(drop=True)))
+    return chunks
+
+
+def generate_monthly_zip(df: pd.DataFrame) -> tuple[bytes, list[str]]:
+    """Generate one Excel report per calendar month and return a ZIP archive.
+
+    Returns:
+        (zip_bytes, list_of_filenames_inside_zip)
+    """
+    months = split_df_by_month(df)
+    if not months:
+        raise ValueError('No data to generate monthly reports from.')
+
+    buf = BytesIO()
+    filenames: list[str] = []
+
+    with zipfile.ZipFile(buf, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+        for label, month_df in months:
+            excel_bytes = generate_report_excel(month_df)
+            fname = f'Daily Report – {label}.xlsx'
+            zf.writestr(fname, excel_bytes)
+            filenames.append(fname)
+
+    buf.seek(0)
+    return buf.getvalue(), filenames
 
 
 # ──────────────────────────────────────────────────────────────────────────────
