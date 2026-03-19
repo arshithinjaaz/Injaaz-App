@@ -78,48 +78,131 @@ except Exception as e:
     USE_PROFESSIONAL_PDF = False
 
 def _write_materials_sheet(ws, materials):
-    """Write a 'Materials Used' sheet into the given openpyxl worksheet."""
+    """Write a 'Materials Used' sheet - matches reference format."""
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     from openpyxl.utils import get_column_letter
 
     header_fill  = PatternFill('solid', fgColor='125435')
-    alt_fill     = PatternFill('solid', fgColor='F0FAF5')
+    alt_fill     = PatternFill('solid', fgColor='E3F2FD')  # Light blue for zebra striping
     header_font  = Font(name='Calibri', bold=True, color='FFFFFF', size=10)
     body_font    = Font(name='Calibri', size=10)
     center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
     left_align   = Alignment(horizontal='left',   vertical='center', wrap_text=True)
+    right_align  = Alignment(horizontal='right',  vertical='center', wrap_text=True)
     thin         = Side(style='thin', color='BBDEFB')
     border       = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-    headers    = ['#', 'Material Name', 'Brand', 'Department', 'UOM', 'Quantity']
-    col_widths = [6, 35, 20, 16, 12, 12]
+    headers = ['#', 'Material Name', 'Brand', 'Department', 'UOM', 'Quantity', 'Unit Price (AED)', 'Line Total (AED)']
+    col_widths = [6, 42, 16, 14, 10, 10, 18, 20]
 
+    ws.merge_cells('A1:H1')
+    title_cell = ws['A1']
+    title_cell.value = "MATERIALS & COST BREAKDOWN"
+    title_cell.font = Font(name='Calibri', bold=True, color='FFFFFF', size=13)
+    title_cell.alignment = center_align
+    title_cell.fill = header_fill
     ws.row_dimensions[1].height = 30
+
+    ws.merge_cells('A2:H2')
+    sub_cell = ws['A2']
+    sub_cell.value = "Selected inspection materials with pricing and cost totals"
+    sub_cell.font = Font(name='Calibri', bold=False, color='125435', size=10)
+    sub_cell.alignment = center_align
+    sub_cell.fill = PatternFill('solid', fgColor='E8F5E9')
+    ws.row_dimensions[2].height = 22
+
+    header_row = 4
     for col_idx, (h, w) in enumerate(zip(headers, col_widths), 1):
-        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell = ws.cell(row=header_row, column=col_idx, value=h)
         cell.font      = header_font
         cell.fill      = header_fill
         cell.alignment = center_align
         cell.border    = border
         ws.column_dimensions[get_column_letter(col_idx)].width = w
 
-    for row_idx, m in enumerate(materials, 2):
+    grand_total = 0.0
+    data_start_row = header_row + 1
+    for idx, m in enumerate(materials, 1):
+        row_idx = data_start_row + idx - 1
         row_fill = PatternFill('solid', fgColor='FFFFFF') if row_idx % 2 == 0 else alt_fill
+        qty = float(m.get('quantity', 1) or 0)
+        unit_price = float(m.get('unit_price', 0) or 0)
+        line_total = qty * unit_price
+        grand_total += line_total
         row_data = [
-            row_idx - 1,
+            idx,
             str(m.get('name', '')),
             str(m.get('brand', '') or ''),
             str(m.get('department', '') or ''),
             str(m.get('uom', '') or ''),
-            m.get('quantity', 1),
+            qty,
+            unit_price,
+            line_total,
         ]
         for col_idx, value in enumerate(row_data, 1):
             cell = ws.cell(row=row_idx, column=col_idx, value=value)
             cell.font      = body_font
             cell.fill      = row_fill
             cell.border    = border
-            cell.alignment = center_align if col_idx in (1, 5, 6) else left_align
+            cell.alignment = center_align if col_idx in (1, 6) else (right_align if col_idx in (7, 8) else left_align)
+            if col_idx in (7, 8):
+                cell.number_format = '#,##0.00'
         ws.row_dimensions[row_idx].height = 22
+
+    total_row = data_start_row + len(materials)
+    for col_idx in range(1, 9):
+        cell = ws.cell(row=total_row, column=col_idx, value='' if col_idx < 7 else None)
+        cell.font = Font(name='Calibri', bold=True, size=10)
+        cell.fill = PatternFill('solid', fgColor='E8F5E9')
+        cell.border = border
+        cell.alignment = right_align if col_idx in (7, 8) else center_align
+    grand_total_cell = ws.cell(row=total_row, column=7, value='Grand Total (AED)')
+    grand_total_cell.alignment = right_align
+    total_value_cell = ws.cell(row=total_row, column=8, value=grand_total)
+    total_value_cell.alignment = right_align
+    total_value_cell.number_format = '#,##0.00'
+    ws.row_dimensions[total_row].height = 24
+
+    data_end_row = total_row - 1
+    if data_end_row >= data_start_row:
+        ws.auto_filter.ref = f"A{header_row}:H{data_end_row}"
+    ws.freeze_panes = f"A{data_start_row}"
+
+
+def _add_summary_kpi_cards(ws, start_row, cards):
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    thin = Side(style='thin', color='D0D7DE')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    ws.row_dimensions[start_row].height = 20
+    ws.row_dimensions[start_row + 1].height = 28
+
+    groups = [(1, 2), (3, 4), (5, 6), (7, 8)]
+    for idx, (c1, c2) in enumerate(groups):
+        if idx >= len(cards):
+            break
+        label, value = cards[idx]
+        ws.merge_cells(start_row=start_row, start_column=c1, end_row=start_row, end_column=c2)
+        ws.merge_cells(start_row=start_row + 1, start_column=c1, end_row=start_row + 1, end_column=c2)
+
+        lbl_cell = ws.cell(row=start_row, column=c1, value=label)
+        lbl_cell.font = Font(name='Calibri', size=9, bold=True, color='125435')
+        lbl_cell.alignment = Alignment(horizontal='center', vertical='center')
+        lbl_cell.fill = PatternFill('solid', fgColor='E8F5E9')
+        lbl_cell.border = border
+
+        val_cell = ws.cell(row=start_row + 1, column=c1, value=value)
+        val_cell.font = Font(name='Calibri', size=13, bold=True, color='0F172A')
+        val_cell.alignment = Alignment(horizontal='center', vertical='center')
+        val_cell.fill = PatternFill('solid', fgColor='FFFFFF')
+        val_cell.border = border
+
+        ws.cell(row=start_row, column=c2).fill = PatternFill('solid', fgColor='E8F5E9')
+        ws.cell(row=start_row, column=c2).border = border
+        ws.cell(row=start_row + 1, column=c2).fill = PatternFill('solid', fgColor='FFFFFF')
+        ws.cell(row=start_row + 1, column=c2).border = border
+
+    return start_row + 3
 
 
 def create_excel_report(data, output_dir):
@@ -133,7 +216,8 @@ def create_excel_report(data, output_dir):
             add_info_section,
             add_data_table,
             add_section_header,
-            finalize_workbook
+            finalize_workbook,
+            recenter_logo
         )
         
         logger.info(f"Creating professional Cleaning Excel report in {output_dir}")
@@ -144,110 +228,124 @@ def create_excel_report(data, output_dir):
         excel_filename = f"Cleaning_Assessment_{project_name}_{timestamp}.xlsx"
         excel_path = os.path.join(output_dir, excel_filename)
         
-        # Create professional workbook
-        wb, ws = create_professional_excel_workbook(
-            title="Site Assessment Report - Cleaning",
-            sheet_name="Assessment Report"
+        materials = data.get('materials_required', [])
+        materials_total = 0.0
+        for m in materials if isinstance(materials, list) else []:
+            try:
+                materials_total += float(m.get('quantity', 1) or 0) * float(m.get('unit_price', 0) or 0)
+            except Exception:
+                pass
+        priced_materials = sum(
+            1 for m in materials if isinstance(materials, list)
+            if (str(m.get('unit_price', '')).strip() not in ('', '0', '0.0', '0.00'))
         )
-        
-        # Add logo and title (span across all columns)
+
+        # Sheet 1: Summary
+        wb, ws_summary = create_professional_excel_workbook(
+            title="Site Assessment Report - Cleaning",
+            sheet_name="Summary"
+        )
         current_row = add_logo_and_title(
-            ws,
+            ws_summary,
             title="CLEANING ASSESSMENT REPORT",
             subtitle=f"Project: {project_name.replace('_', ' ')}",
-            max_columns=4
+            max_columns=8
         )
-        
-        # Project & Client Details Section (span across all columns)
-        project_info = [
-            ('Project Name', data.get('project_name', 'N/A')),
-            ('Date of Visit', data.get('date_of_visit', 'N/A')),
-            ('Report Generated', format_dubai_datetime() + ' (GST)')
-        ]
-        
-        current_row = add_info_section(ws, project_info, current_row, title="Project & Client Details", max_columns=4)
-        
-        # Facility Areas Section (span across all columns)
-        facility_data = [
-            ('Floor', data.get('facility_floor', 'N/A')),
-            ('Ground Parking', data.get('facility_ground_parking', 'N/A')),
-            ('Basement', data.get('facility_basement', 'N/A')),
-            ('Podium', data.get('facility_podium', 'N/A')),
-            ('Gym Room', data.get('facility_gym_room', 'N/A')),
-            ('Swimming Pool', data.get('facility_swimming_pool', 'N/A')),
-            ('Washroom (Male)', data.get('facility_washroom_male', 'N/A')),
-            ('Washroom (Female)', data.get('facility_washroom_female', 'N/A')),
-            ('Changing Room', data.get('facility_changing_room', 'N/A')),
-            ('Kids Play Area', data.get('facility_play_kids_place', 'N/A')),
-            ('Garbage Room', data.get('facility_garbage_room', 'N/A')),
-            ('Floor Chute Room', data.get('facility_floor_chute_room', 'N/A')),
-            ('Staircase', data.get('facility_staircase', 'N/A')),
-            ('Floor Service Room', data.get('facility_floor_service_room', 'N/A')),
-            ('Cleaner Count', data.get('facility_cleaner_count', 'N/A'))
-        ]
-        
-        current_row = add_info_section(ws, facility_data, current_row, title="Facility Area Counts", max_columns=4)
-        
-        # Cleaning Scope Section (span across all columns)
-        scope_data = [
-            ('Offices', '✓' if data.get('scope_offices') == 'True' else '✗'),
-            ('Toilets/Washrooms', '✓' if data.get('scope_toilets') == 'True' else '✗'),
-            ('Corridors/Hallways', '✓' if data.get('scope_hallways') == 'True' else '✗'),
-            ('Kitchen/Pantry', '✓' if data.get('scope_kitchen') == 'True' else '✗'),
-            ('Building Exterior', '✓' if data.get('scope_exterior') == 'True' else '✗'),
-            ('Special Care Areas', '✓' if data.get('scope_special_care') == 'True' else '✗')
-        ]
-        
-        current_row = add_info_section(ws, scope_data, current_row, title="Cleaning Requirements & Scope", max_columns=4)
-        
-        # Deep Cleaning Section (span across all columns)
-        deep_clean_data = [
-            ('Deep Cleaning Required', data.get('deep_clean_required', 'No')),
-            ('Areas to Deep Clean', data.get('deep_clean_areas', 'N/A'))
-        ]
-        
-        current_row = add_info_section(ws, deep_clean_data, current_row, title="Deep Cleaning", max_columns=4)
-        
-        # Waste Disposal Section (span across all columns)
-        waste_disposal_data = [
-            ('Waste Disposal Required', data.get('waste_disposal_required', 'No')),
-            ('Method of Disposal', data.get('waste_disposal_method', 'N/A'))
-        ]
-        
-        current_row = add_info_section(ws, waste_disposal_data, current_row, title="Waste Disposal", max_columns=4)
-        
-        # Special Considerations Section (span across all columns)
-        special_considerations_data = [
-            ('Restricted Access Areas', data.get('restricted_access', 'N/A')),
-            ('Pest Control Needed', data.get('pest_control', 'N/A'))
-        ]
-        
-        current_row = add_info_section(ws, special_considerations_data, current_row, title="Special Considerations", max_columns=4)
-        
-        # Safety & Staffing Section (span across all columns)
-        safety_data = [
-            ('Working Hours', data.get('working_hours', 'N/A')),
-            ('Required Team Size', str(data.get('required_team_size', 'N/A'))),
-            ('Site Access Requirements', data.get('site_access_requirements', 'N/A'))
-        ]
-        
-        current_row = add_info_section(ws, safety_data, current_row, title="Safety & Staffing", max_columns=4)
-        
-        # General Comments Section (span across all columns)
-        comments_data = [
-            ('Comments', data.get('general_comments', 'N/A'))
-        ]
-        
-        current_row = add_info_section(ws, comments_data, current_row, title="General Comments", max_columns=4)
-        
-        # Finalize main sheet formatting
-        finalize_workbook(ws)
+        current_row = add_info_section(
+            ws_summary,
+            [
+                ('Project Name', data.get('project_name', 'N/A')),
+                ('Date of Visit', data.get('date_of_visit', 'N/A')),
+                ('Report Generated', format_dubai_datetime() + ' (GST)'),
+                ('Deep Cleaning Required', data.get('deep_clean_required', 'No')),
+                ('Required Team Size', str(data.get('required_team_size', 'N/A'))),
+                ('Selected Materials', str(len(materials) if isinstance(materials, list) else 0)),
+            ],
+            current_row,
+            title="Executive Overview",
+            max_columns=8
+        )
+        current_row = _add_summary_kpi_cards(ws_summary, current_row, [
+            ("Cleaner Count", data.get('facility_cleaner_count', 'N/A')),
+            ("Selected Materials", len(materials) if isinstance(materials, list) else 0),
+            ("Priced Materials", priced_materials),
+            ("Materials Value (AED)", f"{materials_total:,.2f}")
+        ])
+        ws_summary.freeze_panes = "A8"
+        finalize_workbook(ws_summary)
+        # Lock column widths to match reference format exactly
+        for _cl, _w in zip('ABCDEFGH', [23, 32, 17, 10, 18, 10, 23, 10]):
+            ws_summary.column_dimensions[_cl].width = _w
+        recenter_logo(ws_summary)
 
-        # Materials Used — separate sheet
-        materials = data.get('materials_required', [])
-        if materials and isinstance(materials, list) and len(materials) > 0:
-            ws_mat = wb.create_sheet(title="Materials Used")
+        # Sheet 2: Assessment Details
+        ws_details = wb.create_sheet(title="Assessment Details")
+        row = add_logo_and_title(
+            ws_details,
+            title="CLEANING ASSESSMENT - DETAILS",
+            subtitle=f"Project: {project_name.replace('_', ' ')}",
+            max_columns=8
+        )
+        row = add_info_section(
+            ws_details,
+            [
+                ('Facility Floor', data.get('facility_floor', 'N/A')),
+                ('Ground Parking', data.get('facility_ground_parking', 'N/A')),
+                ('Basement', data.get('facility_basement', 'N/A')),
+                ('Podium', data.get('facility_podium', 'N/A')),
+                ('Gym Room', data.get('facility_gym_room', 'N/A')),
+                ('Swimming Pool', data.get('facility_swimming_pool', 'N/A')),
+                ('Washroom (Male)', data.get('facility_washroom_male', 'N/A')),
+                ('Washroom (Female)', data.get('facility_washroom_female', 'N/A')),
+                ('Restricted Access Areas', data.get('restricted_access', 'N/A')),
+                ('Pest Control Needed', data.get('pest_control', 'N/A')),
+                ('Working Hours', data.get('working_hours', 'N/A')),
+                ('Site Access Requirements', data.get('site_access_requirements', 'N/A')),
+                ('General Comments', data.get('general_comments', 'N/A')),
+            ],
+            row,
+            title="Site & Scope Details",
+            max_columns=8
+        )
+        row = add_section_header(ws_details, "Cleaning Scope Checklist", row, span_columns=8)
+        headers = ['Offices', 'Toilets/Washrooms', 'Corridors/Hallways', 'Kitchen/Pantry', 'Building Exterior', 'Special Care Areas', 'Deep Clean', 'Waste Disposal']
+        checklist = [[
+            'Yes' if data.get('scope_offices') == 'True' else 'No',
+            'Yes' if data.get('scope_toilets') == 'True' else 'No',
+            'Yes' if data.get('scope_hallways') == 'True' else 'No',
+            'Yes' if data.get('scope_kitchen') == 'True' else 'No',
+            'Yes' if data.get('scope_exterior') == 'True' else 'No',
+            'Yes' if data.get('scope_special_care') == 'True' else 'No',
+            data.get('deep_clean_required', 'No'),
+            data.get('waste_disposal_required', 'No')
+        ]]
+        add_data_table(
+            ws_details,
+            headers,
+            checklist,
+            row,
+            col_widths={'A': 15, 'B': 18, 'C': 18, 'D': 15, 'E': 16, 'F': 18, 'G': 12, 'H': 14}
+        )
+        ws_details.freeze_panes = "A8"
+        finalize_workbook(ws_details)
+        # Lock column widths appropriate for Assessment Details content
+        for _cl, _w in zip('ABCDEFGH', [26, 35, 14, 15, 14, 16, 12, 14]):
+            ws_details.column_dimensions[_cl].width = _w
+        recenter_logo(ws_details)
+
+        # Sheet 3: Materials & Cost
+        ws_mat = wb.create_sheet(title="Materials & Cost")
+        if materials and isinstance(materials, list):
             _write_materials_sheet(ws_mat, materials)
+        else:
+            ws_mat.merge_cells('A1:H1')
+            ws_mat['A1'] = "MATERIALS & COST BREAKDOWN"
+            ws_mat.merge_cells('A3:H3')
+            ws_mat['A3'] = "No materials were selected for this inspection."
+        finalize_workbook(ws_mat)
+        # Lock column widths to match reference format exactly
+        for _cl, _w in zip('ABCDEFGH', [13, 25, 15, 17, 11, 15, 24, 25]):
+            ws_mat.column_dimensions[_cl].width = _w
 
         # Save workbook
         wb.save(excel_path)
@@ -420,18 +518,25 @@ def create_pdf_report(data, output_dir):
         materials = data.get('materials_required', [])
         if materials and isinstance(materials, list) and len(materials) > 0:
             add_section_heading(story, "Materials Required")
-            mat_headers = ['#', 'Material Name', 'Brand', 'Department', 'UOM', 'Quantity']
+            mat_headers = ['#', 'Material Name', 'Brand', 'Department', 'UOM', 'Qty', 'Unit Price (AED)', 'Line Total (AED)']
             mat_data = []
+            materials_total = 0.0
             for idx, m in enumerate(materials, 1):
+                qty = float(m.get('quantity', 1) or 0)
+                unit_price = float(m.get('unit_price', 0) or 0)
+                line_total = qty * unit_price
+                materials_total += line_total
                 mat_data.append([
                     str(idx),
                     str(m.get('name', 'N/A')),
                     str(m.get('brand', '') or '—'),
                     str(m.get('department', '') or '—'),
                     str(m.get('uom', '') or '—'),
-                    str(m.get('quantity', 1)),
+                    f"{qty:g}",
+                    f"{unit_price:,.2f}",
+                    f"{line_total:,.2f}",
                 ])
-            mat_col_widths = [0.4*inch, 2.1*inch, 1.2*inch, 1.0*inch, 0.8*inch, 0.7*inch]
+            mat_col_widths = [0.3*inch, 1.8*inch, 0.9*inch, 0.8*inch, 0.5*inch, 0.45*inch, 0.9*inch, 0.95*inch]
             mat_table_data = [mat_headers] + mat_data
             mat_table = Table(mat_table_data, colWidths=mat_col_widths, repeatRows=1)
             mat_table.setStyle(TableStyle([
@@ -444,6 +549,7 @@ def create_pdf_report(data, output_dir):
                 ('FONTSIZE',   (0, 1), (-1, -1), 8),
                 ('ALIGN',      (0, 1), (0, -1), 'CENTER'),
                 ('ALIGN',      (5, 1), (5, -1), 'CENTER'),
+                ('ALIGN',      (6, 1), (7, -1), 'RIGHT'),
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F0FAF5')]),
                 ('GRID',       (0, 0), (-1, -1), 0.5, colors.HexColor('#BBDEFB')),
                 ('TOPPADDING', (0, 0), (-1, -1), 5),
@@ -452,6 +558,7 @@ def create_pdf_report(data, output_dir):
                 ('RIGHTPADDING', (0, 0), (-1, -1), 6),
             ]))
             story.append(mat_table)
+            add_paragraph(story, f"<b>Materials Grand Total (AED):</b> {materials_total:,.2f}")
             story.append(Spacer(1, 0.15*inch))
 
         # SIGNATURES PAGE - Professional format with all reviewer signatures
