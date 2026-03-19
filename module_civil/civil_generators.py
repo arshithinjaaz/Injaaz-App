@@ -72,48 +72,131 @@ except Exception as e:
     USE_PROFESSIONAL_PDF = False
 
 def _write_materials_sheet(ws, materials):
-    """Write a 'Materials Used' sheet into the given openpyxl worksheet."""
+    """Write a 'Materials Used' sheet - matches reference format."""
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     from openpyxl.utils import get_column_letter
 
     header_fill  = PatternFill('solid', fgColor='125435')
-    alt_fill     = PatternFill('solid', fgColor='F0FAF5')
+    alt_fill     = PatternFill('solid', fgColor='E3F2FD')  # Light blue for zebra striping
     header_font  = Font(name='Calibri', bold=True, color='FFFFFF', size=10)
     body_font    = Font(name='Calibri', size=10)
     center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
     left_align   = Alignment(horizontal='left',   vertical='center', wrap_text=True)
+    right_align  = Alignment(horizontal='right',  vertical='center', wrap_text=True)
     thin         = Side(style='thin', color='BBDEFB')
     border       = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-    headers    = ['#', 'Material Name', 'Brand', 'Department', 'UOM', 'Quantity']
-    col_widths = [6, 35, 20, 16, 12, 12]
+    headers = ['#', 'Material Name', 'Brand', 'Department', 'UOM', 'Quantity', 'Unit Price (AED)', 'Line Total (AED)']
+    col_widths = [6, 42, 16, 14, 10, 10, 18, 20]
 
+    ws.merge_cells('A1:H1')
+    title_cell = ws['A1']
+    title_cell.value = "MATERIALS & COST BREAKDOWN"
+    title_cell.font = Font(name='Calibri', bold=True, color='FFFFFF', size=13)
+    title_cell.alignment = center_align
+    title_cell.fill = header_fill
     ws.row_dimensions[1].height = 30
+
+    ws.merge_cells('A2:H2')
+    sub_cell = ws['A2']
+    sub_cell.value = "Selected inspection materials with pricing and cost totals"
+    sub_cell.font = Font(name='Calibri', bold=False, color='125435', size=10)
+    sub_cell.alignment = center_align
+    sub_cell.fill = PatternFill('solid', fgColor='E8F5E9')
+    ws.row_dimensions[2].height = 22
+
+    header_row = 4
     for col_idx, (h, w) in enumerate(zip(headers, col_widths), 1):
-        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell = ws.cell(row=header_row, column=col_idx, value=h)
         cell.font      = header_font
         cell.fill      = header_fill
         cell.alignment = center_align
         cell.border    = border
         ws.column_dimensions[get_column_letter(col_idx)].width = w
 
-    for row_idx, m in enumerate(materials, 2):
+    grand_total = 0.0
+    data_start_row = header_row + 1
+    for idx, m in enumerate(materials, 1):
+        row_idx = data_start_row + idx - 1
         row_fill = PatternFill('solid', fgColor='FFFFFF') if row_idx % 2 == 0 else alt_fill
+        qty = float(m.get('quantity', 1) or 0)
+        unit_price = float(m.get('unit_price', 0) or 0)
+        line_total = qty * unit_price
+        grand_total += line_total
         row_data = [
-            row_idx - 1,
+            idx,
             str(m.get('name', '')),
             str(m.get('brand', '') or ''),
             str(m.get('department', '') or ''),
             str(m.get('uom', '') or ''),
-            m.get('quantity', 1),
+            qty,
+            unit_price,
+            line_total,
         ]
         for col_idx, value in enumerate(row_data, 1):
             cell = ws.cell(row=row_idx, column=col_idx, value=value)
             cell.font      = body_font
             cell.fill      = row_fill
             cell.border    = border
-            cell.alignment = center_align if col_idx in (1, 5, 6) else left_align
+            cell.alignment = center_align if col_idx in (1, 6) else (right_align if col_idx in (7, 8) else left_align)
+            if col_idx in (7, 8):
+                cell.number_format = '#,##0.00'
         ws.row_dimensions[row_idx].height = 22
+
+    total_row = data_start_row + len(materials)
+    for col_idx in range(1, 9):
+        cell = ws.cell(row=total_row, column=col_idx, value='' if col_idx < 7 else None)
+        cell.font = Font(name='Calibri', bold=True, size=10)
+        cell.fill = PatternFill('solid', fgColor='E8F5E9')
+        cell.border = border
+        cell.alignment = right_align if col_idx in (7, 8) else center_align
+    grand_total_cell = ws.cell(row=total_row, column=7, value='Grand Total (AED)')
+    grand_total_cell.alignment = right_align
+    total_value_cell = ws.cell(row=total_row, column=8, value=grand_total)
+    total_value_cell.alignment = right_align
+    total_value_cell.number_format = '#,##0.00'
+    ws.row_dimensions[total_row].height = 24
+
+    data_end_row = total_row - 1
+    if data_end_row >= data_start_row:
+        ws.auto_filter.ref = f"A{header_row}:H{data_end_row}"
+    ws.freeze_panes = f"A{data_start_row}"
+
+
+def _add_summary_kpi_cards(ws, start_row, cards):
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    thin = Side(style='thin', color='D0D7DE')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    ws.row_dimensions[start_row].height = 20
+    ws.row_dimensions[start_row + 1].height = 28
+
+    groups = [(1, 2), (3, 4), (5, 6), (7, 8)]
+    for idx, (c1, c2) in enumerate(groups):
+        if idx >= len(cards):
+            break
+        label, value = cards[idx]
+        ws.merge_cells(start_row=start_row, start_column=c1, end_row=start_row, end_column=c2)
+        ws.merge_cells(start_row=start_row + 1, start_column=c1, end_row=start_row + 1, end_column=c2)
+
+        lbl_cell = ws.cell(row=start_row, column=c1, value=label)
+        lbl_cell.font = Font(name='Calibri', size=9, bold=True, color='125435')
+        lbl_cell.alignment = Alignment(horizontal='center', vertical='center')
+        lbl_cell.fill = PatternFill('solid', fgColor='E8F5E9')
+        lbl_cell.border = border
+
+        val_cell = ws.cell(row=start_row + 1, column=c1, value=value)
+        val_cell.font = Font(name='Calibri', size=13, bold=True, color='0F172A')
+        val_cell.alignment = Alignment(horizontal='center', vertical='center')
+        val_cell.fill = PatternFill('solid', fgColor='FFFFFF')
+        val_cell.border = border
+
+        ws.cell(row=start_row, column=c2).fill = PatternFill('solid', fgColor='E8F5E9')
+        ws.cell(row=start_row, column=c2).border = border
+        ws.cell(row=start_row + 1, column=c2).fill = PatternFill('solid', fgColor='FFFFFF')
+        ws.cell(row=start_row + 1, column=c2).border = border
+
+    return start_row + 3
 
 
 def create_excel_report(data, output_dir):
@@ -127,7 +210,8 @@ def create_excel_report(data, output_dir):
             add_info_section,
             add_data_table,
             add_section_header,
-            finalize_workbook
+            finalize_workbook,
+            recenter_logo
         )
         
         logger.info(f"Creating professional Civil Excel report in {output_dir}")
@@ -135,7 +219,7 @@ def create_excel_report(data, output_dir):
         # Extract data - data is already in the correct format from submit_with_urls
         project_name = data.get('project_name', 'Unknown_Project')
         project_name = project_name.replace(' ', '_') if project_name else 'Unknown_Project'
-        
+
         # Collect all photos from work items
         work_items = data.get('work_items', [])
         logger.info(f"📸 Processing {len(work_items)} work items for Excel")
@@ -150,70 +234,126 @@ def create_excel_report(data, output_dir):
         excel_filename = f"Civil_{project_name}_{timestamp}.xlsx"
         excel_path = os.path.join(output_dir, excel_filename)
         
-        # Create professional workbook
-        wb, ws = create_professional_excel_workbook(
-            title="Civil Works Inspection Report",
-            sheet_name="Civil Works Report"
+        materials = data.get('materials_required', [])
+
+        materials_total = 0.0
+        for m in materials if isinstance(materials, list) else []:
+            try:
+                materials_total += float(m.get('quantity', 1) or 0) * float(m.get('unit_price', 0) or 0)
+            except Exception:
+                pass
+        priced_materials = sum(
+            1 for m in materials if isinstance(materials, list)
+            if (str(m.get('unit_price', '')).strip() not in ('', '0', '0.0', '0.00'))
         )
-        
-        # Add logo and title (span across all 7 columns)
+
+        # Sheet 1: Summary
+        wb, ws_summary = create_professional_excel_workbook(
+            title="Civil Works Inspection Report",
+            sheet_name="Summary"
+        )
         current_row = add_logo_and_title(
-            ws,
+            ws_summary,
             title="CIVIL WORKS INSPECTION REPORT",
             subtitle=f"Project: {project_name.replace('_', ' ')}",
-            max_columns=7
+            max_columns=8
         )
-        
-        # Project Information Section (span across all 7 columns)
-        project_info = [
-            ('Project Name', data.get('project_name', 'N/A')),
-            ('Visit Date', data.get('visit_date', 'N/A')),
-            ('Location', data.get('location', 'N/A')),
-            ('Inspector', data.get('inspector_name', 'N/A')),
-            ('Report Generated', format_dubai_datetime() + ' (GST)'),
-            ('Total Items', str(len(work_items)))
-        ]
-        
-        current_row = add_info_section(ws, project_info, current_row, title="Project Information", max_columns=7)
-        
-        # Work Items Section - Use work_items array directly (Photos column removed)
-        if work_items:
-            current_row = add_section_header(ws, "Work Items", current_row, span_columns=7)
-            
-            headers = ['#', 'Description', 'Quantity', 'Material', 'Material Qty', 'Price', 'Labour']
-            table_data = []
-            
-            for idx, item in enumerate(work_items, 1):
-                table_data.append([
-                    str(idx),
-                    item.get('description', 'N/A'),
-                    item.get('quantity', 'N/A'),
-                    item.get('material', 'N/A'),
-                    item.get('material_qty', 'N/A'),
-                    item.get('price', 'N/A'),
-                    item.get('labour', 'N/A')
-                ])
-            
-            col_widths = {
-                'A': 6,   # #
-                'B': 35,  # Description
-                'C': 12,  # Quantity
-                'D': 20,  # Material
-                'E': 12,  # Material Qty
-                'F': 12,  # Price
-                'G': 15   # Labour
-            }
-            
-            current_row = add_data_table(ws, headers, table_data, current_row, col_widths=col_widths)
-        
-        # Finalize main sheet formatting
-        finalize_workbook(ws)
+        current_row = add_info_section(
+            ws_summary,
+            [
+                ('Project Name', data.get('project_name', 'N/A')),
+                ('Visit Date', data.get('visit_date', 'N/A')),
+                ('Location', data.get('location', 'N/A')),
+                ('Inspector', data.get('inspector_name', 'N/A')),
+                ('Report Generated', format_dubai_datetime() + ' (GST)'),
+                ('Work Items', str(len(work_items))),
+                ('Selected Materials', str(len(materials) if isinstance(materials, list) else 0)),
+            ],
+            current_row,
+            title="Executive Overview",
+            max_columns=8
+        )
+        current_row = _add_summary_kpi_cards(ws_summary, current_row, [
+            ("Total Work Items", len(work_items)),
+            ("Total Materials", len(materials) if isinstance(materials, list) else 0),
+            ("Priced Materials", priced_materials),
+            ("Materials Value (AED)", f"{materials_total:,.2f}")
+        ])
+        ws_summary.freeze_panes = "A8"
+        finalize_workbook(ws_summary)
+        # Lock column widths to match reference format exactly
+        for _cl, _w in zip('ABCDEFGH', [23, 32, 17, 10, 18, 10, 23, 10]):
+            ws_summary.column_dimensions[_cl].width = _w
+        recenter_logo(ws_summary)
 
-        # Materials Used — separate sheet
-        materials = data.get('materials_required', [])
-        if materials and isinstance(materials, list) and len(materials) > 0:
-            ws_mat = wb.create_sheet(title="Materials Used")
+        # Sheet 2: Work Items
+        ws_items = wb.create_sheet(title="Work Items")
+        items_row = add_logo_and_title(
+            ws_items,
+            title="CIVIL WORKS - ITEM REGISTER",
+            subtitle=f"Project: {project_name.replace('_', ' ')}",
+            max_columns=8
+        )
+        items_row = add_info_section(
+            ws_items,
+            [
+                ('Work Description', data.get('description_of_work', 'N/A')),
+                ('Area', data.get('area', 'N/A')),
+                ('Total Photos', str(len(all_photos))),
+            ],
+            items_row,
+            title="Execution Scope",
+            max_columns=8
+        )
+        headers = ['#', 'Description', 'Quantity', 'Material', 'Material Qty', 'Price', 'Labour', 'Comments']
+        table_data = []
+        for idx, item in enumerate(work_items, 1):
+            table_data.append([
+                idx,
+                item.get('description', 'N/A'),
+                float(item.get('quantity', 0) or 0),
+                item.get('material', 'N/A'),
+                item.get('material_qty', 'N/A'),
+                item.get('price', 'N/A'),
+                item.get('labour', 'N/A'),
+                item.get('comments', 'N/A')
+            ])
+        col_widths = {
+            'A': 6,
+            'B': 32,
+            'C': 10,
+            'D': 18,
+            'E': 14,
+            'F': 12,
+            'G': 14,
+            'H': 26
+        }
+        table_start = add_section_header(ws_items, "Work Item Details", items_row, span_columns=8)
+        add_data_table(ws_items, headers, table_data, table_start, col_widths=col_widths)
+        if table_data:
+            header_row = table_start
+            last_row = header_row + len(table_data)
+            ws_items.auto_filter.ref = f"A{header_row}:H{last_row}"
+            ws_items.freeze_panes = f"A{header_row + 1}"
+        finalize_workbook(ws_items)
+        # Lock column widths appropriate for Work Items content
+        for _cl, _w in zip('ABCDEFGH', [16, 40, 12, 25, 16, 12, 20, 32]):
+            ws_items.column_dimensions[_cl].width = _w
+        recenter_logo(ws_items)
+
+        # Sheet 3: Materials & Cost
+        ws_mat = wb.create_sheet(title="Materials & Cost")
+        if materials and isinstance(materials, list):
             _write_materials_sheet(ws_mat, materials)
+        else:
+            ws_mat.merge_cells('A1:H1')
+            ws_mat['A1'] = "MATERIALS & COST BREAKDOWN"
+            ws_mat.merge_cells('A3:H3')
+            ws_mat['A3'] = "No materials were selected for this inspection."
+        finalize_workbook(ws_mat)
+        # Lock column widths to match reference format exactly
+        for _cl, _w in zip('ABCDEFGH', [13, 25, 15, 17, 11, 15, 24, 25]):
+            ws_mat.column_dimensions[_cl].width = _w
 
         # Save workbook
         wb.save(excel_path)
@@ -365,18 +505,25 @@ def create_pdf_report(data, output_dir):
         materials = data.get('materials_required', [])
         if materials and isinstance(materials, list) and len(materials) > 0:
             add_section_heading(story, "Materials Required")
-            mat_headers = ['#', 'Material Name', 'Brand', 'Department', 'UOM', 'Quantity']
+            mat_headers = ['#', 'Material Name', 'Brand', 'Department', 'UOM', 'Qty', 'Unit Price (AED)', 'Line Total (AED)']
             mat_data = []
+            materials_total = 0.0
             for idx, m in enumerate(materials, 1):
+                qty = float(m.get('quantity', 1) or 0)
+                unit_price = float(m.get('unit_price', 0) or 0)
+                line_total = qty * unit_price
+                materials_total += line_total
                 mat_data.append([
                     str(idx),
                     str(m.get('name', 'N/A')),
                     str(m.get('brand', '') or '—'),
                     str(m.get('department', '') or '—'),
                     str(m.get('uom', '') or '—'),
-                    str(m.get('quantity', 1)),
+                    f"{qty:g}",
+                    f"{unit_price:,.2f}",
+                    f"{line_total:,.2f}",
                 ])
-            mat_col_widths = [0.4*inch, 2.1*inch, 1.2*inch, 1.0*inch, 0.8*inch, 0.7*inch]
+            mat_col_widths = [0.3*inch, 1.8*inch, 0.9*inch, 0.8*inch, 0.5*inch, 0.45*inch, 0.9*inch, 0.95*inch]
             mat_table_data = [mat_headers] + mat_data
             mat_table = Table(mat_table_data, colWidths=mat_col_widths, repeatRows=1)
             mat_table.setStyle(TableStyle([
@@ -389,6 +536,7 @@ def create_pdf_report(data, output_dir):
                 ('FONTSIZE',   (0, 1), (-1, -1), 8),
                 ('ALIGN',      (0, 1), (0, -1), 'CENTER'),
                 ('ALIGN',      (5, 1), (5, -1), 'CENTER'),
+                ('ALIGN',      (6, 1), (7, -1), 'RIGHT'),
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F0FAF5')]),
                 ('GRID',       (0, 0), (-1, -1), 0.5, colors.HexColor('#BBDEFB')),
                 ('TOPPADDING', (0, 0), (-1, -1), 5),
@@ -397,6 +545,7 @@ def create_pdf_report(data, output_dir):
                 ('RIGHTPADDING', (0, 0), (-1, -1), 6),
             ]))
             story.append(mat_table)
+            add_paragraph(story, f"<b>Materials Grand Total (AED):</b> {materials_total:,.2f}")
             story.append(Spacer(1, 0.15*inch))
 
         # SIGNATURES PAGE - Professional format with all reviewer signatures

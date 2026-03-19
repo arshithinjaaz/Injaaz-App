@@ -57,7 +57,9 @@ def regenerate_excel(submission_id):
             return jsonify({'error': 'Submission not found'}), 404
 
         module_type = submission_data.get('module_type')
-        form_data = submission_data.get('form_data', {})
+        form_data_wrapper = submission_data.get('form_data', {})
+        # Extract inner data if nested (matches module_base.process_report_job)
+        form_data = form_data_wrapper.get('data', form_data_wrapper) if isinstance(form_data_wrapper, dict) else form_data_wrapper
         
         # Generate report based on module type
         if module_type == 'civil':
@@ -111,7 +113,9 @@ def regenerate_pdf(submission_id):
             return jsonify({'error': 'Submission not found'}), 404
 
         module_type = submission_data.get('module_type')
-        form_data = submission_data.get('form_data', {})
+        form_data_wrapper = submission_data.get('form_data', {})
+        # Extract inner data if nested (matches module_base.process_report_job)
+        form_data = form_data_wrapper.get('data', form_data_wrapper) if isinstance(form_data_wrapper, dict) else form_data_wrapper
         
         # Generate report based on module type
         if module_type == 'civil':

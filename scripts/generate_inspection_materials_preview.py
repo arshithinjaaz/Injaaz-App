@@ -50,37 +50,62 @@ def _latest_form_data(conn, module_type):
 
 
 def _create_png(path, title, subtitle, bg_rgb):
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw
 
     w, h = 1280, 720
-    img = Image.new("RGB", (w, h), color=bg_rgb)
+    img = Image.new("RGB", (w, h), color=(236, 236, 236))
     draw = ImageDraw.Draw(img)
-    font_title = ImageFont.load_default()
-    font_sub = ImageFont.load_default()
 
-    draw.rectangle([(28, 28), (w - 28, h - 28)], outline=(255, 255, 255), width=4)
-    draw.rectangle([(42, 42), (w - 42, 128)], fill=(17, 84, 53))
-    draw.text((58, 70), title, fill=(255, 255, 255), font=font_title)
-    draw.text((58, 160), subtitle, fill=(255, 255, 255), font=font_sub)
-    draw.text((58, 188), "Auto-generated preview image for report rendering test", fill=(240, 240, 240), font=font_sub)
-    draw.text((58, 216), "INJAAZ FACILITY MANAGEMENT", fill=(220, 220, 220), font=font_sub)
+    draw.rectangle([(28, 28), (w - 28, h - 28)], outline=(210, 210, 210), width=2)
+    # Only plain placeholder boxes (no image/text content)
+    block_colors = [(120, 235, 120), (120, 235, 120), (120, 235, 120), (120, 235, 120)]
+    left = 64
+    top = 230
+    bw, bh = 260, 180
+    gap = 22
+    for idx, color in enumerate(block_colors):
+        x = left + idx * (bw + gap)
+        draw.rectangle([(x, top), (x + bw, top + bh)], fill=color, outline=(235, 235, 235), width=2)
     img.save(path, format="PNG")
 
 
 def _create_signature_png(path, signer_name):
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw
 
     w, h = 900, 260
-    img = Image.new("RGB", (w, h), color=(255, 255, 255))
+    img = Image.new("RGB", (w, h), color=(236, 236, 236))
     draw = ImageDraw.Draw(img)
-    font = ImageFont.load_default()
 
-    draw.rectangle([(12, 12), (w - 12, h - 12)], outline=(32, 32, 32), width=2)
-    draw.text((34, 40), f"Digitally Signed: {signer_name}", fill=(20, 20, 20), font=font)
-    draw.text((34, 82), "/s/ " + signer_name, fill=(17, 84, 53), font=font)
-    draw.text((34, 122), "INJAAZ APPROVAL STAMP", fill=(64, 64, 64), font=font)
-    draw.text((34, 162), "Valid for internal workflow preview", fill=(64, 64, 64), font=font)
+    # Only plain signature placeholders (no text/signature strokes)
+    draw.rectangle([(12, 12), (w - 12, h - 12)], outline=(210, 210, 210), width=2)
+    draw.rectangle([(56, 112), (356, 222)], fill=(120, 235, 120), outline=(235, 235, 235), width=2)
+    draw.rectangle([(404, 112), (704, 222)], fill=(120, 235, 120), outline=(235, 235, 235), width=2)
     img.save(path, format="PNG")
+
+
+def _materials_block(prefix, department, start_price):
+    """Generate 12+ materials for richer previews."""
+    names = [
+        "Premium Cleaner", "Degreaser", "Sealant", "Filter Cartridge",
+        "Industrial Wipes", "PVC Adhesive", "Cable Ties", "Safety Gloves",
+        "Disinfectant", "Brush Set", "Absorbent Pads", "Inspection Tape"
+    ]
+    brands = ["3M", "Diversey", "Sika", "Bostik", "Camfil", "Vileda"]
+    uoms = ["PCS", "LTR", "PACK", "ROLL", "BOX", "TUBE"]
+    materials = []
+    for i, name in enumerate(names, 1):
+        materials.append(
+            {
+                "id": f"{prefix}-{i:03d}",
+                "name": f"{name} {i}",
+                "brand": brands[(i - 1) % len(brands)],
+                "uom": uoms[(i - 1) % len(uoms)],
+                "unit_price": round(start_price + (i * 1.35), 2),
+                "quantity": (i % 6) + 1,
+                "department": department,
+            }
+        )
+    return materials
 
 
 def _to_data_uri(path):
@@ -203,35 +228,7 @@ def main():
                 "photos": media["photos"]["hvac"],
             },
         ],
-        "materials_required": [
-            {
-                "id": "mat-hvac-001",
-                "name": "Air Filter 24x24x2",
-                "brand": "Camfil",
-                "uom": "PCS",
-                "unit_price": 42.5,
-                "quantity": 6,
-                "department": "HVAC",
-            },
-            {
-                "id": "mat-elec-012",
-                "name": "Cable Tie UV Resistant 300mm",
-                "brand": "3M",
-                "uom": "PACK",
-                "unit_price": 18.0,
-                "quantity": 2,
-                "department": "Electrical",
-            },
-            {
-                "id": "mat-plumb-033",
-                "name": "PVC Drain Cleaner",
-                "brand": "Bostik",
-                "uom": "LTR",
-                "unit_price": 12.0,
-                "quantity": 3,
-                "department": "Plumbing",
-            },
-        ],
+        "materials_required": _materials_block("mat-hvac", "HVAC", 12.0),
     }
 
     civil_sample_data = {
@@ -275,35 +272,7 @@ def main():
                 "photos": media["photos"]["civil"],
             },
         ],
-        "materials_required": [
-            {
-                "id": "civil-mat-001",
-                "name": "Repair Mortar M20",
-                "brand": "Sika",
-                "uom": "BAG",
-                "unit_price": 33.0,
-                "quantity": 8,
-                "department": "Civil",
-            },
-            {
-                "id": "civil-mat-002",
-                "name": "Waterproof Coating",
-                "brand": "Fosroc",
-                "uom": "LTR",
-                "unit_price": 19.5,
-                "quantity": 12,
-                "department": "Civil",
-            },
-            {
-                "id": "civil-mat-003",
-                "name": "Joint Sealant",
-                "brand": "Bostik",
-                "uom": "TUBE",
-                "unit_price": 9.0,
-                "quantity": 15,
-                "department": "Civil",
-            },
-        ],
+        "materials_required": _materials_block("civil-mat", "Civil", 10.0),
     }
 
     cleaning_sample_data = {
@@ -353,35 +322,7 @@ def main():
         "site_access_requirements": "Security clearance for all staff",
         "general_comments": "Priority focus on high-touch surfaces and washrooms.",
         "photos": media["photos"]["cleaning"],
-        "materials_required": [
-            {
-                "id": "clean-mat-001",
-                "name": "Disinfectant Cleaner",
-                "brand": "Diversey",
-                "uom": "LTR",
-                "unit_price": 14.0,
-                "quantity": 20,
-                "department": "Cleaning",
-            },
-            {
-                "id": "clean-mat-002",
-                "name": "Microfiber Mop Head",
-                "brand": "Vileda",
-                "uom": "PCS",
-                "unit_price": 11.0,
-                "quantity": 18,
-                "department": "Cleaning",
-            },
-            {
-                "id": "clean-mat-003",
-                "name": "Garbage Bag 120L",
-                "brand": "Falcon",
-                "uom": "ROLL",
-                "unit_price": 7.5,
-                "quantity": 25,
-                "department": "Cleaning",
-            },
-        ],
+        "materials_required": _materials_block("clean-mat", "Cleaning", 8.0),
     }
 
     hvac_pdf_path = create_hvac_pdf(hvac_sample_data, output_dir)

@@ -12,7 +12,7 @@ from openpyxl.drawing.image import Image as XLImage
 
 logger = logging.getLogger(__name__)
 
-# Brand Colors (matching PDF)
+# Brand Colors (matching reference format)
 PRIMARY_COLOR = "125435"  # Dark green
 ACCENT_COLOR = "E8F5E9"   # Light green
 SECONDARY_COLOR = "2E7D32"  # Medium green
@@ -66,21 +66,27 @@ def add_logo_and_title(ws, title, subtitle=None, start_row=1, max_columns=5):
     current_row = start_row
     max_col_letter = get_column_letter(max_columns)
     
-    # Set row heights for logo area
-    ws.row_dimensions[current_row].height = 45
-    ws.row_dimensions[current_row + 1].height = 20
-    
+    # Row heights: row 1 tall for logo, row 2 shorter for company name
+    ws.row_dimensions[current_row].height = 50
+    ws.row_dimensions[current_row + 1].height = 22
+
+    # Merge A1:A2 for the logo area (spans both header rows)
+    try:
+        ws.merge_cells(f'A{current_row}:A{current_row + 1}')
+    except Exception:
+        pass
+
     # Add logo if available
     if os.path.exists(LOGO_PATH):
         try:
             img = XLImage(LOGO_PATH)
-            # Resize logo properly
-            img.width = 60
-            img.height = 60
+            # Size logo to visually fill the merged A1:A2 area (rows 1+2 ≈ 72pt total)
+            img.width = 80
+            img.height = 80
             ws.add_image(img, f'A{current_row}')
         except Exception as e:
             logger.warning(f"Could not add logo to Excel: {e}")
-    
+
     # Title (next to logo)
     title_cell = ws[f'B{current_row}']
     title_cell.value = title
@@ -127,6 +133,7 @@ def add_info_section(ws, info_data, start_row, title="Information", max_columns=
     max_col_letter = get_column_letter(max_columns)
     
     # Section title
+    ws.row_dimensions[current_row].height = 18
     title_cell = ws[f'A{current_row}']
     title_cell.value = title
     title_cell.font = Font(bold=True, size=14, color=PRIMARY_COLOR, name='Calibri')
@@ -446,6 +453,43 @@ def finalize_workbook(ws):
     ws.oddFooter.right.text = "Page &P of &N"
     ws.oddFooter.left.size = 8
     ws.oddFooter.right.size = 8
+
+
+def recenter_logo(ws, row1_height=50, row2_height=22, logo_px=80):
+    """Center the logo image inside the merged A1:A2 cell area.
+    
+    Must be called AFTER the final column A width has been set so the horizontal
+    centering offset is computed correctly.  Replaces the string anchor that
+    ws.add_image(img, 'A1') creates with a proper OneCellAnchor that carries the
+    centering offsets, which openpyxl then serialises correctly on save.
+    
+    Args:
+        ws: Worksheet that contains the logo image
+        row1_height: Height of row 1 in points (default 50)
+        row2_height: Height of row 2 in points (default 22)
+        logo_px: Displayed logo size in pixels (default 80)
+    """
+    if not ws._images:
+        return
+    try:
+        from openpyxl.drawing.spreadsheet_drawing import OneCellAnchor, AnchorMarker
+        from openpyxl.drawing.xdr import XDRPositiveSize2D
+
+        img = ws._images[0]
+        # Column A pixel width: (width_units × 7 px/char + 5 px padding)
+        col_a_px = (ws.column_dimensions['A'].width or 22) * 7 + 5
+        # Merged row height in pixels: pt × (96 DPI / 72 pt/in)
+        rows_px = (row1_height + row2_height) * 96.0 / 72.0
+        logo_emu = logo_px * 9525  # 1 px = 9525 EMU
+        # EMU offsets to center the image
+        h_off = max(0, int((col_a_px - logo_px) / 2.0 * 9525))
+        v_off = max(0, int((rows_px  - logo_px) / 2.0 * 9525))
+        # Build a proper anchor object (img.anchor is still a plain string at this point)
+        marker = AnchorMarker(col=0, row=0, colOff=h_off, rowOff=v_off)
+        size   = XDRPositiveSize2D(cx=logo_emu, cy=logo_emu)
+        img.anchor = OneCellAnchor(_from=marker, ext=size)
+    except Exception as e:
+        logger.warning(f"Could not center logo: {e}")
 
 
 def create_summary_sheet(wb, summary_data, sheet_name="Summary"):
