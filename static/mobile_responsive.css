@@ -24,9 +24,10 @@
     padding-right: max(1rem, env(safe-area-inset-right)) !important;
   }
   
-  /* Footer / bottom spacing */
+  /* Footer — safe area only (padding lives on .footer-inner in dashboard.css) */
   .footer {
-    padding-bottom: max(2rem, calc(2rem + env(safe-area-inset-bottom))) !important;
+    background: #f8faf8 !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   }
   
   /* Content area - add bottom padding for home indicator */

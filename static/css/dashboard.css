@@ -61,6 +61,13 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Dashboard routes: one continuous #f8faf8 surface (mobile_responsive sets body white) */
+body.page-dashboard,
+body.hr-dashboard,
+body.inspection-dashboard {
+  background: var(--bg-body) !important;
+}
+
 /* ===========================================
    Navigation
    =========================================== */
@@ -587,20 +594,21 @@ html {
   opacity: 0.95;
 }
 .dashboard-widget-link:hover .dashboard-widget {
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  border-color: rgba(18, 84, 53, 0.14);
 }
 .dashboard-widget {
-  background: var(--white);
-  border-radius: 20px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0,0,0,0.04);
-  border: none;
+  background: var(--bg-body);
+  border-radius: 14px;
+  box-shadow: none;
+  border: 1px solid var(--border-color);
   overflow: hidden;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .dashboard-widget-header {
   padding: 10px 14px 8px;
-  background: var(--bg-light);
+  background: rgba(255, 255, 255, 0.45);
   border-bottom: 1px solid var(--border-light);
   display: flex;
   align-items: center;
@@ -830,7 +838,7 @@ html {
 /* ---- Section ---- */
 .modules-section {
   background: #f8faf8;
-  padding: 3rem 0 5rem;
+  padding: 3rem 0 7rem;
   width: 100%;
   display: block !important;
   opacity: 0;
@@ -921,6 +929,24 @@ html {
 
 .module-card:hover::before {
   transform: scaleY(1);
+}
+
+/* HR “Recent Submissions” — same surface as footer (no white floating slab) */
+.hr-dashboard .submissions-panel.module-card {
+  background: var(--bg-body) !important;
+  box-shadow: none !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 12px;
+}
+
+.hr-dashboard .submissions-panel.module-card:hover {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(18, 84, 53, 0.14) !important;
+}
+
+.hr-dashboard .submissions-panel.module-card::before {
+  display: none;
 }
 
 /* ---- Card Body ---- */
@@ -1020,9 +1046,13 @@ html {
    Footer
    =========================================== */
 .footer {
-  background: #f8faf8;
+  background: var(--bg-body);
   margin-top: auto;
   flex-shrink: 0;
+  position: relative;
+  z-index: 5;
+  border-top: none;
+  box-shadow: none;
 }
 
 .footer::before {
@@ -1032,15 +1062,16 @@ html {
 .footer-inner {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem 3rem;
+  padding: 1.5rem 2.5rem 1.6rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .footer-brand {
-  font-size: 0.875rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: var(--text-dark);
   margin-bottom: 0;
@@ -1053,14 +1084,15 @@ html {
 .footer-links {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 2.25rem;
   margin-bottom: 0;
 }
 
 .footer-links a {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: var(--text-light);
   text-decoration: none;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 500;
   transition: color 0.2s ease;
 }
@@ -1069,12 +1101,30 @@ html {
   color: var(--primary);
 }
 
+/* Copyright line — clean sans (~14px; reference: small muted gray) */
 .footer-copy {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 400;
+  color: #6b7280;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
   margin: 0;
   padding: 0;
   border: none;
+}
+
+/* “Built by” name — Grape Nuts (Google Fonts) */
+.footer-built-by-name {
+  display: inline-block;
+  vertical-align: middle;
+  font-family: 'Grape Nuts', 'Segoe Print', 'Comic Sans MS', cursive;
+  font-size: 1.22em; /* scales with .footer-copy */
+  font-weight: 400;
+  color: #1e3a5f;
+  margin-left: 0.35rem;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
 }
 
 /* ===========================================
@@ -1133,7 +1183,13 @@ html {
   animation: modalSlideUp 0.3s var(--ease-out) forwards;
 }
 
-/* Profile Modal - Compact */
+/* Profile & Contact Modals - positioned near top */
+#profileModal.contact-modal,
+#contactModal.contact-modal {
+  align-items: flex-start !important;
+  justify-content: center !important;
+  padding: 5rem 2rem 2rem !important;
+}
 #profileModal .contact-modal-content {
   max-width: 500px;
   width: auto;
@@ -1246,6 +1302,27 @@ html {
   font-size: 0.8rem;
   color: var(--text-muted);
   margin-top: 0.35rem;
+}
+
+/* Contact Modal - compact spacing */
+#contactModal .contact-modal-info {
+  gap: 0.6rem;
+}
+#contactModal .contact-modal-item {
+  padding: 0.75rem 1rem;
+  gap: 0.75rem;
+}
+#contactModal .contact-modal-details h4 {
+  margin: 0 0 0.2rem 0;
+}
+#contactModal .contact-modal-details p {
+  margin: 0.05rem 0;
+  line-height: 1.4;
+}
+#contactModal .contact-modal-details a {
+  margin: 0.05rem 0;
+  line-height: 1.4;
+  display: inline;
 }
 
 /* ===========================================
@@ -1368,6 +1445,15 @@ html {
     padding: 0 1.5rem;
   }
 
+  .nav-center {
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
   /* Show hamburger as soon as resolution shrinks - nav goes to menu */
   .mobile-menu-toggle {
     display: flex !important;
@@ -1398,15 +1484,6 @@ html {
     background: rgba(18, 84, 53, 0.08) !important;
     border-color: var(--primary) !important;
     color: var(--primary) !important;
-  }
-
-  .nav-center {
-    position: absolute !important;
-    width: 0 !important;
-    height: 0 !important;
-    overflow: hidden !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
   }
 
   /* Hide nav-center menu in collapsed mode (links shown in drawer) */
@@ -1607,7 +1684,7 @@ html {
   }
   
   .footer-inner {
-    padding: 2rem;
+    padding: 1.4rem 2rem;
   }
 }
 
@@ -1649,12 +1726,16 @@ html {
   .contact-modal {
     padding: 6rem 1.25rem 1.5rem !important;
   }
+  #profileModal.contact-modal,
+  #contactModal.contact-modal {
+    padding: 3rem 1rem 1.5rem !important;
+  }
   
   .modules-section {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
-    padding: 1.75rem 0 3rem !important;
+    padding: 1.75rem 0 4.5rem !important;
     width: 100% !important;
     animation: none !important;
     transform: none !important;
@@ -1679,12 +1760,12 @@ html {
   .footer-inner {
     flex-direction: column !important;
     text-align: center !important;
-    padding: 1.5rem 1.25rem max(4rem, calc(4rem + env(safe-area-inset-bottom))) !important;
-    gap: 0.75rem !important;
+    padding: 1.25rem 1.5rem max(1rem, env(safe-area-inset-bottom, 0px)) !important;
+    gap: 0.85rem !important;
   }
   
   .footer-links {
-    gap: 1rem !important;
+    gap: 1.75rem !important;
   }
   
   /* Nav - mobile */
@@ -2065,7 +2146,7 @@ html {
   }
   
   .footer-inner {
-    padding: 1.25rem 1rem max(4rem, calc(4rem + env(safe-area-inset-bottom))) !important;
+    padding: 1.2rem 1.25rem max(1rem, env(safe-area-inset-bottom, 0px)) !important;
   }
   
   .footer {

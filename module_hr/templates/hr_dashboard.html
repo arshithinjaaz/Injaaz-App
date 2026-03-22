@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Grape+Nuts&family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
@@ -405,7 +405,7 @@
   <section class="modules-section" style="padding-top: 1rem;">
     <div class="modules-inner">
       <h2 class="modules-section-label">Recent Submissions</h2>
-      <div id="submissionsList" class="module-card" style="padding: 1.5rem; min-height: 120px;">
+      <div id="submissionsList" class="module-card submissions-panel" style="padding: 1.5rem; min-height: 120px;">
         <div style="text-align: center; padding: 2rem;">
           <div class="spinner" style="border: 4px solid rgba(18,84,53,0.1); border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
           <p style="margin-top: 1rem; color: var(--text-light);">Loading submissions...</p>
@@ -419,11 +419,7 @@
   <footer class="footer">
     <div class="footer-inner">
       <div class="footer-brand">Injaaz</div>
-      <nav class="footer-links">
-        <a href="/about">About</a>
-        <a href="#" id="footerContactLink">Contact</a>
-      </nav>
-      <p class="footer-copy">© 2026 Injaaz Application / built by Arshith</p>
+      <p class="footer-copy">© 2026 Injaaz Application / built by <span class="footer-built-by-name">Arshith Swaminath P</span></p>
     </div>
   </footer>
 

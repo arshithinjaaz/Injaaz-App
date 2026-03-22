@@ -2191,17 +2191,34 @@ function loadDashboardStats() {
         if (listEl) listEl.innerHTML = '';
         return;
       }
-      // API returns { success: true, forms_submitted, pending_review, ... } (payload merged at root)
+      // API: hero_metrics + dashboard_role, or legacy forms_submitted / pending_review / ...
       var d = result.body;
-      var formsEl = document.getElementById('stat-forms-submitted');
-      var pendingEl = document.getElementById('stat-pending-review');
-      var usersEl = document.getElementById('stat-active-users');
-      var rateEl = document.getElementById('stat-completion-rate');
-
-      if (formsEl) formsEl.textContent = typeof d.forms_submitted === 'number' ? d.forms_submitted.toLocaleString() : (d.forms_submitted != null ? d.forms_submitted : '0');
-      if (pendingEl) pendingEl.textContent = typeof d.pending_review === 'number' ? d.pending_review : (d.pending_review != null ? d.pending_review : '0');
-      if (usersEl) usersEl.textContent = typeof d.active_users === 'number' ? d.active_users : (d.active_users != null ? d.active_users : '0');
-      if (rateEl) rateEl.textContent = typeof d.completion_rate === 'number' ? d.completion_rate + '%' : (d.completion_rate != null ? d.completion_rate + '%' : '0%');
+      var metrics = d.hero_metrics;
+      if (Array.isArray(metrics) && metrics.length) {
+        for (var i = 0; i < 4; i++) {
+          var m = metrics[i];
+          var lbl = document.getElementById('stat-label-' + i);
+          var val = document.getElementById('stat-value-' + i);
+          if (lbl && m && m.label) lbl.textContent = m.label;
+          if (val && m) {
+            var v = m.value;
+            val.textContent = v != null && v !== '' ? String(v) : '0';
+          }
+        }
+      } else {
+        var formsEl = document.getElementById('stat-value-0') || document.getElementById('stat-forms-submitted');
+        var pendingEl = document.getElementById('stat-value-1') || document.getElementById('stat-pending-review');
+        var usersEl = document.getElementById('stat-value-2') || document.getElementById('stat-active-users');
+        var rateEl = document.getElementById('stat-value-3') || document.getElementById('stat-completion-rate');
+        if (document.getElementById('stat-label-0')) document.getElementById('stat-label-0').textContent = 'Forms submitted';
+        if (document.getElementById('stat-label-1')) document.getElementById('stat-label-1').textContent = 'Pending review';
+        if (document.getElementById('stat-label-2')) document.getElementById('stat-label-2').textContent = 'Active users';
+        if (document.getElementById('stat-label-3')) document.getElementById('stat-label-3').textContent = 'Completion rate';
+        if (formsEl) formsEl.textContent = typeof d.forms_submitted === 'number' ? d.forms_submitted.toLocaleString() : (d.forms_submitted != null ? d.forms_submitted : '0');
+        if (pendingEl) pendingEl.textContent = typeof d.pending_review === 'number' ? d.pending_review : (d.pending_review != null ? d.pending_review : '0');
+        if (usersEl) usersEl.textContent = typeof d.active_users === 'number' ? d.active_users : (d.active_users != null ? d.active_users : '0');
+        if (rateEl) rateEl.textContent = typeof d.completion_rate === 'number' ? d.completion_rate + '%' : (d.completion_rate != null ? d.completion_rate + '%' : '0%');
+      }
 
       var activity = d.recent_activity || [];
       var firstItem = document.getElementById('dashboard-activity-item');

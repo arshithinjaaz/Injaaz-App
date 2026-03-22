@@ -7,10 +7,10 @@ Stage 4: General Manager (final approval)
 """
 from flask import Blueprint, request, jsonify, current_app, render_template
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import or_, and_
-from sqlalchemy.orm import joinedload
+from sqlalchemy import or_, and_, not_
+from sqlalchemy.orm import joinedload, noload
 from sqlalchemy.orm.attributes import flag_modified
-from app.models import db, User, Submission, AuditLog
+from app.models import db, User, Submission, AuditLog, DocHubDocument, Device, BDProject
 from common.error_responses import error_response, success_response
 from common.workflow_notifications import send_team_notification
 from datetime import datetime
@@ -416,17 +416,191 @@ def get_pending_submissions():
         return error_response('Failed to get pending submissions', status_code=500, error_code='DATABASE_ERROR')
 
 
+INSPECTION_MODULE_TYPES = ('hvac_mep', 'civil', 'cleaning')
+
+
+def _filter_inspection():
+    return Submission.module_type.in_(INSPECTION_MODULE_TYPES)
+
+
+def _filter_hr():
+    return Submission.module_type.like('hr_%')
+
+
+def _submission_successfully_finished():
+    """Terminal success states (inspection: completed; HR: approved; other modules: completed/approved)."""
+    return or_(
+        and_(_filter_hr(), Submission.workflow_status == 'approved'),
+        and_(_filter_inspection(), Submission.workflow_status == 'completed'),
+        and_(not_(_filter_hr()), not_(Submission.module_type.in_(INSPECTION_MODULE_TYPES)),
+             Submission.workflow_status.in_(['completed', 'approved']))
+    )
+
+
+def _forms_needing_completion_count():
+    """Submissions not yet successfully finished (excludes rejected/closed)."""
+    terminal_done = _submission_successfully_finished()
+    closed = Submission.workflow_status.in_(['rejected', 'closed_by_admin'])
+    return Submission.query.filter(not_(or_(terminal_done, closed))).count()
+
+
+def _count_inspection(global_scope=True, supervisor_id=None):
+    q = Submission.query.filter(_filter_inspection())
+    if not global_scope and supervisor_id is not None:
+        q = q.filter(Submission.supervisor_id == supervisor_id)
+    return q.count()
+
+
+def _count_hr(global_scope=True, supervisor_id=None):
+    q = Submission.query.filter(_filter_hr())
+    if not global_scope and supervisor_id is not None:
+        q = q.filter(Submission.supervisor_id == supervisor_id)
+    return q.count()
+
+
+def _count_completed_success(global_scope=True, supervisor_id=None):
+    q = Submission.query.filter(_submission_successfully_finished())
+    if not global_scope and supervisor_id is not None:
+        q = q.filter(Submission.supervisor_id == supervisor_id)
+    return q.count()
+
+
+def _count_total_for_rate(global_scope=True, supervisor_id=None):
+    q = Submission.query
+    if not global_scope and supervisor_id is not None:
+        q = q.filter(Submission.supervisor_id == supervisor_id)
+    return q.count()
+
+
+def _completion_rate_pct(global_scope=True, supervisor_id=None):
+    total = _count_total_for_rate(global_scope, supervisor_id)
+    if not total:
+        return 0
+    done = _count_completed_success(global_scope, supervisor_id)
+    return min(100, round(done / total * 100))
+
+
+def _dashboard_persona(user):
+    """Which hero metrics set to show on the main dashboard."""
+    des = (user.designation or '').strip().lower()
+    if user.role == 'admin' or des == 'general_manager':
+        return 'admin_gm'
+    if des == 'business_development':
+        return 'bd'
+    # Procurement & store — before HR so users with both flags get store metrics
+    if des in ('procurement', 'store', 'warehouse', 'store_keeper') or getattr(user, 'access_procurement_module', False):
+        return 'procurement_store'
+    if des in ('supervisor', 'operations_manager'):
+        return 'supervisor_ops'
+    # HR-focused roles (not supervisors / BD / GM already handled)
+    if des in ('hr_manager', 'hr') or (
+        getattr(user, 'access_hr', False)
+        and des not in ('supervisor', 'operations_manager', 'procurement', 'general_manager', 'business_development', 'store', 'warehouse', 'store_keeper')
+    ):
+        return 'hr'
+    return 'default'
+
+
+def _hero_metrics_for_user(user, persona):
+    """Build four {label, value} stat cards for the dashboard hero widget."""
+    insp_all = _count_inspection(global_scope=True)
+    hr_all = _count_hr(global_scope=True)
+    materials_count = Submission.query.filter(Submission.module_type == 'catalog_material').count()
+    forms_to_complete = _forms_needing_completion_count()
+    active_users = User.query.filter_by(is_active=True).count()
+    pending_hr_review = Submission.query.filter(
+        _filter_hr(),
+        Submission.workflow_status == 'hr_review'
+    ).count()
+    docs_count = DocHubDocument.query.count()
+    devices_count = Device.query.count()
+    total_projects = BDProject.query.count()
+    rfps_pipeline = BDProject.query.filter(
+        or_(BDProject.stage == 'proposal', BDProject.status == 'proposal')
+    ).count()
+
+    sup_id = user.id
+    is_supervisor = (user.designation or '').strip().lower() == 'supervisor'
+    use_sup_scope = persona == 'supervisor_ops' and is_supervisor
+
+    def insp_val():
+        if use_sup_scope:
+            return _count_inspection(global_scope=False, supervisor_id=sup_id)
+        return insp_all
+
+    def hr_val():
+        if use_sup_scope:
+            return _count_hr(global_scope=False, supervisor_id=sup_id)
+        return hr_all
+
+    def completed_val():
+        if use_sup_scope:
+            return _count_completed_success(global_scope=False, supervisor_id=sup_id)
+        return _count_completed_success(global_scope=True)
+
+    def rate_val():
+        if use_sup_scope:
+            return _completion_rate_pct(global_scope=False, supervisor_id=sup_id)
+        return _completion_rate_pct(global_scope=True)
+
+    if persona == 'admin_gm':
+        return [
+            {'label': 'Inspection forms submitted', 'value': str(insp_all)},
+            {'label': 'HR forms submitted', 'value': str(hr_all)},
+            {'label': 'Active users', 'value': str(active_users)},
+            {'label': 'Forms to complete', 'value': str(forms_to_complete)},
+        ]
+    if persona == 'procurement_store':
+        return [
+            {'label': 'Materials in catalog', 'value': str(materials_count)},
+            {'label': 'Inspection forms submitted', 'value': str(insp_all)},
+            {'label': 'HR forms submitted', 'value': str(hr_all)},
+            {'label': 'Forms to complete', 'value': str(forms_to_complete)},
+        ]
+    if persona == 'supervisor_ops':
+        return [
+            {'label': 'Inspection forms submitted', 'value': str(insp_val())},
+            {'label': 'HR forms submitted', 'value': str(hr_val())},
+            {'label': 'Completed forms', 'value': str(completed_val())},
+            {'label': 'Completion rate', 'value': f'{rate_val()}%'},
+        ]
+    if persona == 'bd':
+        return [
+            {'label': 'Total projects', 'value': str(total_projects)},
+            {'label': 'RFPs in pipeline', 'value': str(rfps_pipeline)},
+            {'label': 'Inspection forms submitted', 'value': str(insp_all)},
+            {'label': 'HR forms submitted', 'value': str(hr_all)},
+        ]
+    if persona == 'hr':
+        return [
+            {'label': 'HR forms submitted', 'value': str(hr_all)},
+            {'label': 'Documents submitted', 'value': str(docs_count)},
+            {'label': 'Total devices', 'value': str(devices_count)},
+            {'label': 'Pending forms to sign', 'value': str(pending_hr_review)},
+        ]
+    # default: same as admin overview
+    return [
+        {'label': 'Inspection forms submitted', 'value': str(insp_all)},
+        {'label': 'HR forms submitted', 'value': str(hr_all)},
+        {'label': 'Active users', 'value': str(active_users)},
+        {'label': 'Completion rate', 'value': f'{_completion_rate_pct(global_scope=True)}%'},
+    ]
+
+
 @workflow_bp.route('/dashboard-stats', methods=['GET'])
 @jwt_required()
 def get_dashboard_stats():
-    """Stats and recent activity for the dashboard widget (forms submitted, pending, active users, completion rate, recent activity)."""
+    """Role-aware stats and recent activity for the dashboard hero widget."""
     try:
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
 
-        # Pending count (same logic as pending submissions)
+        persona = _dashboard_persona(user)
+        hero_metrics = _hero_metrics_for_user(user, persona)
+
+        # Pending count (same logic as pending submissions) — legacy / other UIs
         if user.role == 'admin':
             pending_count = Submission.query.filter(
                 Submission.workflow_status.notin_(['completed', 'closed_by_admin', 'rejected'])
@@ -435,7 +609,6 @@ def get_dashboard_stats():
             pending_subs = get_user_pending_submissions(user)
             pending_count = len(pending_subs) if pending_subs else 0
 
-        # Forms submitted: for supervisor = my submissions; for admin = total
         if user.designation == 'supervisor':
             forms_submitted = Submission.query.filter(
                 Submission.supervisor_id == user.id
@@ -443,17 +616,12 @@ def get_dashboard_stats():
         else:
             forms_submitted = Submission.query.count()
 
-        # Active users (admin only; others get 0 or hide)
-        active_users = 0
-        if user.role == 'admin':
-            active_users = User.query.filter_by(is_active=True).count()
+        active_users = User.query.filter_by(is_active=True).count() if user.role == 'admin' else 0
 
-        # Completion rate: completed / total * 100
         total_submissions = Submission.query.count()
-        completed_count = Submission.query.filter(Submission.workflow_status == 'completed').count()
+        completed_count = Submission.query.filter(_submission_successfully_finished()).count()
         completion_rate = round((completed_count / total_submissions * 100) if total_submissions else 0)
 
-        # Recent activity: last 5 submissions with user name and module
         base_activity = Submission.query.options(joinedload(Submission.user)).order_by(Submission.created_at.desc()).limit(5).all()
         module_labels = {'hvac_mep': 'HVAC', 'civil': 'Civil', 'cleaning': 'Cleaning', 'hr': 'HR'}
         recent_activity = []
@@ -469,6 +637,8 @@ def get_dashboard_stats():
                 action = 'completed'
             elif status == 'rejected':
                 action = 'rejected'
+            elif status == 'approved':
+                action = 'approved'
             else:
                 action = 'submitted'
             form_type = 'form' if mt.startswith('hr') else 'inspection'
@@ -479,6 +649,8 @@ def get_dashboard_stats():
             })
 
         return success_response({
+            'dashboard_role': persona,
+            'hero_metrics': hero_metrics,
             'forms_submitted': forms_submitted,
             'pending_review': pending_count,
             'active_users': active_users,
@@ -510,166 +682,157 @@ def _time_ago(dt):
     return dt.strftime('%b %d')
 
 
+def _signature_url_from_field(form_data, key, alt_key=None):
+    """Resolve a signature field to a short URL string for history list (not full base64)."""
+    if not isinstance(form_data, dict):
+        return None
+    sig = form_data.get(key) or (form_data.get(alt_key) if alt_key else None)
+    if not sig:
+        return None
+    if isinstance(sig, dict) and sig.get('url'):
+        return sig.get('url')
+    if isinstance(sig, str) and (sig.startswith('http') or sig.startswith('/') or sig.startswith('data:')):
+        return sig[:500] if sig.startswith('data:') else sig  # cap huge data URLs in list payload
+    return None
+
+
+def _parse_form_data_dict(raw):
+    if raw is None:
+        return {}
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, str):
+        try:
+            import json
+            return json.loads(raw)
+        except Exception:
+            return {}
+    return {}
+
+
+def _admin_reviewers_for_history(submission):
+    """Reviewer summary for admin review history (no verbose logging)."""
+    form_data = _parse_form_data_dict(submission.form_data)
+    reviewers = []
+
+    om_has_approved = bool(submission.operations_manager_approved_at or submission.operations_manager_id)
+    om_comments = submission.operations_manager_comments
+    om_sig_url = _signature_url_from_field(form_data, 'operations_manager_signature', 'opMan_signature')
+    if om_has_approved or om_comments or om_sig_url:
+        reviewers.append({
+            'role': 'Operations Manager',
+            'comments': om_comments,
+            'signature_url': om_sig_url,
+            'approved_at': submission.operations_manager_approved_at.isoformat() if submission.operations_manager_approved_at else None
+        })
+
+    bd_has_approved = bool(submission.business_dev_approved_at or submission.business_dev_id)
+    bd_comments = submission.business_dev_comments
+    bd_sig_url = _signature_url_from_field(form_data, 'business_dev_signature')
+    if bd_has_approved or bd_comments or bd_sig_url:
+        reviewers.append({
+            'role': 'Business Development',
+            'comments': bd_comments,
+            'signature_url': bd_sig_url,
+            'approved_at': submission.business_dev_approved_at.isoformat() if submission.business_dev_approved_at else None
+        })
+
+    po_has_approved = bool(submission.procurement_approved_at or submission.procurement_id)
+    po_comments = submission.procurement_comments
+    po_sig_url = _signature_url_from_field(form_data, 'procurement_signature')
+    if po_has_approved or po_comments or po_sig_url:
+        reviewers.append({
+            'role': 'Procurement',
+            'comments': po_comments,
+            'signature_url': po_sig_url,
+            'approved_at': submission.procurement_approved_at.isoformat() if submission.procurement_approved_at else None
+        })
+
+    gm_has_approved = bool(submission.general_manager_approved_at or submission.general_manager_id)
+    gm_comments = submission.general_manager_comments
+    gm_sig_url = _signature_url_from_field(form_data, 'general_manager_signature')
+    if gm_has_approved or gm_comments or gm_sig_url:
+        reviewers.append({
+            'role': 'General Manager',
+            'comments': gm_comments,
+            'signature_url': gm_sig_url,
+            'approved_at': submission.general_manager_approved_at.isoformat() if submission.general_manager_approved_at else None
+        })
+
+    return reviewers
+
+
 @workflow_bp.route('/submissions/history', methods=['GET'])
 @jwt_required()
 def get_history_submissions():
-    """Get all relevant submissions for user (reviewed and pending)"""
+    """Get all relevant submissions for user (reviewed and pending). Optimized: no form_data blob, no N+1 jobs."""
     try:
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
-        
+
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
-        
-        # Admin sees all submissions - use eager loading
+
+        # Eager-load submitter; do not load jobs relationship (avoids N+1 per row)
+        list_opts = (
+            joinedload(Submission.user),
+            noload(Submission.jobs),
+        )
+
+        # Admin sees all submissions
         if user.role == 'admin':
-            submissions = Submission.query.options(
-                joinedload(Submission.user)
-            ).order_by(Submission.created_at.desc()).all()
+            q = Submission.query.options(*list_opts).order_by(Submission.created_at.desc())
         elif not hasattr(user, 'designation') or not user.designation:
             return error_response('No designation assigned', status_code=403, error_code='NO_DESIGNATION')
         else:
             designation = user.designation
-            
-            # Base query with eager loading
-            base_query = Submission.query.options(joinedload(Submission.user))
-            
-            # Filter based on designation
+            base_query = Submission.query.options(*list_opts)
+
             if designation == 'supervisor':
-                submissions = base_query.filter(
+                q = base_query.filter(
                     Submission.supervisor_id == user.id
-                ).order_by(Submission.created_at.desc()).all()
-            
+                ).order_by(Submission.created_at.desc())
             elif designation == 'operations_manager':
-                # Operations Manager sees all forms they've reviewed (where they're assigned as operations_manager_id)
-                # This includes forms they've approved even if status has moved forward
-                submissions = base_query.filter(
+                q = base_query.filter(
                     Submission.operations_manager_id == user.id
-                ).order_by(Submission.created_at.desc()).all()
-            
+                ).order_by(Submission.created_at.desc())
             elif designation == 'business_development':
-                submissions = base_query.filter(
+                q = base_query.filter(
                     Submission.business_dev_id == user.id
-                ).order_by(Submission.created_at.desc()).all()
-            
+                ).order_by(Submission.created_at.desc())
             elif designation == 'procurement':
-                submissions = base_query.filter(
+                q = base_query.filter(
                     Submission.procurement_id == user.id
-                ).order_by(Submission.created_at.desc()).all()
-            
+                ).order_by(Submission.created_at.desc())
             elif designation == 'general_manager':
-                # GM sees everything that reached their stage
-                submissions = base_query.filter(
+                q = base_query.filter(
                     or_(
                         Submission.workflow_status == 'general_manager_review',
                         Submission.workflow_status == 'general_manager_approved',
                         Submission.workflow_status == 'completed',
                         Submission.general_manager_id == user.id
                     )
-                ).order_by(Submission.created_at.desc()).all()
+                ).order_by(Submission.created_at.desc())
             else:
-                submissions = []
-        
+                q = None
+
+        if user.role == 'admin' or (user.designation and user.designation != ''):
+            submissions = q.all() if q is not None else []
+        else:
+            submissions = []
+
         result = []
         for submission in submissions:
-            # Use eager-loaded user if available
             sub_user = getattr(submission, 'user', None) or (User.query.get(submission.user_id) if submission.user_id else None)
-            sub_dict = submission.to_dict()
+            # List view: omit form_data (often MB of base64) and skip Job queries
+            sub_dict = submission.to_dict(include_form_data=False, include_latest_job=False)
             sub_dict['user'] = sub_user.to_dict() if sub_user else None
-            
-            # For admin, include all reviewer comments in the history
+
             if user.role == 'admin':
-                form_data = submission.form_data
-                if isinstance(form_data, str):
-                    try:
-                        import json
-                        form_data = json.loads(form_data)
-                    except:
-                        form_data = {}
-                
-                reviewers = []
-                
-                # Operations Manager
-                om_has_approved = bool(submission.operations_manager_approved_at or submission.operations_manager_id)
-                om_comments = submission.operations_manager_comments
-                om_sig = form_data.get('operations_manager_signature') or form_data.get('opMan_signature') if isinstance(form_data, dict) else None
-                
-                # Log for debugging
-                current_app.logger.info(f"📋 Review history - OM data for submission {submission.submission_id}:")
-                current_app.logger.info(f"  - om_has_approved: {om_has_approved}")
-                current_app.logger.info(f"  - om_comments from model: {bool(om_comments)} ({len(str(om_comments)) if om_comments else 0} chars)")
-                current_app.logger.info(f"  - om_sig from form_data: {bool(om_sig)} (type: {type(om_sig).__name__ if om_sig else 'None'})")
-                current_app.logger.info(f"  - form_data type: {type(form_data)}")
-                if isinstance(form_data, dict):
-                    current_app.logger.info(f"  - form_data keys: {list(form_data.keys())[:15]}")
-                
-                om_sig_url = None
-                if om_sig:
-                    om_sig_url = om_sig.get('url') if isinstance(om_sig, dict) and om_sig.get('url') else (om_sig if isinstance(om_sig, str) and (om_sig.startswith('http') or om_sig.startswith('/') or om_sig.startswith('data:')) else None)
-                
-                if om_has_approved or om_comments or om_sig_url:
-                    current_app.logger.info(f"  ✅ Adding OM to reviewers list")
-                    reviewers.append({
-                        'role': 'Operations Manager',
-                        'comments': om_comments,
-                        'signature_url': om_sig_url,
-                        'approved_at': submission.operations_manager_approved_at.isoformat() if submission.operations_manager_approved_at else None
-                    })
-                else:
-                    current_app.logger.warning(f"  ⚠️ OM data not sufficient to add to reviewers list")
-                
-                # Business Development
-                bd_has_approved = bool(submission.business_dev_approved_at or submission.business_dev_id)
-                bd_comments = submission.business_dev_comments
-                bd_sig = form_data.get('business_dev_signature') if isinstance(form_data, dict) else None
-                bd_sig_url = None
-                if bd_sig:
-                    bd_sig_url = bd_sig.get('url') if isinstance(bd_sig, dict) and bd_sig.get('url') else (bd_sig if isinstance(bd_sig, str) and (bd_sig.startswith('http') or bd_sig.startswith('/') or bd_sig.startswith('data:')) else None)
-                
-                if bd_has_approved or bd_comments or bd_sig_url:
-                    reviewers.append({
-                        'role': 'Business Development',
-                        'comments': bd_comments,
-                        'signature_url': bd_sig_url,
-                        'approved_at': submission.business_dev_approved_at.isoformat() if submission.business_dev_approved_at else None
-                    })
-                
-                # Procurement
-                po_has_approved = bool(submission.procurement_approved_at or submission.procurement_id)
-                po_comments = submission.procurement_comments
-                po_sig = form_data.get('procurement_signature') if isinstance(form_data, dict) else None
-                po_sig_url = None
-                if po_sig:
-                    po_sig_url = po_sig.get('url') if isinstance(po_sig, dict) and po_sig.get('url') else (po_sig if isinstance(po_sig, str) and (po_sig.startswith('http') or po_sig.startswith('/') or po_sig.startswith('data:')) else None)
-                
-                if po_has_approved or po_comments or po_sig_url:
-                    reviewers.append({
-                        'role': 'Procurement',
-                        'comments': po_comments,
-                        'signature_url': po_sig_url,
-                        'approved_at': submission.procurement_approved_at.isoformat() if submission.procurement_approved_at else None
-                    })
-                
-                # General Manager
-                gm_has_approved = bool(submission.general_manager_approved_at or submission.general_manager_id)
-                gm_comments = submission.general_manager_comments
-                gm_sig = form_data.get('general_manager_signature') if isinstance(form_data, dict) else None
-                gm_sig_url = None
-                if gm_sig:
-                    gm_sig_url = gm_sig.get('url') if isinstance(gm_sig, dict) and gm_sig.get('url') else (gm_sig if isinstance(gm_sig, str) and (gm_sig.startswith('http') or gm_sig.startswith('/') or gm_sig.startswith('data:')) else None)
-                
-                if gm_has_approved or gm_comments or gm_sig_url:
-                    reviewers.append({
-                        'role': 'General Manager',
-                        'comments': gm_comments,
-                        'signature_url': gm_sig_url,
-                        'approved_at': submission.general_manager_approved_at.isoformat() if submission.general_manager_approved_at else None
-                    })
-                
-                sub_dict['reviewers'] = reviewers
-            
+                sub_dict['reviewers'] = _admin_reviewers_for_history(submission)
+
             result.append(sub_dict)
-        
+
         return success_response({
             'submissions': result,
             'count': len(result)

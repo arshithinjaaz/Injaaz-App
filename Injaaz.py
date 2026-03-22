@@ -337,7 +337,35 @@ def create_app():
                                         logger.warning(f"Could not add {col_name}: {col_error}")
                     except Exception as e:
                         logger.warning(f"Could not add missing workflow columns (non-critical): {e}")
-            
+
+            if 'dochub_documents' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('dochub_documents')]
+                missing_columns = []
+                if 'doc_type' not in columns:
+                    missing_columns.append(('doc_type', "VARCHAR(20) DEFAULT 'upload'"))
+                if 'content' not in columns:
+                    missing_columns.append(('content', 'TEXT'))
+                if 'inline_asset' not in columns:
+                    missing_columns.append(('inline_asset', 'BOOLEAN DEFAULT 0'))
+                if 'reference_attachments' not in columns:
+                    missing_columns.append(('reference_attachments', 'TEXT'))
+                if missing_columns:
+                    logger.info(f"Adding DocHub columns: {[c[0] for c in missing_columns]}")
+                    try:
+                        with db.engine.begin() as conn:
+                            for col_name, col_def in missing_columns:
+                                try:
+                                    conn.execute(text(f"ALTER TABLE dochub_documents ADD COLUMN {col_name} {col_def}"))
+                                    logger.info(f"✅ Added {col_name} to dochub_documents")
+                                except Exception as col_error:
+                                    err = str(col_error).lower()
+                                    if 'already exists' in err or 'duplicate' in err:
+                                        logger.info(f"Column {col_name} already exists")
+                                    else:
+                                        logger.warning(f"Could not add {col_name}: {col_error}")
+                    except Exception as e:
+                        logger.warning(f"Could not add DocHub columns (non-critical): {e}")
+
             # Step 3: Ensure default admin user exists (fully automatic for Render)
             try:
                 from app.models import User
@@ -382,7 +410,61 @@ def create_app():
                 logger.warning(f"Could not create admin user (non-critical): {admin_create_error}")
             else:
                 logger.info("Users table will be created when first user is registered")
-            
+
+            # Step 4: Seed sample DocHub documents if empty
+            try:
+                from app.models import DocHubDocument, User
+                if DocHubDocument.query.count() == 0:
+                    admin_user = User.query.filter_by(role='admin').first()
+                    author_id = admin_user.id if admin_user else None
+                    samples = [
+                        ('Employee Onboarding Guide', 'onboarding', 'published',
+                         '<h1>Employee Onboarding Guide</h1>'
+                         '<div class="callout callout-blue"><span class="callout-icon">👋</span><div><strong>Welcome to the team!</strong> This guide will help you get up and running quickly.</div></div>'
+                         '<h2>1. Company Overview</h2><p>Injaaz Facilities Management delivers excellence in facility services across the UAE.</p>'
+                         '<h2>2. Your First Week</h2><ul><li><strong>Day 1:</strong> Meet your team lead, set up workstation</li>'
+                         '<li><strong>Day 2:</strong> System access, security training</li><li><strong>Day 3-5:</strong> Department walkthroughs</li></ul>'
+                         '<h2>3. Key Contacts</h2><ul><li><strong>HR:</strong> arshith@injaaz.ae</li><li><strong>IT:</strong> +971 50 156 0277</li></ul>'),
+                        ('Project Services Agreement Template', 'contracts', 'review',
+                         '<h1>Project Services Agreement</h1><p><em>Agreement between Service Provider and Client.</em></p>'
+                         '<h2>1. Parties</h2><p><strong>Service Provider:</strong> Injaaz FM.<br/><strong>Client:</strong> [Client Name].</p>'
+                         '<h2>2. Scope</h2><ul><li>Facility management services</li><li>Maintenance and repairs</li><li>Cleaning and HVAC</li></ul>'
+                         '<h2>3. Payment Terms</h2><p>As per agreed milestones.</p>'),
+                        ('Remote Work Policy', 'policies', 'published',
+                         '<h1>Remote Work Policy</h1><div class="callout"><span class="callout-icon">⚠️</span><div>Effective January 2025.</div></div>'
+                         '<h2>1. Purpose</h2><p>Guidelines for remote work to ensure productivity and security.</p>'
+                         '<h2>2. Eligibility</h2><p>Available after 90-day probation.</p>'
+                         '<h2>3. Core Hours</h2><p>10:00 AM – 3:00 PM local time.</p>'),
+                        ('DocHub User Manual', 'manuals', 'published',
+                         '<h1>DocHub User Manual</h1><p><em>Version 1.0 — March 2025</em></p>'
+                         '<h2>1. Getting Started</h2><p>DocHub is your document management platform.</p>'
+                         '<h2>2. Creating Documents</h2><ol><li>Click + New Document</li><li>Select a template</li><li>Edit and Save</li></ol>'
+                         '<h2>3. Shortcuts</h2><p><strong>Ctrl+S</strong> — Save. <strong>Ctrl+B</strong> — Bold.</p>'),
+                        ('Q1 2025 Performance Report', 'reports', 'draft',
+                         '<h1>Q1 2025 Performance Report</h1><p><em>Analytics Team — April 2025</em></p>'
+                         '<div class="callout callout-green"><span class="callout-icon">📈</span><div>Strong quarter across key metrics.</div></div>'
+                         '<h2>1. Executive Summary</h2><p>Q1 marked a solid start to the fiscal year.</p>'
+                         '<h2>2. Key Metrics</h2><table><tr><th>Metric</th><th>Target</th><th>Actual</th></tr>'
+                         '<tr><td>Revenue</td><td>—</td><td>—</td></tr><tr><td>Projects</td><td>—</td><td>—</td></tr></table>'),
+                    ]
+                    for title, cat, status, content in samples:
+                        doc = DocHubDocument(
+                            title=title,
+                            filename='',
+                            stored_path='',
+                            file_type='',
+                            doc_type='content',
+                            content=content,
+                            category=cat,
+                            status=status,
+                            author_id=author_id
+                        )
+                        db.session.add(doc)
+                    db.session.commit()
+                    logger.info("Seeded 5 sample DocHub documents")
+            except Exception as seed_err:
+                logger.warning(f"Could not seed DocHub samples (non-critical): {seed_err}")
+
             logger.info("✅ Database initialization and migration complete")
             
         except Exception as e:

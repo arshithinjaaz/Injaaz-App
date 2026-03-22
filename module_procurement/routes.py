@@ -648,10 +648,10 @@ def catalog_department(department):
     if department not in allowed:
         return redirect('/procurement/')
     dept_meta = {
-        'HVAC':       {'icon': '❄️',  'color': '#0284c7', 'gradient': 'linear-gradient(135deg,#0ea5e9,#0284c7)', 'desc': 'Compressors, refrigerants, AHUs, filters and air-conditioning spare parts.'},
-        'Cleaning':   {'icon': '🧹', 'color': '#047857', 'gradient': 'linear-gradient(135deg,#10b981,#047857)', 'desc': 'Mops, buckets, chemicals, trolleys, washroom supplies and cleaning equipment.'},
-        'Electrical': {'icon': '⚡', 'color': '#d97706', 'gradient': 'linear-gradient(135deg,#f59e0b,#d97706)', 'desc': 'Switches, sockets, breakers, cables, lights, fans and electrical fittings.'},
-        'Plumbing':   {'icon': '🔧', 'color': '#6d28d9', 'gradient': 'linear-gradient(135deg,#8b5cf6,#6d28d9)', 'desc': 'Mixers, WC sets, basins, pipes, traps, valves and all sanitary fittings.'},
+        'HVAC':       {'color': '#0284c7', 'gradient': 'linear-gradient(135deg,#0ea5e9,#0284c7)', 'desc': 'Compressors, refrigerants, AHUs, filters and air-conditioning spare parts.'},
+        'Cleaning':   {'color': '#047857', 'gradient': 'linear-gradient(135deg,#10b981,#047857)', 'desc': 'Mops, buckets, chemicals, trolleys, washroom supplies and cleaning equipment.'},
+        'Electrical': {'color': '#d97706', 'gradient': 'linear-gradient(135deg,#f59e0b,#d97706)', 'desc': 'Switches, sockets, breakers, cables, lights, fans and electrical fittings.'},
+        'Plumbing':   {'color': '#6d28d9', 'gradient': 'linear-gradient(135deg,#8b5cf6,#6d28d9)', 'desc': 'Mixers, WC sets, basins, pipes, traps, valves and all sanitary fittings.'},
     }
     return render_template(
         'procurement_catalog_department.html',

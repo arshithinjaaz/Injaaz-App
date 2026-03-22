@@ -2,6 +2,7 @@
 Database Models for Injaaz App
 SQLAlchemy ORM models for PostgreSQL/SQLite
 """
+import json
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -151,23 +152,22 @@ class Submission(db.Model):
     jobs = db.relationship('Job', backref='submission', lazy='dynamic', cascade='all, delete-orphan')
     files = db.relationship('File', backref='submission', lazy='dynamic', cascade='all, delete-orphan')
     
-    def to_dict(self):
-        """Convert to dictionary"""
-        # Get the latest completed job for this submission (for downloads)
+    def to_dict(self, include_form_data=True, include_latest_job=True):
+        """Convert to dictionary.
+        For list/history endpoints use include_form_data=False, include_latest_job=False to avoid
+        huge JSON payloads and N+1 Job queries.
+        """
         latest_job = None
-        try:
-            # Use the jobs relationship (defined via db.relationship)
-            if hasattr(self, 'jobs'):
-                # Access the relationship - it will query Job model at runtime
-                completed_jobs = [j for j in self.jobs if hasattr(j, 'status') and j.status == 'completed']
-                if completed_jobs:
-                    # Sort by completed_at descending to get latest
-                    latest_job = max(completed_jobs, key=lambda j: j.completed_at if (hasattr(j, 'completed_at') and j.completed_at) else datetime.min)
-        except Exception:
-            # If query fails, skip - downloads won't be available
-            pass
-        
-        return {
+        if include_latest_job:
+            try:
+                if hasattr(self, 'jobs'):
+                    completed_jobs = [j for j in self.jobs if hasattr(j, 'status') and j.status == 'completed']
+                    if completed_jobs:
+                        latest_job = max(completed_jobs, key=lambda j: j.completed_at if (hasattr(j, 'completed_at') and j.completed_at) else datetime.min)
+            except Exception:
+                pass
+
+        data = {
             'id': self.id,
             'submission_id': self.submission_id,
             'user_id': self.user_id,
@@ -193,11 +193,17 @@ class Submission(db.Model):
             'business_dev_approved_at': getattr(self, 'business_dev_approved_at', None).isoformat() if hasattr(self, 'business_dev_approved_at') and getattr(self, 'business_dev_approved_at', None) else None,
             'procurement_approved_at': getattr(self, 'procurement_approved_at', None).isoformat() if hasattr(self, 'procurement_approved_at') and getattr(self, 'procurement_approved_at', None) else None,
             'general_manager_approved_at': getattr(self, 'general_manager_approved_at', None).isoformat() if hasattr(self, 'general_manager_approved_at') and getattr(self, 'general_manager_approved_at', None) else None,
-            'form_data': self.form_data,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'latest_job_id': latest_job.job_id if latest_job else None  # Latest completed job for downloads
         }
+        if include_form_data:
+            data['form_data'] = self.form_data
+        if include_latest_job:
+            pass  # latest_job_id already set above
+        else:
+            data['latest_job_id'] = None
+        return data
     
     def __repr__(self):
         return f'<Submission {self.submission_id} - {self.module_type}>'
@@ -539,18 +545,24 @@ class BDActivity(db.Model):
 
 
 class DocHubDocument(db.Model):
-    """Document metadata for DocHub."""
+    """Document metadata for DocHub. Supports both file uploads and editable content docs."""
     __tablename__ = 'dochub_documents'
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False, index=True)
-    filename = db.Column(db.String(255), nullable=False)
-    stored_path = db.Column(db.String(500), nullable=False)
-    file_type = db.Column(db.String(20), nullable=False, index=True)  # PDF, DOCX, XLSX, etc.
-    category = db.Column(db.String(50), default='Internal', index=True)  # API, Guide, Legal, Spec, Internal
+    filename = db.Column(db.String(255), nullable=True)  # null for content-only docs
+    stored_path = db.Column(db.String(500), nullable=True)  # null for content-only docs
+    file_type = db.Column(db.String(20), nullable=True, index=True)  # PDF, DOCX, etc.; null for content
+    doc_type = db.Column(db.String(20), default='content', index=True)  # 'content' | 'upload'
+    content = db.Column(db.Text, nullable=True)  # HTML content for editable docs
+    # JSON array: [{ "url": "/api/docs/inline/…", "filename": "…", "feed_document_id": 123 }, …]
+    reference_attachments = db.Column(db.Text, nullable=True)
+    category = db.Column(db.String(50), default='Internal', index=True)  # onboarding, contracts, policies, manuals, reports, Internal, etc.
     status = db.Column(db.String(20), default='draft', index=True)  # draft, review, published, archived
     size_bytes = db.Column(db.Integer, default=0)
     is_starred = db.Column(db.Boolean, default=False)
+    # True when this row mirrors an inline-stored file (editor reference); deleting the row does not delete the file.
+    inline_asset = db.Column(db.Boolean, default=False)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
@@ -565,18 +577,21 @@ class DocHubDocument(db.Model):
         size_mb = (self.size_bytes or 0) / (1024 * 1024)
         if size_mb >= 1:
             size_label = f"{size_mb:.1f} MB"
-        else:
+        elif self.size_bytes:
             size_kb = (self.size_bytes or 0) / 1024
             size_label = f"{max(1, int(round(size_kb)))} KB"
+        else:
+            size_label = '—'
 
         date_label = self.updated_at.strftime('%b %d, %Y') if self.updated_at else ''
 
-        return {
+        d = {
             'id': self.id,
             'name': self.title,
-            'filename': self.filename,
-            'path': self.stored_path,
-            'type': self.file_type,
+            'filename': self.filename or '',
+            'path': self.stored_path or '',
+            'type': self.file_type or '',
+            'doc_type': self.doc_type or 'content',
             'tag': self.category,
             'status': self.status,
             'author': author_name,
@@ -586,9 +601,22 @@ class DocHubDocument(db.Model):
             'size': size_label,
             'sizeB': int(self.size_bytes or 0),
             'starred': bool(self.is_starred),
+            'inline_asset': bool(getattr(self, 'inline_asset', False)),
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+        if self.doc_type == 'content':
+            d['content'] = self.content or ''
+            refs = []
+            raw = getattr(self, 'reference_attachments', None)
+            if raw:
+                try:
+                    parsed = json.loads(raw)
+                    refs = parsed if isinstance(parsed, list) else []
+                except (json.JSONDecodeError, TypeError):
+                    refs = []
+            d['reference_attachments'] = refs
+        return d
 
     def __repr__(self):
         return f'<DocHubDocument {self.id} - {self.title}>'
