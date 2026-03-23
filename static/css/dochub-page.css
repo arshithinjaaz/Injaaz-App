@@ -209,18 +209,44 @@ body.dochub-page-v2 * {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 10px 8px 12px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
   position: relative;
+  /* Firefox: hide until hover */
+  scrollbar-width: none;
+  scrollbar-color: transparent transparent;
 }
 
+.sb-nav:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.32) transparent;
+}
+
+/* WebKit: thin scrollbar, visible only while hovering the nav */
 .sb-nav::-webkit-scrollbar {
-  width: 4px;
+  width: 0;
+  height: 0;
+}
+
+.sb-nav:hover::-webkit-scrollbar {
+  width: 1px;
+}
+
+.sb-nav::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .sb-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.22);
-  border-radius: 4px;
+  background: transparent;
+  border-radius: 1px;
+}
+
+.sb-nav:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.sb-nav::-webkit-scrollbar-button {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .sb-section-label {
@@ -509,11 +535,9 @@ body.dochub-page-v2 * {
   display: none;
 }
 
+/* Doc lists grow with content; the sidebar scrolls as one unit via .sb-nav (no nested bucket scrollbars). */
 .dh-sb-docs {
-  max-height: 200px;
-  overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-width: thin;
 }
 
 .sb-doc-item {
@@ -563,10 +587,6 @@ body.dochub-page-v2 * {
 .dh-sb-other-title {
   padding: 0;
   display: inline;
-}
-
-.dh-sb-section--other .dh-sb-docs {
-  max-height: 240px;
 }
 
 /* ─── MAIN ─── */
@@ -1278,6 +1298,12 @@ label.btn.dh-ref-docs-add {
   box-shadow: var(--shadow-sm);
 }
 
+.mode-tab--disabled,
+.mode-tab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .doc-title-input {
   flex: 1;
   min-width: 120px;
@@ -1704,13 +1730,12 @@ label.dh-table-ref-col-check {
 
 .dh-modal-upload,
 .dh-modal-table {
-  max-width: 520px;
+  max-width: 560px;
   width: 100%;
   padding: 0;
   overflow: hidden;
 }
 
-.dh-modal-upload label[for='dhUName'],
 .dh-modal-table .dh-modal-row label {
   text-transform: none;
   letter-spacing: 0.01em;
@@ -1742,18 +1767,26 @@ label.dh-table-ref-col-check {
   margin-bottom: 8px;
 }
 
-.dh-modal-upload .dh-modal-head ~ label[for='dhUName'],
-.dh-modal-upload .dh-modal-head ~ #dhUName,
 .dh-modal-upload .dh-modal-row {
   margin-left: 28px;
   margin-right: 28px;
   box-sizing: border-box;
 }
 
-.dh-modal-upload .dh-modal-head ~ #dhUName {
-  width: auto;
-  display: block;
-  margin-bottom: 14px;
+.dh-upload-block {
+  margin: 0 28px 18px;
+  box-sizing: border-box;
+}
+
+.dh-upload-block .dh-upload-label {
+  padding: 0;
+}
+
+.dh-upload-field-hint {
+  font-size: 12px;
+  color: var(--ink-4);
+  margin: 0 0 10px;
+  line-height: 1.45;
 }
 
 .dh-modal-upload input[type='text'],
@@ -1780,6 +1813,10 @@ label.dh-table-ref-col-check {
   color: var(--ink-3);
   text-transform: none;
   letter-spacing: 0.01em;
+}
+
+.dh-modal-upload .dh-upload-drop {
+  margin: 0 0 12px;
 }
 
 .dh-upload-drop {
@@ -1853,6 +1890,101 @@ label.dh-table-ref-col-check {
   margin: 12px 0 0;
   min-height: 1.2em;
   word-break: break-all;
+}
+
+.dh-upload-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  padding: 2px 0 4px;
+}
+
+.dh-upload-file-row {
+  display: block;
+  padding: 12px 12px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.dh-upload-file-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.dh-upload-file-row__top {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.dh-upload-file-row__title-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.dh-modal-upload .dh-upload-file-title {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  margin: 0;
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--surface);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.dh-modal-upload .dh-upload-file-title:focus {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.dh-upload-file-row__name {
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dh-upload-file-row__meta {
+  font-size: 12px;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+
+.dh-upload-file-remove {
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-4);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.dh-upload-file-remove:hover {
+  color: var(--accent);
+  background: var(--accent-light);
 }
 
 .dh-modal-footer.modal-footer {
@@ -1974,6 +2106,12 @@ label.dh-table-ref-col-check {
   overflow-x: hidden;
   padding: 28px 28px 48px 40px;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Uploaded file preview: give PDF/spreads more horizontal room and align with the left edge feel */
+.dh-viewer-scroll:has(#dhViewerContent.dh-upload-preview-active) {
+  padding-left: 16px;
+  padding-right: 20px;
 }
 
 .dh-viewer-prose {
@@ -2369,6 +2507,203 @@ label.dh-table-ref-col-check {
   padding: 0;
 }
 
+.dh-md-preview.dh-md-rendered {
+  max-width: 720px;
+  margin: 0 auto;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.dh-md-preview.dh-md-rendered h1,
+.dh-md-preview.dh-md-rendered h2,
+.dh-md-preview.dh-md-rendered h3 {
+  color: var(--ink-1);
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+  font-weight: 700;
+}
+
+.dh-md-preview.dh-md-rendered pre {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  overflow: auto;
+  font-size: 13px;
+}
+
+.dh-docx-preview {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 8px 4px 24px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+
+.dh-docx-preview h1,
+.dh-docx-preview h2,
+.dh-docx-preview h3 {
+  color: var(--ink-1);
+  margin-top: 1.1em;
+  margin-bottom: 0.45em;
+}
+
+.dh-docx-preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.dh-docx-preview td,
+.dh-docx-preview th {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  vertical-align: top;
+}
+
+.dh-docx-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+}
+
+.dh-xlsx-preview {
+  width: 100%;
+  max-height: min(78vh, 960px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-3);
+  padding: 12px 16px 20px;
+}
+
+.dh-xlsx-sheet {
+  margin-bottom: 28px;
+}
+
+.dh-xlsx-sheet:last-child {
+  margin-bottom: 0;
+}
+
+.dh-xlsx-sheet-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-1);
+  margin: 0 0 10px;
+  letter-spacing: 0.02em;
+}
+
+.dh-xlsx-table-wrap {
+  overflow: auto;
+  max-width: 100%;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.dh-xlsx-table-wrap table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+
+.dh-xlsx-table-wrap td,
+.dh-xlsx-table-wrap th {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.dh-xlsx-table-wrap tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.dh-pptx-preview {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 4px 20px;
+}
+
+.dh-pptx-note {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.dh-pptx-slide {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dh-pptx-slide:last-child {
+  border-bottom: none;
+}
+
+.dh-pptx-slide-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand, #125435);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dh-pptx-slide-body {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dh-zip-preview {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 8px 4px;
+}
+
+.dh-zip-intro {
+  font-size: 14px;
+  color: var(--ink-2);
+  margin: 0 0 12px;
+}
+
+.dh-zip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: min(60vh, 640px);
+  overflow: auto;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.dh-zip-list li {
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dh-zip-list li:last-child {
+  border-bottom: none;
+}
+
+.dh-zip-more {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin: 10px 0 0;
+}
+
 .dh-pdfjs-scroll {
   width: 100%;
   overflow: auto;
@@ -2387,16 +2722,47 @@ label.dh-table-ref-col-check {
 }
 
 .dh-pdfjs-page-wrap {
+  position: relative;
+  flex-shrink: 0;
   background: var(--surface);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   border-radius: 4px;
   line-height: 0;
 }
 
+/* PDF.js text layer — invisible but selectable (copy/paste) over the canvas */
+.dh-pdfjs-page-wrap .textLayer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 1;
+  line-height: 1;
+  z-index: 2;
+  pointer-events: auto;
+  text-size-adjust: none;
+}
+
+.dh-pdfjs-page-wrap .textLayer span {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .dh-pdfjs-page-wrap canvas {
   display: block;
   max-width: 100%;
   height: auto;
+  position: relative;
+  z-index: 1;
+  user-select: none;
+  pointer-events: none;
 }
 
 .dh-img-preview-wrap {
@@ -2418,6 +2784,156 @@ label.dh-table-ref-col-check {
   height: auto;
   border-radius: var(--radius);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+/*
+ * Uploaded files — match native DocHub HTML documents: flow in the same white panel,
+ * no “floating page” outline; content aligned to the left (not centered).
+ */
+#dhViewerContent.dh-upload-preview-active .dh-pdfjs-scroll {
+  background: transparent;
+  border: none;
+  max-height: none;
+  padding: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-pdfjs-pages {
+  align-items: flex-start;
+  gap: 24px;
+}
+
+/*
+ * Multi-page PDFs: two pages per row — flex + intrinsic page widths so facing pages sit
+ * next to each other (centered group). A 50/50 grid left a huge empty “gutter” between
+ * narrow PDF canvases; this removes that effect.
+ */
+/* Two columns of intrinsic page width; left-aligned and scaled in JS to fill width. */
+#dhViewerContent.dh-upload-preview-active .dh-pdfjs-pages.dh-pdfjs-pages--spread {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  column-gap: 6px;
+  row-gap: 28px;
+  justify-content: start;
+  justify-items: start;
+  width: max-content;
+  max-width: none;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  #dhViewerContent.dh-upload-preview-active .dh-pdfjs-pages.dh-pdfjs-pages--spread {
+    grid-template-columns: 1fr;
+    width: 100%;
+    justify-items: center;
+  }
+}
+
+/* Single-page PDF: capped width in JS — left-aligned */
+#dhViewerContent.dh-upload-preview-active .dh-pdfjs-pages.dh-pdfjs-pages--single {
+  margin: 0;
+  width: max-content;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-pdfjs-page-wrap {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  border-radius: 0;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-pdfjs-page-wrap canvas {
+  max-width: none;
+}
+
+/* Crease between facing pages (must follow rule above so it is not overridden). */
+#dhViewerContent.dh-upload-preview-active .dh-pdfjs-pages.dh-pdfjs-pages--spread .dh-pdfjs-page-wrap:nth-child(odd) {
+  box-shadow: inset -1px 0 0 rgba(18, 84, 53, 0.12);
+}
+
+@media (max-width: 1100px) {
+  #dhViewerContent.dh-upload-preview-active .dh-pdfjs-pages.dh-pdfjs-pages--spread .dh-pdfjs-page-wrap:nth-child(odd) {
+    box-shadow: none;
+  }
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-img-preview-wrap {
+  background: transparent;
+  border: none;
+  padding: 0;
+  max-height: none;
+  justify-content: flex-start;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-preview-img {
+  box-shadow: none;
+  border: none;
+  border-radius: 0;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-file-preview-wrap {
+  align-items: flex-start;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-file-preview-frame {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-xlsx-preview {
+  background: transparent;
+  border: none;
+  padding: 0;
+  max-height: none;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-xlsx-table-wrap {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-docx-preview {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-md-preview.dh-md-rendered {
+  max-width: none;
+  margin: 0;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-pptx-preview {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-zip-preview {
+  max-width: none;
+  margin: 0;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-zip-list {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-upload-card {
+  text-align: left;
+  padding: 0;
+}
+
+#dhViewerContent.dh-upload-preview-active .dh-preview-loading {
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  min-height: 120px;
 }
 
 /* Callouts in editor / viewer (templates) */

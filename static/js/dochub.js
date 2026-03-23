@@ -138,6 +138,8 @@
   let tocTimer = null;
   /** Blob URL for PDF iframe / image preview; revoked when switching documents. */
   let dhUploadPreviewUrl = null;
+  /** Per-file library titles in the upload modal (key: name:size:lastModified). */
+  let dhUploadTitlesByKey = new Map();
 
   function revokeUploadPreviewUrl() {
     if (dhUploadPreviewUrl) {
@@ -149,12 +151,32 @@
   const PDFJS_WORKER =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+  /** Skip heavy client-side conversion above this size (bytes). */
+  const DH_MAX_PREVIEW_BYTES = 25 * 1024 * 1024;
+
   function uploadPreviewKind(fileType) {
     const t = (fileType || '').toLowerCase();
     if (t === 'pdf') return 'pdf';
     if (t === 'md') return 'markdown';
     if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(t)) return 'image';
+    if (t === 'docx') return 'docx';
+    if (t === 'xlsx' || t === 'xls') return 'excel';
+    if (t === 'pptx') return 'pptx';
+    if (t === 'zip') return 'zip';
     return 'none';
+  }
+
+  function sanitizePreviewHtml(html) {
+    const raw = html == null ? '' : String(html);
+    if (typeof window !== 'undefined' && window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+      return window.DOMPurify.sanitize(raw, {
+        USE_PROFILES: { html: true },
+        ADD_ATTR: ['colspan', 'rowspan', 'start'],
+        ADD_TAGS: ['img'],
+        ALLOW_UNKNOWN_PROTOCOLS: false
+      });
+    }
+    return raw;
   }
 
   function fallbackPdfIframe(buf, vc, docName) {
@@ -183,15 +205,55 @@
       const loadingTask = pdfjsLib.getDocument({ data: buf });
       const pdf = await loadingTask.promise;
       if (currentDocId !== docId) return;
+      await new Promise(function (resolve) {
+        requestAnimationFrame(resolve);
+      });
+      const rect = vc.getBoundingClientRect();
+      const hostW = Math.max(
+        400,
+        rect.width ||
+          vc.clientWidth ||
+          (vc.parentElement && vc.parentElement.clientWidth) ||
+          window.innerWidth - 160
+      );
       vc.innerHTML = '';
       const scroll = document.createElement('div');
       scroll.className = 'dh-pdfjs-scroll';
       const pagesWrap = document.createElement('div');
       pagesWrap.className = 'dh-pdfjs-pages';
+      if (pdf.numPages >= 2) {
+        pagesWrap.classList.add('dh-pdfjs-pages--spread');
+      } else if (pdf.numPages === 1) {
+        pagesWrap.classList.add('dh-pdfjs-pages--single');
+      }
+      const spreadGapPx = 6;
+      const layoutPadPx = 12;
+      /** Allow zoom past 1.35 so spreads can use the full viewer width on large monitors. */
+      const PDF_MAX_RENDER_SCALE = 2.85;
+      const p1 = await pdf.getPage(1);
+      const baseVp = p1.getViewport({ scale: 1 });
+      let maxPageW = baseVp.width;
+      let p2cache = null;
+      if (pdf.numPages >= 2) {
+        p2cache = await pdf.getPage(2);
+        maxPageW = Math.max(maxPageW, p2cache.getViewport({ scale: 1 }).width);
+      }
+      let renderScale = 1.35;
+      if (pdf.numPages >= 2) {
+        const avail = Math.max(320, hostW - spreadGapPx - layoutPadPx);
+        const targetScale = avail / (2 * maxPageW);
+        renderScale = Math.min(PDF_MAX_RENDER_SCALE, Math.max(0.28, targetScale));
+      } else {
+        const singleMaxW = 900;
+        const fitViewport = (Math.max(280, hostW - 32)) / maxPageW;
+        const fitReading = singleMaxW / maxPageW;
+        const targetScale = Math.min(fitViewport, fitReading);
+        renderScale = Math.min(2.2, Math.max(0.35, targetScale));
+      }
       for (let p = 1; p <= pdf.numPages; p++) {
         if (currentDocId !== docId) return;
-        const page = await pdf.getPage(p);
-        const viewport = page.getViewport({ scale: 1.35 });
+        const page = p === 1 ? p1 : p === 2 && p2cache ? p2cache : await pdf.getPage(p);
+        const viewport = page.getViewport({ scale: renderScale });
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (!ctx) {
@@ -203,7 +265,29 @@
         await renderTask.promise;
         const pageWrap = document.createElement('div');
         pageWrap.className = 'dh-pdfjs-page-wrap';
+        pageWrap.style.position = 'relative';
+        pageWrap.style.width = viewport.width + 'px';
+        pageWrap.style.height = viewport.height + 'px';
         pageWrap.appendChild(canvas);
+        if (typeof pdfjsLib.renderTextLayer === 'function') {
+          try {
+            const textContent = await page.getTextContent();
+            const textLayerDiv = document.createElement('div');
+            textLayerDiv.className = 'textLayer';
+            textLayerDiv.style.setProperty('--scale-factor', String(viewport.scale));
+            pageWrap.appendChild(textLayerDiv);
+            const textLayerTask = pdfjsLib.renderTextLayer({
+              textContentSource: textContent,
+              container: textLayerDiv,
+              viewport
+            });
+            if (textLayerTask && typeof textLayerTask.promise !== 'undefined') {
+              await textLayerTask.promise;
+            }
+          } catch (tlErr) {
+            console.warn('DocHub PDF text layer failed (selection may be limited)', tlErr);
+          }
+        }
         pagesWrap.appendChild(pageWrap);
       }
       scroll.appendChild(pagesWrap);
@@ -212,6 +296,205 @@
       console.warn('DocHub PDF.js preview failed, using iframe fallback', err);
       fallbackPdfIframe(buf, vc, docName);
     }
+  }
+
+  async function renderDocxPreview(buf, docId, vc) {
+    const mammoth = typeof window !== 'undefined' ? window.mammoth : null;
+    if (!mammoth || typeof mammoth.convertToHtml !== 'function') {
+      vc.innerHTML =
+        '<p class="dh-preview-error">Word preview could not load. Try <strong>Download</strong>.</p>';
+      return;
+    }
+    let result;
+    try {
+      result = await mammoth.convertToHtml({ arrayBuffer: buf });
+    } catch (err) {
+      console.warn('DocHub mammoth preview failed', err);
+      vc.innerHTML =
+        '<p class="dh-preview-error">Could not read this Word file. Try <strong>Download</strong>.</p>';
+      return;
+    }
+    if (currentDocId !== docId) return;
+    const html = sanitizePreviewHtml(result.value || '');
+    vc.innerHTML = '';
+    const article = document.createElement('article');
+    article.className = 'dh-docx-preview dh-viewer-prose';
+    article.innerHTML = html;
+    vc.appendChild(article);
+  }
+
+  async function renderExcelPreview(buf, docId, vc) {
+    const XLSX = typeof window !== 'undefined' ? window.XLSX : null;
+    if (!XLSX || typeof XLSX.read !== 'function') {
+      vc.innerHTML =
+        '<p class="dh-preview-error">Spreadsheet preview could not load. Try <strong>Download</strong>.</p>';
+      return;
+    }
+    let wb;
+    try {
+      wb = XLSX.read(buf, { type: 'array', cellDates: true });
+    } catch (err) {
+      console.warn('DocHub XLSX read failed', err);
+      vc.innerHTML =
+        '<p class="dh-preview-error">Could not read this spreadsheet. Try <strong>Download</strong>.</p>';
+      return;
+    }
+    if (currentDocId !== docId) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'dh-xlsx-preview';
+    const names = wb.SheetNames || [];
+    if (!names.length) {
+      wrap.innerHTML = '<p class="dh-preview-error">No sheets found in this file.</p>';
+      vc.innerHTML = '';
+      vc.appendChild(wrap);
+      return;
+    }
+    names.forEach((sheetName, idx) => {
+      const ws = wb.Sheets[sheetName];
+      if (!ws) return;
+      const section = document.createElement('section');
+      section.className = 'dh-xlsx-sheet';
+      const h = document.createElement('h3');
+      h.className = 'dh-xlsx-sheet-title';
+      h.textContent = sheetName;
+      section.appendChild(h);
+      const tableWrap = document.createElement('div');
+      tableWrap.className = 'dh-xlsx-table-wrap';
+      try {
+        const rawHtml = XLSX.utils.sheet_to_html(ws, { id: 'dh-sheet-' + idx, editable: false });
+        tableWrap.innerHTML = sanitizePreviewHtml(rawHtml);
+      } catch (err) {
+        console.warn('DocHub sheet_to_html failed', err);
+        tableWrap.innerHTML =
+          '<p class="dh-preview-error">Could not render this sheet. Try <strong>Download</strong>.</p>';
+      }
+      section.appendChild(tableWrap);
+      wrap.appendChild(section);
+    });
+    vc.innerHTML = '';
+    vc.appendChild(wrap);
+  }
+
+  function extractPptxSlideText(xml) {
+    const texts = [];
+    const re = /<a:t[^>]*>([^<]*)<\/a:t>/g;
+    let m;
+    while ((m = re.exec(xml)) !== null) {
+      const t = (m[1] || '').replace(/\s+/g, ' ').trim();
+      if (t) texts.push(t);
+    }
+    return texts.join(' ');
+  }
+
+  async function renderPptxPreview(buf, docId, vc) {
+    const JSZip = typeof window !== 'undefined' ? window.JSZip : null;
+    if (!JSZip) {
+      vc.innerHTML =
+        '<p class="dh-preview-error">Presentation preview could not load. Try <strong>Download</strong>.</p>';
+      return;
+    }
+    let zip;
+    try {
+      zip = await JSZip.loadAsync(buf);
+    } catch (err) {
+      console.warn('DocHub PPTX zip load failed', err);
+      vc.innerHTML =
+        '<p class="dh-preview-error">Could not read this presentation. Try <strong>Download</strong>.</p>';
+      return;
+    }
+    if (currentDocId !== docId) return;
+    const slideFiles = Object.keys(zip.files)
+      .filter(n => /^ppt\/slides\/slide\d+\.xml$/i.test(n))
+      .sort((a, b) => {
+        const ma = a.match(/slide(\d+)\.xml/i);
+        const mb = b.match(/slide(\d+)\.xml/i);
+        return (ma ? parseInt(ma[1], 10) : 0) - (mb ? parseInt(mb[1], 10) : 0);
+      });
+    const container = document.createElement('div');
+    container.className = 'dh-pptx-preview';
+    const note = document.createElement('p');
+    note.className = 'dh-pptx-note';
+    note.textContent =
+      'Slide text preview — layout and images may differ from PowerPoint. Use Download for the full file.';
+    container.appendChild(note);
+    if (!slideFiles.length) {
+      const p = document.createElement('p');
+      p.className = 'dh-preview-fallback-msg';
+      p.textContent = 'No slide content could be read from this file.';
+      container.appendChild(p);
+      vc.innerHTML = '';
+      vc.appendChild(container);
+      return;
+    }
+    for (const path of slideFiles) {
+      const xml = await zip.file(path).async('string');
+      if (currentDocId !== docId) return;
+      const text = extractPptxSlideText(xml);
+      const slideMatch = path.match(/slide(\d+)/i);
+      const slideNum = slideMatch ? slideMatch[1] : '?';
+      const section = document.createElement('section');
+      section.className = 'dh-pptx-slide';
+      const h = document.createElement('h4');
+      h.className = 'dh-pptx-slide-title';
+      h.textContent = 'Slide ' + slideNum;
+      section.appendChild(h);
+      const body = document.createElement('div');
+      body.className = 'dh-pptx-slide-body';
+      body.textContent = text || '(No text on this slide)';
+      section.appendChild(body);
+      container.appendChild(section);
+    }
+    vc.innerHTML = '';
+    vc.appendChild(container);
+  }
+
+  async function renderZipPreview(buf, docId, vc) {
+    const JSZip = typeof window !== 'undefined' ? window.JSZip : null;
+    if (!JSZip) {
+      vc.innerHTML =
+        '<p class="dh-preview-error">ZIP preview could not load. Try <strong>Download</strong>.</p>';
+      return;
+    }
+    let zip;
+    try {
+      zip = await JSZip.loadAsync(buf);
+    } catch (err) {
+      console.warn('DocHub ZIP load failed', err);
+      vc.innerHTML =
+        '<p class="dh-preview-error">Could not read this archive. Try <strong>Download</strong>.</p>';
+      return;
+    }
+    if (currentDocId !== docId) return;
+    const names = Object.keys(zip.files)
+      .filter(n => !zip.files[n].dir)
+      .sort();
+    const wrap = document.createElement('div');
+    wrap.className = 'dh-zip-preview';
+    const title = document.createElement('p');
+    title.className = 'dh-zip-intro';
+    title.textContent =
+      'Archive contains ' +
+      names.length.toLocaleString() +
+      ' file(s). Listing (folders omitted):';
+    wrap.appendChild(title);
+    const ul = document.createElement('ul');
+    ul.className = 'dh-zip-list';
+    const max = 400;
+    names.slice(0, max).forEach(n => {
+      const li = document.createElement('li');
+      li.textContent = n;
+      ul.appendChild(li);
+    });
+    wrap.appendChild(ul);
+    if (names.length > max) {
+      const more = document.createElement('p');
+      more.className = 'dh-zip-more';
+      more.textContent =
+        '… and ' + (names.length - max).toLocaleString() + ' more. Download the ZIP to see everything.';
+      wrap.appendChild(more);
+    }
+    vc.innerHTML = '';
+    vc.appendChild(wrap);
   }
 
   function esc(s) {
@@ -817,6 +1100,10 @@
     currentDocId = null;
     viewMode = 'view';
     setDocInfoWrapsVisible(false);
+    const vcEmpty = document.getElementById('dhViewerContent');
+    if (vcEmpty) {
+      vcEmpty.classList.remove('dh-upload-preview-active');
+    }
     document.getElementById('dhEmptyState').style.display = 'flex';
     document.getElementById('dhViewerState').style.display = 'none';
     document.getElementById('dhEditorState').style.display = 'none';
@@ -898,13 +1185,54 @@
         <p style="color:var(--ink-3);margin-bottom:12px">${esc(doc.filename || '')} · ${esc(
         doc.type || ''
       )} · ${esc(doc.size || '')}</p>
-        <p class="dh-preview-fallback-msg">In-browser preview isn’t available for this file type (e.g. Word, Excel, PowerPoint, or ZIP). Use <strong>Download</strong> to open it on your device.</p>
+        <p class="dh-preview-fallback-msg">In-browser preview isn’t available for this file type. Use <strong>Download</strong> to open it on your device.</p>
+      </div>`;
+      return;
+    }
+
+    const sizeB = doc.sizeB != null ? Number(doc.sizeB) : 0;
+    if (
+      sizeB > DH_MAX_PREVIEW_BYTES &&
+      (kind === 'docx' || kind === 'excel' || kind === 'pptx' || kind === 'zip' || kind === 'markdown')
+    ) {
+      vc.innerHTML = `
+      <div class="dh-upload-card">
+        <div class="dh-upload-icon">📎</div>
+        <h2>${esc(doc.name)}</h2>
+        <p class="dh-preview-fallback-msg">This file is over 25&nbsp;MB — preview is skipped to keep the browser responsive. Use <strong>Download</strong> to open it locally.</p>
       </div>`;
       return;
     }
 
     vc.innerHTML =
       '<div class="dh-preview-loading"><span class="dh-preview-loading-inner">Loading preview…</span></div>';
+
+    // Word: server converts .docx → PDF (LibreOffice / docx2pdf) for print-like layout; else Mammoth HTML.
+    if (kind === 'docx') {
+      const rPdf = await apiFetch('/api/docs/' + docId + '/preview', {});
+      if (currentDocId !== docId) return;
+      if (rPdf.ok) {
+        const ct = (rPdf.headers.get('content-type') || '').toLowerCase();
+        if (ct.includes('application/pdf')) {
+          const buf = await rPdf.arrayBuffer();
+          if (currentDocId !== docId) return;
+          await renderPdfWithPdfJs(buf, docId, vc, doc.name);
+          return;
+        }
+      }
+      const r = await apiFetch('/api/docs/' + docId + '/download', {});
+      if (currentDocId !== docId) return;
+      if (!r.ok) {
+        vc.innerHTML =
+          '<p class="dh-preview-error">Could not load this file for preview. Try Download instead.</p>';
+        toast('Preview failed', true);
+        return;
+      }
+      const buf = await r.arrayBuffer();
+      if (currentDocId !== docId) return;
+      await renderDocxPreview(buf, docId, vc);
+      return;
+    }
 
     const r = await apiFetch('/api/docs/' + docId + '/download', {});
     if (currentDocId !== docId) return;
@@ -953,16 +1281,51 @@
       return;
     }
 
+    if (kind === 'excel') {
+      const buf = await r.arrayBuffer();
+      if (currentDocId !== docId) return;
+      await renderExcelPreview(buf, docId, vc);
+      return;
+    }
+
+    if (kind === 'pptx') {
+      const buf = await r.arrayBuffer();
+      if (currentDocId !== docId) return;
+      await renderPptxPreview(buf, docId, vc);
+      return;
+    }
+
+    if (kind === 'zip') {
+      const buf = await r.arrayBuffer();
+      if (currentDocId !== docId) return;
+      await renderZipPreview(buf, docId, vc);
+      return;
+    }
+
     if (kind === 'markdown') {
       const text = await r.text();
       if (currentDocId !== docId) return;
-      vc.innerHTML = `<article class="dh-md-preview"><pre class="dh-md-pre">${esc(text)}</pre></article>`;
+      const marked = typeof window !== 'undefined' ? window.marked : null;
+      if (marked && typeof marked.parse === 'function') {
+        try {
+          const rawHtml = marked.parse(text);
+          const safe = sanitizePreviewHtml(rawHtml);
+          vc.innerHTML = `<article class="dh-md-preview dh-md-rendered dh-viewer-prose">${safe}</article>`;
+        } catch (err) {
+          console.warn('DocHub marked parse failed', err);
+          vc.innerHTML = `<article class="dh-md-preview"><pre class="dh-md-pre">${esc(text)}</pre></article>`;
+        }
+      } else {
+        vc.innerHTML = `<article class="dh-md-preview"><pre class="dh-md-pre">${esc(text)}</pre></article>`;
+      }
       return;
     }
   }
 
   function showUploadViewer(doc) {
     revokeUploadPreviewUrl();
+    const vcUp = document.getElementById('dhViewerContent');
+    if (vcUp) vcUp.classList.add('dh-upload-preview-active');
     const fv = document.getElementById('dhRefDocsFooterViewer');
     const fe = document.getElementById('dhRefDocsFooterEditor');
     if (fv) fv.style.display = 'none';
@@ -971,8 +1334,7 @@
     document.getElementById('dhEditorState').style.display = 'none';
     document.getElementById('dhViewerState').style.display = 'flex';
     setDocInfoWrapsVisible(true);
-    const tabs = document.getElementById('dhViewerModeTabs');
-    if (tabs) tabs.style.display = 'none';
+    setViewerModeTabsForUpload(true);
 
     document.getElementById('dhViewDocTitle').textContent = doc.name;
     void renderUploadPreview(doc);
@@ -1000,12 +1362,13 @@
 
   function showContentViewer(doc) {
     revokeUploadPreviewUrl();
+    const vcCo = document.getElementById('dhViewerContent');
+    if (vcCo) vcCo.classList.remove('dh-upload-preview-active');
     document.getElementById('dhEmptyState').style.display = 'none';
     document.getElementById('dhEditorState').style.display = 'none';
     document.getElementById('dhViewerState').style.display = 'flex';
     setDocInfoWrapsVisible(true);
-    const tabs = document.getElementById('dhViewerModeTabs');
-    if (tabs) tabs.style.display = 'flex';
+    setViewerModeTabsForUpload(false);
 
     document.getElementById('dhViewDocTitle').textContent = doc.name;
     document.getElementById('dhViewerContent').innerHTML =
@@ -1030,7 +1393,6 @@
       : 'none';
     document.getElementById('dhViewerDelete').onclick = () => deleteDocument(doc.id);
 
-    syncViewerModeTabs('view');
     viewMode = 'view';
     renderRefDocsBar(doc);
   }
@@ -1080,6 +1442,29 @@
     document.querySelectorAll('#dhViewerModeTabs .mode-tab').forEach(b => {
       b.classList.toggle('active', b.getAttribute('data-mode') === mode);
     });
+  }
+
+  /** Match content-doc header: show View | Edit; disable Edit for file uploads. */
+  function setViewerModeTabsForUpload(isUpload) {
+    const tabs = document.getElementById('dhViewerModeTabs');
+    if (!tabs) return;
+    tabs.style.display = 'flex';
+    const editBtn = tabs.querySelector('.mode-tab[data-mode="edit"]');
+    if (editBtn) {
+      if (isUpload) {
+        editBtn.disabled = true;
+        editBtn.setAttribute('aria-disabled', 'true');
+        editBtn.classList.add('mode-tab--disabled');
+        editBtn.title =
+          'Uploaded files open in preview here. Create a DocHub document to edit in the browser, or use Download for the original file.';
+      } else {
+        editBtn.disabled = false;
+        editBtn.removeAttribute('aria-disabled');
+        editBtn.classList.remove('mode-tab--disabled');
+        editBtn.title = '';
+      }
+    }
+    syncViewerModeTabs('view');
   }
 
   function syncEditorModeTabs(mode) {
@@ -1334,12 +1719,144 @@
     document.getElementById('dhNewDocModal').classList.remove('open');
   }
 
+  function formatUploadBytes(n) {
+    if (n == null || Number.isNaN(Number(n))) return '';
+    const u = Number(n);
+    if (u < 1024) return `${u} B`;
+    if (u < 1048576) return `${(u / 1024).toFixed(1)} KB`;
+    return `${(u / 1048576).toFixed(1)} MB`;
+  }
+
+  function basenameTitleFromFilename(name) {
+    const n = (name || '').trim();
+    if (!n) return '';
+    const base = n.includes('.') ? n.slice(0, n.lastIndexOf('.')) : n;
+    return base.replace(/_/g, ' ').trim() || 'Untitled Document';
+  }
+
+  function uploadFileKey(f) {
+    return `${f.name}:${f.size}:${f.lastModified}`;
+  }
+
+  function syncUploadFileListUi() {
+    const input = document.getElementById('dhUFile');
+    const listEl = document.getElementById('dhUploadFileList');
+    const submitBtn = document.getElementById('dhUploadSubmitBtn');
+    if (!input || !listEl) return;
+
+    listEl.querySelectorAll('.dh-upload-file-title').forEach(el => {
+      const raw = el.getAttribute('data-dh-file-key');
+      if (raw) {
+        try {
+          dhUploadTitlesByKey.set(decodeURIComponent(raw), el.value);
+        } catch (err) {
+          /* ignore */
+        }
+      }
+    });
+
+    const files = input.files ? Array.from(input.files) : [];
+    if (files.length === 0) {
+      listEl.innerHTML = '';
+      if (submitBtn) submitBtn.textContent = 'Upload';
+      return;
+    }
+
+    listEl.innerHTML = files
+      .map((f, i) => {
+        const k = uploadFileKey(f);
+        const enc = encodeURIComponent(k);
+        const def = basenameTitleFromFilename(f.name);
+        const cur =
+          dhUploadTitlesByKey.has(k) && dhUploadTitlesByKey.get(k) != null
+            ? String(dhUploadTitlesByKey.get(k))
+            : def;
+        return `<div class="dh-upload-file-row" data-idx="${i}">
+            <div class="dh-upload-file-row__main">
+              <div class="dh-upload-file-row__top">
+                <span class="dh-upload-file-row__name" title="${String(f.name).replace(/"/g, '&quot;')}">${escapeHtml(f.name)}</span>
+                <span class="dh-upload-file-row__meta">${formatUploadBytes(f.size)}</span>
+                <button type="button" class="dh-upload-file-remove" data-remove-idx="${i}">Remove</button>
+              </div>
+              <label class="dh-upload-file-row__title-label" for="dh-upload-title-${i}">Title in library</label>
+              <input type="text" class="dh-upload-file-title" id="dh-upload-title-${i}" data-dh-file-key="${enc}" value="${escapeHtml(cur)}" placeholder="${escapeHtml(def)}" autocomplete="off"/>
+            </div>
+          </div>`;
+      })
+      .join('');
+
+    listEl.querySelectorAll('.dh-upload-file-title').forEach(el => {
+      el.addEventListener('input', () => {
+        const raw = el.getAttribute('data-dh-file-key');
+        if (raw) dhUploadTitlesByKey.set(decodeURIComponent(raw), el.value);
+      });
+    });
+
+    listEl.querySelectorAll('[data-remove-idx]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = parseInt(btn.getAttribute('data-remove-idx'), 10);
+        if (Number.isNaN(idx)) return;
+        removeUploadFileAt(idx);
+      });
+    });
+
+    if (submitBtn) {
+      submitBtn.textContent = files.length === 1 ? 'Upload' : `Upload ${files.length} files`;
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function removeUploadFileAt(index) {
+    const input = document.getElementById('dhUFile');
+    if (!input || !input.files) return;
+    const arr = Array.from(input.files);
+    if (index < 0 || index >= arr.length) return;
+    arr.splice(index, 1);
+    const dt = new DataTransfer();
+    arr.forEach(f => dt.items.add(f));
+    input.files = dt.files;
+    syncUploadFileListUi();
+  }
+
+  function mergeFilesIntoInput(newFiles) {
+    const input = document.getElementById('dhUFile');
+    if (!input) return;
+    const existing = input.files ? Array.from(input.files) : [];
+    const seen = new Set(existing.map(f => `${f.name}:${f.size}:${f.lastModified}`));
+    const dt = new DataTransfer();
+    existing.forEach(f => dt.items.add(f));
+    for (let i = 0; i < newFiles.length; i++) {
+      const f = newFiles[i];
+      const key = `${f.name}:${f.size}:${f.lastModified}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      try {
+        dt.items.add(f);
+      } catch (err) {
+        toast('Could not add a file', true);
+      }
+    }
+    input.files = dt.files;
+    syncUploadFileListUi();
+  }
+
   function openUploadModal() {
     document.getElementById('dhUploadModal').classList.add('open');
     const drop = document.getElementById('dhUploadDrop');
     if (drop) drop.classList.remove('dh-upload-drop--active');
-    const fn = document.getElementById('dhUploadFileName');
-    if (fn) fn.textContent = '';
+    const input = document.getElementById('dhUFile');
+    if (input) input.value = '';
+    dhUploadTitlesByKey = new Map();
+    syncUploadFileListUi();
   }
 
   function closeUploadModal() {
@@ -1351,15 +1868,9 @@
   function initUploadDropZone() {
     const drop = document.getElementById('dhUploadDrop');
     const input = document.getElementById('dhUFile');
-    const nameEl = document.getElementById('dhUploadFileName');
     if (!drop || !input) return;
 
-    const setFileLabel = () => {
-      const f = input.files && input.files[0];
-      if (nameEl) nameEl.textContent = f ? f.name : '';
-    };
-
-    input.addEventListener('change', setFileLabel);
+    input.addEventListener('change', () => syncUploadFileListUi());
 
     drop.addEventListener('dragover', e => {
       e.preventDefault();
@@ -1373,20 +1884,14 @@
       e.preventDefault();
       e.stopPropagation();
       drop.classList.remove('dh-upload-drop--active');
-      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-      if (!f) return;
-      try {
-        const dt = new DataTransfer();
-        dt.items.add(f);
-        input.files = dt.files;
-        setFileLabel();
-      } catch (err) {
-        toast('Could not use that file', true);
-      }
+      const list = e.dataTransfer && e.dataTransfer.files;
+      if (!list || !list.length) return;
+      mergeFilesIntoInput(Array.from(list));
     });
 
     drop.addEventListener('click', e => {
       if (e.target.closest('.dh-upload-browse')) return;
+      if (e.target.closest('.dh-upload-file-remove')) return;
       input.click();
     });
 
@@ -1453,14 +1958,23 @@
       toast('Only administrators can upload documents', true);
       return;
     }
-    const file = document.getElementById('dhUFile').files[0];
-    if (!file) {
-      toast('Select a file first', true);
+    const input = document.getElementById('dhUFile');
+    const files = input && input.files ? Array.from(input.files) : [];
+    if (!files.length) {
+      toast('Select at least one file', true);
       return;
     }
+    const listEl = document.getElementById('dhUploadFileList');
+    const titleEls = listEl ? listEl.querySelectorAll('.dh-upload-file-title') : [];
+
     const fd = new FormData();
-    fd.append('file', file);
-    fd.append('name', document.getElementById('dhUName').value.trim());
+    files.forEach((f, i) => {
+      fd.append('files', f);
+      const inp = titleEls[i];
+      let t = inp ? inp.value.trim() : '';
+      if (!t) t = basenameTitleFromFilename(f.name);
+      fd.append('names', t);
+    });
     fd.append('category', document.getElementById('dhUCategory').value || 'Internal');
     fd.append('status', document.getElementById('dhUStatus').value || 'draft');
     const r = await apiFetch('/api/docs/upload', {
@@ -1473,14 +1987,14 @@
       return;
     }
     closeUploadModal();
-    document.getElementById('dhUName').value = '';
-    document.getElementById('dhUFile').value = '';
-    const ufn = document.getElementById('dhUploadFileName');
-    if (ufn) ufn.textContent = '';
-    toast('Document uploaded');
-    await loadDocs(false);
+    if (input) input.value = '';
+    dhUploadTitlesByKey = new Map();
+    syncUploadFileListUi();
     const created = j.documents || j.data?.documents;
-    if (created && created[0] && created[0].id) selectDoc(created[0].id);
+    const n = (created && created.length) || j.count || 0;
+    toast(n === 1 ? 'Document uploaded' : `Uploaded ${n} documents`);
+    await loadDocs(false);
+    if (created && created[0] && created[0].id != null) selectDoc(created[0].id);
   }
 
   function switchShell() {

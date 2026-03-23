@@ -235,6 +235,49 @@
     .upload-side-actions .btn-automation.btn-automation-disabled:hover {
       background: rgba(18, 84, 53, .08);
     }
+    .automation-status-row {
+      display: flex;
+      align-items: stretch;
+      gap: 0.4rem;
+      width: 100%;
+    }
+    .automation-status-row .btn-automation {
+      flex: 1;
+      min-width: 0;
+      justify-content: flex-start;
+      text-align: left;
+      line-height: 1.25;
+      white-space: normal;
+    }
+    .btn-automation-refresh {
+      flex-shrink: 0;
+      width: 40px;
+      min-height: 40px;
+      padding: 0;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--white);
+      color: var(--primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-automation-refresh:hover {
+      background: rgba(18, 84, 53, .08);
+      border-color: rgba(18, 84, 53, .35);
+    }
+    .btn-automation-refresh:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+    .btn-automation-refresh.spinning svg {
+      animation: mmr-refresh-spin .65s linear infinite;
+    }
+    @keyframes mmr-refresh-spin {
+      to { transform: rotate(360deg); }
+    }
     .upload-zone {
       background: var(--white);
       border: 1px solid var(--border);
@@ -344,11 +387,13 @@
     }
 
     /* ── Top download progress bar ── */
+    /* When hidden, translateY(-110%) moves this bar up over the navbar strip; z-index was 9990 > .nav (1000),
+       so the invisible bar was still capturing clicks and blocking all nav links. */
     #dlTopBar {
       position: fixed;
       top: 72px; /* sits flush under the navbar */
       left: 0; right: 0;
-      z-index: 9990;
+      z-index: 1001;
       background: #fff;
       border-bottom: 1px solid var(--border);
       box-shadow: 0 2px 12px rgba(0,0,0,.10);
@@ -359,10 +404,12 @@
       transform: translateY(-110%);
       transition: transform .28s cubic-bezier(.4,0,.2,1), opacity .28s;
       opacity: 0;
+      pointer-events: none;
     }
     #dlTopBar.visible {
       transform: translateY(0);
       opacity: 1;
+      pointer-events: auto;
     }
     #dlTopBar .dl-bar-icon {
       font-size: 1.1rem;
@@ -588,21 +635,24 @@
     }
 
     /* ── Roadmap Drawer ─────────────────────────────────────────── */
+    /* Below .nav (z-index 1000 in dashboard.css) so top menu stays clickable; above page content */
+    /* Backdrop does not capture clicks — dashboard & report stay usable while panel is open */
     .roadmap-overlay {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,.45);
-      backdrop-filter: blur(3px);
-      z-index: 9990;
+      background: transparent;
+      z-index: 998;
       opacity: 0; visibility: hidden;
       transition: opacity .25s, visibility .25s;
+      pointer-events: none;
     }
     .roadmap-overlay.active { opacity: 1; visibility: visible; }
     .roadmap-panel {
       position: fixed; top: 0; right: 0; bottom: 0;
       width: min(900px, 96vw);
       background: var(--white);
-      box-shadow: -8px 0 48px rgba(0,0,0,.14);
-      z-index: 9991;
+      box-shadow: -8px 0 48px rgba(0,0,0,.22);
+      z-index: 1;
+      pointer-events: auto;
       display: flex; flex-direction: column;
       transform: translateX(100%);
       transition: transform .3s cubic-bezier(.4,0,.2,1);
@@ -738,19 +788,20 @@
     /* Report Folder right-open panel (same pattern as roadmap) */
     .reportfolder-overlay {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,.45);
-      backdrop-filter: blur(3px);
-      z-index: 9990;
+      background: transparent;
+      z-index: 998;
       opacity: 0; visibility: hidden;
       transition: opacity .25s, visibility .25s;
+      pointer-events: none;
     }
     .reportfolder-overlay.active { opacity: 1; visibility: visible; }
     .reportfolder-panel {
       position: fixed; top: 0; right: 0; bottom: 0;
       width: min(560px, 96vw);
       background: var(--white);
-      box-shadow: -8px 0 48px rgba(0,0,0,.14);
-      z-index: 9991;
+      box-shadow: -8px 0 48px rgba(0,0,0,.22);
+      z-index: 1;
+      pointer-events: auto;
       display: flex; flex-direction: column;
       transform: translateX(100%);
       transition: transform .3s cubic-bezier(.4,0,.2,1);
@@ -831,10 +882,15 @@
       <button type="button" id="btnReportFolder" class="btn btn-outline btn-report-folder" onclick="openReportFolderPanel()" title="View saved reports">
         📁 Saved Report
       </button>
-      <button type="button" id="btnAutomation" class="btn-automation btn-automation-disabled" onclick="openRoadmapPanel()" disabled title="View automation roadmap">
-        <span class="automation-dot"></span>
-        <span id="automationLabel">—</span>
-      </button>
+      <div class="automation-status-row">
+        <button type="button" id="btnAutomation" class="btn-automation btn-automation-disabled" onclick="openRoadmapPanel()" disabled title="View automation roadmap">
+          <span class="automation-dot"></span>
+          <span id="automationLabel">—</span>
+        </button>
+        <button type="button" id="btnAutomationRefresh" class="btn-automation-refresh" onclick="refreshMmrDashboard()" title="Refresh automation status" aria-label="Refresh automation status">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1035,7 +1091,7 @@
 <div id="toast-container"></div>
 
 <!-- ════════ Roadmap Panel ════════ -->
-<div id="roadmapOverlay" class="roadmap-overlay" onclick="if(event.target===this)closeRoadmapPanel()">
+<div id="roadmapOverlay" class="roadmap-overlay" aria-hidden="true">
   <div class="roadmap-panel" onclick="event.stopPropagation()">
     <div class="roadmap-panel-hdr">
       <div>
@@ -1088,7 +1144,7 @@
 </div>
 
 <!-- Report Folder right-open panel (same as Automation Roadmap) -->
-<div id="reportFolderOverlay" class="reportfolder-overlay" onclick="if(event.target===this)closeReportFolderPanel()">
+<div id="reportFolderOverlay" class="reportfolder-overlay" aria-hidden="true">
   <div class="reportfolder-panel" onclick="event.stopPropagation()">
     <div class="reportfolder-panel-hdr">
       <div class="reportfolder-panel-title">📁 Report Folder</div>
@@ -1213,8 +1269,8 @@ async function uploadFile(file) {
     document.getElementById('btnSaveToDrive').disabled = false;
     document.getElementById('dashboardSection').classList.remove('hidden');
     document.getElementById('uploadZone').style.borderColor = 'var(--success)';
-    loadAutomationStatus();
-    loadCycleData();
+    await loadAutomationStatus();
+    await loadCycleData();
   } catch(err) {
     setAlert(err.message, 'danger');
     toast(err.message, 'error');
@@ -2125,24 +2181,48 @@ function updateAutomationButton() {
     btn.className = 'btn-automation btn-automation-disabled';
     btn.disabled = true;
     label.textContent = '—';
+    btn.title = 'Automation status unavailable';
     return;
   }
   btn.disabled = false;
   const status = automationStatus.automation_status;
+  const next = automationStatus.next_run_at || '';
+  const excelReq = !automationStatus.excel_uploaded ? ' · Excel required' : '';
+  const nextBit = next ? ` · Next ${next}` : '';
+
   if (status === 'completed') {
     btn.className = 'btn-automation btn-automation-completed';
-    label.textContent = 'Completed';
+    label.textContent = `Automation finished · Pending new upload${excelReq}`;
+    btn.title = "Today's scheduled email has been sent. Upload a new Excel file to start the next cycle. Open panel for details.";
   } else if (status === 'pending') {
     btn.className = 'btn-automation btn-automation-pending';
-    const next = automationStatus.next_run_at || '';
-    const excelReq = !automationStatus.excel_uploaded ? ' · Upload required' : '';
-    label.textContent = next ? `Pending · Next ${next}${excelReq}` : `Pending${excelReq}`;
+    label.textContent = next
+      ? `Automation started${nextBit}${excelReq}`
+      : `Automation started${excelReq}`;
+    btn.title = 'Daily automation is active. The report sends at the next scheduled time. The dashboard stays usable while this runs. Open for the full roadmap.';
   } else if (status === 'paused') {
     btn.className = 'btn-automation btn-automation-paused';
     label.textContent = 'Paused · Upload to resume';
+    btn.title = 'Automation is paused after a successful send. Upload a new Excel file, then resume from the roadmap or Email section.';
   } else {
     btn.className = 'btn-automation btn-automation-disabled';
-    label.textContent = 'Automation';
+    label.textContent = 'Automation off';
+    btn.title = 'Enable the daily schedule under Email Report to use automation.';
+  }
+}
+
+/** Refresh automation status, cycle data, and roadmap content if the panel is open */
+async function refreshMmrDashboard() {
+  const btn = document.getElementById('btnAutomationRefresh');
+  if (btn) btn.classList.add('spinning');
+  try {
+    await loadAutomationStatus();
+    await loadCycleData();
+    toast('Status refreshed', 'success');
+  } catch (e) {
+    toast('Could not refresh status', 'error');
+  } finally {
+    if (btn) btn.classList.remove('spinning');
   }
 }
 
@@ -2474,7 +2554,8 @@ async function openReportAndRestoreFilters(btn) {
     document.getElementById('btnSaveToDrive').disabled = false;
     document.getElementById('dashboardSection').classList.remove('hidden');
     document.getElementById('uploadZone').style.borderColor = 'var(--success)';
-    loadAutomationStatus();
+    await loadAutomationStatus();
+    await loadCycleData();
     toast('Report loaded. Dashboard updated.', 'success');
   } catch (e) {
     toast(e.message || 'Could not load report', 'error');
@@ -2494,14 +2575,20 @@ function openReportFromAdmin(btn) {
 }
 
 function openReportFolderPanel() {
-  document.getElementById('reportFolderOverlay')?.classList.add('active');
-  document.body.style.overflow = 'hidden';
+  const el = document.getElementById('reportFolderOverlay');
+  if (el) {
+    el.classList.add('active');
+    el.setAttribute('aria-hidden', 'false');
+  }
   loadReportFolder();
 }
 
 function closeReportFolderPanel() {
-  document.getElementById('reportFolderOverlay')?.classList.remove('active');
-  document.body.style.overflow = '';
+  const el = document.getElementById('reportFolderOverlay');
+  if (el) {
+    el.classList.remove('active');
+    el.setAttribute('aria-hidden', 'true');
+  }
 }
 
 async function downloadReportFile(filename) {
@@ -2526,12 +2613,21 @@ async function downloadReportFile(filename) {
 let cycleLog = null;
 
 async function openRoadmapPanel() {
-  document.getElementById('roadmapOverlay').classList.add('active');
-  await Promise.all([loadAutomationStatus(), loadCycleData()]);
+  const el = document.getElementById('roadmapOverlay');
+  if (el) {
+    el.classList.add('active');
+    el.setAttribute('aria-hidden', 'false');
+  }
+  await loadAutomationStatus();
+  await loadCycleData();
 }
 
 function closeRoadmapPanel() {
-  document.getElementById('roadmapOverlay').classList.remove('active');
+  const el = document.getElementById('roadmapOverlay');
+  if (el) {
+    el.classList.remove('active');
+    el.setAttribute('aria-hidden', 'true');
+  }
 }
 
 async function loadCycleData() {
@@ -2808,8 +2904,14 @@ async function startAutomationFromRoadmap() {
 // ════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
   loadEmailConfig();
-  loadAutomationStatus();
-  loadCycleData();
+  await loadAutomationStatus();
+  await loadCycleData();
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    closeRoadmapPanel();
+    closeReportFolderPanel();
+  });
 
   const filename = sessionStorage.getItem('mmr_restore_filename');
   const filtersJson = sessionStorage.getItem('mmr_restore_filters');
@@ -2833,7 +2935,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('btnSaveToDrive').disabled = false;
       document.getElementById('dashboardSection').classList.remove('hidden');
       document.getElementById('uploadZone').style.borderColor = 'var(--success)';
-      loadAutomationStatus();
+      await loadAutomationStatus();
+      await loadCycleData();
       toast('Report loaded. Dashboard filters restored.', 'success');
     } catch (e) {
       toast(e.message || 'Could not load report', 'error');

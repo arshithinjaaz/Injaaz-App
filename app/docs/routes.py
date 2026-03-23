@@ -5,6 +5,9 @@ import json
 import mimetypes
 import os
 import re
+import shutil
+import subprocess
+import tempfile
 import uuid
 from datetime import datetime
 
@@ -80,6 +83,74 @@ def _normalize_reference_attachments(raw):
 
 def _is_allowed_file(filename):
     return _ext_of(filename) in ALLOWED_DOC_EXTENSIONS
+
+
+def _libreoffice_executable():
+    """Headless LibreOffice/soffice for DOCX→PDF conversion."""
+    for name in ('soffice', 'libreoffice'):
+        p = shutil.which(name)
+        if p:
+            return p
+    if os.name == 'nt':
+        for base in (
+            r'C:\Program Files\LibreOffice\program\soffice.exe',
+            r'C:\Program Files (x86)\LibreOffice\program\soffice.exe',
+        ):
+            if os.path.isfile(base):
+                return base
+    return None
+
+
+def _docx_to_pdf_cached(doc_id, docx_path, cache_root, logger):
+    """
+    Convert .docx to PDF for high-fidelity in-browser preview (PDF.js).
+    Order: cached file → LibreOffice → docx2pdf (Windows + Word, optional).
+    """
+    os.makedirs(cache_root, exist_ok=True)
+    cache_pdf = os.path.join(cache_root, f'dochub_doc_preview_{doc_id}.pdf')
+    try:
+        src_mtime = os.path.getmtime(docx_path)
+    except OSError:
+        return None
+    if os.path.isfile(cache_pdf) and os.path.getmtime(cache_pdf) >= src_mtime:
+        return cache_pdf
+
+    lo = _libreoffice_executable()
+    if lo:
+        out_dir = tempfile.mkdtemp(prefix='dh_docx_')
+        try:
+            src = os.path.join(out_dir, 'in.docx')
+            shutil.copy2(docx_path, src)
+            cmd = [lo, '--headless', '--convert-to', 'pdf', '--outdir', out_dir, src]
+            subprocess.run(cmd, check=True, capture_output=True, timeout=120)
+            produced = os.path.join(out_dir, 'in.pdf')
+            if os.path.isfile(produced):
+                shutil.copy2(produced, cache_pdf)
+                return cache_pdf
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as e:
+            if logger:
+                logger.warning('LibreOffice docx→pdf failed: %s', e)
+        finally:
+            shutil.rmtree(out_dir, ignore_errors=True)
+
+    try:
+        from docx2pdf import convert as docx2pdf_convert
+
+        tmp_pdf = cache_pdf + '.tmp'
+        docx2pdf_convert(os.path.abspath(docx_path), os.path.abspath(tmp_pdf))
+        if os.path.isfile(tmp_pdf):
+            os.replace(tmp_pdf, cache_pdf)
+            return cache_pdf
+        try:
+            if os.path.isfile(tmp_pdf):
+                os.remove(tmp_pdf)
+        except OSError:
+            pass
+    except Exception as e:
+        if logger:
+            logger.warning('docx2pdf docx→pdf failed: %s', e)
+
+    return None
 
 
 def _get_current_user():
@@ -370,6 +441,7 @@ def upload_documents():
     dochub_dir = os.path.join(generated_root, 'dochub')
     os.makedirs(dochub_dir, exist_ok=True)
 
+    names_list = request.form.getlist('names')
     created = []
     for idx, f in enumerate(incoming):
         if not _is_allowed_file(f.filename):
@@ -378,8 +450,12 @@ def upload_documents():
         ext = _ext_of(f.filename)
         original_name = secure_filename(f.filename)
         base_title = os.path.splitext(original_name)[0].replace('_', ' ').strip() or 'Untitled Document'
-        custom_name = (request.form.get('name') or '').strip() if idx == 0 else ''
-        title = custom_name or base_title
+        custom_name = ''
+        if idx < len(names_list):
+            custom_name = (names_list[idx] or '').strip()
+        if not custom_name and idx == 0:
+            custom_name = (request.form.get('name') or '').strip()
+        title = (custom_name or base_title)[:255]
 
         unique_name = f"{uuid.uuid4().hex[:12]}_{original_name}"
         path = os.path.join(dochub_dir, unique_name)
@@ -444,6 +520,49 @@ def download_document(doc_id):
     )
 
 
+@docs_bp.route('/<int:doc_id>/preview', methods=['GET'])
+@jwt_required()
+@token_required
+def preview_upload_as_pdf(doc_id):
+    """
+    Word (.docx) → PDF for print-accurate in-browser preview (PDF.js).
+    Requires LibreOffice and/or docx2pdf (see _docx_to_pdf_cached).
+    """
+    user = _get_current_user()
+    if not _has_dochub_access(user):
+        return error_response('DocHub access denied', status_code=403, error_code='ACCESS_DENIED')
+
+    doc = DocHubDocument.query.get_or_404(doc_id)
+    if (doc.doc_type or '') != 'upload':
+        return error_response('Preview is only for uploaded files', status_code=400, error_code='INVALID_TYPE')
+    if (_ext_of(doc.filename or '') or (doc.file_type or '').lower()) != 'docx':
+        return error_response('This high-fidelity preview is only for .docx files', status_code=400, error_code='INVALID_TYPE')
+    if not doc.stored_path or not os.path.exists(doc.stored_path):
+        return error_response('Document file not found', status_code=404, error_code='NOT_FOUND')
+
+    generated_root = current_app.config.get('GENERATED_DIR')
+    if not generated_root:
+        return error_response('Generated directory not configured', status_code=500, error_code='CONFIG_ERROR')
+
+    cache_root = os.path.join(generated_root, 'dochub', 'preview_cache')
+    pdf_path = _docx_to_pdf_cached(doc_id, doc.stored_path, cache_root, current_app.logger)
+    if not pdf_path or not os.path.isfile(pdf_path):
+        return error_response(
+            'Word print preview is not available. Install LibreOffice, or on Windows ensure Microsoft Word is installed for docx2pdf.',
+            status_code=503,
+            error_code='PREVIEW_UNAVAILABLE',
+        )
+
+    base_name = os.path.splitext(doc.filename or 'document')[0] or 'document'
+    dl = secure_filename(base_name) + '.pdf'
+    return send_file(
+        pdf_path,
+        mimetype='application/pdf',
+        as_attachment=False,
+        download_name=dl,
+    )
+
+
 @docs_bp.route('/<int:doc_id>', methods=['PATCH'])
 @jwt_required()
 @token_required
@@ -498,14 +617,34 @@ def delete_document(doc_id):
 
     path = doc.stored_path
     shared_inline = bool(getattr(doc, 'inline_asset', False))
+    doc_pk = doc.id
     db.session.delete(doc)
     db.session.commit()
     if shared_inline:
+        generated_root = current_app.config.get('GENERATED_DIR')
+        if generated_root:
+            cache_pdf = os.path.join(
+                generated_root, 'dochub', 'preview_cache', f'dochub_doc_preview_{doc_pk}.pdf'
+            )
+            try:
+                if os.path.isfile(cache_pdf):
+                    os.remove(cache_pdf)
+            except OSError:
+                pass
         return success_response({'deleted': True}, message='Document removed from list (file kept for document links)')
     try:
         if path and os.path.exists(path):
             os.remove(path)
     except Exception:
         current_app.logger.warning('Could not remove document file: %s', path)
+
+    generated_root = current_app.config.get('GENERATED_DIR')
+    if generated_root:
+        cache_pdf = os.path.join(generated_root, 'dochub', 'preview_cache', f'dochub_doc_preview_{doc_pk}.pdf')
+        try:
+            if os.path.isfile(cache_pdf):
+                os.remove(cache_pdf)
+        except OSError:
+            pass
 
     return success_response({'deleted': True}, message='Document deleted')

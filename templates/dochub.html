@@ -375,11 +375,21 @@
   <div class="modal-overlay" id="dhUploadModal" onclick="if(event.target===this)closeUploadModal()">
     <div class="modal dh-modal-upload">
       <div class="dh-modal-head">
-        <h2 id="dhUploadTitle">Upload document</h2>
-        <p class="dh-modal-lead">Add a file to your library. You can preview PDFs, images, and Markdown in DocHub.</p>
+        <h2 id="dhUploadTitle">Upload documents</h2>
+        <p class="dh-modal-lead">Add one or more files to your library. Each file has its own library title below (defaults from the file name).</p>
       </div>
-      <label for="dhUName">Document name</label>
-      <input type="text" id="dhUName" placeholder="e.g. API Reference v3" autocomplete="off"/>
+      <div class="dh-upload-block">
+        <label class="dh-upload-label" for="dhUFile">Files</label>
+        <input type="file" id="dhUFile" class="sr-only" multiple accept=".pdf,.docx,.xlsx,.xls,.pptx,.md,.zip,.png,.jpg,.jpeg,.gif,.webp" tabindex="-1" aria-hidden="true"/>
+        <div class="dh-upload-drop" id="dhUploadDrop" role="button" tabindex="0" aria-label="Choose files or drop here">
+          <div class="dh-upload-drop-icon" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <p class="dh-upload-drop-title"><button type="button" class="dh-upload-browse">Browse files</button> or drag and drop here</p>
+          <p class="dh-upload-drop-hint">PDF, Word, Excel, PowerPoint, Markdown, images, or ZIP — multiple files allowed.</p>
+        </div>
+        <div id="dhUploadFileList" class="dh-upload-file-list" aria-live="polite"></div>
+      </div>
       <div class="dh-modal-row">
         <div class="dh-modal-field">
           <label for="dhUCategory">Category</label>
@@ -401,19 +411,9 @@
           </select>
         </div>
       </div>
-      <label class="dh-upload-label">File</label>
-      <input type="file" id="dhUFile" class="sr-only" accept=".pdf,.docx,.xlsx,.xls,.pptx,.md,.zip,.png,.jpg,.jpeg,.gif,.webp" tabindex="-1" aria-hidden="true"/>
-      <div class="dh-upload-drop" id="dhUploadDrop" role="button" tabindex="0" aria-label="Choose file or drop here">
-        <div class="dh-upload-drop-icon" aria-hidden="true">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        </div>
-        <p class="dh-upload-drop-title"><button type="button" class="dh-upload-browse">Browse files</button> or drag and drop</p>
-        <p class="dh-upload-drop-hint">PDF, Word, Excel, PowerPoint, Markdown, images, or ZIP</p>
-        <p class="dh-upload-file-name" id="dhUploadFileName" aria-live="polite"></p>
-      </div>
       <div class="modal-footer dh-modal-footer">
         <button type="button" class="btn btn-ghost" onclick="closeUploadModal()">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="submitUpload()">Upload</button>
+        <button type="button" class="btn btn-primary" id="dhUploadSubmitBtn" onclick="submitUpload()">Upload</button>
       </div>
     </div>
   </div>
@@ -475,6 +475,11 @@
   <div class="dh-toast" id="dhToast"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js" crossorigin="anonymous"></script>
   <script src="{{ url_for('static', filename='api-client.js') }}"></script>
   <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
   <script src="{{ url_for('static', filename='js/dochub.js') }}"></script>
