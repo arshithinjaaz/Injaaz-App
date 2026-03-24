@@ -5,6 +5,7 @@ from flask import jsonify, current_app
 from flask_jwt_extended import verify_jwt_in_request, get_jwt
 from functools import wraps
 from app.models import Session, User
+from common.jwt_session import sync_access_session_row
 
 
 def token_required(fn):
@@ -19,8 +20,10 @@ def token_required(fn):
             jwt_data = get_jwt()
             jti = jwt_data.get('jti')
             
-            # Check if session is revoked
+            # Match rows created in /api/auth/refresh; self-heal if missing (same as blocklist)
             session = Session.query.filter_by(token_jti=jti).first()
+            if session is None:
+                session = sync_access_session_row(jti, jwt_data)
             if not session or session.is_revoked:
                 return jsonify({'success': False, 'error': 'Token has been revoked'}), 401
             
