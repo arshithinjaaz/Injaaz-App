@@ -1678,17 +1678,24 @@
     dhCanWrite = true;
     dhCanEdit = !!isAdmin;
 
+    /* Toolbar (incl. Access for admins) must reflect access-check even if GET /api/docs fails
+       (e.g. 401 from session/JWT edge cases on deploy). Otherwise buttons stay display:none. */
+    applyWriteUI();
+    applyEditChrome();
+
     const r = await apiFetch('/api/docs', { headers: jsonHeaders() });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || j.success === false) {
-      toast(j.error || 'Failed to load documents', true);
+      const msg =
+        r.status === 401
+          ? j.error || 'Unauthorized — try signing out and back in, or refresh the page.'
+          : j.error || 'Failed to load documents';
+      toast(msg, true);
       return;
     }
     docs = j.documents || j.data?.documents || [];
     updateKpis();
     renderDocList();
-    applyWriteUI();
-    applyEditChrome();
 
     if (currentDocId != null) {
       const d = docs.find(x => Number(x.id) === Number(currentDocId));

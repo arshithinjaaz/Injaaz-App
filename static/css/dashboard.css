@@ -1137,7 +1137,7 @@ body.inspection-dashboard {
   display: inline-block;
   vertical-align: middle;
   font-family: 'Grape Nuts', 'Segoe Print', 'Comic Sans MS', cursive;
-  font-size: 1.22em; /* scales with .footer-copy */
+  font-size: 1.42em; /* scales with .footer-copy */
   font-weight: 400;
   color: #1e3a5f;
   margin-left: 0.35rem;
