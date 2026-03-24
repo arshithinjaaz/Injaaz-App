@@ -8,10 +8,11 @@ import re
 import shutil
 import subprocess
 import tempfile
+import urllib.request
 import uuid
 from datetime import datetime
 
-from flask import Blueprint, current_app, jsonify, request, send_file
+from flask import Blueprint, current_app, jsonify, request, Response, send_file, stream_with_context
 from sqlalchemy import or_
 from sqlalchemy.orm.attributes import flag_modified
 from flask_jwt_extended import get_jwt_identity
@@ -47,6 +48,49 @@ _INLINE_FILE_RE = re.compile(
 
 def _ext_of(filename):
     return (filename.rsplit('.', 1)[1].lower() if '.' in filename else '')
+
+
+def _is_remote_stored_path(path):
+    """True when DocHub file lives on Cloudinary (or any HTTPS URL) instead of local disk."""
+    return bool(path) and (path.startswith('http://') or path.startswith('https://'))
+
+
+def _stream_remote_as_download(url, filename):
+    """Proxy remote file so the browser still calls same-origin /api/docs/.../download (avoids CORS)."""
+    fn = secure_filename(filename or 'document') or 'document'
+    mime, _ = mimetypes.guess_type(fn)
+
+    def generate():
+        req = urllib.request.Request(url, headers={'User-Agent': 'Injaaz-DocHub/1.0'})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            while True:
+                chunk = r.read(65536)
+                if not chunk:
+                    break
+                yield chunk
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype=mime or 'application/octet-stream',
+        headers={'Content-Disposition': f'attachment; filename="{fn}"'},
+    )
+
+
+def _download_url_to_temp(url, suffix):
+    fd, path = tempfile.mkstemp(suffix=suffix)
+    os.close(fd)
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Injaaz-DocHub/1.0'})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            with open(path, 'wb') as f:
+                shutil.copyfileobj(r, f)
+        return path
+    except Exception:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        raise
 
 
 def _normalize_reference_attachments(raw):
@@ -474,6 +518,27 @@ def upload_documents():
         return error_response('No valid files uploaded', status_code=400, error_code='VALIDATION_ERROR')
 
     db.session.commit()
+
+    # Optional: push files to Cloudinary so they survive ephemeral disks (Render, etc.)
+    if os.environ.get('DOCHUB_USE_CLOUDINARY', '').lower() == 'true':
+        from app.services.cloudinary_service import upload_dochub_file
+
+        changed = False
+        for doc in created:
+            sp = doc.stored_path
+            if not sp or _is_remote_stored_path(sp) or not os.path.isfile(sp):
+                continue
+            url = upload_dochub_file(sp, f'doc_{doc.id}_{uuid.uuid4().hex[:10]}')
+            if url:
+                try:
+                    os.remove(sp)
+                except OSError:
+                    pass
+                doc.stored_path = url
+                changed = True
+        if changed:
+            db.session.commit()
+
     return success_response({
         'documents': [d.to_dict() for d in created],
         'count': len(created)
@@ -501,7 +566,11 @@ def download_document(doc_id):
     doc = DocHubDocument.query.get_or_404(doc_id)
     if (doc.doc_type or 'upload') == 'content':
         return error_response('Content documents cannot be downloaded as files', status_code=400, error_code='INVALID_TYPE')
-    if not doc.stored_path or not os.path.exists(doc.stored_path):
+    if not doc.stored_path:
+        return error_response('Document file not found', status_code=404, error_code='NOT_FOUND')
+    if _is_remote_stored_path(doc.stored_path):
+        return _stream_remote_as_download(doc.stored_path, doc.filename)
+    if not os.path.isfile(doc.stored_path):
         return error_response('Document file not found', status_code=404, error_code='NOT_FOUND')
     mime, _ = mimetypes.guess_type(doc.filename or '')
     return send_file(
@@ -528,7 +597,19 @@ def preview_upload_as_pdf(doc_id):
         return error_response('Preview is only for uploaded files', status_code=400, error_code='INVALID_TYPE')
     if (_ext_of(doc.filename or '') or (doc.file_type or '').lower()) != 'docx':
         return error_response('This high-fidelity preview is only for .docx files', status_code=400, error_code='INVALID_TYPE')
-    if not doc.stored_path or not os.path.exists(doc.stored_path):
+    if not doc.stored_path:
+        return error_response('Document file not found', status_code=404, error_code='NOT_FOUND')
+
+    tmp_path = None
+    docx_path = doc.stored_path
+    if _is_remote_stored_path(doc.stored_path):
+        try:
+            tmp_path = _download_url_to_temp(doc.stored_path, '.docx')
+            docx_path = tmp_path
+        except Exception as e:
+            current_app.logger.warning('DocHub preview: could not fetch remote docx: %s', e)
+            return error_response('Document file not found', status_code=404, error_code='NOT_FOUND')
+    elif not os.path.isfile(doc.stored_path):
         return error_response('Document file not found', status_code=404, error_code='NOT_FOUND')
 
     generated_root = current_app.config.get('GENERATED_DIR')
@@ -536,7 +617,15 @@ def preview_upload_as_pdf(doc_id):
         return error_response('Generated directory not configured', status_code=500, error_code='CONFIG_ERROR')
 
     cache_root = os.path.join(generated_root, 'dochub', 'preview_cache')
-    pdf_path = _docx_to_pdf_cached(doc_id, doc.stored_path, cache_root, current_app.logger)
+    try:
+        pdf_path = _docx_to_pdf_cached(doc_id, docx_path, cache_root, current_app.logger)
+    finally:
+        if tmp_path and os.path.isfile(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
     if not pdf_path or not os.path.isfile(pdf_path):
         return error_response(
             'Word print preview is not available. Install LibreOffice, or on Windows ensure Microsoft Word is installed for docx2pdf.',

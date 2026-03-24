@@ -6,7 +6,10 @@ load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-GENERATED_DIR = os.path.join(BASE_DIR, "generated")
+# Set GENERATED_DIR on Render (persistent disk mount, e.g. /var/data/generated) so uploads survive redeploys.
+# Default: project ./generated (ephemeral on most PaaS).
+_gen_override = (os.environ.get("GENERATED_DIR") or "").strip()
+GENERATED_DIR = os.path.abspath(_gen_override) if _gen_override else os.path.join(BASE_DIR, "generated")
 UPLOADS_DIR = os.path.join(GENERATED_DIR, "uploads")
 JOBS_DIR = os.path.join(GENERATED_DIR, "jobs")
 

@@ -521,7 +521,7 @@ def create_app():
         os.makedirs(JOBS_DIR, exist_ok=True)
         os.makedirs(os.path.join(GENERATED_DIR, 'dochub'), exist_ok=True)
         os.makedirs(os.path.join(GENERATED_DIR, 'dochub', 'inline'), exist_ok=True)
-        logger.info("✅ Directory structure verified")
+        logger.info("✅ Directory structure verified (GENERATED_DIR=%s)", GENERATED_DIR)
     except Exception as e:
         logger.error(f"❌ Failed to create directories: {e}")
         # Don't fail, continue anyway (may be permissions issue)
