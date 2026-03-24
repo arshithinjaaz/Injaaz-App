@@ -1,6 +1,7 @@
 import cloudinary
 import cloudinary.uploader
 import os
+import re
 import time
 import logging
 
@@ -72,4 +73,48 @@ def upload_local_file(path, public_id_prefix):
         return url
     except Exception as e:
         logger.error(f"Cloudinary file upload failed: {str(e)}", exc_info=True)
+        return None
+
+
+def upload_dochub_file(local_path, public_id_prefix):
+    """
+    Store a DocHub library file on Cloudinary; return secure_url or None.
+    Used when DOCHUB_USE_CLOUDINARY=true so files survive ephemeral server disks (e.g. Render).
+    """
+    if not local_path or not os.path.isfile(local_path):
+        return None
+    if not init_cloudinary():
+        return None
+    try:
+        ext = os.path.splitext(local_path)[1].lower()
+        resource_type = (
+            "raw"
+            if ext
+            in (
+                ".pdf",
+                ".docx",
+                ".doc",
+                ".xlsx",
+                ".xls",
+                ".pptx",
+                ".ppt",
+                ".zip",
+                ".md",
+            )
+            else "auto"
+        )
+        safe_id = re.sub(r"[^a-zA-Z0-9_-]", "_", public_id_prefix)[:180]
+        res = cloudinary.uploader.upload(
+            local_path,
+            folder="dochub",
+            public_id=safe_id,
+            resource_type=resource_type,
+            access_mode="public",
+        )
+        url = res.get("secure_url")
+        if url:
+            logger.info("DocHub Cloudinary upload success: %s", url[:80])
+        return url
+    except Exception as e:
+        logger.error("DocHub Cloudinary upload failed: %s", e, exc_info=True)
         return None

@@ -176,6 +176,11 @@ def create_app():
     app.config.setdefault('JWT_COOKIE_SAMESITE', 'Lax')
     app.config.setdefault('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
     app.config.setdefault('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
+    # JWTManager defaults JWT_COOKIE_CSRF_PROTECT=True if missing — breaks multipart uploads (no CSRF header).
+    # Explicit opt-in only: JWT_COOKIE_CSRF_PROTECT=true in environment.
+    app.config['JWT_COOKIE_CSRF_PROTECT'] = (
+        os.environ.get('JWT_COOKIE_CSRF_PROTECT', '').lower() == 'true'
+    )
     
     # JWT Error Handlers - ensure proper error responses
     @jwt.unauthorized_loader
@@ -223,46 +228,25 @@ def create_app():
     # JWT token verification callback (check if token is revoked)
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload):
-        from app.models import Session, User
-        from sqlalchemy.exc import IntegrityError
+        from app.models import Session
+        from common.jwt_session import sync_access_session_row
 
-        # Refresh tokens are not stored in sessions table; only access tokens are tracked.
         if jwt_payload.get('type') == 'refresh':
             return False
         jti = jwt_payload.get('jti')
         if not jti:
             return True
         session = Session.query.filter_by(token_jti=jti).first()
-        if session is not None:
-            return session.is_revoked
-        # Valid access JWT but no sessions row (deploy DB drift, failed insert, or race).
-        # Previously this was treated as revoked → 401 on /api/docs/upload etc. Self-heal the row.
-        try:
-            sub = jwt_payload.get('sub')
-            uid = int(sub) if sub is not None else None
-        except (TypeError, ValueError):
-            return True
-        if uid is None:
-            return True
-        user = User.query.get(uid)
-        if not user or not user.is_active:
-            return True
-        exp = jwt_payload.get('exp')
-        exp_dt = datetime.utcfromtimestamp(exp) if exp else datetime.utcnow()
-        try:
-            db.session.add(
-                Session(user_id=user.id, token_jti=jti, expires_at=exp_dt)
+        if session is None:
+            session = sync_access_session_row(jti, jwt_payload)
+        if session is None:
+            logger.warning(
+                "JWT blocklist: missing session for jti=%s sub=%s — token treated as revoked",
+                jti,
+                jwt_payload.get('sub'),
             )
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            session = Session.query.filter_by(token_jti=jti).first()
-            return (session is None) or session.is_revoked
-        except Exception as e:
-            db.session.rollback()
-            logger.warning('JWT session self-heal failed: %s', e)
             return True
-        return False
+        return session.is_revoked
     
     logger.info("✅ Database and JWT initialized")
     
@@ -378,25 +362,23 @@ def create_app():
                 if 'content' not in columns:
                     missing_columns.append(('content', 'TEXT'))
                 if 'inline_asset' not in columns:
-                    missing_columns.append(('inline_asset', 'BOOLEAN DEFAULT 0'))
+                    # PostgreSQL rejects BOOLEAN DEFAULT 0; use FALSE (SQLite accepts FALSE too)
+                    missing_columns.append(('inline_asset', 'BOOLEAN DEFAULT FALSE'))
                 if 'reference_attachments' not in columns:
                     missing_columns.append(('reference_attachments', 'TEXT'))
                 if missing_columns:
                     logger.info(f"Adding DocHub columns: {[c[0] for c in missing_columns]}")
-                    try:
-                        with db.engine.begin() as conn:
-                            for col_name, col_def in missing_columns:
-                                try:
-                                    conn.execute(text(f"ALTER TABLE dochub_documents ADD COLUMN {col_name} {col_def}"))
-                                    logger.info(f"✅ Added {col_name} to dochub_documents")
-                                except Exception as col_error:
-                                    err = str(col_error).lower()
-                                    if 'already exists' in err or 'duplicate' in err:
-                                        logger.info(f"Column {col_name} already exists")
-                                    else:
-                                        logger.warning(f"Could not add {col_name}: {col_error}")
-                    except Exception as e:
-                        logger.warning(f"Could not add DocHub columns (non-critical): {e}")
+                    for col_name, col_def in missing_columns:
+                        try:
+                            with db.engine.begin() as conn:
+                                conn.execute(text(f"ALTER TABLE dochub_documents ADD COLUMN {col_name} {col_def}"))
+                            logger.info(f"✅ Added {col_name} to dochub_documents")
+                        except Exception as col_error:
+                            err = str(col_error).lower()
+                            if 'already exists' in err or 'duplicate' in err:
+                                logger.info(f"Column {col_name} already exists")
+                            else:
+                                logger.warning(f"Could not add {col_name}: {col_error}")
 
             # Step 3: Ensure default admin user exists (fully automatic for Render)
             try:
@@ -539,7 +521,7 @@ def create_app():
         os.makedirs(JOBS_DIR, exist_ok=True)
         os.makedirs(os.path.join(GENERATED_DIR, 'dochub'), exist_ok=True)
         os.makedirs(os.path.join(GENERATED_DIR, 'dochub', 'inline'), exist_ok=True)
-        logger.info("✅ Directory structure verified")
+        logger.info("✅ Directory structure verified (GENERATED_DIR=%s)", GENERATED_DIR)
     except Exception as e:
         logger.error(f"❌ Failed to create directories: {e}")
         # Don't fail, continue anyway (may be permissions issue)

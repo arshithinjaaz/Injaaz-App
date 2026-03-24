@@ -257,9 +257,12 @@ def refresh():
         db.session.add(session)
         db.session.commit()
         
-        return jsonify({
-            'access_token': access_token
-        }), 200
+        # Keep httpOnly access cookie in sync with JSON token. Stale cookie + fresh Bearer in
+        # localStorage can confuse JWT resolution on multipart/API requests (DocHub upload 401 loop).
+        from flask_jwt_extended import set_access_cookies
+        response = jsonify({'access_token': access_token})
+        set_access_cookies(response, access_token)
+        return response, 200
         
     except Exception as e:
         current_app.logger.error(f"Token refresh error: {str(e)}")

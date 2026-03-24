@@ -30,17 +30,15 @@ async function refreshAccessToken() {
   
   refreshPromise = (async () => {
     try {
+      const headers = { 'Content-Type': 'application/json' };
       const refreshToken = localStorage.getItem('refresh_token');
-      if (!refreshToken) {
-        return null;
+      if (refreshToken) {
+        headers['Authorization'] = 'Bearer ' + refreshToken;
       }
-      
+      /* If refresh_token is only in httpOnly cookie, still POST with credentials */
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${refreshToken}`
-        },
+        headers: headers,
         credentials: 'include'
       });
       

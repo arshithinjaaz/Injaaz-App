@@ -604,6 +604,16 @@ body.dochub-page-v2 * {
   overflow: hidden;
 }
 
+/* Global .nav and .dh-topbar are both white; drop the nav hairline so we don’t get a double line
+   between the site header and DocHub’s tab row. Keep .dh-topbar border-bottom vs the canvas below. */
+body.dochub-page-v2.has-main-nav .nav {
+  border-bottom: none;
+}
+
+body.dochub-page-v2.has-main-nav .nav.scrolled {
+  box-shadow: none;
+}
+
 .dh-topbar {
   height: var(--topbar-h);
   background: var(--surface);

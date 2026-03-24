@@ -6,7 +6,10 @@ load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-GENERATED_DIR = os.path.join(BASE_DIR, "generated")
+# Set GENERATED_DIR on Render (persistent disk mount, e.g. /var/data/generated) so uploads survive redeploys.
+# Default: project ./generated (ephemeral on most PaaS).
+_gen_override = (os.environ.get("GENERATED_DIR") or "").strip()
+GENERATED_DIR = os.path.abspath(_gen_override) if _gen_override else os.path.join(BASE_DIR, "generated")
 UPLOADS_DIR = os.path.join(GENERATED_DIR, "uploads")
 JOBS_DIR = os.path.join(GENERATED_DIR, "jobs")
 
@@ -70,6 +73,11 @@ JWT_COOKIE_HTTPONLY = True  # Prevent XSS attacks
 JWT_COOKIE_SAMESITE = 'Lax'  # CSRF protection
 JWT_ACCESS_COOKIE_NAME = 'access_token_cookie'
 JWT_REFRESH_COOKIE_NAME = 'refresh_token_cookie'
+# Flask-JWT-Extended defaults JWT_COOKIE_CSRF_PROTECT=True. When True, POST requests that use
+# the access JWT from cookies require X-CSRF-TOKEN. Multipart uploads (DocHub) do not send it → 401.
+# The SPA uses Authorization: Bearer from localStorage; cookies are a fallback. Default off; set
+# JWT_COOKIE_CSRF_PROTECT=true in env only if you add CSRF headers to all API calls.
+JWT_COOKIE_CSRF_PROTECT = os.getenv("JWT_COOKIE_CSRF_PROTECT", "false").lower() == "true"
 
 # EMAIL (Optional - for HVAC module email reports)
 MAIL_SERVER = os.getenv("MAIL_SERVER")
