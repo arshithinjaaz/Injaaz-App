@@ -14,7 +14,7 @@ from datetime import datetime
 from flask import Blueprint, current_app, jsonify, request, send_file
 from sqlalchemy import or_
 from sqlalchemy.orm.attributes import flag_modified
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import get_jwt_identity
 from werkzeug.utils import secure_filename
 
 from app.middleware import token_required
@@ -177,8 +177,7 @@ def _has_dochub_access(user):
 
 
 @docs_bp.route('/access-check', methods=['GET'])
-@jwt_required()
-@token_required
+@token_required(locations=['headers'])
 def access_check():
     user = _get_current_user()
     if not user:
@@ -193,8 +192,7 @@ DOC_CATEGORIES = ['onboarding', 'contracts', 'policies', 'manuals', 'reports', '
 
 
 @docs_bp.route('/inline-image', methods=['POST'])
-@jwt_required()
-@token_required
+@token_required(locations=['headers'])
 def upload_inline_editor_image():
     """Store an image for rich-text document content; returns a stable URL for <img src>."""
     user = _get_current_user()
@@ -234,8 +232,7 @@ def upload_inline_editor_image():
 
 
 @docs_bp.route('/inline-reference', methods=['POST'])
-@jwt_required()
-@token_required
+@token_required(locations=['headers'])
 def upload_inline_reference():
     """Store a reference file (PDF, Office, etc.) for links in document HTML; URL works without JWT."""
     user = _get_current_user()
@@ -353,8 +350,7 @@ def serve_inline_editor_image(filename):
 
 
 @docs_bp.route('', methods=['GET'])
-@jwt_required()
-@token_required
+@token_required(locations=['headers'])
 def list_documents():
     user = _get_current_user()
     if not _has_dochub_access(user):
@@ -373,8 +369,7 @@ def list_documents():
 
 
 @docs_bp.route('', methods=['POST'])
-@jwt_required()
-@token_required
+@token_required(locations=['headers'])
 def create_document():
     """Create a new content-based document (editable in browser)."""
     user = _get_current_user()
@@ -412,8 +407,7 @@ def create_document():
 
 
 @docs_bp.route('/upload', methods=['POST'])
-@jwt_required()
-@token_required
+@token_required(locations=['headers'])
 def upload_documents():
     user = _get_current_user()
     if not _has_dochub_access(user):
@@ -487,8 +481,7 @@ def upload_documents():
 
 
 @docs_bp.route('/<int:doc_id>', methods=['GET'])
-@jwt_required()
-@token_required
+@token_required(locations=['headers'])
 def get_document(doc_id):
     user = _get_current_user()
     if not _has_dochub_access(user):
@@ -499,8 +492,7 @@ def get_document(doc_id):
 
 
 @docs_bp.route('/<int:doc_id>/download', methods=['GET'])
-@jwt_required()
-@token_required
+@token_required(locations=['headers'])
 def download_document(doc_id):
     user = _get_current_user()
     if not _has_dochub_access(user):
@@ -521,8 +513,7 @@ def download_document(doc_id):
 
 
 @docs_bp.route('/<int:doc_id>/preview', methods=['GET'])
-@jwt_required()
-@token_required
+@token_required(locations=['headers'])
 def preview_upload_as_pdf(doc_id):
     """
     Word (.docx) → PDF for print-accurate in-browser preview (PDF.js).
@@ -564,8 +555,7 @@ def preview_upload_as_pdf(doc_id):
 
 
 @docs_bp.route('/<int:doc_id>', methods=['PATCH'])
-@jwt_required()
-@token_required
+@token_required(locations=['headers'])
 def update_document(doc_id):
     user = _get_current_user()
     if not _has_dochub_access(user):
@@ -603,8 +593,7 @@ def update_document(doc_id):
 
 
 @docs_bp.route('/<int:doc_id>', methods=['DELETE'])
-@jwt_required()
-@token_required
+@token_required(locations=['headers'])
 def delete_document(doc_id):
     user = _get_current_user()
     if not _has_dochub_access(user):

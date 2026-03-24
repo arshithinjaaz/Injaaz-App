@@ -2,11 +2,14 @@
 Ensure `sessions` rows exist for valid access JWTs (JTI).
 Used by JWT blocklist + token_required so behavior stays consistent.
 """
+import logging
 from datetime import datetime
 
 from sqlalchemy.exc import IntegrityError
 
 from app.models import Session, User, db
+
+logger = logging.getLogger(__name__)
 
 
 def sync_access_session_row(jti, jwt_payload):
@@ -39,6 +42,7 @@ def sync_access_session_row(jti, jwt_payload):
     except IntegrityError:
         db.session.rollback()
         return Session.query.filter_by(token_jti=jti).first()
-    except Exception:
+    except Exception as e:
         db.session.rollback()
+        logger.warning("sync_access_session_row failed for jti=%s: %s", jti, e)
         return None

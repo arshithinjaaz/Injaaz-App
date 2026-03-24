@@ -240,6 +240,11 @@ def create_app():
         if session is None:
             session = sync_access_session_row(jti, jwt_payload)
         if session is None:
+            logger.warning(
+                "JWT blocklist: missing session for jti=%s sub=%s — token treated as revoked",
+                jti,
+                jwt_payload.get('sub'),
+            )
             return True
         return session.is_revoked
     
@@ -357,25 +362,23 @@ def create_app():
                 if 'content' not in columns:
                     missing_columns.append(('content', 'TEXT'))
                 if 'inline_asset' not in columns:
-                    missing_columns.append(('inline_asset', 'BOOLEAN DEFAULT 0'))
+                    # PostgreSQL rejects BOOLEAN DEFAULT 0; use FALSE (SQLite accepts FALSE too)
+                    missing_columns.append(('inline_asset', 'BOOLEAN DEFAULT FALSE'))
                 if 'reference_attachments' not in columns:
                     missing_columns.append(('reference_attachments', 'TEXT'))
                 if missing_columns:
                     logger.info(f"Adding DocHub columns: {[c[0] for c in missing_columns]}")
-                    try:
-                        with db.engine.begin() as conn:
-                            for col_name, col_def in missing_columns:
-                                try:
-                                    conn.execute(text(f"ALTER TABLE dochub_documents ADD COLUMN {col_name} {col_def}"))
-                                    logger.info(f"✅ Added {col_name} to dochub_documents")
-                                except Exception as col_error:
-                                    err = str(col_error).lower()
-                                    if 'already exists' in err or 'duplicate' in err:
-                                        logger.info(f"Column {col_name} already exists")
-                                    else:
-                                        logger.warning(f"Could not add {col_name}: {col_error}")
-                    except Exception as e:
-                        logger.warning(f"Could not add DocHub columns (non-critical): {e}")
+                    for col_name, col_def in missing_columns:
+                        try:
+                            with db.engine.begin() as conn:
+                                conn.execute(text(f"ALTER TABLE dochub_documents ADD COLUMN {col_name} {col_def}"))
+                            logger.info(f"✅ Added {col_name} to dochub_documents")
+                        except Exception as col_error:
+                            err = str(col_error).lower()
+                            if 'already exists' in err or 'duplicate' in err:
+                                logger.info(f"Column {col_name} already exists")
+                            else:
+                                logger.warning(f"Could not add {col_name}: {col_error}")
 
             # Step 3: Ensure default admin user exists (fully automatic for Render)
             try:

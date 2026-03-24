@@ -8,44 +8,50 @@ from app.models import Session, User
 from common.jwt_session import sync_access_session_row
 
 
-def token_required(fn):
-    """Decorator to check JWT token and session validity"""
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        try:
-            # Verify JWT token
-            verify_jwt_in_request()
-            
-            # Get token JTI
-            jwt_data = get_jwt()
-            jti = jwt_data.get('jti')
-            
-            # Match rows created in /api/auth/refresh; self-heal if missing (same as blocklist)
-            session = Session.query.filter_by(token_jti=jti).first()
-            if session is None:
-                session = sync_access_session_row(jti, jwt_data)
-            if not session or session.is_revoked:
-                return jsonify({'success': False, 'error': 'Token has been revoked'}), 401
-            
-            # Check if user is still active (identity is str from JWT — coerce for PK lookup)
-            from flask_jwt_extended import get_jwt_identity
-            user_id = get_jwt_identity()
+def token_required(fn=None, *, locations=None):
+    """
+    Verify JWT + Session row + active user.
+    Use locations=['headers'] for SPA JSON/multipart routes so the Authorization Bearer is the
+    only access JWT considered (avoids stale access_token_cookie vs fresh localStorage token).
+    Default locations=None uses app JWT_TOKEN_LOCATION (headers + cookies).
+    """
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
             try:
-                uid = int(user_id)
-            except (TypeError, ValueError):
-                uid = user_id
-            user = User.query.get(uid)
+                verify_jwt_in_request(locations=locations)
 
-            if not user or not user.is_active:
-                return jsonify({'success': False, 'error': 'User is inactive'}), 403
-            
-            return fn(*args, **kwargs)
-            
-        except Exception as e:
-            current_app.logger.error(f"Token validation error: {str(e)}")
-            return jsonify({'error': 'Unauthorized'}), 401
-    
-    return wrapper
+                jwt_data = get_jwt()
+                jti = jwt_data.get('jti')
+
+                session = Session.query.filter_by(token_jti=jti).first()
+                if session is None:
+                    session = sync_access_session_row(jti, jwt_data)
+                if not session or session.is_revoked:
+                    return jsonify({'success': False, 'error': 'Token has been revoked'}), 401
+
+                from flask_jwt_extended import get_jwt_identity
+                user_id = get_jwt_identity()
+                try:
+                    uid = int(user_id)
+                except (TypeError, ValueError):
+                    uid = user_id
+                user = User.query.get(uid)
+
+                if not user or not user.is_active:
+                    return jsonify({'success': False, 'error': 'User is inactive'}), 403
+
+                return f(*args, **kwargs)
+
+            except Exception as e:
+                current_app.logger.error(f"Token validation error: {str(e)}")
+                return jsonify({'error': 'Unauthorized'}), 401
+
+        return wrapper
+
+    if fn is not None:
+        return decorator(fn)
+    return decorator
 
 
 def admin_required(fn):

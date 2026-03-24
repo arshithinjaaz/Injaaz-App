@@ -140,9 +140,8 @@
       if (response.status === 401) {
         console.log('Received 401, attempting token refresh...');
         const newToken = await this.refreshAccessToken();
-        
+
         if (newToken) {
-          // Retry with new token (rebuild FormData — body stream may be consumed on first attempt)
           console.log('Retrying request with new token');
           const retryHeaders = {
             ...options.headers,
@@ -159,20 +158,36 @@
               retryBody.append(pair[0], pair[1]);
             });
           }
-          return fetch(url, {
+          response = await fetch(url, {
             ...options,
             body: retryBody,
             headers: retryHeaders,
             credentials: 'include'
           });
-        } else {
-          // Refresh failed
-          console.warn('Token refresh failed');
-          if (autoRedirect) {
-            this.redirectToLogin('Session expired');
+          // Stale/corrupt localStorage Bearer can still 401 while httpOnly access cookie is valid
+          if (response.status !== 401) {
+            return response;
           }
-          return { ok: false, status: 401, json: async () => ({ error: 'Session expired' }) };
+          localStorage.removeItem('access_token');
+          const cookieHeaders = { ...options.headers };
+          delete cookieHeaders['Authorization'];
+          delete cookieHeaders['authorization'];
+          if (isFormData) {
+            delete cookieHeaders['Content-Type'];
+            delete cookieHeaders['content-type'];
+          }
+          return fetch(url, {
+            ...options,
+            body: retryBody,
+            headers: cookieHeaders,
+            credentials: 'include'
+          });
         }
+        console.warn('Token refresh failed');
+        if (autoRedirect) {
+          this.redirectToLogin('Session expired');
+        }
+        return { ok: false, status: 401, json: async () => ({ error: 'Session expired' }) };
       }
 
       return response;
