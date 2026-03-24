@@ -176,6 +176,11 @@ def create_app():
     app.config.setdefault('JWT_COOKIE_SAMESITE', 'Lax')
     app.config.setdefault('JWT_ACCESS_COOKIE_NAME', 'access_token_cookie')
     app.config.setdefault('JWT_REFRESH_COOKIE_NAME', 'refresh_token_cookie')
+    # JWTManager defaults JWT_COOKIE_CSRF_PROTECT=True if missing — breaks multipart uploads (no CSRF header).
+    # Explicit opt-in only: JWT_COOKIE_CSRF_PROTECT=true in environment.
+    app.config['JWT_COOKIE_CSRF_PROTECT'] = (
+        os.environ.get('JWT_COOKIE_CSRF_PROTECT', '').lower() == 'true'
+    )
     
     # JWT Error Handlers - ensure proper error responses
     @jwt.unauthorized_loader

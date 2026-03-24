@@ -70,6 +70,11 @@ JWT_COOKIE_HTTPONLY = True  # Prevent XSS attacks
 JWT_COOKIE_SAMESITE = 'Lax'  # CSRF protection
 JWT_ACCESS_COOKIE_NAME = 'access_token_cookie'
 JWT_REFRESH_COOKIE_NAME = 'refresh_token_cookie'
+# Flask-JWT-Extended defaults JWT_COOKIE_CSRF_PROTECT=True. When True, POST requests that use
+# the access JWT from cookies require X-CSRF-TOKEN. Multipart uploads (DocHub) do not send it → 401.
+# The SPA uses Authorization: Bearer from localStorage; cookies are a fallback. Default off; set
+# JWT_COOKIE_CSRF_PROTECT=true in env only if you add CSRF headers to all API calls.
+JWT_COOKIE_CSRF_PROTECT = os.getenv("JWT_COOKIE_CSRF_PROTECT", "false").lower() == "true"
 
 # EMAIL (Optional - for HVAC module email reports)
 MAIL_SERVER = os.getenv("MAIL_SERVER")
