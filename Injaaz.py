@@ -223,14 +223,46 @@ def create_app():
     # JWT token verification callback (check if token is revoked)
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload):
-        from app.models import Session
+        from app.models import Session, User
+        from sqlalchemy.exc import IntegrityError
+
         # Refresh tokens are not stored in sessions table; only access tokens are tracked.
-        # Skipping the revocation check for refresh tokens allows access token refresh to work.
         if jwt_payload.get('type') == 'refresh':
             return False
-        jti = jwt_payload['jti']
+        jti = jwt_payload.get('jti')
+        if not jti:
+            return True
         session = Session.query.filter_by(token_jti=jti).first()
-        return session is None or session.is_revoked
+        if session is not None:
+            return session.is_revoked
+        # Valid access JWT but no sessions row (deploy DB drift, failed insert, or race).
+        # Previously this was treated as revoked → 401 on /api/docs/upload etc. Self-heal the row.
+        try:
+            sub = jwt_payload.get('sub')
+            uid = int(sub) if sub is not None else None
+        except (TypeError, ValueError):
+            return True
+        if uid is None:
+            return True
+        user = User.query.get(uid)
+        if not user or not user.is_active:
+            return True
+        exp = jwt_payload.get('exp')
+        exp_dt = datetime.utcfromtimestamp(exp) if exp else datetime.utcnow()
+        try:
+            db.session.add(
+                Session(user_id=user.id, token_jti=jti, expires_at=exp_dt)
+            )
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            session = Session.query.filter_by(token_jti=jti).first()
+            return (session is None) or session.is_revoked
+        except Exception as e:
+            db.session.rollback()
+            logger.warning('JWT session self-heal failed: %s', e)
+            return True
+        return False
     
     logger.info("✅ Database and JWT initialized")
     
@@ -505,6 +537,8 @@ def create_app():
         os.makedirs(GENERATED_DIR, exist_ok=True)
         os.makedirs(UPLOADS_DIR, exist_ok=True)
         os.makedirs(JOBS_DIR, exist_ok=True)
+        os.makedirs(os.path.join(GENERATED_DIR, 'dochub'), exist_ok=True)
+        os.makedirs(os.path.join(GENERATED_DIR, 'dochub', 'inline'), exist_ok=True)
         logger.info("✅ Directory structure verified")
     except Exception as e:
         logger.error(f"❌ Failed to create directories: {e}")

@@ -104,11 +104,22 @@
         return { ok: false, status: 401, json: async () => ({ error: 'No access token' }) };
       }
 
-      // Merge headers with authorization
+      const isFormData =
+        typeof FormData !== 'undefined' && options.body instanceof FormData;
+      let formDataEntries = null;
+      if (isFormData && options.body instanceof FormData) {
+        formDataEntries = Array.from(options.body.entries());
+      }
+
+      // Merge headers with authorization (omit Content-Type for multipart — browser sets boundary)
       const headers = {
         ...options.headers,
         'Authorization': `Bearer ${token}`
       };
+      if (isFormData) {
+        delete headers['Content-Type'];
+        delete headers['content-type'];
+      }
 
       // Make initial request
       let response;
@@ -129,14 +140,27 @@
         const newToken = await this.refreshAccessToken();
         
         if (newToken) {
-          // Retry with new token
+          // Retry with new token (rebuild FormData — body stream may be consumed on first attempt)
           console.log('Retrying request with new token');
+          const retryHeaders = {
+            ...options.headers,
+            'Authorization': `Bearer ${newToken}`
+          };
+          if (isFormData) {
+            delete retryHeaders['Content-Type'];
+            delete retryHeaders['content-type'];
+          }
+          let retryBody = options.body;
+          if (formDataEntries) {
+            retryBody = new FormData();
+            formDataEntries.forEach(function (pair) {
+              retryBody.append(pair[0], pair[1]);
+            });
+          }
           return fetch(url, {
             ...options,
-            headers: {
-              ...options.headers,
-              'Authorization': `Bearer ${newToken}`
-            },
+            body: retryBody,
+            headers: retryHeaders,
             credentials: 'include'
           });
         } else {
