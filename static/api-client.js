@@ -50,18 +50,17 @@
      */
     refreshAccessToken: async function() {
       try {
+        const headers = { 'Content-Type': 'application/json' };
         const refreshToken = this.getRefreshToken();
-        if (!refreshToken) {
-          console.warn('No refresh token available');
-          return null;
+        /* Prefer Bearer refresh from localStorage; if missing, rely on httpOnly refresh_token_cookie
+           (same-origin + credentials). Previous code returned null here → upload 401 on prod. */
+        if (refreshToken) {
+          headers['Authorization'] = 'Bearer ' + refreshToken;
         }
 
         const response = await fetch('/api/auth/refresh', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${refreshToken}`
-          },
+          headers: headers,
           credentials: 'include'
         });
 
@@ -76,6 +75,9 @@
         const data = await response.json();
         if (data.access_token) {
           localStorage.setItem('access_token', data.access_token);
+          if (data.refresh_token) {
+            localStorage.setItem('refresh_token', data.refresh_token);
+          }
           console.log('Access token refreshed successfully');
           return data.access_token;
         }
