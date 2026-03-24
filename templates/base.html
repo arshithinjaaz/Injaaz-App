@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   {% include 'partials/base_head.html' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
   
   <title>{% block title %}Injaaz Application{% endblock %} - All Operations. One Platform.</title>
   <meta name="description" content="{% block description %}Professional site visit inspection and reporting platform{% endblock %}">
@@ -30,10 +31,12 @@
   {% block modals %}
     {% include 'partials/profile_modal.html' %}
     {% include 'partials/contact_modal.html' %}
+    {% include 'partials/todo_modal.html' %}
   {% endblock %}
   
   {# Core Scripts #}
   <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/todo_list.js') }}" defer></script>
   
   {# Page-specific scripts #}
   {% block scripts %}{% endblock %}
@@ -135,6 +138,7 @@
         if (e.key === 'Escape') {
           if (typeof closeContactModal === 'function') closeContactModal();
           if (typeof closeProfileModal === 'function') closeProfileModal();
+          if (typeof closeTodoModal === 'function') closeTodoModal();
         }
       });
     });

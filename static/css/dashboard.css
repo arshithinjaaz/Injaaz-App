@@ -61,6 +61,13 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Dashboard routes: one continuous #f8faf8 surface (mobile_responsive sets body white) */
+body.page-dashboard,
+body.hr-dashboard,
+body.inspection-dashboard {
+  background: var(--bg-body) !important;
+}
+
 /* ===========================================
    Navigation
    =========================================== */
@@ -581,26 +588,29 @@ html {
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.dashboard-widget-link:hover {
-  opacity: 0.95;
+  opacity: 1;
+  transition: transform 0.2s ease;
 }
 .dashboard-widget-link:hover .dashboard-widget {
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  border-color: rgba(18, 84, 53, 0.14);
 }
 .dashboard-widget {
-  background: var(--white);
-  border-radius: 20px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0,0,0,0.04);
-  border: none;
+  background: #ffffff;
+  background-color: #ffffff;
+  opacity: 1;
+  border-radius: 14px;
+  box-shadow: none;
+  border: 1px solid var(--border-color);
   overflow: hidden;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .dashboard-widget-header {
   padding: 10px 14px 8px;
-  background: var(--bg-light);
+  background: #ffffff;
+  background-color: #ffffff;
+  opacity: 1;
   border-bottom: 1px solid var(--border-light);
   display: flex;
   align-items: center;
@@ -642,7 +652,9 @@ html {
 }
 
 .dashboard-stat-card {
-  background: var(--bg-light);
+  background: #ffffff;
+  background-color: #ffffff;
+  opacity: 1;
   border-radius: 12px;
   padding: 1rem;
   border: 1px solid var(--border-light);
@@ -830,7 +842,7 @@ html {
 /* ---- Section ---- */
 .modules-section {
   background: #f8faf8;
-  padding: 3rem 0 5rem;
+  padding: 3rem 0 7rem;
   width: 100%;
   display: block !important;
   opacity: 0;
@@ -913,6 +925,15 @@ html {
 .module-card[style*="display: none"] { display: none !important; }
 .module-card:not([style*="display: none"]) { display: block !important; }
 
+/* Review History is revealed after load (visibility JS). Entrance animation can leave
+   opacity/transform short of the end state so the tile looks like the section gray (#f8faf8). */
+.page-dashboard .modules-grid #module-review-history.module-card {
+  background: var(--white);
+  opacity: 1;
+  transform: translateY(0);
+  animation: none;
+}
+
 .module-card:hover {
   border-color: rgba(18, 84, 53, 0.2);
   box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 12px 32px rgba(18,84,53,0.07);
@@ -923,6 +944,24 @@ html {
   transform: scaleY(1);
 }
 
+/* HR “Recent Submissions” — same surface as footer (no white floating slab) */
+.hr-dashboard .submissions-panel.module-card {
+  background: var(--bg-body) !important;
+  box-shadow: none !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 12px;
+}
+
+.hr-dashboard .submissions-panel.module-card:hover {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(18, 84, 53, 0.14) !important;
+}
+
+.hr-dashboard .submissions-panel.module-card::before {
+  display: none;
+}
+
 /* ---- Card Body ---- */
 .card-body {
   padding: 1.75rem;
@@ -931,11 +970,11 @@ html {
   height: 100%;
 }
 
-/* ---- Icon ---- */
+/* ---- Icon (match hero stat tiles: neutral well + muted glyph; green on hover) ---- */
 .module-icon {
   width: 48px;
   height: 48px;
-  background: rgba(18, 84, 53, 0.07);
+  background: var(--border-light);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -949,12 +988,17 @@ html {
 .module-icon svg {
   width: 22px;
   height: 22px;
-  stroke: var(--primary);
+  stroke: var(--text-muted);
+  transition: stroke 0.2s ease;
 }
 
 .module-card:hover .module-icon {
-  background: rgba(18, 84, 53, 0.12);
+  background: rgba(18, 84, 53, 0.1);
   transform: scale(1.06);
+}
+
+.module-card:hover .module-icon svg {
+  stroke: var(--primary);
 }
 
 /* ---- Text ---- */
@@ -1020,9 +1064,13 @@ html {
    Footer
    =========================================== */
 .footer {
-  background: #f8faf8;
+  background: var(--bg-body);
   margin-top: auto;
   flex-shrink: 0;
+  position: relative;
+  z-index: 5;
+  border-top: none;
+  box-shadow: none;
 }
 
 .footer::before {
@@ -1032,15 +1080,16 @@ html {
 .footer-inner {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem 3rem;
+  padding: 1.5rem 2.5rem 1.6rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .footer-brand {
-  font-size: 0.875rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: var(--text-dark);
   margin-bottom: 0;
@@ -1053,14 +1102,15 @@ html {
 .footer-links {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 2.25rem;
   margin-bottom: 0;
 }
 
 .footer-links a {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: var(--text-light);
   text-decoration: none;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 500;
   transition: color 0.2s ease;
 }
@@ -1069,12 +1119,30 @@ html {
   color: var(--primary);
 }
 
+/* Copyright line — clean sans (~14px; reference: small muted gray) */
 .footer-copy {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 400;
+  color: #6b7280;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
   margin: 0;
   padding: 0;
   border: none;
+}
+
+/* “Built by” name — Grape Nuts (Google Fonts) */
+.footer-built-by-name {
+  display: inline-block;
+  vertical-align: middle;
+  font-family: 'Grape Nuts', 'Segoe Print', 'Comic Sans MS', cursive;
+  font-size: 1.22em; /* scales with .footer-copy */
+  font-weight: 400;
+  color: #1e3a5f;
+  margin-left: 0.35rem;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
 }
 
 /* ===========================================
@@ -1133,7 +1201,13 @@ html {
   animation: modalSlideUp 0.3s var(--ease-out) forwards;
 }
 
-/* Profile Modal - Compact */
+/* Profile & Contact Modals - positioned near top */
+#profileModal.contact-modal,
+#contactModal.contact-modal {
+  align-items: flex-start !important;
+  justify-content: center !important;
+  padding: 5rem 2rem 2rem !important;
+}
 #profileModal .contact-modal-content {
   max-width: 500px;
   width: auto;
@@ -1246,6 +1320,27 @@ html {
   font-size: 0.8rem;
   color: var(--text-muted);
   margin-top: 0.35rem;
+}
+
+/* Contact Modal - compact spacing */
+#contactModal .contact-modal-info {
+  gap: 0.6rem;
+}
+#contactModal .contact-modal-item {
+  padding: 0.75rem 1rem;
+  gap: 0.75rem;
+}
+#contactModal .contact-modal-details h4 {
+  margin: 0 0 0.2rem 0;
+}
+#contactModal .contact-modal-details p {
+  margin: 0.05rem 0;
+  line-height: 1.4;
+}
+#contactModal .contact-modal-details a {
+  margin: 0.05rem 0;
+  line-height: 1.4;
+  display: inline;
 }
 
 /* ===========================================
@@ -1368,6 +1463,15 @@ html {
     padding: 0 1.5rem;
   }
 
+  .nav-center {
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
   /* Show hamburger as soon as resolution shrinks - nav goes to menu */
   .mobile-menu-toggle {
     display: flex !important;
@@ -1398,15 +1502,6 @@ html {
     background: rgba(18, 84, 53, 0.08) !important;
     border-color: var(--primary) !important;
     color: var(--primary) !important;
-  }
-
-  .nav-center {
-    position: absolute !important;
-    width: 0 !important;
-    height: 0 !important;
-    overflow: hidden !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
   }
 
   /* Hide nav-center menu in collapsed mode (links shown in drawer) */
@@ -1607,7 +1702,7 @@ html {
   }
   
   .footer-inner {
-    padding: 2rem;
+    padding: 1.4rem 2rem;
   }
 }
 
@@ -1649,12 +1744,16 @@ html {
   .contact-modal {
     padding: 6rem 1.25rem 1.5rem !important;
   }
+  #profileModal.contact-modal,
+  #contactModal.contact-modal {
+    padding: 3rem 1rem 1.5rem !important;
+  }
   
   .modules-section {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
-    padding: 1.75rem 0 3rem !important;
+    padding: 1.75rem 0 4.5rem !important;
     width: 100% !important;
     animation: none !important;
     transform: none !important;
@@ -1679,12 +1778,12 @@ html {
   .footer-inner {
     flex-direction: column !important;
     text-align: center !important;
-    padding: 1.5rem 1.25rem max(4rem, calc(4rem + env(safe-area-inset-bottom))) !important;
-    gap: 0.75rem !important;
+    padding: 1.25rem 1.5rem max(1rem, env(safe-area-inset-bottom, 0px)) !important;
+    gap: 0.85rem !important;
   }
   
   .footer-links {
-    gap: 1rem !important;
+    gap: 1.75rem !important;
   }
   
   /* Nav - mobile */
@@ -1965,7 +2064,7 @@ html {
     grid-row: 1 / -1 !important;
     align-self: center !important;
     border-radius: 11px !important;
-    background: rgba(18, 84, 53, 0.08) !important;
+    background: var(--border-light) !important;
   }
   
   .module-card .module-title {
@@ -1987,7 +2086,7 @@ html {
     align-self: center !important;
     padding: 0.4rem !important;
     color: var(--primary) !important;
-    background: rgba(18, 84, 53, 0.07) !important;
+    background: var(--border-light) !important;
     border-radius: 8px !important;
     display: flex !important;
     align-items: center !important;
@@ -2065,7 +2164,7 @@ html {
   }
   
   .footer-inner {
-    padding: 1.25rem 1rem max(4rem, calc(4rem + env(safe-area-inset-bottom))) !important;
+    padding: 1.2rem 1.25rem max(1rem, env(safe-area-inset-bottom, 0px)) !important;
   }
   
   .footer {
@@ -2532,6 +2631,341 @@ html {
   .notification-dropdown {
     position: fixed;
     top: 60px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+  }
+}
+
+/* ===========================================
+   Global nav — To-do floating panel (main_navbar, no overlay)
+   =========================================== */
+.todo-nav-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.todo-nav-btn .todo-nav-badge {
+  background: var(--primary, #125435);
+  border-color: #fff;
+}
+
+.todo-panel-pop {
+  --todo-accent: #125435;
+  --todo-accent-hover: #0f402a;
+  --todo-surface: #f8fafc;
+  --todo-border: #e2e8f0;
+  --todo-border-soft: #f1f5f9;
+
+  position: fixed;
+  top: calc(5.5rem + 10px);
+  right: max(16px, env(safe-area-inset-right));
+  width: min(384px, calc(100vw - 24px));
+  z-index: 1005;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity 0.22s ease, transform 0.22s ease, visibility 0.22s;
+}
+
+.todo-panel-pop.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.todo-panel-inner {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.06),
+    0 20px 40px -12px rgba(15, 23, 42, 0.14),
+    0 0 0 1px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: min(70vh, 520px);
+}
+
+.todo-panel-head {
+  padding: 0.875rem 1.125rem;
+  border-bottom: 1px solid var(--todo-border-soft);
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #fafbfc 0%, #f4f6f8 100%);
+}
+
+.todo-panel-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.todo-panel-sub {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin: 0.35rem 0 0;
+  display: block;
+  letter-spacing: 0.01em;
+}
+
+.todo-panel-body {
+  padding: 1rem 1.125rem 1rem;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.todo-composer {
+  margin-bottom: 0.875rem;
+}
+
+.todo-input-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.625rem;
+  margin-bottom: 0;
+}
+
+.todo-remind-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-top: 0.875rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--todo-border-soft);
+}
+
+.todo-remind-label {
+  flex: 0 0 auto;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.todo-remind-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.8125rem;
+  border: 1px solid var(--todo-border);
+  border-radius: 8px;
+  font-family: inherit;
+  color: #334155;
+  background: #fff;
+  color-scheme: light;
+}
+
+.todo-remind-input:focus {
+  outline: none;
+  border-color: var(--todo-accent);
+  box-shadow: 0 0 0 3px rgba(18, 84, 53, 0.12);
+}
+
+.todo-new-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--todo-border);
+  border-radius: 10px;
+  font-family: inherit;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.todo-new-input::placeholder {
+  color: #94a3b8;
+}
+
+.todo-new-input:focus {
+  outline: none;
+  border-color: var(--todo-accent);
+  box-shadow: 0 0 0 3px rgba(18, 84, 53, 0.1);
+}
+
+.todo-add-btn {
+  padding: 0.625rem 1.125rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--todo-accent);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.todo-add-btn:hover {
+  background: var(--todo-accent-hover);
+}
+
+.todo-add-btn:active {
+  transform: scale(0.98);
+}
+
+.todo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem;
+  border: 1px solid var(--todo-border-soft);
+  border-radius: 10px;
+  background: var(--todo-surface);
+}
+
+.todo-item {
+  padding: 0.5rem 0.45rem;
+  border-bottom: 1px solid #e8edf2;
+  font-size: 0.875rem;
+}
+
+.todo-item:last-child {
+  border-bottom: none;
+}
+
+.todo-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.todo-item-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+.todo-item-remind {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--todo-accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  max-width: 38%;
+}
+
+@media (max-width: 380px) {
+  .todo-item-remind {
+    max-width: 32%;
+    font-size: 0.65rem;
+  }
+}
+
+.todo-item-remind--overdue {
+  color: #dc2626;
+}
+
+.todo-item--done .todo-item-remind {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.todo-item-check {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--todo-accent);
+  cursor: pointer;
+}
+
+.todo-item-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.todo-item--done .todo-item-text {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+.todo-item-delete {
+  flex-shrink: 0;
+  align-self: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.todo-item-delete:hover {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.07);
+}
+
+.todo-empty-li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.todo-empty {
+  display: block;
+  padding: 1.35rem 0.75rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+}
+
+.todo-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.625rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--todo-border-soft);
+}
+
+.todo-clear-done {
+  background: none;
+  border: none;
+  color: var(--todo-accent);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.todo-clear-done:hover {
+  background: rgba(18, 84, 53, 0.09);
+  color: var(--todo-accent-hover);
+}
+
+@media (max-width: 640px) {
+  .todo-panel-pop {
+    top: calc(5.5rem + 8px);
     right: 10px;
     left: 10px;
     width: auto;

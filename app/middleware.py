@@ -22,15 +22,19 @@ def token_required(fn):
             # Check if session is revoked
             session = Session.query.filter_by(token_jti=jti).first()
             if not session or session.is_revoked:
-                return jsonify({'error': 'Token has been revoked'}), 401
+                return jsonify({'success': False, 'error': 'Token has been revoked'}), 401
             
-            # Check if user is still active
+            # Check if user is still active (identity is str from JWT — coerce for PK lookup)
             from flask_jwt_extended import get_jwt_identity
             user_id = get_jwt_identity()
-            user = User.query.get(user_id)
-            
+            try:
+                uid = int(user_id)
+            except (TypeError, ValueError):
+                uid = user_id
+            user = User.query.get(uid)
+
             if not user or not user.is_active:
-                return jsonify({'error': 'User is inactive'}), 403
+                return jsonify({'success': False, 'error': 'User is inactive'}), 403
             
             return fn(*args, **kwargs)
             
