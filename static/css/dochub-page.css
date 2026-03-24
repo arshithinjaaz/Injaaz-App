@@ -59,20 +59,9 @@ body.dochub-page-v2 {
   --sb-bg: #125435;
 }
 
-/* Same page canvas as dashboard (body.page-dashboard) so the frosted nav reads the same */
+/* Same mint canvas as BizFlow (admin_bd_module.html body --bg) so DocHub matches BD modules */
 body.dochub-page-v2 {
-  background: var(--bg-body, #f8faf8);
-}
-
-/*
- * Global .nav (dashboard.css) uses backdrop-filter; behind DocHub the stack differs from
- * other modules, so production/browsers can look slightly different. Pin the same tokens.
- */
-body.dochub-page-v2 .nav {
-  background: rgba(255, 255, 255, 0.92);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  background: #f5faf7;
 }
 
 body.dochub-page-v2 * {
@@ -618,8 +607,8 @@ body.dochub-page-v2 * {
 .dh-topbar {
   height: var(--topbar-h);
   background: var(--surface);
-  /* Softer than rgba(18,84,53,0.1) so it doesn’t stack with .nav into a harsh “black line” */
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  /* Same hairline as global .nav / BizFlow .bf-* toolbars */
+  border-bottom: 1px solid var(--nav-hairline, #e2ede8);
   display: flex;
   align-items: center;
   gap: 0;

@@ -22,6 +22,8 @@
   --bg-card: #ffffff;
   --border-color: #e5e7eb;
   --border-light: #f3f4f6;
+  /* Main nav + module toolbars (matches BizFlow --line); avoids harsh “black” hairline on CDN/deploy */
+  --nav-hairline: #e2ede8;
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
@@ -77,16 +79,15 @@ body.inspection-dashboard {
   left: 0;
   right: 0;
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid var(--border-color);
+  /* Solid bar: same on localhost, Render, and behind Cloudflare (no backdrop-filter compositing drift) */
+  background: #ffffff;
+  border-bottom: 1px solid var(--nav-hairline);
   transition: box-shadow 0.3s ease, background 0.3s ease;
 }
 
 .nav.scrolled {
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: var(--shadow-md);
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(18, 84, 53, 0.08);
 }
 
 .nav-container {
