@@ -13,10 +13,16 @@
   /**
    * Authenticated fetch: credentials + Bearer only when token exists; retry once after refresh on 401.
    * Do not set Content-Type for FormData (browser sets multipart boundary).
+   * Snapshots FormData before the first request — multipart bodies are not reliably reusable after a
+   * failed fetch; without this, retry after token refresh can upload an empty body (401 loop on prod).
    */
   async function apiFetch(url, options = {}) {
     const isFormData =
       typeof FormData !== 'undefined' && options.body instanceof FormData;
+    let formDataEntries = null;
+    if (isFormData && options.body instanceof FormData) {
+      formDataEntries = Array.from(options.body.entries());
+    }
     const buildHeaders = () => {
       const incoming = options.headers;
       const base =
@@ -32,13 +38,50 @@
       }
       return base;
     };
-    const run = () =>
-      fetch(url, { ...options, headers: buildHeaders(), credentials: 'include' });
+    const run = bodyOverride => {
+      const body = bodyOverride !== undefined ? bodyOverride : options.body;
+      return fetch(url, { ...options, body, headers: buildHeaders(), credentials: 'include' });
+    };
     let r = await run();
     if (r.status !== 401 || !window.ApiClient) return r;
     const newTok = await window.ApiClient.refreshAccessToken();
     if (!newTok) return r;
+    if (formDataEntries) {
+      const fd2 = new FormData();
+      formDataEntries.forEach(([k, v]) => fd2.append(k, v));
+      return run(fd2);
+    }
     return run();
+  }
+
+  /** If access token expires within `withinMs`, refresh so upload doesn’t 401 on first POST (prod). */
+  async function refreshAccessTokenIfExpiringSoon(withinMs) {
+    const windowMs = withinMs != null ? withinMs : 3 * 60 * 1000;
+    if (!window.ApiClient) return true;
+    const t = localStorage.getItem('access_token');
+    if (!t) {
+      window.location.href = '/login';
+      return false;
+    }
+    try {
+      const parts = t.split('.');
+      if (parts.length < 2) return true;
+      let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      while (b64.length % 4) b64 += '=';
+      const payload = JSON.parse(atob(b64));
+      const exp = payload.exp * 1000;
+      if (exp - Date.now() < windowMs) {
+        const nt = await window.ApiClient.refreshAccessToken();
+        if (!nt) {
+          toast('Session expired — please sign in again.', true);
+          window.location.href = '/login';
+          return false;
+        }
+      }
+    } catch (e) {
+      /* ignore malformed JWT */
+    }
+    return true;
   }
 
   const CAT_META = {
@@ -1965,6 +2008,8 @@
       toast('Only administrators can upload documents', true);
       return;
     }
+    if (!(await refreshAccessTokenIfExpiringSoon())) return;
+
     const input = document.getElementById('dhUFile');
     const files = input && input.files ? Array.from(input.files) : [];
     if (!files.length) {
@@ -1990,7 +2035,17 @@
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || j.success === false) {
-      toast(j.error || 'Upload failed', true);
+      let msg = j.error || j.message || 'Upload failed';
+      if (r.status === 401) {
+        msg = 'Session expired or not signed in. Please sign in again and retry.';
+      } else if (r.status === 403) {
+        msg = j.error || 'DocHub access denied.';
+      } else if (r.status === 413) {
+        msg = 'File too large for the server limit.';
+      } else if (r.status === 500 && (msg || '').toLowerCase().indexOf('generated') !== -1) {
+        msg = 'Server storage is not configured. Contact your administrator.';
+      }
+      toast(msg, true);
       return;
     }
     closeUploadModal();
