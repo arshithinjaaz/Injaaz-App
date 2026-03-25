@@ -186,8 +186,8 @@ def _normalise_parsed_df(df: pd.DataFrame) -> pd.DataFrame:
     """Common normalisation for parsed Excel data."""
     df.columns = [str(c).strip() for c in df.columns]
 
-    # Drop completely empty rows
-    df = df.dropna(how='all')
+    # Drop completely empty rows (copy avoids SettingWithCopyWarning on chained assignment)
+    df = df.dropna(how='all').copy()
 
     # Normalise string columns
     for col in ['Client', 'Service Group', 'Status', 'Contract',
@@ -320,12 +320,17 @@ _NON_CHARGEABLE_BASEUNIT_KEYWORDS = (
     'generator room', 'pump room', 'storage', 'lobby', 'basement', 'roof',
 )
 
+# CAFM often uses "Elevator system" or the typo "Elevater system". Use elevat(or|er)
+# so we do not match unrelated words like "elevation".
+_ELEVATOR_SERVICE_GROUP_RE = re.compile(r'elevat(or|er)', re.IGNORECASE)
+
 
 def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
                        service_group_val: str = '', contract_val: str = '') -> str:
     """
     Resolve Chargeable vs Non-Chargeable.
     - Facade Cleaning service group: always Non-Chargeable.
+    - Elevator system (service group: elevator / common CAFM typo elevater): always Non-Chargeable.
     - Garden City only: all AC/HVAC complaints = Non-Chargeable.
     - Askaan, Ajman Holding, Injaaz: all base units = Chargeable.
     - Else: BaseUnit apartment = Chargeable; common area = Non-Chargeable; fallback to Space.
@@ -337,6 +342,11 @@ def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
 
     # Facade Cleaning is always Non-Chargeable regardless of client or base unit
     if 'facade cleaning' in sg:
+        return 'Non-Chargeable'
+
+    # Elevator system: always Non-Chargeable (before client-wide Chargeable rules).
+    # Match "Elevator" and CAFM typo "Elevater"; not "elevation" (civil works).
+    if _ELEVATOR_SERVICE_GROUP_RE.search(sg):
         return 'Non-Chargeable'
 
     # Garden City only: AC/HVAC complaints are always Non-Chargeable

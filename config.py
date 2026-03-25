@@ -54,7 +54,13 @@ FLASK_ENV = os.getenv("FLASK_ENV", "development")
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
 # REDIS (for rate limiting and background tasks)
-REDIS_URL = os.getenv("REDIS_URL")
+# Strip whitespace — common copy/paste issue from Render/Upstash dashboards
+_redis = (os.getenv("REDIS_URL") or "").strip()
+REDIS_URL = _redis or None
+
+# MMR module: optional schedule overrides (survive redeploys when GENERATED_DIR is ephemeral).
+# Set in Render dashboard if mmr_email_config.json is lost each deploy. See module_mmr.routes._load_config.
+# MMR_SCHEDULE_ENABLED=true|false  MMR_SCHEDULE_HOUR=10  MMR_SCHEDULE_MINUTE=0
 
 # JWT Settings - Token expiry times (configurable via environment variables)
 # JWT_ACCESS_HOURS: Number of hours for access token validity (default: 1 hour)
