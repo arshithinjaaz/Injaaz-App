@@ -13,16 +13,26 @@ from flask import current_app
 logger = logging.getLogger(__name__)
 
 
+def _normalize_socket_timeout(timeout):
+    """smtplib passes socket._GLOBAL_DEFAULT_TIMEOUT (sentinel), not None — settimeout needs float or None."""
+    if timeout is None:
+        return None
+    if timeout is socket._GLOBAL_DEFAULT_TIMEOUT:
+        return None
+    return timeout
+
+
 def _smtp_socket_ipv4(host, port, timeout):
     """Connect over IPv4 only. Many PaaS hosts (e.g. Render) have no usable IPv6 route to Gmail SMTP."""
+    t = _normalize_socket_timeout(timeout)
+    port = int(port)
     err = None
     for res in socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM):
         af, socktype, proto, canonname, sa = res
         sock = None
         try:
             sock = socket.socket(af, socktype, proto)
-            if timeout is not None:
-                sock.settimeout(timeout)
+            sock.settimeout(t)
             sock.connect(sa)
             return sock
         except OSError as e:
