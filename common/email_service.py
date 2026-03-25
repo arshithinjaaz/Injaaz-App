@@ -3,6 +3,7 @@ Email service for sending emails (password resets, notifications)
 """
 import smtplib
 import ssl
+import socket
 import logging
 import os
 import mimetypes
@@ -10,6 +11,40 @@ from email.message import EmailMessage
 from flask import current_app
 
 logger = logging.getLogger(__name__)
+
+
+def _smtp_socket_ipv4(host, port, timeout):
+    """Connect over IPv4 only. Many PaaS hosts (e.g. Render) have no usable IPv6 route to Gmail SMTP."""
+    err = None
+    for res in socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM):
+        af, socktype, proto, canonname, sa = res
+        sock = None
+        try:
+            sock = socket.socket(af, socktype, proto)
+            if timeout is not None:
+                sock.settimeout(timeout)
+            sock.connect(sa)
+            return sock
+        except OSError as e:
+            err = e
+            if sock is not None:
+                sock.close()
+    if err is not None:
+        raise err
+    raise OSError(f"No IPv4 address found for {host!r}")
+
+
+class SMTPIPv4(smtplib.SMTP):
+    """SMTP client that connects via IPv4 (avoids errno 101 on broken IPv6 in cloud)."""
+
+    def _get_socket(self, host, port, timeout):
+        return _smtp_socket_ipv4(host, port, timeout)
+
+
+class SMTP_SSL_IPv4(SMTPIPv4, smtplib.SMTP_SSL):
+    """SMTP_SSL over IPv4 only."""
+
+    pass
 
 
 def send_email(recipient, subject, body, html_body=None, cc=None, attachments=None):
@@ -87,17 +122,17 @@ def send_email(recipient, subject, body, html_body=None, cc=None, attachments=No
             except Exception:
                 logger.error("Failed to attach file", exc_info=True)
         
-        # Send email
+        # Send email (IPv4 SMTP — see SMTPIPv4 docstring)
         if mail_use_tls:
             context = ssl.create_default_context()
-            with smtplib.SMTP(mail_server, mail_port) as server:
+            with SMTPIPv4(mail_server, mail_port) as server:
                 server.starttls(context=context)
                 if mail_user and mail_pass:
                     server.login(mail_user, mail_pass)
                 server.send_message(msg)
         else:
             context = ssl.create_default_context()
-            with smtplib.SMTP_SSL(mail_server, mail_port, context=context) as server:
+            with SMTP_SSL_IPv4(mail_server, mail_port, context=context) as server:
                 if mail_user and mail_pass:
                     server.login(mail_user, mail_pass)
                 server.send_message(msg)
