@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+import mimetypes
 from datetime import datetime
 from flask import Flask, send_from_directory, abort, render_template, jsonify, request, redirect
 from concurrent.futures import ThreadPoolExecutor
@@ -134,6 +135,11 @@ executor = ThreadPoolExecutor(max_workers=1)
 
 def create_app():
     app = Flask(__name__, static_folder='static', template_folder='templates')
+
+    # Some container images lack /etc/mime.types; browsers enforce nosniff on CSS/JS.
+    mimetypes.add_type("text/css", ".css")
+    mimetypes.add_type("application/javascript", ".js")
+    mimetypes.add_type("application/json", ".json")
     
     # Enable template auto-reload for development
     app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -639,13 +645,15 @@ def create_app():
     
     @app.route('/manifest.json')
     def pwa_manifest():
-        """Serve PWA manifest"""
-        return send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
+        """Serve PWA manifest (use static_folder so path works regardless of process cwd)."""
+        return send_from_directory(
+            app.static_folder, 'manifest.json', mimetype='application/manifest+json'
+        )
     
     @app.route('/favicon.ico')
     def favicon():
         """Serve favicon"""
-        return send_from_directory('static', 'logo.png', mimetype='image/png')
+        return send_from_directory(app.static_folder, 'logo.png', mimetype='image/png')
 
     # Register blueprints only if they were imported successfully.
     if hvac_mep_bp:
