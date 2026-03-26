@@ -21,20 +21,45 @@ logger = logging.getLogger(__name__)
 BREVO_SEND_URL = "https://api.brevo.com/v3/smtp/email"
 
 
+def _normalize_secret_env(value):
+    """Strip whitespace and accidental wrapping quotes (common when pasting into Render)."""
+    s = (value or "").strip()
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in ('"', "'"):
+        s = s[1:-1].strip()
+    return s or None
+
+
 def _brevo_api_key(app):
-    return (
+    k = (
         app.config.get("BREVO_API_KEY")
         or os.environ.get("BREVO_API_KEY")
         or os.environ.get("SENDINBLUE_API_KEY")
     )
+    return _normalize_secret_env(k)
+
+
+def _looks_like_brevo_smtp_host(mail_server):
+    if not mail_server:
+        return False
+    m = mail_server.lower().strip()
+    return "brevo" in m or "sendinblue" in m
+
+
+def _running_on_render():
+    return (os.environ.get("RENDER") or "").lower() in ("true", "1", "yes")
 
 
 def is_email_configured(app=None):
     """True if the app can send mail (SMTP or Brevo HTTP)."""
     a = app if app is not None else current_app._get_current_object()
-    if _brevo_api_key(a):
+    key = _brevo_api_key(a)
+    if key:
         return bool(a.config.get("MAIL_DEFAULT_SENDER") or a.config.get("MAIL_USERNAME"))
-    return bool(a.config.get("MAIL_SERVER"))
+    ms = a.config.get("MAIL_SERVER")
+    # On Render, Brevo SMTP usually times out; require HTTPS API key instead of MAIL_SERVER alone.
+    if ms and _looks_like_brevo_smtp_host(ms) and not key and _running_on_render():
+        return False
+    return bool(ms)
 
 
 def _normalize_socket_timeout(timeout):
@@ -134,7 +159,15 @@ def _send_email_brevo_http(app, recipient, subject, body, html_body, cc, attachm
         if r.status_code in (200, 201):
             logger.info("Email sent via Brevo API to %s", recipient)
             return True
-        logger.error("Brevo API HTTP %s: %s", r.status_code, r.text[:4000])
+        if r.status_code == 401:
+            logger.error(
+                "Brevo API 401 (key rejected): %s — Regenerate the key in Brevo (SMTP & API → API keys), "
+                "paste the full v3 key into Render env BREVO_API_KEY only (no quotes/spaces). "
+                "If you rotated the key after exposing it, the old value in Render must be updated.",
+                r.text[:500],
+            )
+        else:
+            logger.error("Brevo API HTTP %s: %s", r.status_code, r.text[:4000])
         return False
     except Exception as e:
         logger.error("Brevo API request failed: %s", e, exc_info=True)
@@ -175,7 +208,17 @@ def send_email(recipient, subject, body, html_body=None, cc=None, attachments=No
         if not mail_server or not mail_port:
             logger.warning("Mail server/port not configured; cannot send email (or set BREVO_API_KEY)")
             return False
-        
+
+        if _looks_like_brevo_smtp_host(mail_server) and _running_on_render():
+            logger.error(
+                "Email: Outbound SMTP to %s is blocked or unreliable on Render. "
+                "Add BREVO_API_KEY (Brevo → SMTP & API → API keys, permission: Send emails) and "
+                "MAIL_DEFAULT_SENDER (verified sender). The app will use https://api.brevo.com instead of SMTP. "
+                "See docs/EMAIL_SMTP_OPTIONS.md",
+                mail_server,
+            )
+            return False
+
         msg = EmailMessage()
         msg['Subject'] = subject
         msg['From'] = mail_sender

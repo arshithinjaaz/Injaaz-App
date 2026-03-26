@@ -39,8 +39,10 @@ services:
       # If you add a disk mount, set to e.g. /var/data/generated
       - key: GENERATED_DIR
         sync: false
-      # HTTPS email API — required on Render *free* (SMTP ports 25/465/587 blocked). Get key at brevo.com
+      # HTTPS email API — required on Render (SMTP to Brevo times out). Brevo → API keys → Send emails.
       - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
         sync: false
 
 databases:
