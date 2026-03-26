@@ -130,6 +130,11 @@ def init_scheduler(app):
             config = _load_config()
         if config.get('schedule_enabled'):
             _add_job(config, app)
+            logger.info(
+                'MMR scheduler: job registered for %02d:%02d (startup)',
+                int(config.get('schedule_hour', 10)),
+                int(config.get('schedule_minute', 0)),
+            )
     except Exception:
         logger.exception('MMR scheduler: error reading config during init')
 

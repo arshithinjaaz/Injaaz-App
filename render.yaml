@@ -1,3 +1,6 @@
+# Persistent GENERATED_DIR: attach a Render Disk (paid plans), mount e.g. /var/data, then set
+# GENERATED_DIR=/var/data/generated so mmr_email_config.json and uploads survive redeploys.
+# Alternatively keep ephemeral disk and set MMR_SCHEDULE_ENABLED=true (and hour/minute) in the dashboard.
 services:
   - type: web
     name: injaaz-app
@@ -22,6 +25,22 @@ services:
       - key: CLOUDINARY_API_KEY
         sync: false
       - key: CLOUDINARY_API_SECRET
+        sync: false
+      # Optional: Redis for rate limiting — use full Upstash URL (rediss://...), no extra spaces
+      - key: REDIS_URL
+        sync: false
+      # MMR daily email: set if config UI resets after deploy (ephemeral /app/generated)
+      - key: MMR_SCHEDULE_ENABLED
+        sync: false
+      - key: MMR_SCHEDULE_HOUR
+        sync: false
+      - key: MMR_SCHEDULE_MINUTE
+        sync: false
+      # If you add a disk mount, set to e.g. /var/data/generated
+      - key: GENERATED_DIR
+        sync: false
+      # HTTPS email API — required on Render *free* (SMTP ports 25/465/587 blocked). Get key at brevo.com
+      - key: BREVO_API_KEY
         sync: false
 
 databases:

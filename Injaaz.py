@@ -533,12 +533,14 @@ def create_app():
         
         # Get Redis URL from app config or environment
         redis_url = app.config.get('REDIS_URL') or os.environ.get('RATELIMIT_STORAGE_URL') or os.environ.get('REDIS_URL')
+        if redis_url:
+            redis_url = redis_url.strip()
         
         if redis_url:
             try:
-                # Test Redis connection first
+                # Test Redis connection first (Upstash: use rediss:// URL from dashboard)
                 import redis
-                r = redis.from_url(redis_url, socket_connect_timeout=2)
+                r = redis.from_url(redis_url, socket_connect_timeout=5)
                 r.ping()
                 logger.info("✓ Redis connection test successful")
                 

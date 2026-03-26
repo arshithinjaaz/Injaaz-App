@@ -29,7 +29,8 @@
     }
 
     body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-    body.mmr-dashboard { padding-top: 72px; }
+    /* Full width under flex body (dashboard.css); avoids narrow column after Chart init in hidden section */
+    body.mmr-dashboard { padding-top: 72px; width: 100%; align-items: stretch; }
 
     /* Buttons and components (nav uses dashboard.css) */
     .btn {
@@ -187,7 +188,8 @@
     }
 
     /* Page */
-    .page { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
+    .page { width: 100%; max-width: 1400px; margin: 0 auto; padding: 1.5rem; box-sizing: border-box; }
+    #dashboardSection { width: 100%; }
 
     /* Upload row: centered upload box + Saved Report & Automation on right */
     .upload-row {
@@ -539,11 +541,11 @@
     .filter-reset:hover { opacity: .9; }
 
     /* Charts */
-    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-    .charts-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; }
-    .chart-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; width: 100%; min-width: 0; }
+    .charts-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem; width: 100%; min-width: 0; }
+    .chart-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; min-width: 0; }
     .chart-label { font-size: .8125rem; font-weight: 600; color: var(--text); margin-bottom: .75rem; }
-    .chart-wrap { position: relative; }
+    .chart-wrap { position: relative; width: 100%; min-width: 0; }
 
     /* Table */
     .table-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; margin-bottom: .5rem; }
@@ -659,25 +661,63 @@
     }
     .roadmap-overlay.active .roadmap-panel { transform: none; }
     .roadmap-panel-hdr {
-      padding: 1.1rem 1.5rem;
+      position: relative;
+      padding: 1.1rem 3.25rem 1.1rem 1.5rem;
       border-bottom: 1px solid var(--border);
-      display: flex; align-items: flex-start; justify-content: space-between;
+      display: flex; align-items: flex-start; justify-content: flex-start;
+      gap: 0.75rem;
       flex-shrink: 0; background: var(--white);
     }
+    .roadmap-panel-hdr-text {
+      min-width: 0;
+      flex: 1;
+      padding-right: 0.25rem;
+    }
     .roadmap-panel-title { font-size: 1rem; font-weight: 700; }
-    .roadmap-panel-sub { font-size: .8125rem; color: var(--text-muted); margin-top: .15rem; }
+    .roadmap-panel-sub {
+      font-size: .8125rem; color: var(--text-muted); margin-top: .15rem;
+      word-break: break-word;
+    }
     .roadmap-close {
-      width: 32px; height: 32px; border: none; background: transparent;
-      color: var(--text-muted); font-size: 1.3rem; cursor: pointer;
-      border-radius: 6px; flex-shrink: 0; line-height: 1;
+      width: 44px; height: 44px; border: none; background: transparent;
+      color: var(--text); font-size: 1.65rem; font-weight: 300; cursor: pointer;
+      border-radius: 8px; flex-shrink: 0; line-height: 1;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .roadmap-panel-hdr .roadmap-close {
+      position: absolute;
+      top: 0.65rem;
+      right: 0.65rem;
     }
     .roadmap-close:hover { background: #f3f4f6; color: var(--text); }
+    .roadmap-close:focus-visible {
+      outline: 2px solid var(--primary); outline-offset: 2px;
+    }
     .roadmap-body {
       flex: 1; overflow-y: auto; padding: 1.5rem;
       scrollbar-width: thin; scrollbar-color: rgba(18,84,53,.2) transparent;
     }
     .roadmap-body::-webkit-scrollbar { width: 6px; }
     .roadmap-body::-webkit-scrollbar-thumb { background: rgba(18,84,53,.2); border-radius: 3px; }
+    /* Second close control at top of automation steps (sticky while scrolling body) */
+    .roadmap-automation-closebar {
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin: -0.25rem 0 0.65rem 0;
+      padding-bottom: 0.35rem;
+      background: linear-gradient(180deg, var(--white) 72%, rgba(255, 255, 255, 0) 100%);
+      pointer-events: none;
+    }
+    .roadmap-automation-closebar .roadmap-close-content {
+      pointer-events: auto;
+      width: 40px;
+      height: 40px;
+      font-size: 1.5rem;
+    }
     .roadmap-section-title {
       font-size: .75rem; font-weight: 700; color: var(--text-muted);
       text-transform: uppercase; letter-spacing: .07em; margin-bottom: 1rem;
@@ -887,7 +927,7 @@
           <span class="automation-dot"></span>
           <span id="automationLabel">—</span>
         </button>
-        <button type="button" id="btnAutomationRefresh" class="btn-automation-refresh" onclick="refreshMmrDashboard()" title="Refresh automation status" aria-label="Refresh automation status">
+        <button type="button" id="btnAutomationRefresh" class="btn-automation-refresh" onclick="refreshMmrDashboard()" title="Clear report — new upload (removes current workbook from server)" aria-label="Clear report and start new upload">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         </button>
       </div>
@@ -1094,13 +1134,16 @@
 <div id="roadmapOverlay" class="roadmap-overlay" aria-hidden="true">
   <div class="roadmap-panel" onclick="event.stopPropagation()">
     <div class="roadmap-panel-hdr">
-      <div>
+      <div class="roadmap-panel-hdr-text">
         <div class="roadmap-panel-title">📊 Email Automation Roadmap</div>
         <div class="roadmap-panel-sub" id="roadmapSub">Loading…</div>
       </div>
-      <button class="roadmap-close" onclick="closeRoadmapPanel()" aria-label="Close">✕</button>
+      <button type="button" class="roadmap-close" onclick="closeRoadmapPanel()" title="Close" aria-label="Close panel">&times;</button>
     </div>
     <div class="roadmap-body" id="roadmapBody">
+      <div class="roadmap-automation-closebar">
+        <button type="button" class="roadmap-close roadmap-close-content" onclick="closeRoadmapPanel()" title="Close" aria-label="Close automation panel">&times;</button>
+      </div>
       <p style="color:var(--text-muted);font-size:.875rem">Loading…</p>
     </div>
   </div>
@@ -1260,14 +1303,15 @@ async function uploadFile(file) {
     if (!resp.ok) throw new Error(data.error || 'Upload failed');
     allRows = data.rows;
     dashboardData = data.dashboard;
+    document.getElementById('dashboardSection').classList.remove('hidden');
     renderDashboard(dashboardData);
     filterRows();
     applyStoredFiltersIfAny();
+    mmrResizeAllCharts();
     toast(`✅ Loaded ${data.total} work orders`, 'success');
     document.getElementById('btnDownloadReport').disabled = false;
     document.getElementById('btnSaveToFolder').disabled = false;
     document.getElementById('btnSaveToDrive').disabled = false;
-    document.getElementById('dashboardSection').classList.remove('hidden');
     document.getElementById('uploadZone').style.borderColor = 'var(--success)';
     await loadAutomationStatus();
     await loadCycleData();
@@ -1399,6 +1443,17 @@ function renderAllCharts(d) {
 function destroyCharts() {
   for (const c of Object.values(charts)) { try { c.destroy(); } catch(e){} }
   charts = {};
+}
+
+/** Chart.js measures parent size at create time; if #dashboardSection was display:none, resize after layout. */
+function mmrResizeAllCharts() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      for (const c of Object.values(charts)) {
+        try { c.resize(); } catch (e) {}
+      }
+    });
+  });
 }
 
 function renderBarChart(id, dataObj, direction = 'vertical') {
@@ -2211,16 +2266,60 @@ function updateAutomationButton() {
   }
 }
 
-/** Refresh automation status, cycle data, and roadmap content if the panel is open */
+/** Reset view to upload-only (no workbook on server or user chose clear slate). */
+function resetMmrToNewReportView() {
+  destroyCharts();
+  allRows = [];
+  filteredRows = [];
+  dashboardData = null;
+  currentPage = 1;
+  sortCol = null;
+  sortDir = 1;
+  const sec = document.getElementById('dashboardSection');
+  if (sec) sec.classList.add('hidden');
+  const dl = document.getElementById('btnDownloadReport');
+  const sf = document.getElementById('btnSaveToFolder');
+  const sd = document.getElementById('btnSaveToDrive');
+  if (dl) dl.disabled = true;
+  if (sf) sf.disabled = true;
+  if (sd) sd.disabled = true;
+  const uz = document.getElementById('uploadZone');
+  if (uz) uz.style.borderColor = '';
+  const sb = document.getElementById('searchBox');
+  if (sb) sb.value = '';
+  document.getElementById('tableBody')?.replaceChildren();
+  document.getElementById('paginationBar')?.replaceChildren();
+  const info = document.getElementById('tableInfo');
+  if (info) info.textContent = '';
+  ['fClient', 'fContract', 'fServiceGroup', 'fSpace', 'fStatus', 'fPriority'].forEach((id) => {
+    const sel = document.getElementById(id);
+    if (sel) sel.innerHTML = '<option value="">All</option>';
+  });
+  document.getElementById('kpiGrid')?.replaceChildren();
+  document.getElementById('tableHead')?.replaceChildren();
+  document.getElementById('chargeableTable')?.replaceChildren();
+}
+
+/**
+ * Circular refresh: clear the report from this page and delete mmr_latest.xlsx on the server,
+ * then refresh automation — same as a blank “new report” until you upload again.
+ */
 async function refreshMmrDashboard() {
   const btn = document.getElementById('btnAutomationRefresh');
   if (btn) btn.classList.add('spinning');
   try {
+    const resp = await authFetch('/admin/mmr/api/clear-upload', { method: 'POST' });
+    const payload = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      throw new Error(payload.error || 'Could not clear uploaded workbook');
+    }
+    resetMmrToNewReportView();
     await loadAutomationStatus();
     await loadCycleData();
-    toast('Status refreshed', 'success');
+    toast('Report cleared. Upload a new Excel when you are ready.', 'success');
   } catch (e) {
-    toast('Could not refresh status', 'error');
+    console.warn('refreshMmrDashboard', e);
+    toast(e.message || 'Could not clear report', 'error');
   } finally {
     if (btn) btn.classList.remove('spinning');
   }
@@ -2402,6 +2501,33 @@ function applyStoredFiltersIfAny() {
   }
 }
 
+/** After refresh: reload dashboard when mmr_latest.xlsx exists on the server (same data as last upload). */
+async function restoreDashboardFromServerIfNeeded() {
+  try {
+    const resp = await authFetch('/admin/mmr/api/current-upload');
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (!data.success || !data.has_file || !Array.isArray(data.rows) || data.rows.length === 0) {
+      return;
+    }
+    allRows = data.rows;
+    dashboardData = data.dashboard;
+    document.getElementById('dashboardSection').classList.remove('hidden');
+    renderDashboard(dashboardData);
+    filterRows();
+    applyStoredFiltersIfAny();
+    mmrResizeAllCharts();
+    document.getElementById('btnDownloadReport').disabled = false;
+    document.getElementById('btnSaveToFolder').disabled = false;
+    document.getElementById('btnSaveToDrive').disabled = false;
+    document.getElementById('uploadZone').style.borderColor = 'var(--success)';
+    await loadAutomationStatus();
+    await loadCycleData();
+  } catch (e) {
+    console.warn('MMR: could not restore last upload', e);
+  }
+}
+
 async function saveToFolder() {
   const btn = document.getElementById('btnSaveToFolder');
   if (btn?.disabled) return;
@@ -2546,13 +2672,14 @@ async function openReportAndRestoreFilters(btn) {
     allRows = data.rows;
     dashboardData = data.dashboard;
     destroyCharts();
+    document.getElementById('dashboardSection').classList.remove('hidden');
     renderDashboard(dashboardData);
     filterRows();
     applyFiltersFromState(filters);
+    mmrResizeAllCharts();
     document.getElementById('btnDownloadReport').disabled = false;
     document.getElementById('btnSaveToFolder').disabled = false;
     document.getElementById('btnSaveToDrive').disabled = false;
-    document.getElementById('dashboardSection').classList.remove('hidden');
     document.getElementById('uploadZone').style.borderColor = 'var(--success)';
     await loadAutomationStatus();
     await loadCycleData();
@@ -2837,6 +2964,9 @@ function renderRoadmap() {
   }
 
   body.innerHTML = `
+    <div class="roadmap-automation-closebar">
+      <button type="button" class="roadmap-close roadmap-close-content" onclick="closeRoadmapPanel()" title="Close" aria-label="Close automation panel">&times;</button>
+    </div>
     <div class="roadmap-section-title">Current Cycle</div>
     ${pipelineHtml}
     ${stepCardsHtml}
@@ -2926,21 +3056,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       allRows = data.rows;
       dashboardData = data.dashboard;
+      document.getElementById('dashboardSection').classList.remove('hidden');
       renderDashboard(dashboardData);
       filterRows();
       const filters = filtersJson ? JSON.parse(filtersJson) : {};
       applyFiltersFromState(filters);
+      mmrResizeAllCharts();
       document.getElementById('btnDownloadReport').disabled = false;
       document.getElementById('btnSaveToFolder').disabled = false;
       document.getElementById('btnSaveToDrive').disabled = false;
-      document.getElementById('dashboardSection').classList.remove('hidden');
       document.getElementById('uploadZone').style.borderColor = 'var(--success)';
       await loadAutomationStatus();
       await loadCycleData();
       toast('Report loaded. Dashboard filters restored.', 'success');
     } catch (e) {
       toast(e.message || 'Could not load report', 'error');
+      await restoreDashboardFromServerIfNeeded();
     }
+  } else {
+    await restoreDashboardFromServerIfNeeded();
   }
 });
 </script>

@@ -114,6 +114,20 @@ def _upload_path():
     return os.path.join(current_app.config['GENERATED_DIR'], _UPLOAD_FILE)
 
 
+def _dashboard_payload_from_path(path: str) -> tuple[dict, list]:
+    """Parse a saved CAFM upload into dashboard aggregates and row dicts (same shaping as POST upload)."""
+    from .mmr_service import parse_excel, compute_dashboard, df_to_rows, _resolve_chargeable
+    df = parse_excel(path)
+    dashboard_data = compute_dashboard(df)
+    rows = df_to_rows(df)
+    for r in rows:
+        r['Space'] = _resolve_chargeable(
+            r.get('Space', ''), r.get('BaseUnit', ''), r.get('Client', ''),
+            r.get('Service Group', ''), r.get('Contract', ''),
+        )
+    return dashboard_data, rows
+
+
 def _reports_folder():
     """Folder for saved reports (sent via email or Save to Folder)."""
     folder = os.path.join(current_app.config['GENERATED_DIR'], 'mmr_reports')
@@ -219,15 +233,33 @@ def _save_report_to_drive(report_bytes: bytes, filename: str, save_path: str | N
             pass
         return None, str(e), False
 
+def _env_schedule_override() -> dict:
+    """Schedule fields from env (Render/PaaS: survives redeploys when JSON on ephemeral disk is wiped)."""
+    out = {}
+    raw = os.environ.get('MMR_SCHEDULE_ENABLED')
+    if raw is not None and str(raw).strip() != '':
+        out['schedule_enabled'] = str(raw).strip().lower() in ('1', 'true', 'yes', 'on')
+    h = os.environ.get('MMR_SCHEDULE_HOUR', '').strip()
+    if h.isdigit():
+        out['schedule_hour'] = max(0, min(23, int(h)))
+    m = os.environ.get('MMR_SCHEDULE_MINUTE', '').strip()
+    if m.isdigit():
+        out['schedule_minute'] = max(0, min(59, int(m)))
+    return out
+
+
 def _load_config() -> dict:
+    cfg = dict(_DEFAULT_CONFIG)
     try:
         p = _config_path()
         if os.path.exists(p):
             with open(p) as f:
-                return {**_DEFAULT_CONFIG, **json.load(f)}
+                cfg = {**cfg, **json.load(f)}
     except Exception:
         pass
-    return dict(_DEFAULT_CONFIG)
+    # Env wins for schedule keys when set (ops can pin automation on cloud without persistent disk)
+    cfg.update(_env_schedule_override())
+    return cfg
 
 def _save_config(config: dict):
     with open(_config_path(), 'w') as f:
@@ -387,15 +419,7 @@ def upload():
     file.save(dest)
 
     try:
-        from .mmr_service import parse_excel, compute_dashboard, df_to_rows, _resolve_chargeable
-        df = parse_excel(dest)
-        dashboard_data = compute_dashboard(df)
-        rows = df_to_rows(df)
-        for r in rows:
-            r['Space'] = _resolve_chargeable(
-                r.get('Space', ''), r.get('BaseUnit', ''), r.get('Client', ''),
-                r.get('Service Group', ''), r.get('Contract', '')
-            )
+        dashboard_data, rows = _dashboard_payload_from_path(dest)
         # Start a new dispatch cycle for this upload
         try:
             _start_new_cycle(_get_caller_identity())
@@ -417,6 +441,42 @@ def upload():
     except Exception as e:
         logger.error(f'MMR upload parse error: {e}', exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+
+@mmr_bp.route('/api/current-upload', methods=['GET'])
+@jwt_required()
+def current_upload():
+    """Return dashboard JSON for the last uploaded Excel (mmr_latest.xlsx) so the page can restore after refresh."""
+    path = _upload_path()
+    if not os.path.exists(path):
+        return jsonify({'success': True, 'has_file': False})
+
+    try:
+        dashboard_data, rows = _dashboard_payload_from_path(path)
+        return jsonify({
+            'success': True,
+            'has_file': True,
+            'dashboard': dashboard_data,
+            'rows': rows,
+            'total': len(rows),
+        })
+    except Exception as e:
+        logger.error(f'MMR current-upload parse error: {e}', exc_info=True)
+        return jsonify({'success': False, 'has_file': True, 'error': str(e)}), 500
+
+
+@mmr_bp.route('/api/clear-upload', methods=['POST'])
+@jwt_required()
+def clear_upload():
+    """Remove mmr_latest.xlsx so the dashboard can start fresh (new report cycle upload)."""
+    path = _upload_path()
+    if os.path.exists(path):
+        try:
+            os.remove(path)
+        except OSError as e:
+            logger.warning(f'MMR clear-upload failed: {e}')
+            return jsonify({'success': False, 'error': str(e)}), 500
+    return jsonify({'success': True})
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -833,6 +893,8 @@ def save_email_config():
     for k in allowed:
         if k in data:
             config[k] = data[k]
+    # Env schedule vars (Render) override form so MMR_SCHEDULE_* survives accidental UI toggles
+    config.update(_env_schedule_override())
     _save_config(config)
 
     # Refresh scheduler
@@ -914,14 +976,14 @@ def send_email_now():
     except Exception as e:
         return jsonify({'error': f'Report generation failed: {str(e)}'}), 500
 
-    # Guard: ensure SMTP is configured before even trying
+    # Guard: SMTP or Brevo HTTP API (Render free tier blocks outbound SMTP ports)
     from flask import current_app as _app
-    if not _app.config.get('MAIL_SERVER'):
+    from common.email_service import is_email_configured
+    if not is_email_configured(_app):
         return jsonify({
             'error': (
-                'SMTP is not configured. '
-                'Add MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD '
-                'and MAIL_DEFAULT_SENDER to your .env file and restart the server.'
+                'Email is not configured. Set MAIL_* for SMTP, or '
+                'BREVO_API_KEY + MAIL_DEFAULT_SENDER for Brevo (HTTPS, recommended on Render free tier).'
             )
         }), 503
 

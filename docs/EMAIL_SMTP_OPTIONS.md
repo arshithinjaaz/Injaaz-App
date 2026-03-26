@@ -1,6 +1,8 @@
 # Email / SMTP options (no Microsoft credentials)
 
-The app sends email via SMTP (Report Generation, password resets). You can use any of these; **no code changes** are needed—only `.env` (or Render env vars).
+The app sends email for reports, password resets, and MMR. Configure `.env` (or Render env vars).
+
+**Render free web services block outbound SMTP** (ports 25, 465, 587). Gmail SMTP will **time out** there. Use the **Brevo HTTP API** instead: set **`BREVO_API_KEY`** and **`MAIL_DEFAULT_SENDER`** (sender verified in Brevo). The app uses HTTPS and does not open SMTP. On a **paid** Render instance, normal SMTP usually works again.
 
 ---
 
@@ -24,6 +26,17 @@ MAIL_DEFAULT_SENDER=noreply@injaaz.ae
 ```
 
 You may need to verify your sender (noreply@injaaz.ae) in Brevo before sending.
+
+### Brevo API (HTTPS — use on Render free tier)
+
+Get an **API key**: Brevo → **SMTP & API** → **API keys** → create a key with **Send emails** permission.
+
+```env
+BREVO_API_KEY=xkeysib-...
+MAIL_DEFAULT_SENDER=noreply@injaaz.ae
+```
+
+You do **not** need `MAIL_SERVER` when `BREVO_API_KEY` is set; the app sends via `https://api.brevo.com/v3/smtp/email`.
 
 ---
 

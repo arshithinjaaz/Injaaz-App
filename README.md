@@ -38,6 +38,7 @@ Run the setup script to automate the entire setup process:
 - **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Codebase organization
 - **[PROJECT_FLOW.md](PROJECT_FLOW.md)** - Application workflow
 - **[CLOUD_ONLY_SETUP.md](CLOUD_ONLY_SETUP.md)** - Production deployment guide
+- **[RENDER_DEPLOYMENT_PHASES.md](RENDER_DEPLOYMENT_PHASES.md)** - Render: Phase 1 (testing) and Phase 2 (production runbook)
 
 ## 🔒 Security Notes
 
