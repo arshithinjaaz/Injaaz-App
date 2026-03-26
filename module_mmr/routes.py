@@ -976,14 +976,14 @@ def send_email_now():
     except Exception as e:
         return jsonify({'error': f'Report generation failed: {str(e)}'}), 500
 
-    # Guard: ensure SMTP is configured before even trying
+    # Guard: SMTP or Brevo HTTP API (Render free tier blocks outbound SMTP ports)
     from flask import current_app as _app
-    if not _app.config.get('MAIL_SERVER'):
+    from common.email_service import is_email_configured
+    if not is_email_configured(_app):
         return jsonify({
             'error': (
-                'SMTP is not configured. '
-                'Add MAIL_SERVER, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD '
-                'and MAIL_DEFAULT_SENDER to your .env file and restart the server.'
+                'Email is not configured. Set MAIL_* for SMTP, or '
+                'BREVO_API_KEY + MAIL_DEFAULT_SENDER for Brevo (HTTPS, recommended on Render free tier).'
             )
         }), 503
 

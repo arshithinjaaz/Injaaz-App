@@ -308,21 +308,27 @@ def _normalise_space(val: str) -> str:
 # Projects where AC/HVAC complaints are always Non-Chargeable (Garden City only)
 _AC_NON_CHARGEABLE_PROJECTS = ('garden',)
 
-# Clients/contracts where all base units are Chargeable (office / internal sites).
+# Clients/contracts where rows with empty BaseUnit default to Chargeable (office / internal sites).
 _ALL_BASEUNITS_CHARGEABLE_CLIENTS = ('askaan', 'ajman holding', 'injaaz')
-
-# BaseUnit keywords that indicate Non-Chargeable (common areas, not apartment numbers).
-# Applied uniformly for ALL projects (Askaan, Saqr, Orient, Garden, others).
-_NON_CHARGEABLE_BASEUNIT_KEYWORDS = (
-    'common area', 'commonarea', 'floor', 'general area', 'corridor', 'corridord',
-    'roof top', 'rooftop', 'ground floor', 'groundfloor',
-    'parking', 'telephone room', 'cctv room', 'electricity room', 'electrical room',
-    'generator room', 'pump room', 'storage', 'lobby', 'basement', 'roof',
-)
 
 # CAFM often uses "Elevator system" or the typo "Elevater system". Use elevat(or|er)
 # so we do not match unrelated words like "elevation".
 _ELEVATOR_SERVICE_GROUP_RE = re.compile(r'elevat(or|er)', re.IGNORECASE)
+
+
+def _baseunit_is_non_chargeable_cafm_labels(bu_lower: str) -> bool:
+    """True when BaseUnit matches CAFM labels that bill as Non-Chargeable (reception, outside, exit/entry)."""
+    if not bu_lower:
+        return False
+    if 'reception' in bu_lower:
+        return True
+    if 'outside' in bu_lower or 'out side' in bu_lower:
+        return True
+    if 'exit' in bu_lower and 'entry' in bu_lower:
+        return True
+    if 'exit/' in bu_lower or 'exit /' in bu_lower:
+        return True
+    return False
 
 
 def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
@@ -332,13 +338,15 @@ def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
     - Facade Cleaning service group: always Non-Chargeable.
     - Elevator system (service group: elevator / common CAFM typo elevater): always Non-Chargeable.
     - Garden City only: all AC/HVAC complaints = Non-Chargeable.
-    - Askaan, Ajman Holding, Injaaz: all base units = Chargeable.
-    - Else: BaseUnit apartment = Chargeable; common area = Non-Chargeable; fallback to Space.
+    - If BaseUnit is non-empty: Non-Chargeable only for specific CAFM labels (reception, outside /
+      out side, exit+entry or exit/); any other BaseUnit text is Chargeable (incl. Askaan / Ajman / Injaaz).
+    - If BaseUnit is empty: Askaan, Ajman Holding, Injaaz default Chargeable; else use Excel Space.
     """
     client = (client_val or '').strip().lower()
     contract = (contract_val or '').strip().lower()
     combined = f'{client} {contract}'
     sg = (service_group_val or '').strip().lower()
+    base_unit = (base_unit_val or '').strip().lower()
 
     # Facade Cleaning is always Non-Chargeable regardless of client or base unit
     if 'facade cleaning' in sg:
@@ -354,27 +362,19 @@ def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
         if 'hvac' in sg or 'ac' in sg or 'air conditioning' in sg or 'airconditioning' in sg:
             return 'Non-Chargeable'
 
-    # Askaan, Ajman Holding, Injaaz office: all base units are Chargeable
+    # Non-empty BaseUnit: Non-Chargeable only for reception / outside / exit-entry CAFM labels; else Chargeable.
+    if base_unit:
+        if _baseunit_is_non_chargeable_cafm_labels(base_unit):
+            return 'Non-Chargeable'
+        return 'Chargeable'
+
+    # BaseUnit empty: office clients default Chargeable; otherwise use Excel Space.
     if any(p in combined for p in _ALL_BASEUNITS_CHARGEABLE_CLIENTS):
         return 'Chargeable'
 
-    base_unit = (base_unit_val or '').strip().lower()
     space = (space_val or '').strip().lower()
 
-    # BaseUnit has content: derive from it (takes precedence over Space)
-    if base_unit:
-        for kw in _NON_CHARGEABLE_BASEUNIT_KEYWORDS:
-            if kw in base_unit:
-                return 'Non-Chargeable'
-        # Apartment number or flat/unit/apt/villa = Chargeable
-        if re.search(r'\d+', base_unit) or any(
-            x in base_unit for x in ('flat', 'unit', 'apt', 'apartment', 'villa')
-        ):
-            return 'Chargeable'
-        # Anything else (not apartment) = Non-Chargeable
-        return 'Non-Chargeable'
-
-    # BaseUnit empty: use Space
+    # Excel Space when BaseUnit empty
     if space and space not in ('unknown',):
         n = _normalise_space(space_val)
         if n in ('Chargeable', 'Non-Chargeable'):

@@ -93,6 +93,9 @@ MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
 MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "true").lower() == "true"
 MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "noreply@injaaz.com")
 
+# Brevo (Sendinblue) — HTTPS API; use on hosts that block SMTP (e.g. Render free tier blocks ports 25/465/587).
+BREVO_API_KEY = os.getenv("BREVO_API_KEY") or os.getenv("SENDINBLUE_API_KEY")
+
 # Application
 APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:5000")
 
