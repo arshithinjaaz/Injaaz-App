@@ -39,8 +39,12 @@ services:
       # If you add a disk mount, set to e.g. /var/data/generated
       - key: GENERATED_DIR
         sync: false
-      # HTTPS email API — required on Render (SMTP to Brevo times out). Brevo → API keys → Send emails.
+      # HTTPS email: use Brevo OR Mailjet on Render when SMTP is blocked (see docs/EMAIL_SMTP_OPTIONS.md).
       - key: BREVO_API_KEY
+        sync: false
+      - key: MAILJET_API_KEY
+        sync: false
+      - key: MAILJET_SECRET_KEY
         sync: false
       - key: MAIL_DEFAULT_SENDER
         sync: false

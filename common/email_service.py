@@ -2,7 +2,8 @@
 Email service for sending emails (password resets, notifications)
 
 SMTP works locally and on hosts that allow outbound 587. Render *free* web services block
-outbound SMTP (see Render changelog); set BREVO_API_KEY and use the Brevo HTTP API instead.
+outbound SMTP (see Render changelog); use HTTPS instead: BREVO_API_KEY (Brevo) or Mailjet
+credentials (MAILJET_API_KEY + MAILJET_SECRET_KEY, or MAIL_* with in-v3.mailjet.com on Render).
 """
 import base64
 import smtplib
@@ -19,6 +20,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 BREVO_SEND_URL = "https://api.brevo.com/v3/smtp/email"
+MAILJET_SEND_URL = "https://api.mailjet.com/v3.1/send"
 
 
 def _normalize_secret_env(value):
@@ -45,19 +47,75 @@ def _looks_like_brevo_smtp_host(mail_server):
     return "brevo" in m or "sendinblue" in m
 
 
+def _looks_like_mailjet_smtp_host(mail_server):
+    if not mail_server:
+        return False
+    m = mail_server.lower().strip()
+    return "mailjet" in m or "in-v3.mailjet" in m
+
+
+def _mailjet_credentials(app):
+    """API key + secret key (same values as Mailjet SMTP username/password)."""
+    k = _normalize_secret_env(
+        app.config.get("MAILJET_API_KEY") or os.environ.get("MAILJET_API_KEY")
+    )
+    s = _normalize_secret_env(
+        app.config.get("MAILJET_SECRET_KEY") or os.environ.get("MAILJET_SECRET_KEY")
+    )
+    if k and s:
+        return (k, s)
+    if _looks_like_mailjet_smtp_host(app.config.get("MAIL_SERVER")):
+        u = _normalize_secret_env(
+            app.config.get("MAIL_USERNAME") or os.environ.get("MAIL_USERNAME")
+        )
+        p = _normalize_secret_env(
+            app.config.get("MAIL_PASSWORD") or os.environ.get("MAIL_PASSWORD")
+        )
+        if u and p:
+            return (u, p)
+    return None
+
+
+def _should_send_mailjet_via_rest(app, mj_creds):
+    if not mj_creds:
+        return False
+    if (os.environ.get("MAILJET_USE_REST") or "").lower() in ("1", "true", "yes"):
+        return True
+    if _normalize_secret_env(
+        app.config.get("MAILJET_API_KEY") or os.environ.get("MAILJET_API_KEY")
+    ) and _normalize_secret_env(
+        app.config.get("MAILJET_SECRET_KEY") or os.environ.get("MAILJET_SECRET_KEY")
+    ):
+        return True
+    if _running_on_render() and _looks_like_mailjet_smtp_host(app.config.get("MAIL_SERVER")):
+        return True
+    return False
+
+
 def _running_on_render():
     return (os.environ.get("RENDER") or "").lower() in ("true", "1", "yes")
 
 
 def is_email_configured(app=None):
-    """True if the app can send mail (SMTP or Brevo HTTP)."""
+    """True if the app can send mail (SMTP or Brevo / Mailjet HTTP)."""
     a = app if app is not None else current_app._get_current_object()
     key = _brevo_api_key(a)
     if key:
         return bool(a.config.get("MAIL_DEFAULT_SENDER") or a.config.get("MAIL_USERNAME"))
+    mj = _mailjet_credentials(a)
+    if mj:
+        if _should_send_mailjet_via_rest(a, mj):
+            return bool(a.config.get("MAIL_DEFAULT_SENDER") or a.config.get("MAIL_USERNAME"))
+        return bool(
+            a.config.get("MAIL_SERVER")
+            and (a.config.get("MAIL_DEFAULT_SENDER") or a.config.get("MAIL_USERNAME"))
+        )
     ms = a.config.get("MAIL_SERVER")
     # On Render, Brevo SMTP usually times out; require HTTPS API key instead of MAIL_SERVER alone.
     if ms and _looks_like_brevo_smtp_host(ms) and not key and _running_on_render():
+        return False
+    # Mailjet host but no credentials → cannot send on Render.
+    if ms and _looks_like_mailjet_smtp_host(ms) and not mj and _running_on_render():
         return False
     return bool(ms)
 
@@ -174,6 +232,87 @@ def _send_email_brevo_http(app, recipient, subject, body, html_body, cc, attachm
         return False
 
 
+def _send_email_mailjet_http(
+    app, recipient, subject, body, html_body, cc, attachments, api_key, secret_key
+):
+    """Send via Mailjet REST API v3.1 (HTTPS). Works when outbound SMTP is blocked (e.g. Render free)."""
+    mail_sender = app.config.get("MAIL_DEFAULT_SENDER") or app.config.get("MAIL_USERNAME")
+    if not mail_sender:
+        logger.error("Mailjet: set MAIL_DEFAULT_SENDER to a verified sender in Mailjet")
+        return False
+    to_list = recipient if isinstance(recipient, (list, tuple)) else [recipient]
+    to_out = []
+    for e in to_list:
+        if e and str(e).strip():
+            to_out.append({"Email": str(e).strip(), "Name": ""})
+    if not to_out:
+        logger.error("Mailjet: no valid recipients")
+        return False
+    msg = {
+        "From": {"Email": mail_sender.strip(), "Name": "Injaaz"},
+        "To": to_out,
+        "Subject": subject,
+        "TextPart": (body or "").rstrip() or " ",
+    }
+    if html_body:
+        msg["HTMLPart"] = html_body
+    if cc:
+        cc_list = cc if isinstance(cc, (list, tuple)) else [cc]
+        msg["Cc"] = [
+            {"Email": str(e).strip(), "Name": ""}
+            for e in cc_list
+            if e and str(e).strip()
+        ]
+    att_out = []
+    for item in attachments or []:
+        try:
+            if isinstance(item, str):
+                path = item
+                if not os.path.exists(path):
+                    logger.warning("Mailjet: attachment not found: %s", path)
+                    continue
+                with open(path, "rb") as fh:
+                    data = fh.read()
+                filename = os.path.basename(path)
+                ctype, _enc = mimetypes.guess_type(path)
+                content_type = ctype or "application/octet-stream"
+            elif isinstance(item, dict):
+                data = item.get("content")
+                filename = item.get("filename")
+                content_type = item.get("mime_type") or "application/octet-stream"
+                if not data or not filename:
+                    continue
+            else:
+                continue
+            att_out.append(
+                {
+                    "ContentType": content_type,
+                    "Filename": filename,
+                    "Base64Content": base64.b64encode(data).decode("ascii"),
+                }
+            )
+        except Exception:
+            logger.error("Mailjet: failed to read attachment", exc_info=True)
+    if att_out:
+        msg["Attachments"] = att_out
+    payload = {"Messages": [msg]}
+    try:
+        r = requests.post(
+            MAILJET_SEND_URL,
+            json=payload,
+            auth=(api_key, secret_key),
+            timeout=120,
+        )
+        if r.status_code in (200, 201):
+            logger.info("Email sent via Mailjet API to %s", recipient)
+            return True
+        logger.error("Mailjet API HTTP %s: %s", r.status_code, r.text[:4000])
+        return False
+    except Exception as e:
+        logger.error("Mailjet API request failed: %s", e, exc_info=True)
+        return False
+
+
 def send_email(recipient, subject, body, html_body=None, cc=None, attachments=None):
     """
     Send email using SMTP configuration from app config
@@ -198,6 +337,12 @@ def send_email(recipient, subject, body, html_body=None, cc=None, attachments=No
                 app, recipient, subject, body, html_body, cc, attachments, brevo_key
             )
 
+        mj = _mailjet_credentials(app)
+        if mj and _should_send_mailjet_via_rest(app, mj):
+            return _send_email_mailjet_http(
+                app, recipient, subject, body, html_body, cc, attachments, mj[0], mj[1]
+            )
+
         mail_server = app.config.get('MAIL_SERVER')
         mail_port = app.config.get('MAIL_PORT', 587)
         mail_user = app.config.get('MAIL_USERNAME')
@@ -216,6 +361,15 @@ def send_email(recipient, subject, body, html_body=None, cc=None, attachments=No
                 "MAIL_DEFAULT_SENDER (verified sender). The app will use https://api.brevo.com instead of SMTP. "
                 "See docs/EMAIL_SMTP_OPTIONS.md",
                 mail_server,
+            )
+            return False
+
+        if _looks_like_mailjet_smtp_host(mail_server) and _running_on_render() and not mj:
+            logger.error(
+                "Email: Mailjet on Render needs API credentials. Set MAIL_USERNAME + MAIL_PASSWORD "
+                "(Mailjet API key + secret key) with MAIL_SERVER=in-v3.mailjet.com, or set "
+                "MAILJET_API_KEY + MAILJET_SECRET_KEY + MAIL_DEFAULT_SENDER. The app will use HTTPS. "
+                "See docs/EMAIL_SMTP_OPTIONS.md",
             )
             return False
 
