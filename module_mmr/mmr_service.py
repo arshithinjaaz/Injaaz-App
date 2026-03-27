@@ -338,8 +338,8 @@ def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
     - Facade Cleaning service group: always Non-Chargeable.
     - Elevator system (service group: elevator / common CAFM typo elevater): always Non-Chargeable.
     - Garden City only: all AC/HVAC complaints = Non-Chargeable.
-    - If BaseUnit is non-empty: Non-Chargeable only for specific CAFM labels (reception, outside /
-      out side, exit+entry or exit/); any other BaseUnit text is Chargeable (incl. Askaan / Ajman / Injaaz).
+    - If BaseUnit is non-empty: Non-Chargeable for specific CAFM labels (reception, outside /
+      out side, exit+entry or exit/), or if BaseUnit contains the word floor; any other BaseUnit text is Chargeable.
     - If BaseUnit is empty: Askaan, Ajman Holding, Injaaz default Chargeable; else use Excel Space.
     """
     client = (client_val or '').strip().lower()
@@ -362,9 +362,11 @@ def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
         if 'hvac' in sg or 'ac' in sg or 'air conditioning' in sg or 'airconditioning' in sg:
             return 'Non-Chargeable'
 
-    # Non-empty BaseUnit: Non-Chargeable only for reception / outside / exit-entry CAFM labels; else Chargeable.
+    # Non-empty BaseUnit: Non-Chargeable for reception / outside / exit-entry CAFM labels, or any label with "floor".
     if base_unit:
         if _baseunit_is_non_chargeable_cafm_labels(base_unit):
+            return 'Non-Chargeable'
+        if 'floor' in base_unit:
             return 'Non-Chargeable'
         return 'Chargeable'
 

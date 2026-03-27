@@ -56,7 +56,7 @@ Other Garden City service groups are **not** forced non-chargeable by this rule 
 
 After sections 2.1–2.3, if **BaseUnit** is **not** empty (after trim):
 
-### 3.1 Non-Chargeable — specific CAFM BaseUnit labels only
+### 3.1 Non-Chargeable — specific CAFM BaseUnit labels, or floor
 
 BaseUnit is compared **case-insensitively**. It is **Non-Chargeable** if **any** of the following hold:
 
@@ -66,6 +66,7 @@ BaseUnit is compared **case-insensitively**. It is **Non-Chargeable** if **any**
 | Contains **outside** **or** **out side** | e.g. `Outside area`, `Out side area` |
 | Contains both **exit** and **entry** | e.g. `Exit/ Entry` |
 | Contains **exit/** **or** **exit /** | e.g. `Exit/ lobby` |
+| Contains **floor** | e.g. `10th Floor`, `Ground Floor` |
 
 ### 3.2 Chargeable — any other non-empty BaseUnit
 
@@ -75,7 +76,7 @@ If BaseUnit has text and **does not** match section 3.1:
 |--------|
 | **Chargeable** |
 
-**Examples (Chargeable):** `Apt No 911`, `Lobby`, `Lift Area`, `GYM Equipment`, numeric-only labels, etc.  
+**Examples (Chargeable):** `Apt No 911`, `Lobby`, `Lift Area`, `GYM Equipment`, numeric-only labels, etc. (no `floor` in the label).  
 This applies to **all** clients, including **Askaan**, **Ajman Holding**, and **Injaaz**, when BaseUnit is non-empty and not in 3.1.
 
 ---
@@ -139,7 +140,7 @@ The **Service Group** and **BaseUnit** columns from the CAFM extract drive most 
 | Facade Cleaning (service group) | Non-Chargeable |
 | Elevator / Elevater (service group) | Non-Chargeable |
 | Garden + AC/HVAC-type service group | Non-Chargeable |
-| BaseUnit = reception / outside / out side / exit+entry / exit/ | Non-Chargeable |
+| BaseUnit = reception / outside / out side / exit+entry / exit/ / contains **floor** | Non-Chargeable |
 | BaseUnit = anything else (non-empty) | Chargeable |
 | BaseUnit empty + Askaan / Ajman Holding / Injaaz | Chargeable |
 | BaseUnit empty + other client + Excel Space chargeable | Chargeable |

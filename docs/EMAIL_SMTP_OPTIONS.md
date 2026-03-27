@@ -2,7 +2,12 @@
 
 The app sends email for reports, password resets, and MMR. Configure `.env` (or Render env vars).
 
-**Render free web services block outbound SMTP** (ports 25, 465, 587). Gmail SMTP will **time out** there. Use the **Brevo HTTP API** instead: set **`BREVO_API_KEY`** and **`MAIL_DEFAULT_SENDER`** (sender verified in Brevo). The app uses HTTPS and does not open SMTP. On a **paid** Render instance, normal SMTP usually works again.
+**Render free web services block outbound SMTP** (ports 25, 465, 587). Gmail SMTP will **time out** there. Use **HTTPS** instead:
+
+- **Brevo:** **`BREVO_API_KEY`** + **`MAIL_DEFAULT_SENDER`**
+- **Mailjet:** **`MAILJET_API_KEY`** + **`MAILJET_SECRET_KEY`** + **`MAIL_DEFAULT_SENDER`**, *or* the same **API key + secret** as **`MAIL_USERNAME`** / **`MAIL_PASSWORD`** with **`MAIL_SERVER=in-v3.mailjet.com`** (the app switches to Mailjet’s REST API automatically on Render).
+
+On a **paid** Render instance, normal SMTP usually works again for providers that use SMTP.
 
 ---
 
@@ -62,7 +67,10 @@ Verify your sender/domain in SendGrid.
 ## Mailjet (free tier)
 
 - **Free tier** available; see [mailjet.com](https://www.mailjet.com) for limits.
-- **Sign up** → **Account settings** → **SMTP and SEND API** → use **API Key** as username and **Secret Key** as password.
+- **Sign up** → **Account** → **SMTP and SEND API** → copy **API Key** and **Secret Key**.
+- **Verify** your sender or domain in Mailjet before sending.
+
+### SMTP (best on Render **paid** or local dev)
 
 ```env
 MAIL_SERVER=in-v3.mailjet.com
@@ -72,6 +80,35 @@ MAIL_USERNAME=your-mailjet-api-key
 MAIL_PASSWORD=your-mailjet-secret-key
 MAIL_DEFAULT_SENDER=noreply@injaaz.ae
 ```
+
+### REST / HTTPS (Render **free** — same keys as SMTP)
+
+If **`BREVO_API_KEY`** is set, the app **always uses Brevo first**. Remove it when switching to Mailjet.
+
+Do **not** set **`BREVO_API_KEY`** if you use Mailjet. Either:
+
+**Option A — explicit env vars (recommended on Render):**
+
+```env
+MAILJET_API_KEY=your-mailjet-api-key
+MAILJET_SECRET_KEY=your-mailjet-secret-key
+MAIL_DEFAULT_SENDER=noreply@injaaz.ae
+```
+
+**Option B — SMTP-style vars (still uses HTTPS on Render automatically):**
+
+```env
+MAIL_SERVER=in-v3.mailjet.com
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USERNAME=your-mailjet-api-key
+MAIL_PASSWORD=your-mailjet-secret-key
+MAIL_DEFAULT_SENDER=noreply@injaaz.ae
+```
+
+The app calls **`https://api.mailjet.com/v3.1/send`** so outbound SMTP is not required.
+
+Optional: set **`MAILJET_USE_REST=true`** anywhere to force Mailjet HTTPS even off Render (e.g. testing).
 
 ---
 
@@ -124,7 +161,7 @@ MAIL_DEFAULT_SENDER=noreply@injaaz.ae
 | **Brevo**       | 300/day, no card | Easiest long-term free option      |
 | **Personal Gmail** | With 2-Step + App pwd | Quick setup with your @gmail.com |
 | SendGrid        | 100/day, 60 days | Short-term trial                   |
-| Mailjet         | Free tier        | Alternative free SMTP              |
+| Mailjet         | Free tier        | SMTP or **HTTPS REST** (no code change) |
 | Google Workspace| With your domain | If injaaz.ae uses Google           |
 
 After editing `.env`, restart the Flask app. On Render, set the same variables in the dashboard and redeploy.
