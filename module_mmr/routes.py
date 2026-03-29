@@ -124,6 +124,7 @@ def _dashboard_payload_from_path(path: str) -> tuple[dict, list]:
         r['Space'] = _resolve_chargeable(
             r.get('Space', ''), r.get('BaseUnit', ''), r.get('Client', ''),
             r.get('Service Group', ''), r.get('Contract', ''),
+            r.get('Work Description', ''), r.get('Specific Area', ''),
         )
     return dashboard_data, rows
 
@@ -720,7 +721,8 @@ def open_report_from_folder(filename):
         for r in rows:
             r['Space'] = _resolve_chargeable(
                 r.get('Space', ''), r.get('BaseUnit', ''), r.get('Client', ''),
-                r.get('Service Group', ''), r.get('Contract', '')
+                r.get('Service Group', ''), r.get('Contract', ''),
+                r.get('Work Description', ''), r.get('Specific Area', ''),
             )
         return jsonify({
             'success': True,

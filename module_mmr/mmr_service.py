@@ -315,6 +315,19 @@ _ALL_BASEUNITS_CHARGEABLE_CLIENTS = ('askaan', 'ajman holding', 'injaaz')
 # so we do not match unrelated words like "elevation".
 _ELEVATOR_SERVICE_GROUP_RE = re.compile(r'elevat(or|er)', re.IGNORECASE)
 
+# Roof / rooftop mentions (incl. "roof toop", "rooftop", "roof top") → Non-Chargeable
+_ROOF_TOP_RE = re.compile(r'roof\s*to+p', re.IGNORECASE)
+
+
+def _text_indicates_roof_top(*parts: str) -> bool:
+    """True when any combined text mentions roof top / rooftop (common CAFM typos included)."""
+    blob = ' '.join(p for p in parts if p and str(p).strip())
+    if not blob:
+        return False
+    if _ROOF_TOP_RE.search(blob):
+        return True
+    return False
+
 
 def _baseunit_is_non_chargeable_cafm_labels(bu_lower: str) -> bool:
     """True when BaseUnit matches CAFM labels that bill as Non-Chargeable (reception, outside, exit/entry)."""
@@ -332,12 +345,14 @@ def _baseunit_is_non_chargeable_cafm_labels(bu_lower: str) -> bool:
 
 
 def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
-                       service_group_val: str = '', contract_val: str = '') -> str:
+                       service_group_val: str = '', contract_val: str = '',
+                       work_description_val: str = '', specific_area_val: str = '') -> str:
     """
     Resolve Chargeable vs Non-Chargeable.
     - Facade Cleaning service group: always Non-Chargeable.
     - Elevator system (service group: elevator / common CAFM typo elevater): always Non-Chargeable.
     - Garden City only: all AC/HVAC complaints = Non-Chargeable.
+    - BaseUnit / Work Description / Specific Area mentioning roof top (or typo e.g. roof toop) = Non-Chargeable.
     - If BaseUnit is non-empty: Non-Chargeable for specific CAFM labels (reception, outside /
       out side, exit+entry or exit/), or if BaseUnit contains the word floor; any other BaseUnit text is Chargeable.
     - If BaseUnit is empty: Askaan, Ajman Holding, Injaaz default Chargeable; else use Excel Space.
@@ -355,6 +370,12 @@ def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
     # Elevator system: always Non-Chargeable (before client-wide Chargeable rules).
     # Match "Elevator" and CAFM typo "Elevater"; not "elevation" (civil works).
     if _ELEVATOR_SERVICE_GROUP_RE.search(sg):
+        return 'Non-Chargeable'
+
+    # Roof top / rooftop in BaseUnit, description, or Specific Area (CAFM) → Non-Chargeable
+    if _text_indicates_roof_top(
+        base_unit_val or '', work_description_val or '', specific_area_val or '',
+    ):
         return 'Non-Chargeable'
 
     # Garden City only: AC/HVAC complaints are always Non-Chargeable
@@ -391,6 +412,8 @@ def _get_resolved_chargeable_series(df: pd.DataFrame) -> pd.Series:
     client_col = df['Client'] if 'Client' in df.columns else pd.Series([''] * len(df))
     contract_col = df['Contract'] if 'Contract' in df.columns else pd.Series([''] * len(df))
     sg_col = df['Service Group'] if 'Service Group' in df.columns else pd.Series([''] * len(df))
+    wd_col = df['Work Description'] if 'Work Description' in df.columns else pd.Series([''] * len(df))
+    sa_col = df['Specific Area'] if 'Specific Area' in df.columns else pd.Series([''] * len(df))
     return pd.Series([
         _resolve_chargeable(
             space_col.iat[i] if i < len(space_col) else '',
@@ -398,6 +421,8 @@ def _get_resolved_chargeable_series(df: pd.DataFrame) -> pd.Series:
             client_col.iat[i] if i < len(client_col) else '',
             sg_col.iat[i] if i < len(sg_col) else '',
             contract_col.iat[i] if i < len(contract_col) else '',
+            wd_col.iat[i] if i < len(wd_col) else '',
+            sa_col.iat[i] if i < len(sa_col) else '',
         )
         for i in range(len(df))
     ], index=df.index)

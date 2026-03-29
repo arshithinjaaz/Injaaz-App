@@ -134,7 +134,12 @@ body.inspection-dashboard {
 .logo img {
   height: 36px;
   width: auto;
+  max-width: min(260px, 52vw);
   flex-shrink: 0;
+  object-fit: contain;
+  object-position: left center;
+  /* White wordmark PNG (icons/INJAAZ Logo - Edited.png): visible on light nav */
+  filter: brightness(0);
 }
 
 .logo-text {

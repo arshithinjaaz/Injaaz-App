@@ -100,6 +100,15 @@
       padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
     }
+    .modal-automation-header.modal-automation-header--close-left {
+      justify-content: flex-start;
+      gap: 0.75rem;
+    }
+    .modal-automation-header--close-left .modal-automation-title {
+      flex: 1;
+      min-width: 0;
+      margin: 0;
+    }
     .modal-automation-title { font-size: 1rem; font-weight: 700; color: var(--text); }
     .modal-automation-close {
       width: 28px; height: 28px; border-radius: 6px;
@@ -638,7 +647,7 @@
 
     /* ── Roadmap Drawer ─────────────────────────────────────────── */
     /* Below .nav (z-index 1000 in dashboard.css) so top menu stays clickable; above page content */
-    /* Backdrop does not capture clicks — dashboard & report stay usable while panel is open */
+    /* Backdrop: click outside the drawer closes the panel (panel uses stopPropagation) */
     .roadmap-overlay {
       position: fixed; inset: 0;
       background: transparent;
@@ -647,7 +656,7 @@
       transition: opacity .25s, visibility .25s;
       pointer-events: none;
     }
-    .roadmap-overlay.active { opacity: 1; visibility: visible; }
+    .roadmap-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
     .roadmap-panel {
       position: fixed; top: 0; right: 0; bottom: 0;
       width: min(900px, 96vw);
@@ -662,7 +671,7 @@
     .roadmap-overlay.active .roadmap-panel { transform: none; }
     .roadmap-panel-hdr {
       position: relative;
-      padding: 1.1rem 3.25rem 1.1rem 1.5rem;
+      padding: 1.1rem 1.5rem;
       border-bottom: 1px solid var(--border);
       display: flex; align-items: flex-start; justify-content: flex-start;
       gap: 0.75rem;
@@ -684,10 +693,9 @@
       border-radius: 8px; flex-shrink: 0; line-height: 1;
       display: inline-flex; align-items: center; justify-content: center;
     }
-    .roadmap-panel-hdr .roadmap-close {
-      position: absolute;
-      top: 0.65rem;
-      right: 0.65rem;
+    .roadmap-panel-hdr > .roadmap-close:first-child {
+      flex-shrink: 0;
+      margin-top: 0.1rem;
     }
     .roadmap-close:hover { background: #f3f4f6; color: var(--text); }
     .roadmap-close:focus-visible {
@@ -699,25 +707,6 @@
     }
     .roadmap-body::-webkit-scrollbar { width: 6px; }
     .roadmap-body::-webkit-scrollbar-thumb { background: rgba(18,84,53,.2); border-radius: 3px; }
-    /* Second close control at top of automation steps (sticky while scrolling body) */
-    .roadmap-automation-closebar {
-      position: sticky;
-      top: 0;
-      z-index: 4;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      margin: -0.25rem 0 0.65rem 0;
-      padding-bottom: 0.35rem;
-      background: linear-gradient(180deg, var(--white) 72%, rgba(255, 255, 255, 0) 100%);
-      pointer-events: none;
-    }
-    .roadmap-automation-closebar .roadmap-close-content {
-      pointer-events: auto;
-      width: 40px;
-      height: 40px;
-      font-size: 1.5rem;
-    }
     .roadmap-section-title {
       font-size: .75rem; font-weight: 700; color: var(--text-muted);
       text-transform: uppercase; letter-spacing: .07em; margin-bottom: 1rem;
@@ -834,7 +823,7 @@
       transition: opacity .25s, visibility .25s;
       pointer-events: none;
     }
-    .reportfolder-overlay.active { opacity: 1; visibility: visible; }
+    .reportfolder-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
     .reportfolder-panel {
       position: fixed; top: 0; right: 0; bottom: 0;
       width: min(560px, 96vw);
@@ -851,8 +840,15 @@
       padding: 1.1rem 1.5rem;
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
+      gap: 0.75rem;
       flex-shrink: 0; background: var(--white);
     }
+    .reportfolder-panel-hdr-left {
+      display: flex; align-items: center; gap: 0.75rem;
+      min-width: 0; flex: 1;
+    }
+    .reportfolder-panel-hdr-left .roadmap-close { flex-shrink: 0; }
+    .reportfolder-panel-hdr-left .reportfolder-panel-title { margin: 0; }
     .reportfolder-panel-title { font-size: 1rem; font-weight: 700; }
     .reportfolder-panel-body {
       flex: 1;
@@ -1131,19 +1127,16 @@
 <div id="toast-container"></div>
 
 <!-- ════════ Roadmap Panel ════════ -->
-<div id="roadmapOverlay" class="roadmap-overlay" aria-hidden="true">
+<div id="roadmapOverlay" class="roadmap-overlay" aria-hidden="true" onclick="if(event.target===this)closeRoadmapPanel()">
   <div class="roadmap-panel" onclick="event.stopPropagation()">
     <div class="roadmap-panel-hdr">
+      <button type="button" class="roadmap-close" onclick="closeRoadmapPanel()" title="Close" aria-label="Close panel">&times;</button>
       <div class="roadmap-panel-hdr-text">
         <div class="roadmap-panel-title">📊 Email Automation Roadmap</div>
         <div class="roadmap-panel-sub" id="roadmapSub">Loading…</div>
       </div>
-      <button type="button" class="roadmap-close" onclick="closeRoadmapPanel()" title="Close" aria-label="Close panel">&times;</button>
     </div>
     <div class="roadmap-body" id="roadmapBody">
-      <div class="roadmap-automation-closebar">
-        <button type="button" class="roadmap-close roadmap-close-content" onclick="closeRoadmapPanel()" title="Close" aria-label="Close automation panel">&times;</button>
-      </div>
       <p style="color:var(--text-muted);font-size:.875rem">Loading…</p>
     </div>
   </div>
@@ -1152,9 +1145,9 @@
 <!-- Automation status modal (comprehensive) -->
 <div id="automationModal" class="modal-overlay" onclick="if(event.target===this)closeAutomationModal()">
   <div class="modal-automation modal-automation-wide" onclick="event.stopPropagation()">
-    <div class="modal-automation-header">
-      <h3 class="modal-automation-title">📧 Email Automation</h3>
+    <div class="modal-automation-header modal-automation-header--close-left">
       <button type="button" class="modal-automation-close" onclick="closeAutomationModal()" aria-label="Close">&times;</button>
+      <h3 class="modal-automation-title">📧 Email Automation</h3>
     </div>
     <div class="modal-automation-body" id="automationModalBody">
       <p style="color:var(--text-muted)">Loading…</p>
@@ -1187,14 +1180,14 @@
 </div>
 
 <!-- Report Folder right-open panel (same as Automation Roadmap) -->
-<div id="reportFolderOverlay" class="reportfolder-overlay" aria-hidden="true">
+<div id="reportFolderOverlay" class="reportfolder-overlay" aria-hidden="true" onclick="if(event.target===this)closeReportFolderPanel()">
   <div class="reportfolder-panel" onclick="event.stopPropagation()">
     <div class="reportfolder-panel-hdr">
-      <div class="reportfolder-panel-title">📁 Report Folder</div>
-      <div style="display:flex;align-items:center;gap:.5rem">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="loadReportFolder(); toast('List refreshed', 'info')" title="Refresh list">↻</button>
-        <button type="button" class="roadmap-close" onclick="closeReportFolderPanel()" aria-label="Close">✕</button>
+      <div class="reportfolder-panel-hdr-left">
+        <button type="button" class="roadmap-close" onclick="closeReportFolderPanel()" title="Close" aria-label="Close">✕</button>
+        <div class="reportfolder-panel-title">📁 Report Folder</div>
       </div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="loadReportFolder(); toast('List refreshed', 'info')" title="Refresh list">↻</button>
     </div>
     <div class="reportfolder-panel-body">
       <p class="report-folder-subtitle" style="font-size:.875rem;color:var(--text-muted);margin-bottom:1rem">Reports sent via email or saved manually.</p>
@@ -2964,9 +2957,6 @@ function renderRoadmap() {
   }
 
   body.innerHTML = `
-    <div class="roadmap-automation-closebar">
-      <button type="button" class="roadmap-close roadmap-close-content" onclick="closeRoadmapPanel()" title="Close" aria-label="Close automation panel">&times;</button>
-    </div>
     <div class="roadmap-section-title">Current Cycle</div>
     ${pipelineHtml}
     ${stepCardsHtml}
