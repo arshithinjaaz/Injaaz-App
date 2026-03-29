@@ -3,7 +3,7 @@
 <nav class="nav" id="nav">
   <div class="nav-container">
     <a href="/dashboard" class="logo" aria-label="Injaaz Home">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="Injaaz">
+      <img src="{{ url_for('static', filename='icons/INJAAZ Logo - Edited.png') }}" alt="Injaaz Facilities Management" width="200" height="40" decoding="async">
       <div class="logo-text">
         <span class="logo-brand">Injaaz</span>
         <span id="welcome-text" class="nav-welcome">Injaaz Application</span>
@@ -13,6 +13,9 @@
       <ul class="nav-menu">
         <li><a href="/dashboard" {% if active_page == 'home' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Home</a></li>
         <li><a href="/about" {% if active_page == 'about' %}style="color: var(--primary); font-weight: 600;"{% endif %}>About</a></li>
+        {% if active_page == 'about' %}
+        <li class="about-details-nav-item"><a href="#details">Details</a></li>
+        {% endif %}
         <li><a href="javascript:void(0)" id="profileLink" role="button" onclick="if(typeof openProfileModal==='function'){openProfileModal();}">Profile</a></li>
         <li><a href="javascript:void(0)" id="contactLink" role="button" onclick="if(typeof openContactModal==='function'){openContactModal();}">Contact</a></li>
         <li id="inspection-forms-menu-item">
