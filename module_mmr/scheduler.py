@@ -1,12 +1,31 @@
 """
 APScheduler wrapper for the MMR daily email.
 Runs a single cron job at the configured time (default 10:00 AM).
+
+Schedule hour/minute are interpreted in Dubai time (Asia/Dubai), not server UTC.
+Override with env MMR_SCHEDULE_TIMEZONE (e.g. UTC for debugging).
 """
 import logging
+import os
+from zoneinfo import ZoneInfo
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 logger = logging.getLogger(__name__)
+
+
+def _cron_timezone():
+    """IANA zone for cron triggers; default Asia/Dubai (UAE)."""
+    name = (os.environ.get('MMR_SCHEDULE_TIMEZONE') or 'Asia/Dubai').strip() or 'Asia/Dubai'
+    try:
+        return ZoneInfo(name)
+    except Exception:
+        logger.warning(
+            'MMR scheduler: invalid MMR_SCHEDULE_TIMEZONE=%r, using Asia/Dubai',
+            name,
+        )
+        return ZoneInfo('Asia/Dubai')
 
 _scheduler: BackgroundScheduler | None = None
 _JOB_ID = 'mmr_daily_report'
@@ -19,7 +38,6 @@ _JOB_ID = 'mmr_daily_report'
 def _run_scheduled_report(app):
     with app.app_context():
         try:
-            import os
             from datetime import datetime, timedelta
             from .routes import (_upload_path, _load_config, _save_last_run,
                                   _save_report_to_folder, _save_email_report_to_network,
@@ -130,10 +148,12 @@ def init_scheduler(app):
             config = _load_config()
         if config.get('schedule_enabled'):
             _add_job(config, app)
+            tz = _cron_timezone()
             logger.info(
-                'MMR scheduler: job registered for %02d:%02d (startup)',
+                'MMR scheduler: job registered for %02d:%02d %s (startup)',
                 int(config.get('schedule_hour', 10)),
                 int(config.get('schedule_minute', 0)),
+                getattr(tz, 'key', str(tz)),
             )
     except Exception:
         logger.exception('MMR scheduler: error reading config during init')
@@ -156,9 +176,12 @@ def update_schedule(config: dict, app):
 
     if config.get('schedule_enabled'):
         _add_job(config, app)
+        tz = _cron_timezone()
         logger.info(
-            f"MMR scheduler: job set for "
-            f"{config.get('schedule_hour', 10):02d}:{config.get('schedule_minute', 0):02d}"
+            'MMR scheduler: job set for %02d:%02d %s',
+            int(config.get('schedule_hour', 10)),
+            int(config.get('schedule_minute', 0)),
+            getattr(tz, 'key', str(tz)),
         )
     else:
         logger.info('MMR scheduler: job disabled')
@@ -170,7 +193,8 @@ def _add_job(config: dict, app):
         _run_scheduled_report,
         CronTrigger(
             hour=int(config.get('schedule_hour', 10)),
-            minute=int(config.get('schedule_minute', 0))
+            minute=int(config.get('schedule_minute', 0)),
+            timezone=_cron_timezone(),
         ),
         args=[app],
         id=_JOB_ID,

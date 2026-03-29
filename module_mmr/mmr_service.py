@@ -318,6 +318,9 @@ _ELEVATOR_SERVICE_GROUP_RE = re.compile(r'elevat(or|er)', re.IGNORECASE)
 # Roof / rooftop mentions (incl. "roof toop", "rooftop", "roof top") → Non-Chargeable
 _ROOF_TOP_RE = re.compile(r'roof\s*to+p', re.IGNORECASE)
 
+# BaseUnit like "Apt No 911", "AptNo 12" → always Chargeable (checked before reception/floor rules)
+_APT_NO_WITH_NUMBER_RE = re.compile(r'apt\s*no\s*\d+', re.IGNORECASE)
+
 
 def _text_indicates_roof_top(*parts: str) -> bool:
     """True when any combined text mentions roof top / rooftop (common CAFM typos included)."""
@@ -353,8 +356,9 @@ def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
     - Elevator system (service group: elevator / common CAFM typo elevater): always Non-Chargeable.
     - Garden City only: all AC/HVAC complaints = Non-Chargeable.
     - BaseUnit / Work Description / Specific Area mentioning roof top (or typo e.g. roof toop) = Non-Chargeable.
-    - If BaseUnit is non-empty: Non-Chargeable for specific CAFM labels (reception, outside /
-      out side, exit+entry or exit/), or if BaseUnit contains the word floor; any other BaseUnit text is Chargeable.
+    - If BaseUnit is non-empty: "Apt No" + number → Chargeable (before reception/floor rules).
+    - Else Non-Chargeable for specific CAFM labels (reception, outside / out side, exit+entry or exit/),
+      or if BaseUnit contains the word floor; any other BaseUnit text is Chargeable.
     - If BaseUnit is empty: Askaan, Ajman Holding, Injaaz default Chargeable; else use Excel Space.
     """
     client = (client_val or '').strip().lower()
@@ -383,8 +387,10 @@ def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
         if 'hvac' in sg or 'ac' in sg or 'air conditioning' in sg or 'airconditioning' in sg:
             return 'Non-Chargeable'
 
-    # Non-empty BaseUnit: Non-Chargeable for reception / outside / exit-entry CAFM labels, or any label with "floor".
+    # Non-empty BaseUnit: explicit apartment number → Chargeable (overrides reception/floor heuristics).
     if base_unit:
+        if _APT_NO_WITH_NUMBER_RE.search(base_unit_val or ''):
+            return 'Chargeable'
         if _baseunit_is_non_chargeable_cafm_labels(base_unit):
             return 'Non-Chargeable'
         if 'floor' in base_unit:

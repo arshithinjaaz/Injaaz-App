@@ -61,6 +61,7 @@ REDIS_URL = _redis or None
 # MMR module: optional schedule overrides (survive redeploys when GENERATED_DIR is ephemeral).
 # Set in Render dashboard if mmr_email_config.json is lost each deploy. See module_mmr.routes._load_config.
 # MMR_SCHEDULE_ENABLED=true|false  MMR_SCHEDULE_HOUR=10  MMR_SCHEDULE_MINUTE=0
+# MMR_SCHEDULE_TIMEZONE=Asia/Dubai  (default; hour/minute are in this zone, not UTC)
 
 # JWT Settings - Token expiry times (configurable via environment variables)
 # JWT_ACCESS_HOURS: Number of hours for access token validity (default: 1 hour)
