@@ -8,7 +8,7 @@ Handles: Reactive Workorder Details sheet with columns:
 import os
 import logging
 import zipfile
-from io import BytesIO
+from io import BytesIO, StringIO
 from datetime import datetime
 
 import re
@@ -22,6 +22,34 @@ from openpyxl.drawing.spreadsheet_drawing import OneCellAnchor, AnchorMarker
 from openpyxl.utils.units import pixels_to_EMU
 
 logger = logging.getLogger(__name__)
+
+# Built-in rules (admin can disable each; defaults match original CAFM logic).
+DEFAULT_BUILTIN_RULES = {
+    'facade_cleaning_non_chargeable': True,
+    'elevator_non_chargeable': True,
+    'roof_top_non_chargeable': True,
+    'garden_city_ac_non_chargeable': True,
+    'apt_number_chargeable': True,
+    'residential_hvac_non_chargeable': True,
+    'cafm_reception_outside_exit_non_chargeable': True,
+    'floor_word_non_chargeable': True,
+}
+
+# Defaults for MMR chargeable admin settings (see admin UI + MmrChargeableConfig model)
+DEFAULT_MMR_CHARGEABLE_CONFIG = {
+    # When True (recommended for CAFM exports): BaseUnit text that is not "Apt No + number"
+    # and not reception/floor/exit-style labels resolves to Non-Chargeable.
+    # When False: legacy behaviour — those locations resolve to Chargeable.
+    'non_apartment_baseunit_non_chargeable': True,
+    # Substring overrides (longest match wins). Applied after core rules except where
+    # facade/elevator/roof/Garden AC or apartment numbers lock the outcome.
+    'baseunit_overrides': [],  # [{ "pattern": "lobby", "chargeable": true }, ...]
+    'builtin_rules': dict(DEFAULT_BUILTIN_RULES),
+    # Last saved Location Register (Excel/HTML): rows with chargeable flags for UI + overrides merge
+    'location_register_state': None,
+}
+
+_mmr_chargeable_config_cache: dict | None = None
 
 EXPECTED_COLS = [
     'WorkOrder No', 'Reported Date', 'Priority', 'Work Description',
@@ -182,6 +210,17 @@ def parse_saved_report_excel(file_path: str) -> pd.DataFrame:
     return _normalise_parsed_df(df)
 
 
+def _clean_cafm_text(val) -> str:
+    """Strip Excel/CSV artefacts (e.g. _x000d_) and collapse whitespace."""
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return ''
+    t = str(val).strip()
+    if t.lower() == 'nan':
+        return ''
+    t = t.replace('_x000d_', ' ').replace('_x000D_', ' ').replace('\r', ' ')
+    return ' '.join(t.split())
+
+
 def _normalise_parsed_df(df: pd.DataFrame) -> pd.DataFrame:
     """Common normalisation for parsed Excel data."""
     df.columns = [str(c).strip() for c in df.columns]
@@ -189,11 +228,15 @@ def _normalise_parsed_df(df: pd.DataFrame) -> pd.DataFrame:
     # Drop completely empty rows (copy avoids SettingWithCopyWarning on chained assignment)
     df = df.dropna(how='all').copy()
 
-    # Normalise string columns
+    # Normalise string columns (BaseUnit cleaned again below for CAFM artefacts)
     for col in ['Client', 'Service Group', 'Status', 'Contract',
-                'BaseUnit', 'Space', 'Priority', 'Reported By', 'Closed By']:
+                'Space', 'Priority', 'Reported By', 'Closed By']:
         if col in df.columns:
             df[col] = df[col].fillna('').astype(str).str.strip()
+
+    for col in ['Work Description', 'Specific Area', 'BaseUnit']:
+        if col in df.columns:
+            df[col] = df[col].apply(_clean_cafm_text)
 
     # Normalise work order number – keep rows with valid WO formats:
     # - Pure numeric: 10017690
@@ -305,8 +348,12 @@ def _normalise_space(val: str) -> str:
     return val.strip() or 'Unknown'
 
 
-# Projects where AC/HVAC complaints are always Non-Chargeable (Garden City only)
-_AC_NON_CHARGEABLE_PROJECTS = ('garden',)
+# AC/HVAC in Service Group / complaint text (word-boundary "ac" avoids matching "space", etc.)
+_AC_HVAC_TEXT_RE = re.compile(
+    r'(?:\b(?:hvac|a/c|a-c|chiller|vrf|cooling|ventilation|duct(?:ing)?|thermostat|split\s*ac|'
+    r'ac\s+system|mechanical\s+ac|air\s*condition(?:ing|er)?|airconditioning)\b|\bac\b)',
+    re.IGNORECASE,
+)
 
 # Clients/contracts where rows with empty BaseUnit default to Chargeable (office / internal sites).
 _ALL_BASEUNITS_CHARGEABLE_CLIENTS = ('askaan', 'ajman holding', 'injaaz')
@@ -320,6 +367,134 @@ _ROOF_TOP_RE = re.compile(r'roof\s*to+p', re.IGNORECASE)
 
 # BaseUnit like "Apt No 911", "AptNo 12" → always Chargeable (checked before reception/floor rules)
 _APT_NO_WITH_NUMBER_RE = re.compile(r'apt\s*no\s*\d+', re.IGNORECASE)
+
+
+def _extra_project_blob_for_chargeable(df: pd.DataFrame, i: int) -> str:
+    """Concatenate optional CAFM location columns so Garden City can be detected when not on Client/Contract."""
+    parts: list[str] = []
+    for col in ('Property', 'Site', 'Project', 'Location', 'Building', 'Tower'):
+        if col not in df.columns:
+            continue
+        v = df[col].iat[i]
+        if pd.isna(v):
+            continue
+        s = str(v).strip()
+        if s:
+            parts.append(s)
+    return ' '.join(parts)
+
+
+def _complaint_text_for_chargeable(df: pd.DataFrame, i: int) -> str:
+    for col in ('Complaint', 'Complaint Description', 'Complaint Details'):
+        if col not in df.columns:
+            continue
+        v = df[col].iat[i]
+        if pd.isna(v):
+            continue
+        s = str(v).strip()
+        if s:
+            return s
+    return ''
+
+
+def _project_blob_from_row_dict(r: dict) -> str:
+    """Same fields as _extra_project_blob_for_chargeable for dashboard row dicts."""
+    parts: list[str] = []
+    if not isinstance(r, dict):
+        return ''
+    for k in (
+        'property_display',
+        'Property display',
+        'property',
+        'Property',
+        'Site',
+        'site',
+        'Project',
+        'project',
+        'Location',
+        'location',
+        'Building',
+        'building',
+        'Tower',
+        'tower',
+    ):
+        v = r.get(k)
+        if v is None:
+            continue
+        s = str(v).strip()
+        if s:
+            parts.append(s)
+    return ' '.join(parts)
+
+
+def _complaint_from_row_dict(r: dict) -> str:
+    for k in ('Complaint', 'Complaint Description', 'Complaint Details'):
+        v = r.get(k) if isinstance(r, dict) else None
+        if v is None:
+            continue
+        s = str(v).strip()
+        if s:
+            return s
+    return ''
+
+
+# CAFM property code for **Garden City** estate (PY0002). PY0003 and other codes are not rolled up here.
+# Extend this set only when another code should alias to Garden City.
+_GARDEN_CITY_PROPERTY_CODES = frozenset({'py0002'})
+
+
+def _alnum_lower(s: str) -> str:
+    return re.sub(r'[^a-z0-9]', '', (s or '').lower())
+
+
+def _blob_contains_garden_city_property_code(blob: str) -> bool:
+    compact = _alnum_lower(blob)
+    if not compact:
+        return False
+    for code in _GARDEN_CITY_PROPERTY_CODES:
+        if _alnum_lower(code) in compact:
+            return True
+    return False
+
+
+def _text_indicates_garden_city_project(
+    client_val: str,
+    contract_val: str,
+    property_val: str = '',
+    site_val: str = '',
+) -> bool:
+    """
+    True when the row is for the Garden City estate (CAFM may put this in Property/Site,
+    not only Client/Contract). Also matches known Garden City property codes (e.g. PY0003).
+    """
+    blob = ' '.join(
+        p for p in (client_val, contract_val, property_val, site_val) if p and str(p).strip()
+    ).strip().lower()
+    if not blob:
+        return False
+    if 'garden' in blob and 'city' in blob:
+        return True
+    return _blob_contains_garden_city_property_code(blob)
+
+
+def _text_indicates_ac_hvac_complaint(
+    service_group_val: str,
+    work_description_val: str,
+    specific_area_val: str,
+    complaint_val: str = '',
+) -> bool:
+    """Service Group or complaint/description text indicates an AC / HVAC-type job."""
+    sg = (service_group_val or '').strip()
+    if sg and _AC_HVAC_TEXT_RE.search(sg):
+        return True
+    blob = ' '.join(
+        p
+        for p in (work_description_val, specific_area_val, complaint_val)
+        if p and str(p).strip()
+    ).strip()
+    if not blob:
+        return False
+    return bool(_AC_HVAC_TEXT_RE.search(blob))
 
 
 def _text_indicates_roof_top(*parts: str) -> bool:
@@ -347,72 +522,1086 @@ def _baseunit_is_non_chargeable_cafm_labels(bu_lower: str) -> bool:
     return False
 
 
+def merge_builtin_rules_payload(raw: dict | None) -> dict:
+    """Merge admin JSON into DEFAULT_BUILTIN_RULES (unknown keys ignored)."""
+    br = dict(DEFAULT_BUILTIN_RULES)
+    if isinstance(raw, dict):
+        for k in DEFAULT_BUILTIN_RULES:
+            if k in raw:
+                br[k] = bool(raw[k])
+    return br
+
+
+def _sanitize_location_register_state(lrs: dict | None) -> dict | None:
+    """Trim and cap location_register_state for JSON storage."""
+    if lrs is None:
+        return None
+    if not isinstance(lrs, dict):
+        return None
+    rows_in = lrs.get('rows') or []
+    if not isinstance(rows_in, list):
+        rows_in = []
+    clean: list[dict] = []
+    for r in rows_in[:50000]:
+        if not isinstance(r, dict):
+            continue
+        bu = (r.get('base_unit') or '').strip()
+        if not bu:
+            continue
+        rec: dict = {
+            'base_unit': bu[:500],
+            'funct_type': (str(r.get('funct_type') or ''))[:200],
+            'property': (str(r.get('property') or ''))[:300],
+            'zone': (str(r.get('zone') or ''))[:300],
+            'is_apt': bool(r.get('is_apt')),
+            'chargeable': bool(r.get('chargeable')),
+        }
+        pd = (str(r.get('property_display') or '')).strip()
+        if pd:
+            rec['property_display'] = pd[:300]
+        sz = (str(r.get('sub_zone') or ''))[:300].strip()
+        if sz:
+            rec['sub_zone'] = sz
+        for k, lim in (
+            ('city', 120),
+            ('area', 120),
+            ('area_group', 120),
+            ('sub_zone_code', 120),
+            ('base_unit_code', 120),
+            ('funct_sub_type', 200),
+        ):
+            v = r.get(k)
+            if v is not None and str(v).strip():
+                rec[k] = (str(v))[:lim]
+        for k in ('permit_required', 'tenantable'):
+            if k in r and r.get(k) is not None:
+                rec[k] = r.get(k)
+        kid = (str(r.get('key_id') or '')).strip()
+        if kid:
+            rec['key_id'] = kid[:120]
+        clean.append(rec)
+    cd = lrs.get('columns_detected')
+    if not isinstance(cd, dict):
+        cd = {}
+    return {
+        'source_filename': (str(lrs.get('source_filename') or ''))[:255],
+        'columns_detected': {str(k)[:80]: str(v)[:200] for k, v in cd.items()},
+        'rows': clean,
+    }
+
+
+def _merge_mmr_chargeable_config(raw: dict | None) -> dict:
+    out = {
+        'non_apartment_baseunit_non_chargeable': DEFAULT_MMR_CHARGEABLE_CONFIG[
+            'non_apartment_baseunit_non_chargeable'
+        ],
+        'baseunit_overrides': [],
+        'builtin_rules': dict(DEFAULT_BUILTIN_RULES),
+        'location_register_state': None,
+    }
+    if isinstance(raw, dict):
+        if 'non_apartment_baseunit_non_chargeable' in raw:
+            out['non_apartment_baseunit_non_chargeable'] = bool(
+                raw['non_apartment_baseunit_non_chargeable']
+            )
+        if raw.get('baseunit_overrides') is not None:
+            out['baseunit_overrides'] = list(raw['baseunit_overrides'])
+        out['builtin_rules'] = merge_builtin_rules_payload(raw.get('builtin_rules'))
+        if 'location_register_state' in raw:
+            out['location_register_state'] = _sanitize_location_register_state(
+                raw.get('location_register_state')
+            )
+    return out
+
+
+def _br(cfg: dict, key: str) -> bool:
+    """True if built-in rule `key` is enabled (default: DEFAULT_BUILTIN_RULES)."""
+    br = cfg.get('builtin_rules') or {}
+    if key in br:
+        return bool(br[key])
+    return bool(DEFAULT_BUILTIN_RULES.get(key, True))
+
+
+def _norm_header(val) -> str:
+    return re.sub(r'\s+', ' ', str(val).strip().lower())
+
+
+def _find_register_column(df: pd.DataFrame, required_phrases: list[str]) -> str | None:
+    """Pick column whose header matches the best-scoring phrase (substring match)."""
+    best_col = None
+    best = 0
+    for col in df.columns:
+        nh = _norm_header(col)
+        for phrase in required_phrases:
+            if phrase in nh or nh == phrase:
+                sc = len(phrase)
+                if sc > best:
+                    best = sc
+                    best_col = str(col).strip()
+    return best_col
+
+
+def _column_if_exact(df: pd.DataFrame, want: str) -> str | None:
+    """Pick column whose normalized header equals `want` (single best match)."""
+    want_n = _norm_header(want)
+    for col in df.columns:
+        if _norm_header(col) == want_n:
+            return str(col).strip()
+    return None
+
+
+def _find_property_display_column(df: pd.DataFrame, prop_col: str | None) -> str | None:
+    """
+    Optional column with human-readable property / estate name when the main Property column
+    holds a code (e.g. PRC-0036). Used for register headlines instead of the code.
+    """
+    if df is None or df.empty:
+        return None
+    for col in df.columns:
+        c = str(col).strip()
+        if prop_col and c == prop_col:
+            continue
+        nh = _norm_header(col)
+        if nh in (
+            'property name',
+            'estate name',
+            'project name',
+            'building name',
+            'site name',
+            'property description',
+            'project title',
+            'property title',
+            'estate',
+        ):
+            return c
+        if ('property' in nh and 'name' in nh) or nh.endswith('property title'):
+            if 'code' not in nh and 'id' not in nh and 'key' not in nh:
+                return c
+    return None
+
+
+def _property_headline_source_for_row(r: dict) -> str:
+    """Prefer display name from register; fall back to Property code field."""
+    disp = (r.get('property_display') or '').strip()
+    code = (r.get('property') or '').strip()
+    return disp if disp else code
+
+
+def _map_register_columns(df: pd.DataFrame) -> dict[str, str | None]:
+    """Map logical fields to CAFM-style columns (Location Register .xlsx).
+
+    Prefer a plain **Zone** column over **Sub Zone** so both can coexist (CAFM exports both).
+    Optional columns (city, sub zone, codes, etc.) are used for grouping and display only.
+    """
+    bu = _find_register_column(
+        df,
+        [
+            'base unit name',
+            'base unit',
+            'bu name',
+            'unit name',
+            'location name',
+            'location',
+        ],
+    )
+    if not bu:
+        bu = _find_register_column(df, ['name'])
+    bu_code = _find_register_column(df, ['base unit code', 'bu code', 'unit code'])
+    ft = _find_register_column(
+        df,
+        ['bu funct type', 'funct type', 'function type', 'functional type', 'bu function'],
+    )
+    ft_sub = _find_register_column(
+        df,
+        ['bu funct sub type', 'bu function sub type', 'funct sub type', 'function sub type'],
+    )
+    prop_code = _column_if_exact(df, 'Property Code') or _find_register_column(
+        df,
+        ['property code', 'property id', 'project code', 'prc', 'prc code', 'property ref'],
+    )
+    prop_name = _column_if_exact(df, 'Property Name') or _find_register_column(
+        df,
+        [
+            'property name',
+            'property description',
+            'project name',
+            'building name',
+            'estate name',
+            'site name',
+        ],
+    )
+    prop_generic = None
+    if not prop_code and not prop_name:
+        prop_generic = _find_register_column(df, ['property', 'project'])
+
+    prop_display_col = None
+    if prop_code and prop_name and prop_code != prop_name:
+        prop = prop_code
+        prop_display_col = prop_name
+    elif prop_code and not prop_name:
+        prop = prop_code
+        prop_display_col = _find_property_display_column(df, prop)
+    elif prop_name and not prop_code:
+        prop = prop_name
+        prop_display_col = _find_property_display_column(df, prop)
+    elif prop_generic:
+        prop = prop_generic
+        prop_display_col = _find_property_display_column(df, prop)
+    else:
+        prop = None
+        prop_display_col = None
+    # Main zone: exact "Zone" first, then names — never pick "Sub Zone" as the main zone column.
+    zone = _column_if_exact(df, 'Zone')
+    if not zone:
+        zone = _find_register_column(
+            df,
+            [
+                'zone name',
+                'area zone name',
+                'location zone',
+            ],
+        )
+    if not zone:
+        for col in df.columns:
+            nh = _norm_header(col)
+            if nh == 'zone' or nh.endswith(' zone') and 'sub' not in nh:
+                zone = str(col).strip()
+                break
+    if not zone:
+        zone = _find_register_column(
+            df,
+            [
+                'zone code',
+                'bu zone',
+                'area zone',
+                'zone',
+            ],
+        )
+    # Sub zone (finer grouping under Zone) — "Sub Zone", not "Sub Zone Code"
+    sub_zone = _column_if_exact(df, 'Sub Zone')
+    if not sub_zone:
+        sub_zone = _find_register_column(
+            df,
+            ['sub zone name', 'subzone name', 'sub-zone name'],
+        )
+    if not sub_zone:
+        for col in df.columns:
+            nh = _norm_header(col)
+            if nh in ('sub zone', 'subzone') and 'code' not in nh:
+                sub_zone = str(col).strip()
+                break
+    sub_zone_code = _find_register_column(
+        df,
+        ['sub zone code', 'subzone code', 'sub-zone code'],
+    )
+    city = _column_if_exact(df, 'City') or _find_register_column(df, ['city'])
+    area = _column_if_exact(df, 'Area') or _find_register_column(df, ['area'])
+    area_group = _find_register_column(df, ['area group', 'areagroup'])
+    permit_req = _find_register_column(df, ['permit required', 'permit'])
+    tenantable = _column_if_exact(df, 'Tenantable') or _find_register_column(df, ['tenantable'])
+    # Stable CAFM / register identifier (highlighted “Key ID” in many exports) — dedupe & UI row key
+    key_id = _find_register_column(
+        df,
+        [
+            'key id',
+            'keyid',
+            'location key id',
+            'location id',
+            'cafm id',
+            'cafm key',
+            'record id',
+            'register id',
+            'base unit id',
+            'bu id',
+        ],
+    )
+
+    return {
+        'base_unit': bu,
+        'base_unit_code': bu_code,
+        'key_id': key_id,
+        'funct_type': ft,
+        'funct_sub_type': ft_sub,
+        'property': prop,
+        'property_display': prop_display_col,
+        'zone': zone,
+        'sub_zone': sub_zone,
+        'sub_zone_code': sub_zone_code,
+        'city': city,
+        'area': area,
+        'area_group': area_group,
+        'permit_required': permit_req,
+        'tenantable': tenantable,
+    }
+
+
+def _strip_utf8_bom(data: bytes) -> bytes:
+    if data.startswith(b'\xef\xbb\xbf'):
+        return data[3:]
+    return data
+
+
+def _decode_html_bytes(data: bytes) -> str:
+    data = _strip_utf8_bom(data)
+    for enc in ('utf-8-sig', 'utf-8', 'latin-1', 'cp1252'):
+        try:
+            return data.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return data.decode('utf-8', errors='replace')
+
+
+_MSO_COND_OPEN = re.compile(r'<!--\s*\[if[^\]]*\]\s*>', re.IGNORECASE | re.DOTALL)
+_MSO_COND_CLOSE = re.compile(r'<!\[endif\]\s*-->', re.IGNORECASE)
+
+
+def _unwrap_mso_conditional_comments(html: str) -> str:
+    """Strip Office conditional-comment wrappers so <table> inside is visible to parsers."""
+    s = _MSO_COND_OPEN.sub('', html)
+    return _MSO_COND_CLOSE.sub('', s)
+
+
+def _inline_html_comments_with_table_markup(html: str) -> str:
+    """Unwrap <!-- ... --> blocks that contain table rows so BeautifulSoup/pandas can see them."""
+    out: list[str] = []
+    i = 0
+    while True:
+        start = html.find('<!--', i)
+        if start < 0:
+            out.append(html[i:])
+            break
+        out.append(html[i:start])
+        end = html.find('-->', start + 4)
+        if end < 0:
+            out.append(html[start:])
+            break
+        body = html[start + 4 : end]
+        low = body.lower()
+        if '<table' in low or '<tr' in low or '<td' in low:
+            out.append(body)
+        else:
+            out.append(html[start : end + 3])
+        i = end + 3
+    return ''.join(out)
+
+
+def _dedupe_column_names(names: list[str]) -> list[str]:
+    seen: dict[str, int] = {}
+    out = []
+    for raw in names:
+        h = str(raw).strip() or 'col'
+        if h in seen:
+            seen[h] += 1
+            h = f'{h}_{seen[h]}'
+        else:
+            seen[h] = 0
+        out.append(h)
+    return out
+
+
+def _grid_to_dataframe(grid: list[list[str]]) -> pd.DataFrame | None:
+    if not grid:
+        return None
+    width = max(len(r) for r in grid)
+    norm = [list(r) + [''] * (width - len(r)) for r in grid]
+    if len(norm) == 1:
+        return pd.DataFrame([norm[0]], columns=_dedupe_column_names([str(i) for i in range(width)]))
+    header = [str(c).strip() for c in norm[0]]
+    cols = _dedupe_column_names([h if h else f'col_{i}' for i, h in enumerate(header)])
+    body = norm[1:]
+    return pd.DataFrame(body, columns=cols)
+
+
+def _dataframes_from_tr_tags(html: str) -> list[pd.DataFrame]:
+    """Build DataFrames from <tr>/<td> when pandas.read_html finds no <table> (or MSO quirks)."""
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return []
+    soup = BeautifulSoup(html, 'lxml')
+    out: list[pd.DataFrame] = []
+
+    def append_from_grid(grid: list[list[str]]) -> None:
+        df = _grid_to_dataframe(grid)
+        if df is not None and not df.empty:
+            out.append(df)
+
+    for table in soup.find_all('table'):
+        grid: list[list[str]] = []
+        for tr in table.find_all('tr'):
+            cells = tr.find_all(['td', 'th'])
+            if not cells:
+                continue
+            grid.append([c.get_text(' ', strip=True) for c in cells])
+        append_from_grid(grid)
+
+    if not out:
+        orphan_rows: list[list[str]] = []
+        for tr in soup.find_all('tr'):
+            if tr.find_parent('table') is not None:
+                continue
+            cells = tr.find_all(['td', 'th'])
+            if not cells:
+                continue
+            orphan_rows.append([c.get_text(' ', strip=True) for c in cells])
+        append_from_grid(orphan_rows)
+
+    return out
+
+
+def _read_html_dataframes(data: bytes) -> list[pd.DataFrame]:
+    """
+    Extract tables from HTML/Office "web page" exports.
+
+    Order: unwrap MSO conditional comments → pandas read_html (whole doc, cleaned doc,
+    per-<table>) → manual <tr>/<td> extraction (when pandas reports no tables).
+    """
+    dfs: list[pd.DataFrame] = []
+    text = _unwrap_mso_conditional_comments(_decode_html_bytes(data))
+    text = _inline_html_comments_with_table_markup(text)
+    buf = BytesIO(text.encode('utf-8'))
+
+    for flavor in ('lxml', 'html5lib', None):
+        try:
+            kw = {'displayed_only': False}
+            if flavor is not None:
+                kw['flavor'] = flavor
+            buf.seek(0)
+            tbs = pd.read_html(buf, **kw)
+            for t in tbs or []:
+                if t is not None and not t.empty:
+                    dfs.append(t)
+            if dfs:
+                return dfs
+        except Exception:
+            pass
+
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError as e:
+        raise ValueError(
+            'Could not read HTML table export: beautifulsoup4 is required. '
+            'pip install beautifulsoup4 lxml html5lib'
+        ) from e
+
+    soup = BeautifulSoup(text, 'lxml')
+
+    if not dfs:
+        soup_clean = BeautifulSoup(text, 'lxml')
+        for tag in soup_clean(['script', 'style', 'noscript']):
+            tag.decompose()
+        for flavor in ('lxml', 'html5lib', None):
+            try:
+                kw = {'displayed_only': False}
+                if flavor is not None:
+                    kw['flavor'] = flavor
+                tbs = pd.read_html(StringIO(str(soup_clean)), **kw)
+                for t in tbs or []:
+                    if t is not None and not t.empty:
+                        dfs.append(t)
+                if dfs:
+                    return dfs
+            except Exception:
+                pass
+
+    for table in soup.find_all('table'):
+        fragment = str(table)
+        for flavor in ('lxml', 'html5lib', None):
+            try:
+                kw = {'displayed_only': False}
+                if flavor is not None:
+                    kw['flavor'] = flavor
+                tbs = pd.read_html(StringIO(fragment), **kw)
+                for t in tbs or []:
+                    if t is not None and not t.empty:
+                        dfs.append(t)
+                break
+            except Exception:
+                continue
+
+    if not dfs:
+        dfs.extend(_dataframes_from_tr_tags(text))
+
+    return dfs
+
+
+def _pick_largest_table(dfs: list[pd.DataFrame]) -> pd.DataFrame | None:
+    if not dfs:
+        return None
+
+    def score(df: pd.DataFrame) -> int:
+        if df is None or df.empty:
+            return -1
+        return int(df.shape[0]) * max(1, int(df.shape[1]))
+
+    return max(dfs, key=score)
+
+
+def _dataframe_from_register_bytes(data: bytes, filename: str) -> tuple[pd.DataFrame, str]:
+    """Load first sheet / first HTML table. Returns (df, source_format)."""
+    data = _strip_utf8_bom(data)
+    head = (data[:1024] if data else b'').lstrip().lower()
+    if head.startswith(b'<!doctype') or head.startswith(b'<html'):
+        dfs = _read_html_dataframes(data)
+        df = _pick_largest_table(dfs)
+        if df is None:
+            fn = (filename or '').lower()
+            try:
+                bio = BytesIO(data)
+                if fn.endswith(('.xlsx', '.xlsm')):
+                    bio.seek(0)
+                    df = pd.read_excel(bio, engine='openpyxl', sheet_name=0)
+                elif fn.endswith('.xls'):
+                    try:
+                        bio.seek(0)
+                        df = pd.read_excel(bio, engine='xlrd', sheet_name=0)
+                    except Exception:
+                        bio.seek(0)
+                        df = pd.read_excel(bio, engine='openpyxl', sheet_name=0)
+                if df is not None and not df.empty:
+                    df = df.dropna(axis=1, how='all')
+                    return df, 'excel'
+            except Exception:
+                pass
+            raise ValueError(
+                'This file could not be read as a location register table. '
+                'Export from CAFM as a real .xlsx file, or use a spreadsheet/HTML export that '
+                'includes visible grid rows (table or row/cell layout).'
+            )
+        df = df.dropna(axis=1, how='all')
+        return df, 'html_table'
+
+    buf = BytesIO(data)
+    fn = (filename or '').lower()
+    try:
+        buf.seek(0)
+        if fn.endswith('.xls') and not head.startswith(b'<'):
+            df = pd.read_excel(buf, engine='xlrd', sheet_name=0)
+        elif fn.endswith('.csv'):
+            last_err = None
+            for enc in ('utf-8-sig', 'utf-8', 'latin-1', 'cp1252'):
+                try:
+                    buf.seek(0)
+                    df = pd.read_csv(buf, encoding=enc)
+                    break
+                except Exception as e:
+                    last_err = e
+            else:
+                raise ValueError(f'Could not read CSV: {last_err}') from last_err
+        else:
+            df = pd.read_excel(buf, engine='openpyxl', sheet_name=0)
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(
+            f'Could not read Excel workbook: {e}. '
+            'If you saved the page from the browser, export a real .xlsx from CAFM instead.'
+        ) from e
+
+    df = df.dropna(axis=1, how='all')
+    return df, 'excel'
+
+
+def _register_row_sort_key(u: dict) -> tuple:
+    """Sort by Key ID when present (natural order), else Base Unit."""
+    kid = (str(u.get('key_id') or '')).strip()
+    bu = (u.get('base_unit') or '').lower()
+    if kid:
+        return (0, kid.lower(), bu)
+    return (1, bu, bu)
+
+
+def _zone_category_sort_key(z: str) -> tuple:
+    """
+    Sort zone headings for the Location Register: Common Area, Residential, etc. first,
+    then other zones alphabetically, then (No zone) last.
+    """
+    s = (z or '').strip().lower()
+    if not s or s == '(no zone)':
+        return (2, 0, '')
+    # Longer phrases first so e.g. "common area" wins over bare "common"
+    rules: list[tuple[str, int]] = [
+        ('common area', 0),
+        ('common parts', 1),
+        ('common', 2),
+        ('residential', 3),
+        ('commercial', 4),
+        ('retail', 5),
+        ('office', 6),
+        ('parking', 7),
+        ('amenity', 8),
+        ('amenities', 8),
+        ('service', 9),
+        ('utility', 10),
+        ('utilities', 10),
+        ('mechanical', 11),
+        ('electrical', 12),
+        ('landscape', 13),
+        ('external', 14),
+    ]
+    for phrase, rank in rules:
+        if phrase in s:
+            return (0, rank, s)
+    return (1, 0, s)
+
+
+def _loc_register_property_group_key(raw: str) -> str:
+    """
+    Roll up per-tower / per-block CAFM property names into one heading for the Location Register UI.
+
+    - Any property text containing both "orient" and "tower" → single group **Orient Tower**
+    - Any property text containing both "garden" and "city", or a known Garden City CAFM code → **Garden City**
+    Headlines prefer **property_display** (Property Name / estate name) when present so codes (e.g. PRC-0036) are not shown alone.
+    Row payloads still keep the original `property` (code) and optional `property_display` from CAFM.
+    """
+    s = (raw or '').strip()
+    if not s:
+        return '(No property)'
+    low = s.lower()
+    if 'orient' in low and 'tower' in low:
+        return 'Orient Tower'
+    if ('garden' in low and 'city' in low) or _blob_contains_garden_city_property_code(s):
+        return 'Garden City'
+    return s
+
+
+def _group_register_by_property_zone(rows: list[dict]) -> list[dict]:
+    """Group rows by property → zone → sub_zone (when present) for the admin UI."""
+    from collections import defaultdict
+
+    has_sub = any((r.get('sub_zone') or '').strip() for r in rows)
+
+    tree: dict[str, dict[str, dict[str, list[dict]]]] = defaultdict(
+        lambda: defaultdict(lambda: defaultdict(list))
+    )
+    for r in rows:
+        p = _loc_register_property_group_key(_property_headline_source_for_row(r))
+        z = (r.get('zone') or '').strip() or '(No zone)'
+        if has_sub:
+            sz = (r.get('sub_zone') or '').strip() or '(No sub-zone)'
+        else:
+            sz = ''
+        tree[p][z][sz].append(r)
+
+    out: list[dict] = []
+    for p in sorted(tree.keys(), key=lambda x: x.lower()):
+        zd = tree[p]
+        zones_out: list[dict] = []
+        for z in sorted(zd.keys(), key=_zone_category_sort_key):
+            szd = zd[z]
+            if has_sub:
+                sub_zones: list[dict] = []
+                for sz in sorted(szd.keys(), key=lambda x: x.lower()):
+                    units = sorted(szd[sz], key=_register_row_sort_key)
+                    sub_zones.append({'sub_zone': sz, 'units': units})
+                zones_out.append({'zone': z, 'sub_zones': sub_zones})
+            else:
+                units = sorted(szd.get('', []), key=_register_row_sort_key)
+                zones_out.append({'zone': z, 'units': units})
+        out.append({'property': p, 'zones': zones_out})
+    return out
+
+
+def parse_location_register_bytes(data: bytes, filename: str) -> dict:
+    """
+    Parse Location Register: Base Unit name, BU Funct Type, Property, Zone.
+
+    When a **Key ID** column exists (e.g. CAFM “Key ID” / highlighted identifier), it is used as
+    the stable row key for deduplication and saved toggles; otherwise rows are deduped by
+    (Base Unit, Property, Zone, Sub Zone).
+
+    Supports .xlsx, binary .xls, and CAFM HTML spreadsheet exports (single-file HTML must contain
+    a `<table>`; “Save as Web Page” .xls that only references external sheet files may be empty —
+    re-save as .xlsx from Excel).
+
+    Returns grouped structure for the Report settings UI.
+    """
+    df, source_format = _dataframe_from_register_bytes(data, filename)
+    if df is None or df.empty:
+        return {
+            'source_format': source_format,
+            'columns_detected': {},
+            'apt_like_count': 0,
+            'total_rows': 0,
+            'rows': [],
+            'by_property': [],
+            'stats': {},
+        }
+
+    df = df.dropna(how='all')
+    if df.empty:
+        return {
+            'source_format': source_format,
+            'columns_detected': {},
+            'apt_like_count': 0,
+            'total_rows': 0,
+            'rows': [],
+            'by_property': [],
+            'stats': {},
+        }
+
+    cols = _map_register_columns(df)
+    bu_col = cols.get('base_unit')
+    if not bu_col or bu_col not in df.columns:
+        raise ValueError(
+            'Could not find a Base Unit name column. '
+            'Expected a column titled like “Base Unit”, “Base Unit Name”, or “BU Name”.'
+        )
+
+    ft_col = cols.get('funct_type')
+    pr_col = cols.get('property')
+    zn_col = cols.get('zone')
+
+    rows: list[dict] = []
+    apt_like = 0
+    seen_key: set[tuple] = set()
+
+    cols_list = list(df.columns)
+    bi = cols_list.index(bu_col)
+
+    def _idx(cname: str | None) -> int | None:
+        if not cname or cname not in cols_list:
+            return None
+        return cols_list.index(cname)
+
+    fti = _idx(ft_col)
+    pri = _idx(pr_col)
+    prop_display_col = cols.get('property_display')
+    propdi = _idx(prop_display_col)
+    zni = _idx(zn_col)
+    subzi = _idx(cols.get('sub_zone'))
+    ftsubi = _idx(cols.get('funct_sub_type'))
+    keyidi = _idx(cols.get('key_id'))
+    bucodei = _idx(cols.get('base_unit_code'))
+    cityi = _idx(cols.get('city'))
+    areai = _idx(cols.get('area'))
+    agri = _idx(cols.get('area_group'))
+    szcodei = _idx(cols.get('sub_zone_code'))
+    permi = _idx(cols.get('permit_required'))
+    teni = _idx(cols.get('tenantable'))
+
+    def _tup_cell(tup: tuple, ix: int | None) -> str:
+        if ix is None:
+            return ''
+        v = tup[ix]
+        if pd.isna(v):
+            return ''
+        s = str(v).strip()
+        return '' if s.lower() == 'nan' else s
+
+    # itertuples() is much faster than iterrows() for large exports
+    for tup in df.itertuples(index=False, name=None):
+        bu_raw = tup[bi]
+        if pd.isna(bu_raw):
+            continue
+        bu = str(bu_raw).strip()
+        if not bu or bu.lower() == 'nan':
+            continue
+        prop_v = _tup_cell(tup, pri)
+        zone_v = _tup_cell(tup, zni)
+        sz_v = _tup_cell(tup, subzi)
+        kid_raw = _tup_cell(tup, keyidi) if keyidi is not None else ''
+        kid = kid_raw.strip()
+        if kid:
+            dedupe = ('id', kid.lower())
+        else:
+            dedupe = ('bu', bu.lower(), prop_v.lower(), zone_v.lower(), sz_v.lower())
+        if dedupe in seen_key:
+            continue
+        seen_key.add(dedupe)
+
+        ft_v = _tup_cell(tup, fti)
+        is_apt = bool(_APT_NO_WITH_NUMBER_RE.search(bu))
+        if is_apt:
+            apt_like += 1
+
+        row_obj: dict = {
+            'base_unit': bu,
+            'funct_type': ft_v,
+            'property': prop_v,
+            'zone': zone_v,
+            'is_apt': is_apt,
+        }
+        if propdi is not None:
+            pd_v = _tup_cell(tup, propdi)
+            if pd_v:
+                row_obj['property_display'] = pd_v
+        if kid:
+            row_obj['key_id'] = kid
+        if sz_v:
+            row_obj['sub_zone'] = sz_v
+        if ftsubi is not None:
+            row_obj['funct_sub_type'] = _tup_cell(tup, ftsubi)
+        if bucodei is not None:
+            row_obj['base_unit_code'] = _tup_cell(tup, bucodei)
+        if cityi is not None:
+            row_obj['city'] = _tup_cell(tup, cityi)
+        if areai is not None:
+            row_obj['area'] = _tup_cell(tup, areai)
+        if agri is not None:
+            row_obj['area_group'] = _tup_cell(tup, agri)
+        if szcodei is not None:
+            row_obj['sub_zone_code'] = _tup_cell(tup, szcodei)
+        if permi is not None:
+            v = tup[permi] if permi < len(tup) else None
+            if v is not None and not (isinstance(v, float) and pd.isna(v)):
+                row_obj['permit_required'] = v
+        if teni is not None:
+            v = tup[teni] if teni < len(tup) else None
+            if v is not None and not (isinstance(v, float) and pd.isna(v)):
+                row_obj['tenantable'] = v
+
+        rows.append(row_obj)
+
+    by_property = _group_register_by_property_zone(rows)
+
+    non_apt_n = sum(1 for r in rows if not r.get('is_apt'))
+    props = {_loc_register_property_group_key(_property_headline_source_for_row(r)) for r in rows}
+    zones = {r.get('zone', '') for r in rows}
+    subz = {r.get('sub_zone', '') for r in rows if (r.get('sub_zone') or '').strip()}
+    stats = {
+        'row_count': len(rows),
+        'property_count': len([p for p in props if p]),
+        'zone_count': len([z for z in zones if z]),
+        'sub_zone_count': len(subz),
+        'non_apartment_rows': non_apt_n,
+        'apartment_rows': apt_like,
+    }
+
+    return {
+        'source_format': source_format,
+        'columns_detected': {k: v for k, v in cols.items() if v},
+        'apt_like_count': apt_like,
+        'total_rows': len(rows),
+        'rows': rows,
+        'by_property': by_property,
+        'stats': stats,
+    }
+
+
+def _load_mmr_chargeable_config_from_db() -> dict:
+    try:
+        from flask import has_app_context
+        if not has_app_context():
+            return dict(DEFAULT_MMR_CHARGEABLE_CONFIG)
+        from app.models import MmrChargeableConfig
+        row = MmrChargeableConfig.query.first()
+        if row and row.config_json:
+            return _merge_mmr_chargeable_config(row.config_json)
+    except Exception as e:
+        logger.debug('MMR chargeable config DB read skipped: %s', e)
+    return dict(DEFAULT_MMR_CHARGEABLE_CONFIG)
+
+
+def get_mmr_chargeable_config() -> dict:
+    """Return merged MMR chargeable settings (cached until invalidate_mmr_chargeable_config_cache)."""
+    global _mmr_chargeable_config_cache
+    if _mmr_chargeable_config_cache is None:
+        _mmr_chargeable_config_cache = _load_mmr_chargeable_config_from_db()
+    return dict(_mmr_chargeable_config_cache)
+
+
+def invalidate_mmr_chargeable_config_cache() -> None:
+    global _mmr_chargeable_config_cache
+    _mmr_chargeable_config_cache = None
+
+
+def _apply_mmr_chargeable_overrides(
+    base_unit_val: str,
+    service_group_val: str,
+    client_val: str,
+    contract_val: str,
+    work_description_val: str,
+    specific_area_val: str,
+    resolved: str,
+    config: dict,
+    property_val: str = '',
+    site_val: str = '',
+    complaint_val: str = '',
+) -> str:
+    """Admin-defined BaseUnit substring overrides. Longest pattern wins."""
+    overrides = config.get('baseunit_overrides') or []
+    if not overrides or not (base_unit_val or '').strip():
+        return resolved
+    sg = (service_group_val or '').strip().lower()
+    if _br(config, 'facade_cleaning_non_chargeable') and 'facade cleaning' in sg:
+        return resolved
+    if _br(config, 'elevator_non_chargeable') and _ELEVATOR_SERVICE_GROUP_RE.search(
+        service_group_val or ''
+    ):
+        return resolved
+    if _br(config, 'roof_top_non_chargeable') and _text_indicates_roof_top(
+        base_unit_val or '', work_description_val or '', specific_area_val or '',
+    ):
+        return resolved
+    if _br(config, 'garden_city_ac_non_chargeable') and _text_indicates_garden_city_project(
+        client_val or '', contract_val or '', property_val or '', site_val or ''
+    ) and _text_indicates_ac_hvac_complaint(
+        service_group_val or '',
+        work_description_val or '',
+        specific_area_val or '',
+        complaint_val or '',
+    ):
+        return resolved
+    if (
+        _br(config, 'residential_hvac_non_chargeable')
+        and _text_indicates_garden_city_project(
+            client_val or '', contract_val or '', property_val or '', site_val or ''
+        )
+        and _APT_NO_WITH_NUMBER_RE.search(base_unit_val or '')
+        and _text_indicates_ac_hvac_complaint(
+            service_group_val or '',
+            work_description_val or '',
+            specific_area_val or '',
+            complaint_val or '',
+        )
+    ):
+        return resolved
+    if _br(config, 'apt_number_chargeable') and _APT_NO_WITH_NUMBER_RE.search(
+        base_unit_val or ''
+    ):
+        return resolved
+    bu = (base_unit_val or '').strip().lower()
+    best_chargeable = None
+    best_len = -1
+    for o in overrides:
+        if not isinstance(o, dict):
+            continue
+        pat = (o.get('pattern') or '').strip().lower()
+        if not pat or pat not in bu:
+            continue
+        if len(pat) > best_len:
+            best_len = len(pat)
+            best_chargeable = bool(o.get('chargeable'))
+    if best_chargeable is None:
+        return resolved
+    return 'Chargeable' if best_chargeable else 'Non-Chargeable'
+
+
 def _resolve_chargeable(space_val: str, base_unit_val: str, client_val: str,
                        service_group_val: str = '', contract_val: str = '',
-                       work_description_val: str = '', specific_area_val: str = '') -> str:
+                       work_description_val: str = '', specific_area_val: str = '',
+                       config: dict | None = None,
+                       property_val: str = '', site_val: str = '',
+                       complaint_val: str = '') -> str:
     """
     Resolve Chargeable vs Non-Chargeable.
     - Facade Cleaning service group: always Non-Chargeable.
     - Elevator system (service group: elevator / common CAFM typo elevater): always Non-Chargeable.
-    - Garden City only: all AC/HVAC complaints = Non-Chargeable.
+    - Garden City only: AC/HVAC complaints = Non-Chargeable (estate from Client/Contract/Property/Site;
+      AC/HVAC from Service Group and/or Work Description / Specific Area / Complaint).
     - BaseUnit / Work Description / Specific Area mentioning roof top (or typo e.g. roof toop) = Non-Chargeable.
-    - If BaseUnit is non-empty: "Apt No" + number → Chargeable (before reception/floor rules).
+    - If BaseUnit is non-empty: **Garden City only** — apartment pattern + HVAC/AC-type Service Group or
+      complaint → Non-Chargeable when that rule is on; else "Apt No" + number → Chargeable (before reception/floor rules).
     - Else Non-Chargeable for specific CAFM labels (reception, outside / out side, exit+entry or exit/),
-      or if BaseUnit contains the word floor; any other BaseUnit text is Chargeable.
+      or if BaseUnit contains the word floor; other non-apartment BaseUnit text follows admin config
+      (default: Non-Chargeable to match CAFM exports where only apartments bill).
     - If BaseUnit is empty: Askaan, Ajman Holding, Injaaz default Chargeable; else use Excel Space.
+    - Optional admin substring overrides (longest match) via get_mmr_chargeable_config().
     """
+    if config is None:
+        config = get_mmr_chargeable_config()
     client = (client_val or '').strip().lower()
     contract = (contract_val or '').strip().lower()
     combined = f'{client} {contract}'
     sg = (service_group_val or '').strip().lower()
     base_unit = (base_unit_val or '').strip().lower()
 
-    # Facade Cleaning is always Non-Chargeable regardless of client or base unit
-    if 'facade cleaning' in sg:
-        return 'Non-Chargeable'
-
-    # Elevator system: always Non-Chargeable (before client-wide Chargeable rules).
-    # Match "Elevator" and CAFM typo "Elevater"; not "elevation" (civil works).
-    if _ELEVATOR_SERVICE_GROUP_RE.search(sg):
-        return 'Non-Chargeable'
-
-    # Roof top / rooftop in BaseUnit, description, or Specific Area (CAFM) → Non-Chargeable
-    if _text_indicates_roof_top(
+    if _br(config, 'facade_cleaning_non_chargeable') and 'facade cleaning' in sg:
+        out = 'Non-Chargeable'
+    elif _br(config, 'elevator_non_chargeable') and _ELEVATOR_SERVICE_GROUP_RE.search(sg):
+        out = 'Non-Chargeable'
+    elif _br(config, 'roof_top_non_chargeable') and _text_indicates_roof_top(
         base_unit_val or '', work_description_val or '', specific_area_val or '',
     ):
-        return 'Non-Chargeable'
+        out = 'Non-Chargeable'
+    elif _br(config, 'garden_city_ac_non_chargeable') and _text_indicates_garden_city_project(
+        client_val or '', contract_val or '', property_val or '', site_val or ''
+    ) and _text_indicates_ac_hvac_complaint(
+        service_group_val or '',
+        work_description_val or '',
+        specific_area_val or '',
+        complaint_val or '',
+    ):
+        out = 'Non-Chargeable'
+    elif base_unit:
+        if (
+            _br(config, 'residential_hvac_non_chargeable')
+            and _text_indicates_garden_city_project(
+                client_val or '', contract_val or '', property_val or '', site_val or ''
+            )
+            and _APT_NO_WITH_NUMBER_RE.search(base_unit_val or '')
+            and _text_indicates_ac_hvac_complaint(
+                service_group_val or '',
+                work_description_val or '',
+                specific_area_val or '',
+                complaint_val or '',
+            )
+        ):
+            out = 'Non-Chargeable'
+        elif _br(config, 'apt_number_chargeable') and _APT_NO_WITH_NUMBER_RE.search(
+            base_unit_val or ''
+        ):
+            out = 'Chargeable'
+        elif _br(config, 'cafm_reception_outside_exit_non_chargeable') and _baseunit_is_non_chargeable_cafm_labels(
+            base_unit
+        ):
+            out = 'Non-Chargeable'
+        elif _br(config, 'floor_word_non_chargeable') and 'floor' in base_unit:
+            out = 'Non-Chargeable'
+        elif config.get('non_apartment_baseunit_non_chargeable', True):
+            out = 'Non-Chargeable'
+        else:
+            out = 'Chargeable'
+    elif any(p in combined for p in _ALL_BASEUNITS_CHARGEABLE_CLIENTS):
+        out = 'Chargeable'
+    else:
+        space = (space_val or '').strip().lower()
+        if space and space not in ('unknown',):
+            n = _normalise_space(space_val)
+            if n in ('Chargeable', 'Non-Chargeable'):
+                out = n
+            else:
+                out = 'Non-Chargeable'
+        else:
+            out = 'Non-Chargeable'
 
-    # Garden City only: AC/HVAC complaints are always Non-Chargeable
-    if any(p in combined for p in _AC_NON_CHARGEABLE_PROJECTS):
-        if 'hvac' in sg or 'ac' in sg or 'air conditioning' in sg or 'airconditioning' in sg:
-            return 'Non-Chargeable'
+    return _apply_mmr_chargeable_overrides(
+        base_unit_val,
+        service_group_val,
+        client_val,
+        contract_val,
+        work_description_val,
+        specific_area_val,
+        out,
+        config,
+        property_val,
+        site_val,
+        complaint_val,
+    )
 
-    # Non-empty BaseUnit: explicit apartment number → Chargeable (overrides reception/floor heuristics).
-    if base_unit:
-        if _APT_NO_WITH_NUMBER_RE.search(base_unit_val or ''):
-            return 'Chargeable'
-        if _baseunit_is_non_chargeable_cafm_labels(base_unit):
-            return 'Non-Chargeable'
-        if 'floor' in base_unit:
-            return 'Non-Chargeable'
-        return 'Chargeable'
 
-    # BaseUnit empty: office clients default Chargeable; otherwise use Excel Space.
-    if any(p in combined for p in _ALL_BASEUNITS_CHARGEABLE_CLIENTS):
-        return 'Chargeable'
-
-    space = (space_val or '').strip().lower()
-
-    # Excel Space when BaseUnit empty
-    if space and space not in ('unknown',):
-        n = _normalise_space(space_val)
-        if n in ('Chargeable', 'Non-Chargeable'):
-            return n
-    return 'Non-Chargeable'
+def preview_chargeable_for_base_units(
+    base_units: list[str],
+    merged_config: dict,
+) -> list[dict[str, str]]:
+    """
+    Resolve Chargeable/Non-Chargeable for BaseUnit-only strings (location register preview).
+    Uses the same pipeline as MMR reports: built-in rules, non-apartment default, then overrides.
+    Space / Service Group / Client are empty (register export has BaseUnit only).
+    """
+    out: list[dict[str, str]] = []
+    for bu in base_units:
+        s = bu if isinstance(bu, str) else str(bu or '')
+        s = s.strip()
+        r = _resolve_chargeable('', s, '', '', '', '', '', merged_config)
+        out.append({'base_unit': s, 'resolved': r})
+    return out
 
 
 def _get_resolved_chargeable_series(df: pd.DataFrame) -> pd.Series:
     """Return a Series of Chargeable/Non-Chargeable per row for chargeable analysis."""
+    cfg = get_mmr_chargeable_config()
     space_col = df['Space'] if 'Space' in df.columns else pd.Series([''] * len(df))
     base_col = df['BaseUnit'] if 'BaseUnit' in df.columns else pd.Series([''] * len(df))
     client_col = df['Client'] if 'Client' in df.columns else pd.Series([''] * len(df))
@@ -420,6 +1609,7 @@ def _get_resolved_chargeable_series(df: pd.DataFrame) -> pd.Series:
     sg_col = df['Service Group'] if 'Service Group' in df.columns else pd.Series([''] * len(df))
     wd_col = df['Work Description'] if 'Work Description' in df.columns else pd.Series([''] * len(df))
     sa_col = df['Specific Area'] if 'Specific Area' in df.columns else pd.Series([''] * len(df))
+    n = len(df)
     return pd.Series([
         _resolve_chargeable(
             space_col.iat[i] if i < len(space_col) else '',
@@ -429,8 +1619,12 @@ def _get_resolved_chargeable_series(df: pd.DataFrame) -> pd.Series:
             contract_col.iat[i] if i < len(contract_col) else '',
             wd_col.iat[i] if i < len(wd_col) else '',
             sa_col.iat[i] if i < len(sa_col) else '',
+            cfg,
+            _extra_project_blob_for_chargeable(df, i) if i < n else '',
+            '',
+            _complaint_text_for_chargeable(df, i) if i < n else '',
         )
-        for i in range(len(df))
+        for i in range(n)
     ], index=df.index)
 
 
