@@ -35,6 +35,8 @@
       --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
       --shadow: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.04);
       --shadow-lg: 0 20px 40px -8px rgba(0,0,0,0.1);
+      /* Fixed main nav (dashboard.css .nav / .nav-container min-height) — content must start below it */
+      --main-nav-h: 72px;
     }
     
     body {
@@ -94,7 +96,7 @@
     .container {
       max-width: 1400px;
       margin: 0 auto;
-      padding: 1.75rem 1.5rem 3rem;
+      padding: calc(var(--main-nav-h) + 1.75rem) 1.5rem 3rem;
     }
     
     .page-header {
@@ -1021,7 +1023,7 @@
     
     @media (max-width: 1200px) {
       .container {
-        padding: 1.25rem 1.5rem !important;
+        padding: calc(var(--main-nav-h) + 1.25rem) 1.5rem 1.25rem !important;
       }
       
       .users-section {
@@ -1076,7 +1078,7 @@
       }
       
       .container {
-        padding: 1rem !important;
+        padding: calc(var(--main-nav-h) + 1rem) 1rem 1rem !important;
         width: 100% !important;
       }
       
@@ -1176,7 +1178,7 @@
       }
       
       .container {
-        padding: 0.75rem 1rem !important;
+        padding: calc(var(--main-nav-h) + 0.75rem) 1rem 0.75rem !important;
       }
       
       .page-title {

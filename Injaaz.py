@@ -871,6 +871,11 @@ def create_app():
         """Admin dashboard - requires admin authentication"""
         return render_template('admin_dashboard.html')
 
+    @app.route('/admin/mmr-chargeable')
+    def mmr_chargeable_settings_page():
+        """Report setting: chargeable / BaseUnit rules (admin UI)."""
+        return render_template('mmr_chargeable_settings.html')
+
     @app.route('/admin/devices')
     def admin_devices():
         """Device management - admin only"""

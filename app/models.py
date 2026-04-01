@@ -647,6 +647,17 @@ class DocHubAccess(db.Model):
         return f'<DocHubAccess user={self.user_id} access={self.can_access}>'
 
 
+class MmrChargeableConfig(db.Model):
+    """Single-row JSON settings for MMR chargeable rules (admin-editable)."""
+    __tablename__ = 'mmr_chargeable_config'
+
+    id = db.Column(db.Integer, primary_key=True)
+    config_json = db.Column(JSON, nullable=False)
+
+    def __repr__(self):
+        return f'<MmrChargeableConfig id={self.id}>'
+
+
 class Notification(db.Model):
     """User notifications for workflow updates"""
     __tablename__ = 'notifications'

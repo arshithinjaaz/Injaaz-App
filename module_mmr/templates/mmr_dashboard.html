@@ -213,21 +213,23 @@
     .upload-side-actions {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.45rem;
       flex-shrink: 0;
-      min-width: 160px;
+      min-width: 136px;
+      max-width: 200px;
     }
     .upload-side-actions .btn-report-folder,
     .upload-side-actions .btn-automation {
       width: 100%;
-      min-width: 160px;
+      min-width: 0;
       justify-content: center;
-      padding: 0.5rem 1rem;
-      font-size: .875rem;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.8125rem;
       font-weight: 600;
       border-radius: var(--radius);
       cursor: pointer;
       transition: background .2s, border-color .2s, color .2s;
+      line-height: 1.25;
     }
     .upload-side-actions .btn-report-folder {
       background: var(--primary);
@@ -262,8 +264,8 @@
     }
     .btn-automation-refresh {
       flex-shrink: 0;
-      width: 40px;
-      min-height: 40px;
+      width: 34px;
+      min-height: 34px;
       padding: 0;
       border-radius: var(--radius);
       border: 1px solid var(--border);
@@ -274,6 +276,10 @@
       align-items: center;
       justify-content: center;
       transition: background .15s, border-color .15s;
+    }
+    .btn-automation-refresh svg {
+      width: 16px;
+      height: 16px;
     }
     .btn-automation-refresh:hover {
       background: rgba(18, 84, 53, .08);
@@ -288,6 +294,78 @@
     }
     @keyframes mmr-refresh-spin {
       to { transform: rotate(360deg); }
+    }
+    #mmr-report-settings-btn.btn-report-settings {
+      width: 100%;
+      min-width: 0;
+      justify-content: center;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background .2s, border-color .2s, color .2s;
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      display: none;
+      flex-direction: row;
+      line-height: 1.25;
+    }
+    #mmr-report-settings-btn.btn-report-settings:hover {
+      background: rgba(18, 84, 53, .08);
+    }
+    /*
+      Report settings: centered modal; fully transparent ::backdrop (dashboard stays visible).
+      White panel uses shadow/border so the box stays readable without a dim layer.
+    */
+    #reportSettingsModal.mmr-rs-native {
+      position: fixed;
+      inset: auto;
+      top: 50%;
+      left: 50%;
+      margin: 0;
+      padding: 0;
+      border: none;
+      width: min(99.5vw, 1760px);
+      height: min(97vh, 1200px);
+      max-width: none;
+      max-height: none;
+      background: transparent;
+      color: inherit;
+      overflow: visible;
+      transform: translate(-50%, -50%);
+    }
+    #reportSettingsModal.mmr-rs-native::backdrop {
+      background: transparent;
+    }
+    #reportSettingsModal.mmr-rs-native .mmr-rs-panel {
+      background: #ffffff;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.06);
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      max-height: none;
+      overflow: hidden;
+    }
+    #reportSettingsModal.mmr-rs-native #reportSettingsFrame {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      border: none;
+      background: #ffffff;
+    }
+    @media (max-width: 640px) {
+      #reportSettingsModal.mmr-rs-native {
+        width: min(100vw, 1760px);
+        height: min(98vh, 1200px);
+      }
     }
     .upload-zone {
       background: var(--white);
@@ -874,6 +952,57 @@
   </style>
 </head>
 <body class="mmr-dashboard">
+  <script>
+  (function () {
+    function openModal() {
+      var d = document.getElementById('reportSettingsModal');
+      var fr = document.getElementById('reportSettingsFrame');
+      if (!d || !fr) {
+        window.open('/admin/mmr-chargeable', '_blank', 'noopener,noreferrer');
+        return;
+      }
+      try { fr.src = '/admin/mmr-chargeable?embed=1&t=' + Date.now(); } catch (e) {}
+      if (typeof d.showModal !== 'function') {
+        window.open('/admin/mmr-chargeable', '_blank', 'noopener,noreferrer');
+        return;
+      }
+      try {
+        if (!d.open) d.showModal();
+      } catch (err) {
+        window.open('/admin/mmr-chargeable', '_blank', 'noopener,noreferrer');
+        return;
+      }
+      d.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+      var d = document.getElementById('reportSettingsModal');
+      if (!d) return;
+      if (typeof d.close === 'function' && d.open) {
+        try { d.close(); } catch (e) {}
+      }
+      d.classList.remove('active');
+      d.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+    window.mmrOpenReportSettings = function (ev) {
+      if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+      openModal();
+    };
+    window.mmrCloseReportSettings = closeModal;
+    window.openReportSettingsModal = openModal;
+    window.closeReportSettingsModal = closeModal;
+    document.addEventListener('DOMContentLoaded', function () {
+      var rsDlg = document.getElementById('reportSettingsModal');
+      if (!rsDlg || !rsDlg.addEventListener) return;
+      rsDlg.addEventListener('close', function () {
+        rsDlg.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        rsDlg.classList.remove('active');
+      });
+    });
+  })();
+  </script>
   {% set active_page = 'report' %}
   {% include 'partials/main_navbar.html' with context %}
 
@@ -917,6 +1046,11 @@
     <div class="upload-side-actions">
       <button type="button" id="btnReportFolder" class="btn btn-outline btn-report-folder" onclick="openReportFolderPanel()" title="View saved reports">
         📁 Saved Report
+      </button>
+      <button type="button" id="mmr-report-settings-btn" class="btn btn-outline btn-report-settings" title="Chargeable rules and location register (admin)"
+        {% if is_admin %}style="display:flex"{% else %}style="display:none"{% endif %}
+        onclick="window.mmrOpenReportSettings && window.mmrOpenReportSettings(event)">
+        ⚙ Report settings
       </button>
       <div class="automation-status-row">
         <button type="button" id="btnAutomation" class="btn-automation btn-automation-disabled" onclick="openRoadmapPanel()" disabled title="View automation roadmap">
@@ -1195,6 +1329,13 @@
     </div>
   </div>
 </div>
+
+<!-- Report settings (admin): full-screen dialog; iframe loads chargeable page with ?embed=1 (transparent, no nav) -->
+<dialog id="reportSettingsModal" class="mmr-rs-native" aria-label="Report settings — chargeable rules and location register" aria-hidden="true">
+  <div class="mmr-rs-panel">
+    <iframe id="reportSettingsFrame" src="about:blank" title="Report settings — chargeable rules and location register"></iframe>
+  </div>
+</dialog>
 
 <script>
 // ════════════════════════════════════════════════════════════════
@@ -3031,6 +3172,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key !== 'Escape') return;
     closeRoadmapPanel();
     closeReportFolderPanel();
+    const rs = document.getElementById('reportSettingsModal');
+    const rsOpen = rs && (rs.open || rs.classList.contains('active'));
+    if (rsOpen && typeof window.closeReportSettingsModal === 'function') {
+      window.closeReportSettingsModal();
+    }
   });
 
   const filename = sessionStorage.getItem('mmr_restore_filename');

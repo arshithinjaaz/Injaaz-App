@@ -13,6 +13,8 @@ from flask import (Blueprint, request, jsonify, render_template,
                    current_app, send_file)
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from app.models import User
+
 logger = logging.getLogger(__name__)
 
 mmr_bp = Blueprint('mmr_bp', __name__, url_prefix='/admin/mmr',
@@ -116,15 +118,28 @@ def _upload_path():
 
 def _dashboard_payload_from_path(path: str) -> tuple[dict, list]:
     """Parse a saved CAFM upload into dashboard aggregates and row dicts (same shaping as POST upload)."""
-    from .mmr_service import parse_excel, compute_dashboard, df_to_rows, _resolve_chargeable
+    from .mmr_service import (
+        parse_excel,
+        compute_dashboard,
+        df_to_rows,
+        _resolve_chargeable,
+        get_mmr_chargeable_config,
+        _project_blob_from_row_dict,
+        _complaint_from_row_dict,
+    )
     df = parse_excel(path)
     dashboard_data = compute_dashboard(df)
     rows = df_to_rows(df)
+    cfg = get_mmr_chargeable_config()
     for r in rows:
         r['Space'] = _resolve_chargeable(
             r.get('Space', ''), r.get('BaseUnit', ''), r.get('Client', ''),
             r.get('Service Group', ''), r.get('Contract', ''),
             r.get('Work Description', ''), r.get('Specific Area', ''),
+            cfg,
+            _project_blob_from_row_dict(r),
+            '',
+            _complaint_from_row_dict(r),
         )
     return dashboard_data, rows
 
@@ -136,11 +151,14 @@ def _reports_folder():
     return folder
 
 
-# TrueNAS / network drive paths for Save to Drive
-_TRUENAS_CAFM_PATH = os.environ.get('TRUENAS_CAFM_PATH') or r'\\172.25.70.137\Injaaz\CAFM\Daily Generated Report'
-_SAVE_TO_DRIVE_GENERAL_PATH = os.environ.get('MMR_SAVE_DRIVE_GENERAL_PATH') or r'\\172.25.70.137\Injaaz\General\CAFM\Daily Generated Report'
+# TrueNAS: web UI (TrueNAS ID / management URL). Override with TRUENAS_UI_URL.
+_TRUENAS_UI_URL = (os.environ.get('TRUENAS_UI_URL') or 'http://172.25.70.143/').rstrip('/') + '/'
+# SMB host for Save to Drive (same appliance as UI). Override full paths via TRUENAS_CAFM_PATH etc., or TRUENAS_HOST only.
+_TRUENAS_HOST = os.environ.get('TRUENAS_HOST', '172.25.70.143')
+_TRUENAS_CAFM_PATH = os.environ.get('TRUENAS_CAFM_PATH') or rf'\\{_TRUENAS_HOST}\Injaaz\CAFM\Daily Generated Report'
+_SAVE_TO_DRIVE_GENERAL_PATH = os.environ.get('MMR_SAVE_DRIVE_GENERAL_PATH') or rf'\\{_TRUENAS_HOST}\Injaaz\General\CAFM\Daily Generated Report'
 # Email report save location (set MMR_EMAIL_SAVE_PATH in .env to override)
-_EMAIL_REPORT_SAVE_PATH = os.environ.get('MMR_EMAIL_SAVE_PATH') or r'\\172.25.70.137\Injaaz\General\CAFM'
+_EMAIL_REPORT_SAVE_PATH = os.environ.get('MMR_EMAIL_SAVE_PATH') or rf'\\{_TRUENAS_HOST}\Injaaz\General\CAFM'
 
 
 def _save_report_to_folder(report_bytes: bytes, base_filename: str, suffix: str = '',
@@ -171,7 +189,7 @@ def _save_report_to_folder(report_bytes: bytes, base_filename: str, suffix: str 
 
 
 def _save_email_report_to_network(report_bytes: bytes, base_filename: str) -> None:
-    """Save email report to General CAFM path (\\\\172.25.70.137\\Injaaz\\General\\CAFM). Best-effort, logs on failure.
+    """Save email report to General CAFM path on TrueNAS (see _EMAIL_REPORT_SAVE_PATH). Best-effort, logs on failure.
     Filename uses only reported date(s), no save timestamp."""
     try:
         name = base_filename if base_filename.endswith('.xlsx') else base_filename + '.xlsx'
@@ -219,7 +237,7 @@ def _save_report_to_drive(report_bytes: bytes, filename: str, save_path: str | N
         except Exception:
             pass
         if 'cannot find' in err.lower() or 'no such file' in err.lower() or 'network' in err.lower():
-            return None, f'Cannot reach TrueNAS. Ensure {base} is accessible. ({err})', False
+            return None, f'Cannot reach TrueNAS ({_TRUENAS_UI_URL}). Ensure {base} is accessible. ({err})', False
         return None, err, False
     except Exception as e:
         logger.warning(f'MMR save to drive failed ({base}): {e}')
@@ -398,7 +416,15 @@ def _save_last_run(status: str, to_list: list, cc_list: list | None, subject: st
 @mmr_bp.route('/', methods=['GET'])
 @jwt_required()
 def dashboard():
-    return render_template('mmr_dashboard.html')
+    is_admin = False
+    try:
+        uid = get_jwt_identity()
+        user = User.query.get(int(uid))
+        if user and user.role == 'admin':
+            is_admin = True
+    except (TypeError, ValueError):
+        pass
+    return render_template('mmr_dashboard.html', is_admin=is_admin)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -588,7 +614,7 @@ def save_to_folder():
 @mmr_bp.route('/api/save-to-drive', methods=['POST'])
 @jwt_required()
 def save_to_drive():
-    """Save current (optionally filtered) report to TrueNAS CAFM drive (\\\\172.25.70.137\\Injaaz\\CAFM)."""
+    """Save current (optionally filtered) report to TrueNAS CAFM drive (see _TRUENAS_CAFM_PATH)."""
     path = _upload_path()
     if not os.path.exists(path):
         return jsonify({'error': 'No file uploaded yet. Please upload an Excel file first.'}), 400
@@ -712,17 +738,30 @@ def open_report_from_folder(filename):
         return jsonify({'error': 'File not found'}), 404
 
     try:
-        from .mmr_service import parse_saved_report_excel, compute_dashboard, df_to_rows, _resolve_chargeable
+        from .mmr_service import (
+            parse_saved_report_excel,
+            compute_dashboard,
+            df_to_rows,
+            _resolve_chargeable,
+            get_mmr_chargeable_config,
+            _project_blob_from_row_dict,
+            _complaint_from_row_dict,
+        )
         df = parse_saved_report_excel(path)
         if df.empty:
             return jsonify({'error': 'Could not parse report. The file may be in a different format.'}), 400
         dashboard_data = compute_dashboard(df)
         rows = df_to_rows(df)
+        cfg = get_mmr_chargeable_config()
         for r in rows:
             r['Space'] = _resolve_chargeable(
                 r.get('Space', ''), r.get('BaseUnit', ''), r.get('Client', ''),
                 r.get('Service Group', ''), r.get('Contract', ''),
                 r.get('Work Description', ''), r.get('Specific Area', ''),
+                cfg,
+                _project_blob_from_row_dict(r),
+                '',
+                _complaint_from_row_dict(r),
             )
         return jsonify({
             'success': True,

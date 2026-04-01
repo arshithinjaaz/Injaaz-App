@@ -5,17 +5,219 @@ from flask import Blueprint, request, jsonify, render_template, current_app, sen
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import (
     db, User, AuditLog, Device, BDProject, BDFollowUp, BDContact, BDActivity,
-    DocHubAccess
+    DocHubAccess, MmrChargeableConfig
 )
 from app.middleware import admin_required
 from common.error_responses import error_response, success_response
 from datetime import datetime, timedelta
 from io import BytesIO, StringIO
 import json
+import os
 import secrets
 import string
+import threading
 
 admin_bp = Blueprint('admin_bp', __name__, url_prefix='/api/admin')
+
+
+@admin_bp.route('/mmr/chargeable-config', methods=['GET', 'PUT'])
+@jwt_required()
+@admin_required
+def mmr_chargeable_config():
+    """Load or save MMR chargeable rules (BaseUnit defaults + substring overrides)."""
+    from module_mmr.mmr_service import (
+        DEFAULT_MMR_CHARGEABLE_CONFIG,
+        merge_builtin_rules_payload,
+        _merge_mmr_chargeable_config,
+        invalidate_mmr_chargeable_config_cache,
+    )
+    if request.method == 'GET':
+        try:
+            row = MmrChargeableConfig.query.first()
+            stored = row.config_json if row else None
+            return success_response({'config': _merge_mmr_chargeable_config(stored)})
+        except Exception as e:
+            current_app.logger.error(f"MMR chargeable config GET: {e}", exc_info=True)
+            return error_response('Failed to load MMR chargeable settings', status_code=500, error_code='DATABASE_ERROR')
+
+    try:
+        admin_id = get_jwt_identity()
+        data = request.get_json()
+        if data is None:
+            return error_response('JSON body required', status_code=400, error_code='VALIDATION_ERROR')
+
+        flag = data.get('non_apartment_baseunit_non_chargeable')
+        overrides = data.get('baseunit_overrides')
+        if flag is None or not isinstance(flag, bool):
+            return error_response(
+                'non_apartment_baseunit_non_chargeable (boolean) is required',
+                status_code=400,
+                error_code='VALIDATION_ERROR',
+            )
+        if overrides is None:
+            overrides = []
+        if not isinstance(overrides, list):
+            return error_response('baseunit_overrides must be a list', status_code=400, error_code='VALIDATION_ERROR')
+
+        cleaned = []
+        for item in overrides:
+            if not isinstance(item, dict):
+                continue
+            pat = (item.get('pattern') or '').strip()
+            if not pat:
+                continue
+            cleaned.append({'pattern': pat, 'chargeable': bool(item.get('chargeable'))})
+
+        row = MmrChargeableConfig.query.first()
+        prev = _merge_mmr_chargeable_config(row.config_json if row else None)
+        br_in = data.get('builtin_rules')
+        if br_in is not None and not isinstance(br_in, dict):
+            return error_response(
+                'builtin_rules must be an object',
+                status_code=400,
+                error_code='VALIDATION_ERROR',
+            )
+        br_merged = merge_builtin_rules_payload(br_in) if isinstance(br_in, dict) else prev['builtin_rules']
+
+        raw_update = {
+            **prev,
+            'non_apartment_baseunit_non_chargeable': flag,
+            'baseunit_overrides': cleaned,
+            'builtin_rules': br_merged,
+        }
+        if 'location_register_state' in data:
+            raw_update['location_register_state'] = data.get('location_register_state')
+        merged = _merge_mmr_chargeable_config(raw_update)
+
+        if row:
+            row.config_json = merged
+        else:
+            db.session.add(MmrChargeableConfig(config_json=merged))
+
+        db.session.commit()
+        invalidate_mmr_chargeable_config_cache()
+
+        log_audit(admin_id, 'mmr_chargeable_config', 'settings', 'mmr', {
+            'non_apartment_baseunit_non_chargeable': flag,
+            'override_count': len(cleaned),
+            'builtin_rules': br_merged,
+        })
+
+        return success_response({'config': merged}, message='MMR chargeable settings saved')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"MMR chargeable config PUT: {e}", exc_info=True)
+        return error_response('Failed to save MMR chargeable settings', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/mmr/location-register/parse', methods=['POST'])
+@jwt_required()
+@admin_required
+def mmr_location_register_parse():
+    """Parse Location Register Excel (or CAFM HTML export): Base Unit, BU Funct Type, Property, Zone."""
+    from module_mmr.mmr_service import parse_location_register_bytes
+
+    _MAX_LOC_BYTES = 5 * 1024 * 1024
+
+    try:
+        if 'file' not in request.files:
+            return error_response('No file provided', status_code=400, error_code='VALIDATION_ERROR')
+        f = request.files['file']
+        if not f or not f.filename:
+            return error_response('No file selected', status_code=400, error_code='VALIDATION_ERROR')
+        fn = (f.filename or '').lower()
+        if not (fn.endswith('.xlsx') or fn.endswith('.xls')):
+            return error_response(
+                'Upload a .xlsx or .xls file (CAFM “Export to Excel”; HTML exports often use a .xls name).',
+                status_code=400,
+                error_code='VALIDATION_ERROR',
+            )
+        data = f.read()
+        if len(data) > _MAX_LOC_BYTES:
+            return error_response('File too large (max 5 MB)', status_code=400, error_code='VALIDATION_ERROR')
+        result = parse_location_register_bytes(data, f.filename or 'register.xlsx')
+        result['source_filename'] = (f.filename or '')[:255]
+        gen = current_app.config.get('GENERATED_DIR')
+        if gen:
+
+            def _write_last_copy():
+                try:
+                    os.makedirs(gen, exist_ok=True)
+                    ext = os.path.splitext(f.filename or '')[1] or '.xlsx'
+                    if ext.lower() not in ('.xlsx', '.xls', '.xlsm'):
+                        ext = '.xlsx'
+                    safe_ext = ext[:8]
+                    path = os.path.join(gen, f'mmr_location_register_last{safe_ext}')
+                    with open(path, 'wb') as out:
+                        out.write(data)
+                except Exception as e:
+                    current_app.logger.warning('MMR location register copy not saved: %s', e)
+
+            threading.Thread(target=_write_last_copy, daemon=True).start()
+        return success_response(result)
+    except ValueError as e:
+        return error_response(str(e), status_code=400, error_code='VALIDATION_ERROR')
+    except Exception as e:
+        current_app.logger.error(f'MMR location register parse: {e}', exc_info=True)
+        return error_response('Failed to parse file', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/mmr/chargeable-preview', methods=['POST'])
+@jwt_required()
+@admin_required
+def mmr_chargeable_preview():
+    """Batch-resolve Chargeable/Non-Chargeable for BaseUnit strings using current form rules (preview)."""
+    from module_mmr.mmr_service import (
+        _merge_mmr_chargeable_config,
+        merge_builtin_rules_payload,
+        preview_chargeable_for_base_units,
+    )
+
+    try:
+        data = request.get_json(silent=True) or {}
+        units = data.get('base_units')
+        if not isinstance(units, list):
+            return error_response('base_units must be a list', status_code=400, error_code='VALIDATION_ERROR')
+        if len(units) > 4000:
+            return error_response('Too many base_units (max 4000)', status_code=400, error_code='VALIDATION_ERROR')
+
+        raw: dict = {}
+        if 'non_apartment_baseunit_non_chargeable' in data:
+            raw['non_apartment_baseunit_non_chargeable'] = bool(
+                data.get('non_apartment_baseunit_non_chargeable')
+            )
+        br_in = data.get('builtin_rules')
+        if br_in is not None:
+            if not isinstance(br_in, dict):
+                return error_response('builtin_rules must be an object', status_code=400, error_code='VALIDATION_ERROR')
+            raw['builtin_rules'] = merge_builtin_rules_payload(br_in)
+        ov = data.get('baseunit_overrides')
+        if ov is not None:
+            if not isinstance(ov, list):
+                return error_response('baseunit_overrides must be a list', status_code=400, error_code='VALIDATION_ERROR')
+            cleaned = []
+            for item in ov:
+                if not isinstance(item, dict):
+                    continue
+                pat = (item.get('pattern') or '').strip()
+                if not pat:
+                    continue
+                cleaned.append({'pattern': pat, 'chargeable': bool(item.get('chargeable'))})
+            raw['baseunit_overrides'] = cleaned
+
+        merged = _merge_mmr_chargeable_config(raw if raw else None)
+        strings: list[str] = []
+        for u in units:
+            if u is None:
+                continue
+            s = u if isinstance(u, str) else str(u)
+            strings.append(s.strip())
+
+        results = preview_chargeable_for_base_units(strings, merged)
+        return success_response({'results': results})
+    except Exception as e:
+        current_app.logger.error(f'MMR chargeable preview: {e}', exc_info=True)
+        return error_response('Failed to resolve chargeable preview', status_code=500, error_code='DATABASE_ERROR')
 
 
 def generate_temp_password(length=12):
