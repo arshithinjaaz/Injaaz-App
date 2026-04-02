@@ -675,6 +675,19 @@
     .form-input.input-error { border-color: var(--danger); }
     .field-error { font-size: .75rem; color: var(--danger); margin-top: .2rem; }
     .form-textarea { min-height: 100px; resize: vertical; }
+    .report-format-row .form-label { margin-bottom: .4rem; }
+    .report-format-hint { font-size: .75rem; color: var(--text-muted); margin: .4rem 0 0; line-height: 1.4; max-width: 42rem; }
+    .report-format-seg {
+      display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+      background: #f9fafb;
+    }
+    .report-format-seg .seg-btn {
+      border: none; background: transparent; padding: .45rem 1rem; font-size: .8rem; font-weight: 600;
+      cursor: pointer; color: var(--text-muted); transition: background .15s, color .15s;
+    }
+    .report-format-seg .seg-btn + .seg-btn { border-left: 1px solid var(--border); }
+    .report-format-seg .seg-btn:hover { background: #f3f4f6; color: var(--text); }
+    .report-format-seg .seg-btn.active { background: var(--primary); color: #fff; }
     .schedule-row { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; padding: .875rem; background: #f9fafb; border-radius: var(--radius); margin-top: .5rem; }
     .toggle-wrap { display: flex; align-items: center; gap: .5rem; }
     .toggle { position: relative; width: 36px; height: 20px; }
@@ -1188,6 +1201,14 @@
                    oninput="validateEmailField(this)">
             <div class="field-error" id="emailCcError"></div>
           </div>
+          <div class="form-group report-format-row">
+            <span class="form-label">Report format</span>
+            <div class="report-format-seg" role="group" aria-label="Daily or monthly wording for email and Excel">
+              <button type="button" class="seg-btn active" id="fmtDailyBtn" onclick="setReportFormat('daily', true)">Daily</button>
+              <button type="button" class="seg-btn" id="fmtMonthlyBtn" onclick="setReportFormat('monthly', true)">Monthly</button>
+            </div>
+            <p class="report-format-hint">Chooses the wording for the email subject/body and for Excel filenames and attachments (<strong>Daily Report …</strong> vs <strong>Monthly Report …</strong>). The timed schedule below still runs once per day; upload data that matches the period you need. After switching Daily/Monthly, subject and body update to the matching template—click <strong>Save Config</strong> to keep them. Use <strong>Download Excel</strong> / <strong>Monthly Excel (ZIP)</strong> in the row below for exports.</p>
+          </div>
           <div class="form-group">
             <label class="form-label">Subject</label>
             <input class="form-input" id="emailSubject" type="text">
@@ -1209,14 +1230,20 @@
             <button class="btn btn-outline" onclick="saveEmailConfig()">
               💾 Save Config
             </button>
+            <button type="button" class="btn btn-outline" id="btnEmailDownloadExcel" onclick="handleDownloadClick()" disabled title="Download Excel (same as top KPI; filename follows Daily/Monthly after Save Config)">
+              📥 Download Excel
+            </button>
+            <button type="button" class="btn btn-outline hidden" id="btnEmailDownloadMonthlyZip" onclick="downloadReportMonthly()" disabled title="ZIP with one workbook per calendar month">
+              📥 Monthly Excel (ZIP)
+            </button>
           </div>
         </div>
 
         <!-- Schedule -->
         <div>
-          <div class="card-title" style="margin-bottom:.75rem">⏰ Daily Schedule</div>
+          <div class="card-title" style="margin-bottom:.75rem">⏰ Schedule</div>
           <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem">
-            Automatically send the report every day at the configured time (using the last uploaded Excel file).
+            Automatically send the report every day at the configured time (using the last uploaded Excel file). Uses the <strong>Report format</strong> (Daily/Monthly) on the left for subject, body, and attachment filename.
           </p>
           <div class="schedule-row">
             <div class="toggle-wrap">
@@ -1447,6 +1474,7 @@ async function uploadFile(file) {
     document.getElementById('btnSaveToFolder').disabled = false;
     document.getElementById('btnSaveToDrive').disabled = false;
     document.getElementById('uploadZone').style.borderColor = 'var(--success)';
+    updateEmailSectionDownloadButtons();
     await loadAutomationStatus();
     await loadCycleData();
   } catch(err) {
@@ -1998,14 +2026,18 @@ function cancelDownload() {
   if (btn) btn.disabled = false;
 }
 
+function reportFilenameLabelPrefix() {
+  return getReportFormat() === 'monthly'
+    ? 'Monthly Report on Resolved and Pending Complaints for'
+    : 'Daily Report on Resolved and Pending Complaints for';
+}
+
 /**
  * Build the correct report filename from the data currently in allRows,
- * matching the server-side naming convention:
- *   Single date  → "Daily Report … for 17th of March 2026.xlsx"
- *   Two dates    → "Daily Report … for 1st of March 2026 & 17th of March 2026.xlsx"
- *   Range        → "Daily Report … for 1st of March 2026 - 17th of March 2026.xlsx"
+ * matching the server-side naming convention (Daily vs Monthly from Report format).
  */
 function getReportFilenameFromRows(rows) {
+  const labelPrefix = reportFilenameLabelPrefix();
   const fmtDay = d => {
     const n = d.getDate();
     const sfx = (n >= 11 && n <= 13) ? 'th'
@@ -2026,7 +2058,7 @@ function getReportFilenameFromRows(rows) {
   if (!dates.size) {
     // absolute fallback – yesterday
     const y = new Date(); y.setDate(y.getDate() - 1);
-    return `Daily Report on Resolved and Pending Complaints for ${fmtDay(y)}.xlsx`;
+    return `${labelPrefix} ${fmtDay(y)}.xlsx`;
   }
 
   const sorted = [...dates].sort();
@@ -2041,7 +2073,7 @@ function getReportFilenameFromRows(rows) {
   } else {
     datePart = `${fmtDay(min)} - ${fmtDay(max)}`;
   }
-  return `Daily Report on Resolved and Pending Complaints for ${datePart}.xlsx`;
+  return `${labelPrefix} ${datePart}.xlsx`;
 }
 
 /**
@@ -2119,8 +2151,9 @@ function _triggerBlobDownload(blob, filename) {
 
 async function downloadReport() {
   try {
+    const rf = encodeURIComponent(getReportFormat());
     const { blob, filename } = await _fetchWithProgress(
-      '/admin/mmr/api/download-report',
+      `/admin/mmr/api/download-report?report_format=${rf}`,
       'Generating report on server…',
       'Downloading report…'
     );
@@ -2140,8 +2173,9 @@ async function downloadReport() {
 
 async function downloadReportMonthly() {
   try {
+    const rf = encodeURIComponent(getReportFormat());
     const { blob, filename } = await _fetchWithProgress(
-      '/admin/mmr/api/download-report-monthly',
+      `/admin/mmr/api/download-report-monthly?report_format=${rf}`,
       'Building monthly ZIP on server…',
       'Downloading ZIP archive…',
       'This may take a moment – click × to cancel'
@@ -2170,20 +2204,79 @@ async function downloadReportMonthly() {
 // ════════════════════════════════════════════════════════════════
 // Email
 // ════════════════════════════════════════════════════════════════
+const MMR_EMAIL_PRESETS_FALLBACK = {
+  daily: {
+    subject: 'Daily Report on Resolved and Pending Complaints for {{REPORT_DATE}}',
+    body: 'Dear FM Team,\n\nPlease find below comprehensive Daily Report of ({{REPORT_DATE}}) generated from our CAFM system / Injaaz Application for all Pending & Resolved work orders.\n\nRegards,\nCAFM Team',
+  },
+  monthly: {
+    subject: 'Monthly Report on Resolved and Pending Complaints for {{REPORT_DATE}}',
+    body: 'Dear FM Team,\n\nPlease find below comprehensive Monthly Report of ({{REPORT_DATE}}) generated from our CAFM system / Injaaz Application for all Pending & Resolved work orders.\n\nRegards,\nCAFM Team',
+  },
+};
+let mmrEmailPresets = MMR_EMAIL_PRESETS_FALLBACK;
+
+function getReportFormat() {
+  const m = document.getElementById('fmtMonthlyBtn');
+  return (m && m.classList.contains('active')) ? 'monthly' : 'daily';
+}
+
+/** @param {'daily'|'monthly'} mode @param {boolean} [applyPresets] */
+function setReportFormat(mode, applyPresets) {
+  const dailyBtn = document.getElementById('fmtDailyBtn');
+  const monthlyBtn = document.getElementById('fmtMonthlyBtn');
+  if (!dailyBtn || !monthlyBtn) return;
+  const isDaily = mode === 'daily';
+  dailyBtn.classList.toggle('active', isDaily);
+  monthlyBtn.classList.toggle('active', !isDaily);
+  if (applyPresets) {
+    const p = mmrEmailPresets[mode] || MMR_EMAIL_PRESETS_FALLBACK[mode];
+    if (p && p.subject) document.getElementById('emailSubject').value = p.subject;
+    if (p && p.body) document.getElementById('emailBody').value = p.body;
+  }
+  updateEmailSectionDownloadButtons();
+}
+
 async function loadEmailConfig() {
   try {
     const resp = await authFetch('/admin/mmr/api/email-config');
     if (!resp.ok) return;
     const cfg = await resp.json();
+    mmrEmailPresets = cfg.presets || MMR_EMAIL_PRESETS_FALLBACK;
+    const rf = (cfg.report_format || 'daily').toString().toLowerCase() === 'monthly' ? 'monthly' : 'daily';
+    setReportFormat(rf, false);
     document.getElementById('emailTo').value       = cfg.to      || '';
     document.getElementById('emailCc').value       = cfg.cc      || '';
-    document.getElementById('emailSubject').value  = cfg.subject || 'Daily Report on Resolved and Pending Complaints for {{REPORT_DATE}}';
-    document.getElementById('emailBody').value     = cfg.body    || '';
+    const p = mmrEmailPresets[rf] || MMR_EMAIL_PRESETS_FALLBACK[rf];
+    const sub = (cfg.subject || '').trim();
+    const bod = (cfg.body || '').trim();
+    const needsPreset =
+      !sub || !bod ||
+      (rf === 'monthly' && (/Daily Report on Resolved/i.test(sub) || /comprehensive Daily Report/i.test(bod))) ||
+      (rf === 'daily' && (/Monthly Report on Resolved/i.test(sub) || /comprehensive Monthly Report/i.test(bod)));
+    document.getElementById('emailSubject').value = needsPreset ? p.subject : (cfg.subject || p.subject);
+    document.getElementById('emailBody').value    = needsPreset ? p.body : (cfg.body || p.body);
     document.getElementById('scheduleEnabled').checked = !!cfg.schedule_enabled;
     document.getElementById('scheduleHour').value   = cfg.schedule_hour   ?? 10;
     document.getElementById('scheduleMinute').value = cfg.schedule_minute ?? 0;
     updateScheduleStatus(cfg);
+    updateEmailSectionDownloadButtons();
   } catch(e) { console.warn('Could not load email config', e); }
+}
+
+function updateEmailSectionDownloadButtons() {
+  const main = document.getElementById('btnDownloadReport');
+  const ex = document.getElementById('btnEmailDownloadExcel');
+  const zip = document.getElementById('btnEmailDownloadMonthlyZip');
+  if (!ex || !zip) return;
+  const en = main && !main.disabled;
+  ex.disabled = !en;
+  zip.disabled = !en;
+  if (getReportFormat() === 'monthly') {
+    zip.classList.remove('hidden');
+  } else {
+    zip.classList.add('hidden');
+  }
 }
 
 async function saveEmailConfig() {
@@ -2192,6 +2285,7 @@ async function saveEmailConfig() {
     cc:      document.getElementById('emailCc').value,
     subject: document.getElementById('emailSubject').value,
     body:    document.getElementById('emailBody').value,
+    report_format: getReportFormat(),
   };
   const resp = await authFetch('/admin/mmr/api/email-config', {
     method: 'POST',
@@ -2266,6 +2360,7 @@ async function sendEmailNow() {
     cc:      document.getElementById('emailCc').value,
     subject: document.getElementById('emailSubject').value,
     body:    document.getElementById('emailBody').value,
+    report_format: getReportFormat(),
   };
   try {
     const resp = await authFetch('/admin/mmr/api/send-email', {
@@ -2292,6 +2387,7 @@ async function saveSchedule() {
     cc:      document.getElementById('emailCc').value,
     subject: document.getElementById('emailSubject').value,
     body:    document.getElementById('emailBody').value,
+    report_format: getReportFormat(),
   };
   const resp = await authFetch('/admin/mmr/api/email-config', {
     method: 'POST',
@@ -2417,6 +2513,7 @@ function resetMmrToNewReportView() {
   if (dl) dl.disabled = true;
   if (sf) sf.disabled = true;
   if (sd) sd.disabled = true;
+  updateEmailSectionDownloadButtons();
   const uz = document.getElementById('uploadZone');
   if (uz) uz.style.borderColor = '';
   const sb = document.getElementById('searchBox');
@@ -2655,6 +2752,7 @@ async function restoreDashboardFromServerIfNeeded() {
     document.getElementById('btnSaveToFolder').disabled = false;
     document.getElementById('btnSaveToDrive').disabled = false;
     document.getElementById('uploadZone').style.borderColor = 'var(--success)';
+    updateEmailSectionDownloadButtons();
     await loadAutomationStatus();
     await loadCycleData();
   } catch (e) {
@@ -2671,6 +2769,7 @@ async function saveToFolder() {
     const payload = {
       rows: filteredRows.length > 0 ? filteredRows : null,
       filters: getCurrentFilters(),
+      report_format: getReportFormat(),
     };
     const resp = await authFetch('/admin/mmr/api/save-to-folder', {
       method: 'POST',
@@ -2701,6 +2800,7 @@ async function saveToDrive() {
     const payload = {
       rows: filteredRows.length > 0 ? filteredRows : null,
       filters: getCurrentFilters(),
+      report_format: getReportFormat(),
     };
     const resp = await authFetch('/admin/mmr/api/save-to-drive', {
       method: 'POST',
@@ -2815,6 +2915,7 @@ async function openReportAndRestoreFilters(btn) {
     document.getElementById('btnSaveToFolder').disabled = false;
     document.getElementById('btnSaveToDrive').disabled = false;
     document.getElementById('uploadZone').style.borderColor = 'var(--success)';
+    updateEmailSectionDownloadButtons();
     await loadAutomationStatus();
     await loadCycleData();
     toast('Report loaded. Dashboard updated.', 'success');
@@ -3202,6 +3303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('btnSaveToFolder').disabled = false;
       document.getElementById('btnSaveToDrive').disabled = false;
       document.getElementById('uploadZone').style.borderColor = 'var(--success)';
+      updateEmailSectionDownloadButtons();
       await loadAutomationStatus();
       await loadCycleData();
       toast('Report loaded. Dashboard filters restored.', 'success');

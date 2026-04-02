@@ -73,6 +73,9 @@
     .kpi-b .kpi-pill-icon { background: #eff6ff; } .kpi-b .kpi-pill-icon svg { stroke: #2563eb; } .kpi-b .kpi-pill-val { color: #2563eb; }
     .kpi-a .kpi-pill-icon { background: #fffbeb; } .kpi-a .kpi-pill-icon svg { stroke: #d97706; } .kpi-a .kpi-pill-val { color: #d97706; }
     .kpi-p .kpi-pill-icon { background: #f5f3ff; } .kpi-p .kpi-pill-icon svg { stroke: #7c3aed; } .kpi-p .kpi-pill-val { color: #7c3aed; }
+    .kpi-p .kpi-pill-icon-aed .kpi-currency-aed {
+      font-size: 0.68rem; font-weight: 800; letter-spacing: 0.05em; color: #7c3aed; line-height: 1;
+    }
 
     /* ─── Main content wrapper ───────────────────────────── */
     .proc-main { max-width: 1400px; margin: 0 auto; padding: 3.5rem 2.5rem 4rem; background: transparent; }
@@ -302,10 +305,8 @@
       <div><div class="kpi-pill-lbl">Catalog Items</div><div class="kpi-pill-val" id="totalQuantity">—</div></div>
     </div>
     <div class="kpi-pill kpi-p">
-      <div class="kpi-pill-icon">
-        <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-        </svg>
+      <div class="kpi-pill-icon kpi-pill-icon-aed" aria-hidden="true">
+        <span class="kpi-currency-aed">AED</span>
       </div>
       <div><div class="kpi-pill-lbl">Total Value (AED)</div><div class="kpi-pill-val" id="totalValue">—</div></div>
     </div>

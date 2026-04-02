@@ -57,11 +57,36 @@ _DEFAULT_CONFIG = {
         'Regards,\n'
         'CAFM Team'
     ),
+    # daily | monthly — affects default subject/body templates, Excel attachment name, and saved downloads
+    'report_format': 'daily',
     'schedule_enabled': False,
     'schedule_hour': 10,
     'schedule_minute': 0,
     'schedule_paused': False,
 }
+
+_MONTHLY_SUBJECT_DEFAULT = 'Monthly Report on Resolved and Pending Complaints for {{REPORT_DATE}}'
+_MONTHLY_BODY_DEFAULT = (
+    'Dear FM Team,\n\n'
+    'Please find below comprehensive Monthly Report of ({{REPORT_DATE}}) '
+    'generated from our CAFM system / Injaaz Application for all Pending & Resolved work orders.\n\n'
+    'Regards,\n'
+    'CAFM Team'
+)
+
+
+def _email_presets() -> dict:
+    """Canonical Daily vs Monthly subject/body for UI and switching."""
+    return {
+        'daily': {
+            'subject': _DEFAULT_CONFIG['subject'],
+            'body': _DEFAULT_CONFIG['body'],
+        },
+        'monthly': {
+            'subject': _MONTHLY_SUBJECT_DEFAULT,
+            'body': _MONTHLY_BODY_DEFAULT,
+        },
+    }
 
 _REPORT_DATE_PLACEHOLDER = '{{REPORT_DATE}}'
 
@@ -90,9 +115,14 @@ def _format_report_date_range_str(date_range: tuple | None) -> str | None:
 
 
 def _report_filename(report_date: datetime | None = None, report_date_range: tuple | None = None,
-                     upload_path: str | None = None) -> str:
+                     upload_path: str | None = None, report_format: str | None = None) -> str:
     """Excel filename based on report date(s).
     1 date: single date | 2 dates: date1 & date2 | 3+ dates: date1 - date2"""
+    kind = (report_format or 'daily').strip().lower()
+    if kind == 'monthly':
+        prefix = 'Monthly Report on Resolved and Pending Complaints for'
+    else:
+        prefix = 'Daily Report on Resolved and Pending Complaints for'
     date_str = _format_report_date_range_str(report_date_range) if report_date_range else None
     if date_str is None:
         dt = report_date
@@ -102,7 +132,17 @@ def _report_filename(report_date: datetime | None = None, report_date_range: tup
         if dt is None:
             dt = datetime.now() - timedelta(days=1)
         date_str = _format_report_date(dt)
-    return f"Daily Report on Resolved and Pending Complaints for {date_str}.xlsx"
+    return f"{prefix} {date_str}.xlsx"
+
+
+def _resolve_report_format(explicit: str | None) -> str:
+    """Prefer explicit daily|monthly from query/body; else saved mmr_email_config.json."""
+    if explicit is not None and str(explicit).strip() != '':
+        v = str(explicit).strip().lower()
+        if v in ('daily', 'monthly'):
+            return v
+    v = str(_load_config().get('report_format', 'daily')).strip().lower()
+    return v if v in ('daily', 'monthly') else 'daily'
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -522,7 +562,8 @@ def download_report():
         df = parse_excel(path)
         report_bytes = generate_report_excel(df)
         date_range = get_report_date_range_from_df(df)
-        filename = _report_filename(report_date_range=date_range, upload_path=path)
+        rf = _resolve_report_format(request.args.get('report_format'))
+        filename = _report_filename(report_date_range=date_range, upload_path=path, report_format=rf)
         from flask import make_response
         resp = make_response(send_file(
             BytesIO(report_bytes),
@@ -548,7 +589,8 @@ def download_report_monthly():
     try:
         from .mmr_service import parse_excel, generate_monthly_zip, get_report_date_range_from_df
         df = parse_excel(path)
-        zip_bytes, filenames = generate_monthly_zip(df)
+        rf = _resolve_report_format(request.args.get('report_format'))
+        zip_bytes, filenames = generate_monthly_zip(df, report_format=rf)
 
         date_range = get_report_date_range_from_df(df)
         if date_range:
@@ -601,7 +643,8 @@ def save_to_folder():
             df = parse_excel(path)
         report_bytes = generate_report_excel(df)
         date_range = get_report_date_range_from_df(df)
-        filename = _report_filename(report_date_range=date_range, upload_path=path)
+        rf = _resolve_report_format(data.get('report_format'))
+        filename = _report_filename(report_date_range=date_range, upload_path=path, report_format=rf)
         saved = _save_report_to_folder(report_bytes, filename, 'saved', filters=filters)
         if saved:
             return jsonify({'success': True, 'filename': saved})
@@ -634,7 +677,8 @@ def save_to_drive():
             df = parse_excel(path)
         report_bytes = generate_report_excel(df)
         date_range = get_report_date_range_from_df(df)
-        filename = _report_filename(report_date_range=date_range, upload_path=path)
+        rf = _resolve_report_format(data.get('report_format'))
+        filename = _report_filename(report_date_range=date_range, upload_path=path, report_format=rf)
 
         if save_path:
             # Custom path: save only there
@@ -781,7 +825,9 @@ def open_report_from_folder(filename):
 @mmr_bp.route('/api/email-config', methods=['GET'])
 @jwt_required()
 def get_email_config():
-    return jsonify(_load_config())
+    cfg = _load_config()
+    out = {**cfg, 'presets': _email_presets()}
+    return jsonify(out)
 
 
 @mmr_bp.route('/api/automation-status', methods=['GET'])
@@ -934,6 +980,11 @@ def save_email_config():
     for k in allowed:
         if k in data:
             config[k] = data[k]
+    if 'report_format' in data:
+        rf = str(data['report_format']).strip().lower()
+        if rf not in ('daily', 'monthly'):
+            return jsonify({'error': 'report_format must be "daily" or "monthly"'}), 400
+        config['report_format'] = rf
     # Env schedule vars (Render) override form so MMR_SCHEDULE_* survives accidental UI toggles
     config.update(_env_schedule_override())
     _save_config(config)
@@ -965,6 +1016,11 @@ def send_email_now():
     cc_raw = data.get('cc', '').strip()
     subject = data.get('subject', _DEFAULT_CONFIG['subject'])
     body    = data.get('body', '')
+    cfg_send = _load_config()
+    rf = (data.get('report_format') or cfg_send.get('report_format') or 'daily')
+    rf = str(rf).strip().lower()
+    if rf not in ('daily', 'monthly'):
+        rf = 'daily'
 
     if not to_raw:
         return jsonify({'error': 'Recipient (To) email is required'}), 400
@@ -984,7 +1040,7 @@ def send_email_now():
         df = parse_excel(path)
         report_bytes = generate_report_excel(df)
         date_range = get_report_date_range_from_df(df)
-        filename = _report_filename(report_date_range=date_range, upload_path=path)
+        filename = _report_filename(report_date_range=date_range, upload_path=path, report_format=rf)
         # Build report_date string for subject/body (same format as filename date part)
         report_date = _format_report_date_range_str(date_range)
         if report_date is None:

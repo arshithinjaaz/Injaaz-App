@@ -161,8 +161,10 @@ def split_df_by_month(df: pd.DataFrame) -> list[tuple[str, pd.DataFrame]]:
     return chunks
 
 
-def generate_monthly_zip(df: pd.DataFrame) -> tuple[bytes, list[str]]:
+def generate_monthly_zip(df: pd.DataFrame, report_format: str = 'daily') -> tuple[bytes, list[str]]:
     """Generate one Excel report per calendar month and return a ZIP archive.
+
+    report_format: 'daily' | 'monthly' — prefix for each workbook inside the ZIP.
 
     Returns:
         (zip_bytes, list_of_filenames_inside_zip)
@@ -171,13 +173,16 @@ def generate_monthly_zip(df: pd.DataFrame) -> tuple[bytes, list[str]]:
     if not months:
         raise ValueError('No data to generate monthly reports from.')
 
+    kind = (report_format or 'daily').strip().lower()
+    prefix = 'Monthly Report' if kind == 'monthly' else 'Daily Report'
+
     buf = BytesIO()
     filenames: list[str] = []
 
     with zipfile.ZipFile(buf, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
         for label, month_df in months:
             excel_bytes = generate_report_excel(month_df)
-            fname = f'Daily Report – {label}.xlsx'
+            fname = f'{prefix} – {label}.xlsx'
             zf.writestr(fname, excel_bytes)
             filenames.append(fname)
 

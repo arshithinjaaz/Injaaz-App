@@ -70,7 +70,11 @@ def _run_scheduled_report(app):
             df = parse_excel(path)
             report_bytes = generate_report_excel(df)
             date_range = get_report_date_range_from_df(df)
-            filename = _report_filename(report_date_range=date_range, upload_path=path)
+            rf = config.get('report_format', 'daily')
+            rf = str(rf).strip().lower() if rf is not None else 'daily'
+            if rf not in ('daily', 'monthly'):
+                rf = 'daily'
+            filename = _report_filename(report_date_range=date_range, upload_path=path, report_format=rf)
 
             body = config.get('body', '')
             report_date = _format_report_date_range_str(date_range)

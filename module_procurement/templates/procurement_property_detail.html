@@ -89,6 +89,9 @@
     .kpi-green  .kpi-box-icon { background: #f0fdf4; } .kpi-green  .kpi-box-icon svg { stroke: #059669; } .kpi-green  .kpi-box-val { color: #059669; }
     .kpi-amber  .kpi-box-icon { background: #fffbeb; } .kpi-amber  .kpi-box-icon svg { stroke: #d97706; } .kpi-amber  .kpi-box-val { color: #d97706; }
     .kpi-purple .kpi-box-icon { background: #f5f3ff; } .kpi-purple .kpi-box-icon svg { stroke: #7c3aed; } .kpi-purple .kpi-box-val { color: #7c3aed; }
+    .kpi-purple .kpi-box-icon-aed .kpi-currency-aed {
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em; color: #7c3aed; line-height: 1;
+    }
 
     /* ── Main content ── */
     .main-content { max-width: 1400px; margin: 2.5rem auto; padding: 0 2rem; }
@@ -203,7 +206,7 @@
       <div><div class="kpi-box-lbl">Categories</div><div class="kpi-box-val" id="categories">—</div></div>
     </div>
     <div class="kpi-box kpi-purple">
-      <div class="kpi-box-icon"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+      <div class="kpi-box-icon kpi-box-icon-aed" aria-hidden="true"><span class="kpi-currency-aed">AED</span></div>
       <div><div class="kpi-box-lbl">Value (AED)</div><div class="kpi-box-val" id="totalValue">—</div></div>
     </div>
   </div>
