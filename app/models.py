@@ -544,6 +544,99 @@ class BDActivity(db.Model):
         return f'<BDActivity {self.id} - {self.title}>'
 
 
+class AdminPersonalProject(db.Model):
+    """Admin-only personal work tracking: current initiatives and metadata."""
+    __tablename__ = 'admin_personal_projects'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    title = db.Column(db.String(255), nullable=False, index=True)
+    summary = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), default='active', index=True)  # planning, active, on_hold, done, archived
+    priority = db.Column(db.String(10), default='med')  # low, med, high
+    category = db.Column(db.String(80), nullable=True, index=True)
+    start_date = db.Column(db.Date, nullable=True)
+    target_date = db.Column(db.Date, nullable=True)
+    link_url = db.Column(db.String(500), nullable=True)
+    tags = db.Column(JSON, default=list)
+    notes = db.Column(db.Text, nullable=True)
+    is_current_focus = db.Column(db.Boolean, default=False, index=True)
+    sort_order = db.Column(db.Integer, default=0, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('admin_personal_projects', lazy='dynamic'))
+    steps = db.relationship(
+        'AdminPersonalProgressStep',
+        backref='project',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+        order_by='AdminPersonalProgressStep.sort_order',
+    )
+
+    def to_dict(self, include_steps=True):
+        tags = self.tags if isinstance(self.tags, list) else []
+        out = {
+            'id': self.id,
+            'title': self.title,
+            'summary': self.summary or '',
+            'status': self.status or 'active',
+            'priority': self.priority or 'med',
+            'category': self.category or '',
+            'startDate': self.start_date.isoformat() if self.start_date else None,
+            'targetDate': self.target_date.isoformat() if self.target_date else None,
+            'linkUrl': self.link_url or '',
+            'tags': tags,
+            'notes': self.notes or '',
+            'isCurrentFocus': bool(self.is_current_focus),
+            'sortOrder': int(self.sort_order or 0),
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
+        }
+        if include_steps:
+            step_rows = self.steps.order_by(AdminPersonalProgressStep.sort_order.asc()).all()
+            out['steps'] = [s.to_dict() for s in step_rows]
+            done = sum(1 for s in step_rows if (s.status or '') == 'done')
+            total = len(step_rows)
+            out['progressPercent'] = int(round(100 * done / total)) if total else 0
+            out['stepsDone'] = done
+            out['stepsTotal'] = total
+        return out
+
+    def __repr__(self):
+        return f'<AdminPersonalProject {self.id} - {self.title}>'
+
+
+class AdminPersonalProgressStep(db.Model):
+    """Checklist-style steps for a personal admin project."""
+    __tablename__ = 'admin_personal_progress_steps'
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('admin_personal_projects.id'), nullable=False, index=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), default='pending', index=True)  # pending, in_progress, done, blocked, skipped
+    sort_order = db.Column(db.Integer, default=0, index=True)
+    due_date = db.Column(db.Date, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description or '',
+            'status': self.status or 'pending',
+            'sortOrder': int(self.sort_order or 0),
+            'dueDate': self.due_date.isoformat() if self.due_date else None,
+            'completedAt': self.completed_at.isoformat() + 'Z' if self.completed_at else None,
+            'notes': self.notes or '',
+        }
+
+    def __repr__(self):
+        return f'<AdminPersonalProgressStep {self.id} - {self.title}>'
+
+
 class DocHubDocument(db.Model):
     """Document metadata for DocHub. Supports both file uploads and editable content docs."""
     __tablename__ = 'dochub_documents'
