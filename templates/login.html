@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="login-root">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
@@ -37,29 +37,50 @@
             line-height: 1;
         }
 
+        /* One viewport, no page scroll (clip if content exceeds very short screens) */
+        html.login-root {
+            height: 100%;
+            max-height: 100%;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        html.login-root body.login-page {
+            height: 100%;
+            max-height: 100%;
+        }
+
         body.login-page {
             margin: 0;
-            min-height: max(884px, 100dvh);
             font-family: 'Inter', system-ui, sans-serif;
             color: var(--lp-on-surface);
             background: var(--lp-surface);
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0);
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+
+        @supports (height: 100dvh) {
+            html.login-root {
+                height: 100dvh;
+                max-height: 100dvh;
+            }
         }
 
         .login-main {
-            flex: 1;
+            flex: 1 1 auto;
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
-            min-height: 100dvh;
-            padding-top: env(safe-area-inset-top, 0);
+            min-height: 0;
+            overflow: hidden;
         }
 
         @media (min-width: 768px) {
             .login-main {
                 flex-direction: row;
-                min-height: max(884px, 100dvh);
             }
         }
 
@@ -72,7 +93,16 @@
             justify-content: center;
             padding: 2rem 1.5rem 2.5rem;
             background: linear-gradient(135deg, var(--lp-primary) 0%, var(--lp-primary-container) 100%);
-            flex: 0 0 auto;
+            flex: 0 1 auto;
+            min-height: 0;
+        }
+
+        @media (max-width: 767px) {
+            .login-hero {
+                flex: 0 1 42%;
+                max-height: 44vh;
+                padding: 1.25rem 1.5rem;
+            }
         }
 
         @media (min-width: 768px) {
@@ -80,8 +110,8 @@
                 width: 55%;
                 flex: 0 0 55%;
                 max-width: none;
-                padding: 3rem 2rem 3rem 3rem;
-                min-height: min(100vh, 900px);
+                align-self: stretch;
+                padding: 2rem 2rem 2rem 3rem;
             }
         }
 
@@ -152,38 +182,42 @@
         }
 
         .login-canvas {
-            flex: 1;
+            flex: 1 1 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 1.5rem 1.25rem 2rem;
-            position: relative;
+            padding: 1.25rem 1.25rem 1.5rem;
             min-width: 0;
+            min-height: 0;
+            overflow: hidden;
         }
 
         @media (min-width: 768px) {
             .login-canvas {
                 width: 45%;
                 flex: 0 0 45%;
-                padding: 3rem 1.5rem;
+                padding: 2rem 1.5rem;
                 min-width: 0;
+                align-self: stretch;
             }
         }
 
         .login-card {
             width: 100%;
             max-width: 28rem;
+            max-height: 100%;
             background: var(--lp-surface-lowest);
             border-radius: 0.75rem;
-            padding: 2rem 1.75rem;
+            padding: 1.5rem 1.5rem;
             box-shadow: 0 12px 40px rgba(0, 59, 34, 0.06);
             border: 1px solid rgba(192, 201, 192, 0.35);
             box-sizing: border-box;
+            overflow: hidden;
         }
 
         @media (min-width: 768px) {
             .login-card {
-                padding: 2.75rem 3rem;
+                padding: 2.25rem 2.5rem;
                 margin-top: 0;
             }
         }
@@ -364,106 +398,14 @@
             text-decoration-color: var(--lp-primary-fixed-dim);
         }
 
-        .login-secure-badge {
-            display: none;
-            position: absolute;
-            bottom: 1.5rem;
-            right: 1.5rem;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            background: rgba(241, 244, 242, 0.95);
-            border-radius: 0.5rem;
-            border: 1px solid rgba(192, 201, 192, 0.4);
-            max-width: 16rem;
-        }
-
-        @media (min-width: 1024px) {
-            .login-secure-badge {
-                display: flex;
-            }
-        }
-
-        .login-secure-badge-icon {
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: 50%;
-            background: var(--lp-primary-fixed-dim);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--lp-primary);
-            flex-shrink: 0;
-        }
-
-        .login-secure-badge-icon .material-symbols-outlined {
-            font-size: 1.25rem;
-        }
-
-        .login-secure-badge p {
-            margin: 0;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--lp-primary);
-        }
-
-        .login-secure-badge span.sub {
-            display: block;
-            margin-top: 0.15rem;
-            font-size: 0.625rem;
-            font-weight: 400;
-            color: var(--lp-outline);
-            line-height: 1.3;
-        }
-
-        .login-footer {
-            padding: 1.75rem 1.5rem;
-            padding-bottom: max(1.75rem, env(safe-area-inset-bottom));
-            background: rgba(236, 253, 245, 0.65);
-            color: #166534;
-            font-size: 0.875rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-            text-align: center;
-        }
-
-        @media (min-width: 768px) {
-            .login-footer {
-                flex-direction: row;
-                justify-content: space-between;
-                padding-left: 2.5rem;
-                padding-right: 2.5rem;
-                text-align: left;
-            }
-        }
-
-        .login-footer-links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.25rem 2rem;
-            justify-content: center;
-        }
-
-        @media (min-width: 768px) {
-            .login-footer-links {
-                justify-content: flex-end;
-            }
-        }
-
-        .login-footer a {
-            color: inherit;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .login-footer a:hover {
-            color: #052e16;
-            text-decoration: underline;
-        }
-
         @media (max-width: 767px) {
+            html.login-root,
+            body.login-page {
+                overflow: hidden !important;
+                overflow-x: hidden !important;
+                overflow-y: hidden !important;
+            }
+
             body.login-page {
                 background: var(--lp-surface) !important;
             }
@@ -504,6 +446,12 @@
             body.login-page input.lp-input[type="password"]:focus {
                 box-shadow: 0 0 0 2px var(--lp-primary-fixed-dim) !important;
             }
+        }
+
+        /* Override shared mobile_responsive.css body overflow on this route */
+        html.login-root,
+        body.login-page {
+            overflow: hidden !important;
         }
     </style>
 </head>
@@ -559,27 +507,8 @@
                     Don't have an account? <a href="{{ url_for('register_page') }}">Sign up</a>
                 </div>
             </div>
-
-            <div class="login-secure-badge" aria-hidden="true">
-                <div class="login-secure-badge-icon">
-                    <span class="material-symbols-outlined">verified_user</span>
-                </div>
-                <div>
-                    <p>Secure access</p>
-                    <span class="sub">Sign-in is protected with encrypted credentials.</span>
-                </div>
-            </div>
         </section>
     </main>
-
-    <footer class="login-footer">
-        <span>© 2026 Injaaz. All rights reserved.</span>
-        <div class="login-footer-links">
-            <a href="#">Help center</a>
-            <a href="#">Privacy policy</a>
-            <a href="#">Terms of service</a>
-        </div>
-    </footer>
 
     <script>
         const loginForm = document.getElementById('login-form');
