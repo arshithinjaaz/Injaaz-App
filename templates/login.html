@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="login-root">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
@@ -37,30 +37,50 @@
             line-height: 1;
         }
 
+        /* One viewport, no page scroll (clip if content exceeds very short screens) */
+        html.login-root {
+            height: 100%;
+            max-height: 100%;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        html.login-root body.login-page {
+            height: 100%;
+            max-height: 100%;
+        }
+
         body.login-page {
             margin: 0;
-            min-height: max(884px, 100dvh);
             font-family: 'Inter', system-ui, sans-serif;
             color: var(--lp-on-surface);
             background: var(--lp-surface);
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0);
             padding-bottom: env(safe-area-inset-bottom, 0);
         }
 
+        @supports (height: 100dvh) {
+            html.login-root {
+                height: 100dvh;
+                max-height: 100dvh;
+            }
+        }
+
         .login-main {
-            flex: 1;
+            flex: 1 1 auto;
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
-            min-height: 100dvh;
-            padding-top: env(safe-area-inset-top, 0);
+            min-height: 0;
+            overflow: hidden;
         }
 
         @media (min-width: 768px) {
             .login-main {
                 flex-direction: row;
-                min-height: max(884px, 100dvh);
             }
         }
 
@@ -73,7 +93,16 @@
             justify-content: center;
             padding: 2rem 1.5rem 2.5rem;
             background: linear-gradient(135deg, var(--lp-primary) 0%, var(--lp-primary-container) 100%);
-            flex: 0 0 auto;
+            flex: 0 1 auto;
+            min-height: 0;
+        }
+
+        @media (max-width: 767px) {
+            .login-hero {
+                flex: 0 1 42%;
+                max-height: 44vh;
+                padding: 1.25rem 1.5rem;
+            }
         }
 
         @media (min-width: 768px) {
@@ -81,8 +110,8 @@
                 width: 55%;
                 flex: 0 0 55%;
                 max-width: none;
-                padding: 3rem 2rem 3rem 3rem;
-                min-height: min(100vh, 900px);
+                align-self: stretch;
+                padding: 2rem 2rem 2rem 3rem;
             }
         }
 
@@ -153,37 +182,42 @@
         }
 
         .login-canvas {
-            flex: 1;
+            flex: 1 1 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 1.5rem 1.25rem 2rem;
+            padding: 1.25rem 1.25rem 1.5rem;
             min-width: 0;
+            min-height: 0;
+            overflow: hidden;
         }
 
         @media (min-width: 768px) {
             .login-canvas {
                 width: 45%;
                 flex: 0 0 45%;
-                padding: 3rem 1.5rem;
+                padding: 2rem 1.5rem;
                 min-width: 0;
+                align-self: stretch;
             }
         }
 
         .login-card {
             width: 100%;
             max-width: 28rem;
+            max-height: 100%;
             background: var(--lp-surface-lowest);
             border-radius: 0.75rem;
-            padding: 2rem 1.75rem;
+            padding: 1.5rem 1.5rem;
             box-shadow: 0 12px 40px rgba(0, 59, 34, 0.06);
             border: 1px solid rgba(192, 201, 192, 0.35);
             box-sizing: border-box;
+            overflow: hidden;
         }
 
         @media (min-width: 768px) {
             .login-card {
-                padding: 2.75rem 3rem;
+                padding: 2.25rem 2.5rem;
                 margin-top: 0;
             }
         }
@@ -365,6 +399,13 @@
         }
 
         @media (max-width: 767px) {
+            html.login-root,
+            body.login-page {
+                overflow: hidden !important;
+                overflow-x: hidden !important;
+                overflow-y: hidden !important;
+            }
+
             body.login-page {
                 background: var(--lp-surface) !important;
             }
@@ -405,6 +446,12 @@
             body.login-page input.lp-input[type="password"]:focus {
                 box-shadow: 0 0 0 2px var(--lp-primary-fixed-dim) !important;
             }
+        }
+
+        /* Override shared mobile_responsive.css body overflow on this route */
+        html.login-root,
+        body.login-page {
+            overflow: hidden !important;
         }
     </style>
 </head>
