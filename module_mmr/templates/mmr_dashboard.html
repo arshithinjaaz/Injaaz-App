@@ -26,6 +26,11 @@
       --warning: #f59e0b;
       --info: #3b82f6;
       --radius: 8px;
+      /* MMR upload row — shared surface (upload zone, schedule card, automation strip) */
+      --mmr-surface: #ffffff;
+      --mmr-surface-muted: #f6faf8;
+      --mmr-card-border: #d8ebe3;
+      --mmr-card-radius: 12px;
     }
 
     body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
@@ -200,90 +205,243 @@
     .page { width: 100%; max-width: 1400px; margin: 0 auto; padding: 1.5rem; box-sizing: border-box; }
     #dashboardSection { width: 100%; }
 
-    /* Upload row: centered upload box + Saved Report & Automation on right */
+    /* Upload row: left = upload + actions + automation | right = Schedule & last send card */
     .upload-row {
       display: flex;
-      align-items: center;
+      align-items: stretch;
       justify-content: center;
-      gap: 1.5rem;
+      gap: 1.25rem;
       margin: 3rem 0 2rem;
       flex-wrap: wrap;
     }
-    .upload-wrap { flex: 0 0 auto; min-width: 280px; max-width: 520px; }
-    .upload-side-actions {
+    .upload-col-main {
+      flex: 1 1 380px;
+      min-width: 0;
+      max-width: 560px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.625rem;
+      min-height: 0;
+      box-sizing: border-box;
+      align-self: stretch;
+    }
+    .upload-col-schedule {
+      flex: 0 1 340px;
+      width: 340px;
+      max-width: min(340px, 100%);
+      min-width: 260px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      align-self: stretch;
+      min-height: 0;
+      box-sizing: border-box;
+    }
+    .upload-wrap {
+      width: 100%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Saved Report + Report settings + automation — full width of upload column */
+    .upload-col-actions-centered {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.625rem;
+    }
+    .upload-col-actions-centered .upload-side-primary-row,
+    .upload-col-actions-centered .automation-status-row {
+      width: 100%;
+      max-width: none;
+    }
+    /* Live schedule + last send — tall card in the right column */
+    .upload-side-insight {
+      flex: 1 1 auto;
+      min-height: 8rem;
+      min-width: 0;
+      margin-top: 0;
+      padding: 0.75rem 0.85rem 0.65rem;
+      border-radius: var(--mmr-card-radius);
+      border: 1px solid var(--mmr-card-border);
+      background: var(--mmr-surface);
       display: flex;
       flex-direction: column;
       gap: 0.45rem;
-      flex-shrink: 0;
-      min-width: 136px;
-      max-width: 200px;
+      text-align: left;
     }
-    .upload-side-actions .btn-report-folder,
-    .upload-side-actions .btn-automation {
+    .upload-side-insight-hdr {
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      width: 100%;
+      text-align: left;
+    }
+    .upload-side-insight-body {
+      font-size: 0.8125rem;
+      line-height: 1.45;
+      color: var(--text);
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+    }
+    .upload-side-insight-main {
+      flex: 0 0 auto;
+      width: 100%;
+      text-align: left;
+    }
+    .upload-side-insight-main p { margin: 0 0 0.4rem; }
+    .upload-side-insight-main p:last-child { margin-bottom: 0; }
+    .upload-side-insight-body strong { color: var(--primary); font-weight: 600; }
+    .upload-side-insight-muted { color: var(--text-muted) !important; font-size: 0.78rem !important; }
+    .upload-side-insight-smart {
+      flex: 1 1 auto;
+      min-height: 2.5rem;
+      display: flex;
+      align-items: stretch;
+      justify-content: flex-start;
+      padding: 0.15rem 0;
+    }
+    .upload-side-insight-tip {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      padding: 0.55rem 0.65rem;
+      border-radius: 10px;
+      border: 1px solid var(--mmr-card-border);
+      background: var(--mmr-surface-muted);
+      text-align: left;
+    }
+    .upload-side-insight-tip-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+    .upload-side-insight-tip-sub {
+      margin-top: 0.3rem;
+      font-size: 0.72rem;
+      line-height: 1.4;
+      color: var(--text-muted);
+    }
+    .upload-side-insight-jump {
+      align-self: flex-start;
+      margin-top: 0.15rem;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-align: left;
+      color: var(--primary);
+      background: var(--mmr-surface-muted);
+      border: 1px solid var(--mmr-card-border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .upload-side-insight-jump:hover {
+      background: #edf5f1;
+      border-color: rgba(18, 84, 53, 0.28);
+    }
+    .upload-side-primary-row {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      gap: 0.5rem;
       width: 100%;
       min-width: 0;
+    }
+    .upload-side-primary-row .btn-report-folder,
+    .upload-side-primary-row #mmr-report-settings-btn.btn-report-settings {
+      display: flex;
+      flex-direction: row;
+      flex: 1 1 0%;
+      min-width: 0;
+      width: auto;
       justify-content: center;
-      padding: 0.35rem 0.65rem;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.55rem 0.65rem;
       font-size: 0.8125rem;
       font-weight: 600;
-      border-radius: var(--radius);
+      border-radius: 10px;
       cursor: pointer;
       transition: background .2s, border-color .2s, color .2s;
       line-height: 1.25;
+      text-align: center;
     }
-    .upload-side-actions .btn-report-folder {
+    .upload-col-main .btn-automation {
+      min-width: 0;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background .2s, border-color .2s, color .2s;
+      line-height: 1.35;
+    }
+    .upload-col-main .btn-report-folder {
       background: var(--primary);
       color: #fff;
       border: 1px solid var(--primary);
     }
-    .upload-side-actions .btn-report-folder:hover {
+    .upload-col-main .btn-report-folder:hover {
       background: var(--primary-light);
       color: #fff;
     }
-    .upload-side-actions .btn-automation.btn-automation-disabled {
-      background: transparent;
+    .upload-col-main .btn-automation.btn-automation-completed {
+      background: var(--mmr-surface-muted);
       color: var(--primary);
-      border: 1px solid var(--primary);
+      border: 1px solid var(--mmr-card-border);
     }
-    .upload-side-actions .btn-automation.btn-automation-disabled:hover {
-      background: rgba(18, 84, 53, .08);
+    .upload-col-main .btn-automation.btn-automation-completed:hover {
+      background: #edf5f1;
+      border-color: rgba(18, 84, 53, 0.28);
     }
-    .automation-status-row {
-      display: flex;
-      align-items: stretch;
-      gap: 0.4rem;
-      width: 100%;
+    .upload-col-main .btn-automation.btn-automation-completed .automation-dot {
+      background: var(--primary);
     }
-    .automation-status-row .btn-automation {
-      flex: 1;
-      min-width: 0;
-      justify-content: flex-start;
-      text-align: left;
-      line-height: 1.25;
-      white-space: normal;
+    .upload-col-main .btn-automation.btn-automation-pending {
+      background: #fffbeb;
+      color: #92400e;
+      border: 1px solid rgba(245, 158, 11, 0.35);
     }
-    .btn-automation-refresh {
-      flex-shrink: 0;
-      width: 34px;
-      min-height: 34px;
-      padding: 0;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      background: var(--white);
-      color: var(--primary);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transition: background .15s, border-color .15s;
+    .upload-col-main .btn-automation.btn-automation-pending:hover {
+      background: #fef3c7;
     }
+    .upload-col-main .btn-automation.btn-automation-paused {
+      background: var(--mmr-surface-muted);
+      color: #4b5563;
+      border: 1px solid var(--mmr-card-border);
+    }
+    .upload-col-main .btn-automation.btn-automation-paused:hover {
+      background: #edf5f1;
+    }
+    .upload-col-main .btn-automation.btn-automation-disabled {
+      background: var(--mmr-surface);
+      color: var(--text-muted);
+      border: 1px solid var(--mmr-card-border);
+    }
+    .upload-col-main .btn-automation.btn-automation-disabled:hover {
+      background: var(--mmr-surface-muted);
+      border-color: rgba(18, 84, 53, 0.22);
+    }
+    .upload-col-main .btn-automation.btn-automation-disabled .automation-dot {
+      background: var(--text-muted);
+    }
+    /* Bottom row layout: see MMR_UPLOAD_SIDEBAR_LOCK at end of this <style> (must load last). */
     .btn-automation-refresh svg {
       width: 16px;
       height: 16px;
     }
-    .btn-automation-refresh:hover {
-      background: rgba(18, 84, 53, .08);
-      border-color: rgba(18, 84, 53, .35);
+    .upload-col-main .btn-automation-refresh:hover {
+      background: var(--mmr-surface-muted);
+      border-color: rgba(18, 84, 53, 0.28);
     }
     .btn-automation-refresh:disabled {
       opacity: .45;
@@ -296,26 +454,15 @@
       to { transform: rotate(360deg); }
     }
     #mmr-report-settings-btn.btn-report-settings {
-      width: 100%;
-      min-width: 0;
-      justify-content: center;
-      align-items: center;
-      gap: 0.25rem;
-      padding: 0.35rem 0.65rem;
-      font-size: 0.8125rem;
-      font-weight: 600;
-      border-radius: var(--radius);
-      cursor: pointer;
-      transition: background .2s, border-color .2s, color .2s;
-      background: transparent;
-      color: var(--primary);
-      border: 1px solid var(--primary);
+      /* display toggled inline for admin; layout matches .upload-col-main primary row */
       display: none;
-      flex-direction: row;
-      line-height: 1.25;
+      background: var(--mmr-surface);
+      color: var(--primary);
+      border: 1px solid var(--mmr-card-border);
     }
     #mmr-report-settings-btn.btn-report-settings:hover {
-      background: rgba(18, 84, 53, .08);
+      background: var(--mmr-surface-muted);
+      border-color: rgba(18, 84, 53, 0.28);
     }
     /*
       Report settings: centered modal; fully transparent ::backdrop (dashboard stays visible).
@@ -368,13 +515,17 @@
       }
     }
     .upload-zone {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      background: var(--mmr-surface);
+      border: 1px solid var(--mmr-card-border);
+      border-radius: var(--mmr-card-radius);
       padding: 0;
       cursor: pointer;
       transition: border-color .2s, box-shadow .2s;
       overflow: hidden;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
     .upload-zone:hover, .upload-zone.drag-over {
       border-color: var(--primary);
@@ -385,6 +536,8 @@
       align-items: center;
       gap: 1.25rem;
       padding: 1.25rem 1.5rem;
+      flex: 1 1 auto;
+      min-height: 0;
     }
     .upload-icon-box {
       width: 48px;
@@ -413,10 +566,10 @@
     .upload-zone:hover .upload-zone-cta { background: #1a7a4d; }
     .upload-zone-footer {
       padding: .5rem 1.5rem;
-      background: #f9fafb;
+      background: var(--mmr-surface-muted);
       font-size: .75rem;
       color: var(--text-muted);
-      border-top: 1px solid var(--border);
+      border-top: 1px solid var(--mmr-card-border);
     }
     #fileInput { display: none; }
     .upload-progress { display: none; margin: 0 1.5rem .75rem; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; }
@@ -438,18 +591,39 @@
     }
     .card-title { font-size: .9375rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; }
 
-    /* KPIs */
-    .kpi-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .75rem; flex: 1; min-width: 0; }
-    .kpi-download-wrap { flex-shrink: 0; }
+    /* KPIs — grid row so Download column matches full height of KPI grid */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 140px;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      align-items: stretch;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: .75rem;
+      min-width: 0;
+    }
+    .kpi-download-wrap {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      width: 140px;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
     .kpi-download {
       background: var(--primary);
       border: 1px solid var(--primary);
       border-radius: var(--radius);
       padding: 1rem;
       text-align: center;
-      width: 140px;
+      width: 100%;
+      flex: 1 1 auto;
       min-height: 68px;
+      box-sizing: border-box;
       cursor: pointer;
       transition: opacity .2s;
       text-decoration: none;
@@ -463,11 +637,23 @@
     .kpi-download:hover:not(:disabled) { opacity: .9; }
     .kpi-download:focus { outline: none; }
     .kpi-download:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
-    .kpi-download .kpi-value { font-size: 1.25rem; color: #fff; }
+    .kpi-download .kpi-value,
+    .kpi-download .kpi-label {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .kpi-download .kpi-value { font-size: 1.25rem; color: #fff; line-height: 1.2; }
     .kpi-download .kpi-label {
       font-size: .8125rem;
       font-weight: 500;
       color: rgba(255,255,255,.95);
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      line-height: 1.25;
+      text-wrap: balance;
     }
     /* Download mode modal – pinned near the top */
     .modal-dl-picker {
@@ -591,13 +777,51 @@
       border-radius: var(--radius);
       padding: 1rem;
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
     }
-    .kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.2; }
-    .kpi-label { font-size: .6875rem; color: var(--text-muted); margin-top: .25rem; text-transform: uppercase; letter-spacing: .03em; }
+    .kpi-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+      width: 100%;
+      max-width: 100%;
+      text-align: center;
+    }
+    .kpi-label {
+      font-size: .6875rem;
+      color: var(--text-muted);
+      margin-top: .25rem;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      width: 100%;
+      max-width: 100%;
+      text-align: center;
+    }
     .kpi.accent .kpi-value { color: var(--info); }
     .kpi.warn .kpi-value { color: var(--warning); }
-    .kpi.kpi-priority { display: flex; flex-direction: column; justify-content: center; }
-    .kpi-priority .priority-breakdown { display: flex; gap: .6rem; margin-top: .35rem; font-size: .8125rem; font-weight: 600; color: var(--text); flex-wrap: wrap; }
+    .kpi.kpi-priority {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .kpi-priority .priority-breakdown {
+      display: flex;
+      gap: .6rem;
+      margin-top: .35rem;
+      font-size: .8125rem;
+      font-weight: 600;
+      color: var(--text);
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+      text-align: center;
+    }
     .kpi-priority .priority-breakdown .p1 { color: var(--info); }
     .kpi-priority .priority-breakdown .p2 { color: var(--text-muted); }
     .kpi-priority .priority-breakdown .p3 { color: var(--text); }
@@ -723,15 +947,35 @@
     }
     @media (max-width: 768px) {
       .page { padding: 1rem; }
-      .upload-row { flex-direction: column; }
+      .upload-row { flex-direction: column; align-items: stretch; }
+      .upload-col-main { max-width: 100%; flex: 1 1 auto; width: 100%; }
+      .upload-col-schedule {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        flex: 1 1 auto;
+      }
       .upload-wrap { max-width: 100%; }
-      .upload-side-actions { flex-direction: row; flex-wrap: wrap; min-width: auto; }
-      .upload-side-actions .btn-report-folder,
-      .upload-side-actions .btn-automation { min-width: 0; width: auto; }
+      .upload-side-primary-row {
+        width: 100%;
+        gap: 0.4rem;
+      }
+      .upload-side-primary-row .btn-report-folder,
+      .upload-side-primary-row #mmr-report-settings-btn {
+        flex: 1 1 0%;
+        min-width: 0;
+        padding: 0.5rem 0.5rem;
+        font-size: 0.75rem;
+      }
+      .upload-col-main .automation-status-row { width: 100%; }
       .upload-zone-inner { flex-direction: column; text-align: center; }
       .upload-zone-cta { width: 100%; }
-      .kpi-row { flex-direction: column; align-items: stretch; }
-      .kpi-download-wrap { display: flex; justify-content: center; }
+      .kpi-row { grid-template-columns: 1fr; }
+      .kpi-download-wrap {
+        width: 100%;
+        max-width: none;
+      }
+      .kpi-download { flex: 0 0 auto; min-height: 72px; }
       .kpi-grid { grid-template-columns: repeat(2, 1fr); }
       .schedule-row { flex-direction: column; align-items: flex-start; }
     }
@@ -872,6 +1116,103 @@
     }
     .auto-strip-label { font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
     .auto-strip-val { flex: 1; color: var(--text); }
+
+    /* Live automation activity feed (roadmap) */
+    .mmr-activity-section { margin-bottom: 1.25rem; }
+    .mmr-activity-head {
+      display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+      flex-wrap: wrap; margin-bottom: .35rem;
+    }
+    .mmr-activity-sub {
+      font-size: .75rem; color: var(--text-muted); margin: 0 0 .75rem; line-height: 1.45;
+    }
+    .mmr-activity-live {
+      display: inline-flex; align-items: center; gap: .35rem;
+      font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--primary);
+    }
+    .mmr-live-pulse {
+      width: 7px; height: 7px; border-radius: 50%; background: #22c55e;
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, .5);
+      animation: mmrLivePulse 2s ease-out infinite;
+    }
+    @keyframes mmrLivePulse {
+      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .45); }
+      70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+    .mmr-activity-feed {
+      max-height: 280px; overflow-y: auto;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: #fafafa;
+      scrollbar-width: thin;
+    }
+    .mmr-activity-feed--loading { padding: 1rem; font-size: .8125rem; color: var(--text-muted); }
+    .mmr-activity-row {
+      display: flex; gap: .65rem; padding: .65rem .85rem;
+      border-bottom: 1px solid var(--border); background: var(--white);
+      font-size: .78rem; line-height: 1.4; align-items: flex-start;
+    }
+    .mmr-activity-feed > .mmr-activity-row:last-child { border-bottom: none; }
+    .mmr-activity-row.mmr-activity-row--new {
+      animation: mmrActFlash .85s ease-out;
+    }
+    @keyframes mmrActFlash {
+      from { background: #ecfdf5; }
+      to { background: var(--white); }
+    }
+    .mmr-activity-icon {
+      flex-shrink: 0; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .95rem; background: #f1f5f9;
+    }
+    .mmr-activity-row.t-email_sent .mmr-activity-icon { background: #d1fae5; }
+    .mmr-activity-row.t-email_failed .mmr-activity-icon { background: #fee2e2; }
+    .mmr-activity-row.t-run_skipped .mmr-activity-icon { background: #fef3c7; }
+    .mmr-activity-row.t-reminder_sent .mmr-activity-icon { background: #e0e7ff; }
+    .mmr-activity-row.t-excel_uploaded .mmr-activity-icon { background: #dbeafe; }
+    .mmr-activity-row.t-excel_cleared .mmr-activity-icon { background: #f3f4f6; }
+    .mmr-activity-row.t-paused .mmr-activity-icon,
+    .mmr-activity-row.t-resumed .mmr-activity-icon,
+    .mmr-activity-row.t-resume_blocked .mmr-activity-icon { background: #e5e7eb; }
+    .mmr-activity-row.t-schedule_on .mmr-activity-icon { background: #d1fae5; }
+    .mmr-activity-row.t-schedule_off .mmr-activity-icon { background: #fecaca; }
+    .mmr-activity-row.t-cycle_approved .mmr-activity-icon { background: #cffafe; }
+    .mmr-activity-row.t-cycle_completed .mmr-activity-icon { background: #d1fae5; }
+    .mmr-activity-main { flex: 1; min-width: 0; }
+    .mmr-activity-msg { color: var(--text); font-weight: 500; }
+    .mmr-activity-detail { color: var(--text-muted); font-size: .72rem; margin-top: .2rem; word-break: break-word; }
+    .mmr-activity-time { flex-shrink: 0; font-size: .68rem; color: var(--text-muted); white-space: nowrap; }
+
+    .mmr-live-cycle-banner {
+      display: flex;
+      flex-direction: column;
+      gap: .2rem;
+      padding: .55rem .75rem;
+      font-size: .72rem;
+      line-height: 1.35;
+      background: #ecfdf5;
+      color: #065f46;
+      border-bottom: 1px solid var(--border);
+    }
+    .mmr-live-cycle-banner--idle {
+      background: #fefce8;
+      color: #854d0e;
+    }
+    .mmr-live-cycle-title { font-weight: 700; }
+    .mmr-live-cycle-hint {
+      font-weight: 500;
+      color: var(--text-muted);
+      font-size: .68rem;
+    }
+    .mmr-live-cycle-banner--idle .mmr-live-cycle-hint { color: #a16207; }
+    .mmr-activity-empty {
+      padding: .85rem .75rem;
+      font-size: .78rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
     .roadmap-timing-prompt {
       padding: 1rem 1.25rem; margin-bottom: 1.5rem;
       background: #f0fdf4; border: 1px solid rgba(16,185,129,.3);
@@ -901,6 +1242,80 @@
     .cycle-info { flex: 1; min-width: 0; }
     .cycle-info-top { font-weight: 600; color: var(--text); }
     .cycle-info-sub { font-size: .7rem; color: var(--text-muted); margin-top: .1rem; }
+    /* Cycle history: expandable rows (logs load under each cycle) */
+    details.cycle-history-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--white);
+      margin-bottom: .5rem;
+      overflow: hidden;
+    }
+    summary.cycle-history-sum {
+      list-style: none;
+      cursor: pointer;
+      padding: .65rem 1rem;
+      transition: background .15s;
+    }
+    summary.cycle-history-sum::-webkit-details-marker { display: none; }
+    summary.cycle-history-sum:hover { background: #fafafa; }
+    summary.cycle-history-sum:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: -2px;
+    }
+    .cycle-history-sum-row {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+    }
+    .cycle-history-item .cycle-item-inner {
+      display: flex;
+      align-items: center;
+      gap: .875rem;
+      flex: 1;
+      min-width: 0;
+    }
+    .cycle-history-chev {
+      flex-shrink: 0;
+      font-size: .72rem;
+      color: var(--text-muted);
+      transition: transform .18s ease;
+      width: 1.1rem;
+      text-align: center;
+    }
+    details.cycle-history-item[open] > summary .cycle-history-chev { transform: rotate(90deg); }
+    details.cycle-history-item[open] > summary {
+      border-bottom: 1px solid var(--border);
+      background: #f8fafc;
+    }
+    .cycle-history-logs {
+      padding: .85rem 1rem 1rem;
+      background: #fafafa;
+      font-size: .8rem;
+    }
+    .cycle-history-loading { color: var(--text-muted); font-size: .8rem; margin: 0; }
+    .cycle-detail-hint { font-size: .75rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.45; }
+    .cd-section-title {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted); margin: 1rem 0 .5rem;
+    }
+    .cd-section-title:first-child { margin-top: 0; }
+    .cd-timeline-row {
+      display: flex; gap: .65rem; padding: .55rem 0;
+      border-bottom: 1px solid var(--border); font-size: .8rem;
+    }
+    .cd-timeline-row:last-child { border-bottom: none; }
+    .cd-timeline-dot {
+      flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--primary); margin-top: .4rem;
+    }
+    .cd-timeline-body { flex: 1; min-width: 0; }
+    .cd-timeline-title { font-weight: 600; color: var(--text); }
+    .cd-timeline-meta { font-size: .72rem; color: var(--text-muted); margin-top: .15rem; }
+    .cd-timeline-detail { font-size: .75rem; color: var(--text-muted); margin-top: .25rem; line-height: 1.45; word-break: break-word; }
+    .cd-act-row { font-size: .76rem; padding: .5rem 0; border-bottom: 1px solid #f1f5f9; line-height: 1.4; }
+    .cd-act-row:last-child { border-bottom: none; }
+    .cd-act-type { font-weight: 600; color: var(--text); }
+    .cd-act-sub { font-size: .7rem; color: var(--text-muted); margin-top: .2rem; }
 
     @media (max-width: 640px) { .step-cards { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 400px) { .step-cards { grid-template-columns: 1fr; } }
@@ -962,6 +1377,116 @@
     }
     .reportfolder-panel-body .report-folder-list::-webkit-scrollbar { width: 6px; }
     .reportfolder-panel-body .report-folder-list::-webkit-scrollbar-thumb { background: rgba(18,84,53,.2); border-radius: 3px; }
+
+    /* ========== MMR_UPLOAD_SIDEBAR_LOCK — keep last ========== */
+    body.mmr-dashboard .upload-col-main {
+      align-items: stretch !important;
+      align-self: stretch !important;
+      max-width: 560px !important;
+      min-height: 0 !important;
+      box-sizing: border-box !important;
+    }
+    body.mmr-dashboard .upload-col-schedule {
+      align-items: stretch !important;
+      align-self: stretch !important;
+      width: 340px !important;
+      max-width: min(340px, 100%) !important;
+      min-height: 0 !important;
+      box-sizing: border-box !important;
+    }
+    body.mmr-dashboard .upload-col-schedule .upload-side-insight {
+      flex: 1 1 auto !important;
+      min-height: 8rem !important;
+      min-width: 0 !important;
+    }
+    body.mmr-dashboard .upload-side-insight-body {
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      align-items: stretch !important;
+    }
+    body.mmr-dashboard .upload-side-primary-row {
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      width: 100% !important;
+      gap: 0.5rem !important;
+      min-width: 0 !important;
+    }
+    body.mmr-dashboard .upload-side-primary-row .btn-report-folder,
+    body.mmr-dashboard .upload-side-primary-row #mmr-report-settings-btn {
+      flex: 1 1 0% !important;
+      min-width: 0 !important;
+      width: auto !important;
+    }
+    body.mmr-dashboard .upload-col-main .upload-col-actions-centered .automation-status-row {
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      align-items: stretch !important;
+      gap: 0.5rem !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+    body.mmr-dashboard .upload-col-main .automation-status-main {
+      flex: 1 1 0% !important;
+      min-width: 0 !important;
+      display: block !important;
+    }
+    body.mmr-dashboard .upload-col-main #btnAutomation {
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      margin: 0 !important;
+      width: 100% !important;
+      max-width: none !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: center !important;
+      text-align: center !important;
+      white-space: normal !important;
+      min-height: 44px !important;
+      padding: 0.55rem 0.85rem !important;
+    }
+    body.mmr-dashboard .upload-col-main #btnAutomation #automationLabel {
+      flex: 0 1 auto !important;
+      min-width: 0 !important;
+      text-align: center !important;
+      word-break: break-word !important;
+    }
+    body.mmr-dashboard .upload-col-main #btnAutomationRefresh {
+      flex: 0 0 44px !important;
+      width: 44px !important;
+      height: 44px !important;
+      min-width: 44px !important;
+      max-width: 44px !important;
+      align-self: center !important;
+      box-sizing: border-box !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border-radius: 10px !important;
+      border: 1px solid var(--mmr-card-border) !important;
+      background: var(--mmr-surface) !important;
+      color: var(--primary) !important;
+      cursor: pointer !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    @media (max-width: 768px) {
+      body.mmr-dashboard .upload-col-main {
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+      body.mmr-dashboard .upload-col-schedule {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+    }
   </style>
 </head>
 <body class="mmr-dashboard">
@@ -1035,9 +1560,10 @@
   <!-- Alert -->
   <div id="alertBox"></div>
 
-  <!-- Upload row: upload box + Saved Report & Automation on the right -->
+  <!-- Upload row: main column (upload + actions + automation) | schedule card -->
   <div class="upload-row">
-    <div class="upload-wrap">
+    <div class="upload-col-main">
+      <div class="upload-wrap">
       <div class="upload-zone" id="uploadZone"
            ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)"
            onclick="document.getElementById('fileInput').click()">
@@ -1055,8 +1581,9 @@
         <div class="upload-zone-footer">Supports .xlsx .xls</div>
         <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="onFileSelected(event)">
       </div>
-    </div>
-    <div class="upload-side-actions">
+      </div>
+      <div class="upload-col-actions-centered">
+      <div class="upload-side-primary-row">
       <button type="button" id="btnReportFolder" class="btn btn-outline btn-report-folder" onclick="openReportFolderPanel()" title="View saved reports">
         📁 Saved Report
       </button>
@@ -1065,14 +1592,27 @@
         onclick="window.mmrOpenReportSettings && window.mmrOpenReportSettings(event)">
         ⚙ Report settings
       </button>
+      </div>
       <div class="automation-status-row">
+        <div class="automation-status-main">
         <button type="button" id="btnAutomation" class="btn-automation btn-automation-disabled" onclick="openRoadmapPanel()" disabled title="View automation roadmap">
           <span class="automation-dot"></span>
           <span id="automationLabel">—</span>
         </button>
+        </div>
         <button type="button" id="btnAutomationRefresh" class="btn-automation-refresh" onclick="refreshMmrDashboard()" title="Clear report — new upload (removes current workbook from server)" aria-label="Clear report and start new upload">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         </button>
+      </div>
+      </div>
+    </div>
+    <div class="upload-col-schedule">
+      <div class="upload-side-insight" id="uploadSideInsight" aria-live="polite">
+        <div class="upload-side-insight-hdr">Schedule &amp; last send</div>
+        <div class="upload-side-insight-body" id="uploadSideInsightBody">
+          <p class="upload-side-insight-muted">Loading schedule…</p>
+        </div>
+        <button type="button" class="upload-side-insight-jump" id="uploadSideInsightJump" onclick="mmrScrollToEmailOrRoadmap()">Email schedule ↓</button>
       </div>
     </div>
   </div>
@@ -2369,8 +2909,11 @@ async function sendEmailNow() {
       body: JSON.stringify(payload),
     });
     const data = await resp.json();
-    if (resp.ok) toast('✅ ' + (data.message || 'Email sent successfully'), 'success');
-    else toast('❌ ' + (data.error || 'Email failed'), 'error');
+    if (resp.ok) {
+      toast('✅ ' + (data.message || 'Email sent successfully'), 'success');
+      await loadAutomationStatus();
+      await loadCycleData();
+    } else toast('❌ ' + (data.error || 'Email failed'), 'error');
   } finally {
     btn.disabled = false; btn.textContent = '✉️ Send Email Now';
   }
@@ -2442,18 +2985,132 @@ let automationStatus = null;
 async function loadAutomationStatus() {
   try {
     const resp = await authFetch('/admin/mmr/api/automation-status');
-    if (!resp.ok) return;
+    if (!resp.ok) {
+      automationStatus = null;
+      updateAutomationButton();
+      updateUploadSideInsight();
+      return;
+    }
     automationStatus = await resp.json();
     updateAutomationButton();
   } catch (e) {
     console.error('Automation status load failed:', e);
+    automationStatus = null;
+    updateAutomationButton();
+    updateUploadSideInsight();
   }
+}
+
+function mmrEscInsight(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Contextual tip in the schedule card — fills vertical space above the Email schedule action. */
+function buildInsightSmartHtml(s) {
+  if (!s) return '';
+  let title = '';
+  let sub = '';
+  if (!s.schedule_enabled) {
+    title = 'Set up once';
+    sub =
+      'After you upload, open Email Report to choose time, recipients, and CC — then automation can run daily.';
+  } else if (s.schedule_paused) {
+    title = 'Paused cycle';
+    sub = s.excel_uploaded
+      ? 'Resume from Email Report or the automation roadmap after you upload a fresh workbook.'
+      : 'Upload your CAFM export first, then resume when you are ready to send again.';
+  } else if (s.automation_status === 'completed') {
+    title = 'Send complete';
+    sub =
+      'Upload a new Excel file when you want the next cycle. The current workbook stays on the server until you replace or clear it.';
+  } else if (s.automation_status === 'pending') {
+    title = 'Before the run';
+    sub = s.excel_uploaded
+      ? 'You can filter, chart, and download until send time. Change recipients in Email Report if you need to.'
+      : 'Upload a workbook so the scheduled job has a report to deliver.';
+  } else {
+    title = 'Automation';
+    sub = 'Open the roadmap from the automation button for the full timeline and controls.';
+  }
+  return (
+    '<div class="upload-side-insight-smart" role="status">' +
+    '<div class="upload-side-insight-tip">' +
+    `<div class="upload-side-insight-tip-title">${mmrEscInsight(title)}</div>` +
+    `<div class="upload-side-insight-tip-sub">${mmrEscInsight(sub)}</div>` +
+    '</div></div>'
+  );
+}
+
+function updateUploadSideInsight() {
+  const root = document.getElementById('uploadSideInsightBody');
+  if (!root) return;
+  if (!automationStatus) {
+    root.innerHTML =
+      '<div class="upload-side-insight-main"><p class="upload-side-insight-muted">Could not load schedule. Refresh the page or try again.</p></div>' +
+      '<div class="upload-side-insight-smart"><div class="upload-side-insight-tip">' +
+      '<div class="upload-side-insight-tip-title">Retry</div>' +
+      '<div class="upload-side-insight-tip-sub">Check your connection and reload — we will fetch schedule and last send again.</div>' +
+      '</div></div>';
+    return;
+  }
+  const s = automationStatus;
+  const mainParts = [];
+  if (!s.schedule_enabled) {
+    mainParts.push(
+      '<p>Enable <strong>daily email</strong> in the Email Report section after you upload a file to automate sends.</p>'
+    );
+  } else if (s.schedule_paused) {
+    mainParts.push(
+      '<p>Schedule is <strong>paused</strong> after the last send. Upload a new workbook, then resume from the roadmap or Email section.</p>'
+    );
+  } else {
+    const t =
+      s.next_run_at ||
+      `${String(s.schedule_hour ?? 10).padStart(2, '0')}:${String(s.schedule_minute ?? 0).padStart(2, '0')}`;
+    const day = s.next_run_tomorrow ? 'Tomorrow' : 'Today';
+    mainParts.push(
+      `<p>Next automatic send <strong>${day}</strong> at <strong>${mmrEscInsight(t)}</strong> GST.</p>`
+    );
+  }
+  if (s.last_run && s.last_run.status === 'success' && s.last_run.at_formatted) {
+    const n = Number(s.last_run.recipient_count) || 0;
+    mainParts.push(
+      `<p class="upload-side-insight-muted">Last send: ${mmrEscInsight(s.last_run.at_formatted)} · ${n} recipients</p>`
+    );
+  } else if (
+    s.schedule_enabled &&
+    !s.schedule_paused &&
+    s.automation_status === 'pending' &&
+    !s.last_run
+  ) {
+    mainParts.push('<p class="upload-side-insight-muted">No successful send logged yet today.</p>');
+  }
+  root.innerHTML =
+    `<div class="upload-side-insight-main">${mainParts.join('')}</div>` +
+    buildInsightSmartHtml(s);
+}
+
+function mmrScrollToEmailOrRoadmap() {
+  const dash = document.getElementById('dashboardSection');
+  const card = document.getElementById('emailCard');
+  if (dash && !dash.classList.contains('hidden') && card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+  if (typeof openRoadmapPanel === 'function') openRoadmapPanel();
 }
 
 function updateAutomationButton() {
   const btn = document.getElementById('btnAutomation');
   const label = document.getElementById('automationLabel');
-  if (!btn || !label) return;
+  if (!btn || !label) {
+    updateUploadSideInsight();
+    return;
+  }
 
   // Show / hide the Stop buttons (navbar + card)
   const stopNavBtn  = document.getElementById('btnStopAuto');
@@ -2467,6 +3124,7 @@ function updateAutomationButton() {
     btn.disabled = true;
     label.textContent = '—';
     btn.title = 'Automation status unavailable';
+    updateUploadSideInsight();
     return;
   }
   btn.disabled = false;
@@ -2494,6 +3152,7 @@ function updateAutomationButton() {
     label.textContent = 'Automation off';
     btn.title = 'Enable the daily schedule under Email Report to use automation.';
   }
+  updateUploadSideInsight();
 }
 
 /** Reset view to upload-only (no workbook on server or user chose clear slate). */
@@ -2974,6 +3633,207 @@ async function downloadReportFile(filename) {
 // ════════════════════════════════════════════════════════════════
 let cycleLog = null;
 
+// —— Live automation activity (server-backed timeline + polling) ——
+let mmrActivityPollTimer = null;
+let mmrActivityRelTimer = null;
+
+function mmrActivityIcon(type) {
+  const m = {
+    email_sent: '✉️',
+    email_failed: '⚠️',
+    run_skipped: '⏭️',
+    reminder_sent: '🔔',
+    excel_uploaded: '📤',
+    excel_cleared: '🗑️',
+    paused: '⏸️',
+    resumed: '▶️',
+    resume_blocked: '🚫',
+    schedule_on: '✅',
+    schedule_off: '⏹️',
+    cycle_approved: '✓',
+    cycle_completed: '📋',
+  };
+  return m[type] || '•';
+}
+
+function mmrParseActivityTs(iso) {
+  if (!iso) return null;
+  const s = String(iso).replace('Z', '+00:00');
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function mmrFormatRelTime(isoUtc) {
+  const d = mmrParseActivityTs(isoUtc);
+  if (!d) return '';
+  const sec = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (sec < 45) return 'Just now';
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
+  if (sec < 172800) return 'Yesterday';
+  return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function mmrBuildActivityRow(a, flash) {
+  const t = a.type || 'unknown';
+  const tCls = String(t).replace(/[^\w-]/g, '');
+  const icon = mmrActivityIcon(t);
+  const rel = mmrFormatRelTime(a.ts);
+  const detail = a.detail ? escHtml(a.detail) : '';
+  const flashCls = flash ? ' mmr-activity-row--new' : '';
+  return `<div class="mmr-activity-row t-${tCls}${flashCls}" data-activity-id="${a.id}">
+    <div class="mmr-activity-icon" aria-hidden="true">${icon}</div>
+    <div class="mmr-activity-main">
+      <div class="mmr-activity-msg">${escHtml(a.message || '')}</div>
+      ${detail ? `<div class="mmr-activity-detail">${detail}</div>` : ''}
+    </div>
+    <div class="mmr-activity-time" data-mmr-ts="${escHtml(a.ts || '')}">${escHtml(rel)}</div>
+  </div>`;
+}
+
+function mmrLiveActivityBanner(curNum) {
+  const hasActiveCycle = Number.isFinite(curNum);
+  if (hasActiveCycle) {
+    return `<div class="mmr-live-cycle-banner"><span class="mmr-live-cycle-title">Live · Cycle #${curNum}</span><span class="mmr-live-cycle-hint">Newest first. When this cycle finishes, it moves to <strong>Cycle History</strong> below.</span></div>`;
+  }
+  return `<div class="mmr-live-cycle-banner mmr-live-cycle-banner--idle"><span class="mmr-live-cycle-title">Ready for the next cycle</span><span class="mmr-live-cycle-hint">Upload a <strong>new Excel</strong> file to start. Past runs stay in <strong>Cycle History</strong> below — expand a row to see full logs.</span></div>`;
+}
+
+async function mmrLoadActivityFeed(initial) {
+  const feed = document.getElementById('mmrActivityFeed');
+  if (!feed) return;
+  try {
+    const resp = await authFetch('/admin/mmr/api/automation-activities?limit=80&mode=live');
+    if (!resp.ok) throw new Error('bad response');
+    const data = await resp.json();
+    const list = data.activities || [];
+    const ctx = data.live_context;
+    const curNum = ctx && ctx.active_cycle_id != null ? Number(ctx.active_cycle_id) : NaN;
+    const hasActiveCycle = Number.isFinite(curNum);
+    const banner = mmrLiveActivityBanner(curNum);
+    feed.classList.remove('mmr-activity-feed--loading');
+    if (!list.length) {
+      const emptyMsg = hasActiveCycle
+        ? 'No events for this cycle yet.'
+        : 'No live feed until you upload a new workbook. Use the upload area on the dashboard, then open this panel again to see this cycle’s stream.';
+      feed.innerHTML = `${banner}<div class="mmr-activity-empty">${emptyMsg}</div>`;
+      return;
+    }
+    const rows = list.map((a) => mmrBuildActivityRow(a, false)).join('');
+    feed.innerHTML = banner + rows;
+  } catch (e) {
+    if (initial) {
+      feed.classList.remove('mmr-activity-feed--loading');
+      feed.innerHTML = '<div class="mmr-activity-feed--loading" style="border:none;color:var(--danger)">Could not load activity.</div>';
+    }
+  }
+}
+
+function mmrRefreshActivityRelTimes() {
+  document.querySelectorAll('#mmrActivityFeed [data-mmr-ts]').forEach((el) => {
+    const ts = el.getAttribute('data-mmr-ts');
+    if (ts) el.textContent = mmrFormatRelTime(ts);
+  });
+}
+
+function mmrStopActivityPolling() {
+  if (mmrActivityPollTimer) {
+    clearInterval(mmrActivityPollTimer);
+    mmrActivityPollTimer = null;
+  }
+  if (mmrActivityRelTimer) {
+    clearInterval(mmrActivityRelTimer);
+    mmrActivityRelTimer = null;
+  }
+  const badge = document.getElementById('mmrActivityLiveBadge');
+  if (badge) badge.hidden = true;
+}
+
+function mmrStartActivityPolling() {
+  mmrStopActivityPolling();
+  const overlay = document.getElementById('roadmapOverlay');
+  if (!overlay || !overlay.classList.contains('active')) return;
+  const badge = document.getElementById('mmrActivityLiveBadge');
+  if (badge) badge.hidden = false;
+  mmrActivityPollTimer = setInterval(() => mmrLoadActivityFeed(false), 10000);
+  mmrActivityRelTimer = setInterval(mmrRefreshActivityRelTimes, 45000);
+}
+
+function mmrOnRoadmapRendered() {
+  const overlay = document.getElementById('roadmapOverlay');
+  if (!overlay || !overlay.classList.contains('active')) return;
+  mmrLoadActivityFeed(true);
+  mmrStartActivityPolling();
+}
+
+function mmrCollectOpenCycleHistoryIds() {
+  const rb = document.getElementById('roadmapBody');
+  if (!rb) return new Set();
+  const s = new Set();
+  rb.querySelectorAll('details.cycle-history-item[open]').forEach((d) => {
+    const id = d.getAttribute('data-cycle-id');
+    if (id != null) s.add(id);
+  });
+  return s;
+}
+
+function mmrRestoreCycleHistoryDetails(ids) {
+  ids.forEach((id) => {
+    const el = document.querySelector(`details.cycle-history-item[data-cycle-id="${id}"]`);
+    if (el) el.open = true;
+  });
+}
+
+function mmrRenderCycleDetailPanelHtml(cycleId, d) {
+  const tl = (d.timeline || []).map((row) => `
+      <div class="cd-timeline-row">
+        <div class="cd-timeline-dot" aria-hidden="true"></div>
+        <div class="cd-timeline-body">
+          <div class="cd-timeline-title">${escHtml(row.title || '')}</div>
+          <div class="cd-timeline-meta">${escHtml(fmtDT(row.at) || '—')}</div>
+          ${row.detail ? `<div class="cd-timeline-detail">${escHtml(row.detail)}</div>` : ''}
+        </div>
+      </div>`).join('');
+  const actRows = (d.activities || []).map((a) => `
+      <div class="cd-act-row">
+        <div class="cd-act-type">${mmrActivityIcon(a.type)} ${escHtml(a.message || '')}</div>
+        <div class="cd-act-sub">${escHtml(fmtDT(a.ts) || a.ts || '')}</div>
+        ${a.detail ? `<div class="cd-act-sub">${escHtml(a.detail)}</div>` : ''}
+      </div>`).join('');
+  const actsBlock = actRows
+    ? actRows
+    : '<p style="font-size:.78rem;color:var(--text-muted)">No automation log lines are tagged to this cycle yet (older runs may predate this feature).</p>';
+  return `
+      <p class="cycle-detail-hint">Cycle #${cycleId} — <strong>newest first</strong> (scroll down for the start of the run). <strong>Live activity</strong> above shows the current cycle only.</p>
+      <div class="cd-section-title">Milestones</div>
+      ${tl || '<p style="font-size:.8rem;color:var(--text-muted)">No milestone data stored for this cycle.</p>'}
+      <div class="cd-section-title">Automation log (this cycle)</div>
+      ${actsBlock}
+    `;
+}
+
+async function mmrLoadCycleHistoryLogs(detailEl) {
+  const panel = detailEl.querySelector('.cycle-history-logs');
+  if (!panel) return;
+  if (panel.dataset.loaded === '1' || panel.dataset.loading === '1') return;
+  const cycleId = detailEl.getAttribute('data-cycle-id');
+  if (!cycleId) return;
+  panel.dataset.loading = '1';
+  panel.innerHTML = '<p class="cycle-history-loading">Loading…</p>';
+  try {
+    const resp = await authFetch(`/admin/mmr/api/cycle/${encodeURIComponent(cycleId)}/detail`);
+    const d = await resp.json();
+    if (!resp.ok) throw new Error(d.error || 'Could not load cycle');
+    panel.innerHTML = mmrRenderCycleDetailPanelHtml(cycleId, d);
+    panel.dataset.loaded = '1';
+  } catch (e) {
+    panel.innerHTML = `<p style="color:var(--danger);font-size:.8rem">${escHtml(e.message || 'Failed to load')}</p>`;
+    delete panel.dataset.loaded;
+  } finally {
+    delete panel.dataset.loading;
+  }
+}
+
 async function openRoadmapPanel() {
   const el = document.getElementById('roadmapOverlay');
   if (el) {
@@ -2985,6 +3845,7 @@ async function openRoadmapPanel() {
 }
 
 function closeRoadmapPanel() {
+  mmrStopActivityPolling();
   const el = document.getElementById('roadmapOverlay');
   if (el) {
     el.classList.remove('active');
@@ -3030,6 +3891,8 @@ function renderRoadmap() {
   const subEl  = document.getElementById('roadmapSub');
   if (!body) return;
 
+  const mmrHistoryOpen = mmrCollectOpenCycleHistoryIds();
+
   const s       = automationStatus || {};
   const current = cycleLog?.current;
   const history = cycleLog?.history || [];
@@ -3046,20 +3909,20 @@ function renderRoadmap() {
   const s1 = !!(current?.upload_at);
   const s2 = !!(current?.approved_at);
   const s3 = !!(current?.sent_at);
-  const s4 = s3; // locked state is active once sent
+  const hasCurrent = !!current;
 
   const psDot = (done, active) => done ? 'ps-done' : active ? 'ps-active' : 'ps-locked';
   const scCard = (done, active) => done ? 'sc-done' : active ? 'sc-active' : 'sc-locked';
 
-  const dot1 = psDot(s1, true);
-  const dot2 = psDot(s2, s1 && !s3);
-  const dot3 = psDot(s3, s1);
-  const dot4 = psDot(false, s4);
+  const dot1 = psDot(s1, !s1);
+  const dot2 = psDot(s2, hasCurrent && s1 && !s2 && !s3);
+  const dot3 = psDot(s3, hasCurrent && s1 && !s3);
+  const dot4 = psDot(false, hasCurrent && s3);
 
   const cd1 = scCard(s1, !s1);
-  const cd2 = scCard(s2, s1 && !s3);
-  const cd3 = scCard(s3, s1);
-  const cd4 = scCard(false, s4);
+  const cd2 = scCard(s2, hasCurrent && s1 && !s3);
+  const cd3 = scCard(s3, hasCurrent && s1);
+  const cd4 = scCard(!!(hasCurrent && s3), false);
 
   // Progress bar width (steps completed → fill from dot1 to next dot)
   const progressWidth = s3 ? '75%' : s2 ? '50%' : s1 ? '25%' : '0%';
@@ -3069,7 +3932,7 @@ function renderRoadmap() {
     { icon: s1 ? '✓' : '1', name: 'Upload',       cls: dot1 },
     { icon: s2 ? '✓' : '2', name: 'Review &<br>Approve', cls: dot2 },
     { icon: s3 ? '✓' : '3', name: 'Send Email',   cls: dot3 },
-    { icon: s4 ? '🔒' : '4', name: 'Lock &<br>Await', cls: dot4 },
+    { icon: hasCurrent && s3 ? '🔒' : '4', name: 'Lock &<br>History', cls: dot4 },
   ];
   const pipelineHtml = `
     <div class="pipeline-wrap">
@@ -3120,14 +3983,13 @@ function renderRoadmap() {
         : 'Awaiting upload.',
     s3 ? fmtDT(current.sent_at) : null, sendBtnHtml);
 
-  // Card 4 – Lock
-  const lockBody = s4
-    ? '<span style="color:var(--success);font-weight:600">✓ Automated email has been sent.</span> Upload a new Excel file to start the next cycle.'
-    : 'Becomes active after the email is sent. Prevents re-sending without a fresh file.';
-  const lockActionHtml = s4
-    ? `<button class="sc-btn sc-btn-approve" onclick="refreshToStartNextCycle()">↻ Refresh to start automation</button>`
-    : null;
-  const card4 = buildStepCard(4, 'Lock / Await Next', cd4, lockBody, null, lockActionHtml);
+  // Card 4 – After send, cycle is archived; pipeline resets until next upload
+  const lockBody = !hasCurrent
+    ? 'Completed cycles are listed below — <strong>expand a cycle</strong> to see its logs underneath. <strong>Live activity</strong> above keeps showing new events. Upload a new Excel file to begin again.'
+    : (s3
+      ? '<span style="color:var(--success);font-weight:600">✓ This cycle is complete.</span> It will move to history after the next refresh.'
+      : 'Once the report email is sent, this cycle is saved to history and the roadmap resets until you upload a new Excel file.');
+  const card4 = buildStepCard(4, 'History & next cycle', cd4, lockBody, null, null);
 
   const stepCardsHtml = `<div class="step-cards">${card1}${card2}${card3}${card4}</div>`;
 
@@ -3149,12 +4011,12 @@ function renderRoadmap() {
              <button type="button" class="btn btn-danger btn-sm" onclick="stopAutomation()" style="font-size:.75rem">🛑 Stop</button>`)
       : '';
     let timingPrompt = '';
-    if (s4 && s.schedule_enabled) {
+    if (s.schedule_enabled && s.automation_waiting_for_fresh_upload && !hasCurrent) {
       timingPrompt = `
       <div class="roadmap-timing-prompt">
-        <p class="roadmap-timing-question">For the next cycle, use the same timing or set a new timing?</p>
+        <p class="roadmap-timing-question">Next cycle: keep the same send time or change it?</p>
         <div class="roadmap-timing-actions">
-          <button type="button" class="btn btn-outline btn-sm" onclick="toast('✓ Same timing will be used for the next cycle.', 'success')" style="font-size:.75rem">Same timing</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="toast('✓ Same schedule time stays active for the next run after you upload.', 'success')" style="font-size:.75rem">Same timing</button>
           <button type="button" class="btn btn-primary btn-sm" onclick="closeRoadmapPanel(); document.getElementById('emailCard')?.scrollIntoView({behavior:'smooth'})" style="font-size:.75rem">Set new timing</button>
         </div>
       </div>`;
@@ -3169,33 +4031,42 @@ function renderRoadmap() {
       ${timingPrompt}`;
   }
 
-  // ── Cycle history (include completed current cycle at top when sent) ──
-  const displayHistory = s3 && current
-    ? [current, ...history]
-    : history;
+  // ── Cycle history (expand row → logs load inline beneath; Live activity stays above)
+  const displayHistory = history;
   let histHtml = '<div class="roadmap-section-title" style="margin-top:0">Cycle History</div>';
+  histHtml += '<p style="color:var(--text-muted);font-size:.75rem;margin:-.25rem 0 .75rem">Click a cycle to expand — milestones and logs appear <strong>under</strong> that row. New events keep streaming in <strong>Live activity</strong> above.</p>';
   if (displayHistory.length) {
     histHtml += `<div class="cycle-history">${displayHistory.map(c => {
       const isSent   = c.status === 'sent';
       const isFailed = c.status === 'failed';
       const badgeCls = isSent ? 'cb-sent' : isFailed ? 'cb-failed' : 'cb-partial';
       const icon     = isSent ? '✓' : isFailed ? '✗' : '–';
-      const label    = isSent ? 'Sent' : isFailed ? 'Failed' : 'Abandoned';
+      const label    = isSent ? 'Sent' : isFailed ? 'Failed' : 'Incomplete';
       const dateStr  = fmtD(c.sent_at || c.upload_at) || '';
       const recip    = isSent ? ` · ${c.recipient_count || 0} recipients` : '';
-      const subj     = c.subject
-        ? ` · ${c.subject.length > 45 ? c.subject.substring(0, 45) + '…' : c.subject}`
+      const subjShort = c.subject
+        ? (c.subject.length > 48 ? c.subject.substring(0, 48) + '…' : c.subject)
         : '';
-      return `<div class="cycle-item">
-        <div class="cycle-badge ${badgeCls}">${icon}</div>
-        <div class="cycle-info">
-          <div class="cycle-info-top">Cycle #${c.cycle_id} · ${label}</div>
-          <div class="cycle-info-sub">${dateStr}${recip}${subj ? `<br>${escHtml(subj)}` : ''}</div>
-        </div>
-      </div>`;
+      const subjLine  = subjShort ? `<br><span style="font-size:.68rem">${escHtml(subjShort)}</span>` : '';
+      const cid = c.cycle_id;
+      return `<details class="cycle-history-item" data-cycle-id="${cid}">
+        <summary class="cycle-history-sum" aria-label="Show or hide logs for cycle ${cid}">
+          <div class="cycle-history-sum-row">
+            <div class="cycle-item-inner">
+              <div class="cycle-badge ${badgeCls}">${icon}</div>
+              <div class="cycle-info">
+                <div class="cycle-info-top">Cycle #${cid} · ${label}</div>
+                <div class="cycle-info-sub">${dateStr}${recip}${subjLine}</div>
+              </div>
+            </div>
+            <span class="cycle-history-chev" aria-hidden="true">▸</span>
+          </div>
+        </summary>
+        <div class="cycle-history-logs" aria-live="polite"></div>
+      </details>`;
     }).join('')}</div>`;
   } else {
-    histHtml += `<p style="color:var(--text-muted);font-size:.8125rem">No completed cycles yet. Send your first report to see history here.</p>`;
+    histHtml += `<p style="color:var(--text-muted);font-size:.8125rem">No cycles in history yet. After you send a report, the cycle is saved here automatically.</p>`;
   }
 
   body.innerHTML = `
@@ -3204,8 +4075,18 @@ function renderRoadmap() {
     ${stepCardsHtml}
     ${autoHtml}
     <hr style="border:none;border-top:1px solid var(--border);margin:1.5rem 0 1.25rem">
+    <div class="mmr-activity-section">
+      <div class="mmr-activity-head">
+        <span class="roadmap-section-title" style="margin-bottom:0">Live activity</span>
+        <span class="mmr-activity-live" id="mmrActivityLiveBadge" hidden><span class="mmr-live-pulse" aria-hidden="true"></span>Live</span>
+      </div>
+      <p class="mmr-activity-sub">Shows the <strong>active cycle</strong> only (newest first). When a cycle ends, this area clears until you upload a new file — full logs for each finished run are under <strong>Cycle History</strong>. Refreshes every 10 seconds while this panel is open.</p>
+      <div id="mmrActivityFeed" class="mmr-activity-feed mmr-activity-feed--loading" aria-live="polite">Loading…</div>
+    </div>
     ${histHtml}
   `;
+  mmrRestoreCycleHistoryDetails(mmrHistoryOpen);
+  mmrOnRoadmapRendered();
 }
 
 // Refresh automation process (Step 4) – reload data, no full page reload
@@ -3268,6 +4149,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadEmailConfig();
   await loadAutomationStatus();
   await loadCycleData();
+
+  document.getElementById('roadmapBody')?.addEventListener('toggle', (e) => {
+    const t = e.target;
+    if (t && t.matches && t.matches('details.cycle-history-item') && t.open) {
+      mmrLoadCycleHistoryLogs(t);
+    }
+  }, true);
 
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;

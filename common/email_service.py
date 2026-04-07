@@ -13,6 +13,7 @@ import logging
 import os
 import mimetypes
 from email.message import EmailMessage
+from email.utils import formataddr
 from flask import current_app
 
 import requests
@@ -375,7 +376,7 @@ def send_email(recipient, subject, body, html_body=None, cc=None, attachments=No
 
         msg = EmailMessage()
         msg['Subject'] = subject
-        msg['From'] = mail_sender
+        msg['From'] = formataddr(("Injaaz", str(mail_sender).strip()))
         if isinstance(recipient, (list, tuple)):
             msg['To'] = ', '.join(recipient)
         else:

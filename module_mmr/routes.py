@@ -6,7 +6,7 @@ Administrative module (user management, access control) stays admin-only.
 import os
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
 
 from flask import (Blueprint, request, jsonify, render_template,
@@ -45,6 +45,8 @@ def _validate_injaaz_emails(raw: str) -> tuple[list[str], str | None]:
 _CONFIG_FILE    = 'mmr_email_config.json'
 _UPLOAD_FILE    = 'mmr_latest.xlsx'
 _CYCLE_LOG_FILE = 'mmr_cycle_log.json'
+_ACTIVITY_FILE = 'mmr_automation_activity.json'
+_ACTIVITY_MAX_ENTRIES = 100
 
 _DEFAULT_CONFIG = {
     'to': 'dennis@injaaz.ae, shakeel@injaaz.ae, araki@injaaz.ae, abbas@injaaz.ae, a.mohammed@injaaz.ae',
@@ -63,6 +65,8 @@ _DEFAULT_CONFIG = {
     'schedule_hour': 10,
     'schedule_minute': 0,
     'schedule_paused': False,
+    # After a successful send while automation is on: true until a new Excel is uploaded.
+    'automation_waiting_for_fresh_upload': False,
 }
 
 _MONTHLY_SUBJECT_DEFAULT = 'Monthly Report on Resolved and Pending Complaints for {{REPORT_DATE}}'
@@ -333,6 +337,53 @@ def _cycle_log_path():
     return os.path.join(current_app.config['GENERATED_DIR'], _CYCLE_LOG_FILE)
 
 
+def _activity_log_path():
+    return os.path.join(current_app.config['GENERATED_DIR'], _ACTIVITY_FILE)
+
+
+def _load_activity_log() -> dict:
+    empty = {'next_id': 1, 'entries': []}
+    try:
+        p = _activity_log_path()
+        if os.path.exists(p):
+            with open(p, encoding='utf-8') as f:
+                data = json.load(f)
+            if isinstance(data.get('entries'), list):
+                return {'next_id': max(1, int(data.get('next_id', 1))), 'entries': data['entries']}
+    except Exception:
+        pass
+    return dict(empty)
+
+
+def append_automation_activity(
+    event_type: str,
+    message: str,
+    detail: str | None = None,
+    *,
+    meta: dict | None = None,
+) -> None:
+    """Append one timeline row for the MMR automation UI (best-effort, never raises)."""
+    try:
+        log = _load_activity_log()
+        eid = int(log.get('next_id', 1))
+        entry = {
+            'id': eid,
+            'ts': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'type': event_type,
+            'message': (message or '')[:500],
+            'detail': (detail[:1000] if detail else None),
+            'meta': meta if isinstance(meta, dict) else {},
+        }
+        log['next_id'] = eid + 1
+        entries = log.get('entries', [])
+        entries.insert(0, entry)
+        log['entries'] = entries[:_ACTIVITY_MAX_ENTRIES]
+        with open(_activity_log_path(), 'w', encoding='utf-8') as f:
+            json.dump(log, f, indent=2)
+    except Exception as e:
+        logger.warning('MMR automation activity log failed: %s', e)
+
+
 def _get_caller_identity() -> str:
     """Safely extract a username string from the current JWT identity."""
     try:
@@ -347,14 +398,32 @@ def _get_caller_identity() -> str:
 
 
 def _load_cycle_log() -> dict:
+    default = {'current': None, 'history': [], 'next_cycle_id': 1}
     try:
         p = _cycle_log_path()
         if os.path.exists(p):
-            with open(p) as f:
-                return json.load(f)
+            with open(p, encoding='utf-8') as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                return dict(default)
+            # Legacy: older builds left current=cycle with status sent — archive to history
+            cur = data.get('current')
+            if isinstance(cur, dict) and cur.get('status') == 'sent':
+                hist = data.get('history', [])
+                if not isinstance(hist, list):
+                    hist = []
+                hist.insert(0, cur)
+                data['history'] = hist[:50]
+                data['current'] = None
+                try:
+                    with open(p, 'w', encoding='utf-8') as wf:
+                        json.dump(data, wf, indent=2)
+                except Exception:
+                    pass
+            return data
     except Exception:
         pass
-    return {'current': None, 'history': [], 'next_cycle_id': 1}
+    return dict(default)
 
 
 def _save_cycle_log(log: dict):
@@ -407,8 +476,8 @@ def _approve_current_cycle(approved_by: str = 'admin') -> bool:
 
 
 def _complete_current_cycle(sent_by: str, subject: str,
-                             recipient_count: int, report_filename: str):
-    """Record a successful email send against the current cycle."""
+                             recipient_count: int, report_filename: str) -> int | None:
+    """Mark current cycle sent, move it to history, clear current (await next Excel). Returns cycle_id."""
     try:
         log = _load_cycle_log()
         current = log.get('current')
@@ -429,14 +498,89 @@ def _complete_current_cycle(sent_by: str, subject: str,
         current['subject'] = subject
         current['report_filename'] = report_filename
         current['status'] = 'sent'
-        log['current'] = current
+        cid = int(current.get('cycle_id', 0))
+        history = log.get('history', [])
+        history.insert(0, current)
+        log['history'] = history[:50]
+        log['current'] = None
         _save_cycle_log(log)
+        append_automation_activity(
+            'cycle_completed',
+            f'Cycle #{cid} completed — saved to history; upload a new Excel for the next run',
+            (subject or '')[:200] or None,
+            meta={'cycle_id': cid},
+        )
+        return cid
     except Exception as e:
         logger.warning(f'MMR complete cycle failed: {e}')
+    return None
 
 
-def _save_last_run(status: str, to_list: list, cc_list: list | None, subject: str, recipient_count: int):
-    """Persist last automation run for status display. Called from scheduler."""
+def _cycle_timeline_from_record(c: dict) -> list[dict]:
+    """Ordered milestone rows for cycle detail UI."""
+    rows: list[dict] = []
+    if c.get('upload_at'):
+        rows.append({
+            'key': 'upload',
+            'at': c['upload_at'],
+            'title': 'Excel uploaded',
+            'detail': f"By {c.get('upload_by') or '—'}",
+        })
+    if c.get('approved_at'):
+        rows.append({
+            'key': 'approved',
+            'at': c['approved_at'],
+            'title': 'Reviewed & approved',
+            'detail': f"By {c.get('approved_by') or '—'}",
+        })
+    if c.get('sent_at'):
+        subj = (c.get('subject') or '').strip()
+        rows.append({
+            'key': 'sent',
+            'at': c['sent_at'],
+            'title': 'Report email sent',
+            'detail': (
+                f"{c.get('recipient_count', 0)} recipients · sent by {c.get('sent_by') or '—'}"
+                + (f' · {subj}' if subj else '')
+            ),
+        })
+    fn = (c.get('report_filename') or '').strip()
+    if fn:
+        rows.append({
+            'key': 'attachment',
+            'at': c.get('sent_at') or c.get('upload_at'),
+            'title': 'Excel attachment filename',
+            'detail': fn,
+        })
+    rows.sort(key=lambda r: (r.get('at') or ''))
+    return rows
+
+
+def _activities_for_cycle_id(cycle_id: int, limit: int = 80) -> list[dict]:
+    """Automation activity log rows tagged with this cycle_id (chronological)."""
+    matches: list[dict] = []
+    for e in _load_activity_log().get('entries', []):
+        mid = e.get('meta') or {}
+        try:
+            if int(mid.get('cycle_id', -1)) == int(cycle_id):
+                matches.append(e)
+        except (TypeError, ValueError):
+            continue
+    matches.sort(key=lambda x: int(x.get('id', 0)))
+    return matches[-limit:]
+
+
+def _save_last_run(
+    status: str,
+    to_list: list,
+    cc_list: list | None,
+    subject: str,
+    recipient_count: int,
+    *,
+    activity_source: str | None = None,
+    cycle_id: int | None = None,
+):
+    """Persist last run for status display. On success with automation enabled, pause until a new Excel upload."""
     config = _load_config()
     config['last_run_at'] = datetime.now().isoformat()
     config['last_run_status'] = status
@@ -444,9 +588,35 @@ def _save_last_run(status: str, to_list: list, cc_list: list | None, subject: st
     config['last_run_cc'] = ', '.join(cc_list) if cc_list else ''
     config['last_run_subject'] = subject or ''
     config['last_run_recipient_count'] = recipient_count
-    if status == 'success':
+    if status == 'success' and config.get('schedule_enabled'):
         config['schedule_paused'] = True
+        config['automation_waiting_for_fresh_upload'] = True
+        up = _upload_path()
+        if os.path.exists(up):
+            config['last_sent_source_mtime'] = os.path.getmtime(up)
     _save_config(config)
+
+    if status == 'success' and activity_source:
+        src = 'Scheduled automation' if activity_source == 'scheduler' else 'Manual send'
+        em: dict = {'recipients': recipient_count, 'source': activity_source}
+        if cycle_id is not None:
+            em['cycle_id'] = int(cycle_id)
+        append_automation_activity(
+            'email_sent',
+            f'{src}: report email sent',
+            subject or None,
+            meta=em,
+        )
+    elif status == 'failed' and activity_source == 'scheduler':
+        fm: dict = {'source': 'scheduler'}
+        if cycle_id is not None:
+            fm['cycle_id'] = int(cycle_id)
+        append_automation_activity(
+            'email_failed',
+            'Scheduled automation: send failed',
+            None,
+            meta=fm,
+        )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -488,21 +658,39 @@ def upload():
     try:
         dashboard_data, rows = _dashboard_payload_from_path(dest)
         # Start a new dispatch cycle for this upload
+        new_cycle = None
         try:
-            _start_new_cycle(_get_caller_identity())
+            new_cycle = _start_new_cycle(_get_caller_identity())
         except Exception:
             pass
 
         # Auto-resume automation when new file uploaded (each run needs fresh Excel)
         config = _load_config()
+        resumed_auto = False
         if config.get('schedule_enabled') and config.get('schedule_paused'):
             config['schedule_paused'] = False
+            config['automation_waiting_for_fresh_upload'] = False
             _save_config(config)
+            resumed_auto = True
             try:
                 from .scheduler import update_schedule
                 update_schedule(config, current_app._get_current_object())
             except Exception:
                 pass
+        who = _get_caller_identity()
+        fn = (file.filename or 'workbook')[:120]
+        emeta: dict = {'by': who, 'resumed_automation': resumed_auto}
+        try:
+            if new_cycle and new_cycle.get('cycle_id') is not None:
+                emeta['cycle_id'] = int(new_cycle['cycle_id'])
+        except (TypeError, ValueError):
+            pass
+        append_automation_activity(
+            'excel_uploaded',
+            f'New Excel uploaded by {who}' + (' — automation resumed for the next run.' if resumed_auto else ''),
+            fn,
+            meta=emeta,
+        )
         return jsonify({'success': True, 'dashboard': dashboard_data, 'rows': rows,
                         'total': len(rows)})
     except Exception as e:
@@ -543,6 +731,13 @@ def clear_upload():
         except OSError as e:
             logger.warning(f'MMR clear-upload failed: {e}')
             return jsonify({'success': False, 'error': str(e)}), 500
+    _who = _get_caller_identity()
+    append_automation_activity(
+        'excel_cleared',
+        f'Report cleared from server by {_who}',
+        'Workbook removed — upload a new Excel when ready.',
+        meta={'by': _who},
+    )
     return jsonify({'success': True})
 
 
@@ -885,6 +1080,7 @@ def get_automation_status():
         schedule_enabled and schedule_paused and
         last_run and last_run['is_today'] and last_run['status'] == 'success'
     )
+    waiting_fresh = bool(config.get('automation_waiting_for_fresh_upload'))
 
     return jsonify({
         'schedule_enabled': schedule_enabled,
@@ -895,9 +1091,82 @@ def get_automation_status():
         'next_run_tomorrow': next_run_tomorrow,
         'excel_uploaded': excel_uploaded,
         'excel_required_for_next_run': excel_required_for_next_run,
+        'automation_waiting_for_fresh_upload': waiting_fresh,
         'last_run': last_run,
         'automation_status': automation_status,
     })
+
+
+def _activity_entry_cycle_id(entry: dict) -> int | None:
+    mid = entry.get('meta') or {}
+    raw = mid.get('cycle_id')
+    if raw is None or raw == '':
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+@mmr_bp.route('/api/automation-activities', methods=['GET'])
+@jwt_required()
+def get_automation_activities():
+    """Automation timeline (newest first).
+    mode=live: rows for the active cycle only; if there is no current cycle, returns an empty list
+    (idle top feed — full logs stay on each cycle under Cycle History).
+    Or for_cycle=N / only_untagged=1 when mode is not live.
+    """
+    try:
+        limit = min(_ACTIVITY_MAX_ENTRIES, max(1, int(request.args.get('limit', 40))))
+    except (TypeError, ValueError):
+        limit = 40
+    after_id = request.args.get('after_id', type=int)
+    mode = (request.args.get('mode') or '').strip().lower()
+    live_context: dict | None = None
+    only_untagged = False
+
+    if mode == 'live':
+        cl = _load_cycle_log()
+        cur = cl.get('current')
+        for_cycle = None
+        if isinstance(cur, dict) and cur.get('cycle_id') is not None:
+            try:
+                for_cycle = int(cur['cycle_id'])
+            except (TypeError, ValueError):
+                for_cycle = None
+        live_context = {'active_cycle_id': for_cycle}
+    else:
+        for_cycle = request.args.get('for_cycle', type=int)
+        only_untagged = str(request.args.get('only_untagged', '')).strip().lower() in ('1', 'true', 'yes', 'on')
+
+    log = _load_activity_log()
+    pool = list(log.get('entries', []))
+    if mode == 'live':
+        if for_cycle is not None:
+            pool = [e for e in pool if _activity_entry_cycle_id(e) == for_cycle]
+        else:
+            pool = []
+    elif for_cycle is not None:
+        pool = [e for e in pool if _activity_entry_cycle_id(e) == for_cycle]
+    elif only_untagged:
+        pool = [e for e in pool if _activity_entry_cycle_id(e) is None]
+
+    if after_id is not None:
+        entries = [e for e in pool if int(e.get('id', 0)) > after_id]
+    else:
+        entries = pool[:limit]
+
+    ids = [int(e.get('id', 0)) for e in log.get('entries', [])]
+    max_id = max(ids) if ids else 0
+
+    out = {
+        'activities': entries,
+        'max_id': max_id,
+        'server_time': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+    }
+    if live_context is not None:
+        out['live_context'] = live_context
+    return jsonify(out)
 
 
 @mmr_bp.route('/api/automation-pause', methods=['POST'])
@@ -906,12 +1175,19 @@ def pause_automation():
     """Pause the automation. Next run will not execute until resumed."""
     config = _load_config()
     config['schedule_paused'] = True
+    config['automation_waiting_for_fresh_upload'] = False
     _save_config(config)
     try:
         from .scheduler import update_schedule
         update_schedule(config, current_app._get_current_object())
     except Exception:
         pass
+    append_automation_activity(
+        'paused',
+        f'Automation paused by {_get_caller_identity()}',
+        'Scheduled sends are on hold until you resume.',
+        meta={'by': _get_caller_identity()},
+    )
     return jsonify({'success': True, 'paused': True})
 
 
@@ -923,13 +1199,38 @@ def resume_automation():
     if not os.path.exists(path):
         return jsonify({'error': 'Upload an Excel file first to resume automation.'}), 400
     config = _load_config()
+    if config.get('automation_waiting_for_fresh_upload'):
+        try:
+            last_mt = float(config.get('last_sent_source_mtime', 0))
+        except (TypeError, ValueError):
+            last_mt = 0.0
+        if os.path.getmtime(path) <= last_mt + 0.001:
+            append_automation_activity(
+                'resume_blocked',
+                f'Resume blocked for {_get_caller_identity()}',
+                'A new Excel upload is required after the last send before automation can run again.',
+                meta={'by': _get_caller_identity()},
+            )
+            return jsonify({
+                'error': (
+                    'Automation needs a new Excel upload after the last send. '
+                    'Upload a fresh CAFM file, then resume (or it will resume automatically on upload).'
+                )
+            }), 400
     config['schedule_paused'] = False
+    config['automation_waiting_for_fresh_upload'] = False
     _save_config(config)
     try:
         from .scheduler import update_schedule
         update_schedule(config, current_app._get_current_object())
     except Exception:
         pass
+    append_automation_activity(
+        'resumed',
+        f'Automation resumed by {_get_caller_identity()}',
+        'Next send will run at the scheduled time.',
+        meta={'by': _get_caller_identity()},
+    )
     return jsonify({'success': True, 'paused': False})
 
 
@@ -944,12 +1245,49 @@ def get_cycles():
     return jsonify(_load_cycle_log())
 
 
+@mmr_bp.route('/api/cycle/<int:cycle_id>/detail', methods=['GET'])
+@jwt_required()
+def get_cycle_detail(cycle_id: int):
+    """Milestones + automation activity rows for one cycle (newest first, then back to start)."""
+    log = _load_cycle_log()
+    history = log.get('history', [])
+    found = next((c for c in history if int(c.get('cycle_id', -1)) == int(cycle_id)), None)
+    if found is None:
+        cur = log.get('current')
+        if cur and int(cur.get('cycle_id', -1)) == int(cycle_id):
+            found = cur
+    if found is None:
+        return jsonify({'error': 'Cycle not found'}), 404
+    timeline = list(reversed(_cycle_timeline_from_record(found)))
+    activities = list(reversed(_activities_for_cycle_id(cycle_id)))
+    return jsonify({
+        'cycle': found,
+        'timeline': timeline,
+        'activities': activities,
+    })
+
+
 @mmr_bp.route('/api/approve', methods=['POST'])
 @jwt_required()
 def approve_cycle():
     """Mark the current cycle as reviewed/approved."""
     user = _get_caller_identity()
     if _approve_current_cycle(user):
+        log_ok = _load_cycle_log()
+        cur = log_ok.get('current') or {}
+        cid = cur.get('cycle_id')
+        ameta: dict = {'by': user}
+        try:
+            if cid is not None:
+                ameta['cycle_id'] = int(cid)
+        except (TypeError, ValueError):
+            pass
+        append_automation_activity(
+            'cycle_approved',
+            f'Cycle marked reviewed by {user}',
+            'Ready for email send or scheduled automation.',
+            meta=ameta,
+        )
         return jsonify({'success': True})
     log = _load_cycle_log()
     current = log.get('current')
@@ -975,6 +1313,7 @@ def save_email_config():
                 return jsonify({'error': err}), 400
 
     config = _load_config()
+    prev_schedule_on = bool(config.get('schedule_enabled'))
     allowed = ['to', 'cc', 'subject', 'body',
                 'schedule_enabled', 'schedule_hour', 'schedule_minute', 'schedule_paused']
     for k in allowed:
@@ -988,6 +1327,25 @@ def save_email_config():
     # Env schedule vars (Render) override form so MMR_SCHEDULE_* survives accidental UI toggles
     config.update(_env_schedule_override())
     _save_config(config)
+
+    now_on = bool(config.get('schedule_enabled'))
+    if prev_schedule_on != now_on:
+        h = int(config.get('schedule_hour', 10))
+        m = int(config.get('schedule_minute', 0))
+        if now_on:
+            append_automation_activity(
+                'schedule_on',
+                'Daily email automation enabled',
+                f'Schedule: {h:02d}:{m:02d} (automation timezone).',
+                meta={'hour': h, 'minute': m},
+            )
+        else:
+            append_automation_activity(
+                'schedule_off',
+                'Daily email automation stopped',
+                'No further scheduled sends until re-enabled.',
+                meta={},
+            )
 
     # Refresh scheduler
     try:
@@ -1102,9 +1460,17 @@ def send_email_now():
         if ok:
             _save_report_to_folder(report_bytes, filename, 'email')
             _save_email_report_to_network(report_bytes, filename)
+            rc = len(to_list) + (len(cc_list) if cc_list else 0)
+            cid = None
             try:
-                rc = len(to_list) + (len(cc_list) if cc_list else 0)
-                _complete_current_cycle(_get_caller_identity(), subject, rc, filename)
+                cid = _complete_current_cycle(_get_caller_identity(), subject, rc, filename)
+            except Exception:
+                pass
+            try:
+                _save_last_run(
+                    'success', to_list, cc_list, subject, rc,
+                    activity_source='manual', cycle_id=cid,
+                )
             except Exception:
                 pass
             return jsonify({

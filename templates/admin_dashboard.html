@@ -3,12 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-  <title>Administrative Dashboard - Injaaz Application</title>
+  <title>Administration - Injaaz Application</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dochub-page.css') }}">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -39,13 +42,15 @@
       --main-nav-h: 72px;
     }
     
+    /* Same stack as dashboard.css / DocHub / main nav */
     body {
-      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
       background-attachment: fixed;
       color: var(--text);
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
       min-height: 100vh;
     }
     
@@ -93,6 +98,154 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     }
     
+    /* DocHub-aligned sidebar: match dochub-page.css body.dochub-page-v2 tokens + breakpoints */
+    body.admin-dh-page {
+      --sb-bg: #125435;
+      --accent: #125435;
+      --accent-2: #1a7a4d;
+      --sidebar-w: 288px;
+      --radius: 10px;
+      --dh-fs-base: 17px;
+      --dh-fs-sidebar: 16px;
+      --dh-fs-sidebar-label: 12px;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: var(--font-body);
+      background: #f5faf7;
+    }
+    @media (max-width: 1280px) {
+      body.admin-dh-page {
+        --sidebar-w: 252px;
+      }
+    }
+    @media (max-width: 1100px) {
+      body.admin-dh-page {
+        --sidebar-w: 232px;
+      }
+    }
+    /* DocHub method: viewport-locked body + flex column; only main column scrolls (see dochub-page.css body.dochub-page-v2.has-main-nav + .dh-page-root) */
+    body.admin-dh-page.has-main-nav {
+      --nav-offset: 5.5rem;
+      padding-top: var(--nav-offset) !important;
+      min-height: 100dvh;
+      min-height: 100svh;
+      height: 100dvh;
+      height: 100svh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden !important;
+      /* Lock page scroll: main column scrolls (DocHub). !important beats mobile_responsive body rules above 768px. */
+      overflow-y: hidden !important;
+      box-sizing: border-box;
+    }
+    body.admin-dh-page.has-main-nav .admin-dh-page-root.dh-page-root {
+      flex: 1 1 0%;
+      min-height: 0;
+      width: 100%;
+      height: 100%;
+      max-height: none;
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: row;
+      direction: ltr;
+      align-items: stretch;
+      align-content: stretch;
+      gap: 0;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      box-sizing: border-box;
+    }
+    /* Use global .nav from dashboard.css (white bar, hairline, scroll shadow) — same as Report setting & other modules */
+    .admin-dh-page-root .dh-sidebar {
+      order: 0;
+      flex: 0 0 var(--sidebar-w);
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      min-height: 0;
+      align-self: stretch;
+      position: relative;
+      top: auto;
+      height: auto;
+      max-height: none;
+      border-radius: 0;
+      overflow: hidden;
+      box-shadow: none;
+      font-family: var(--font-body);
+      font-size: var(--dh-fs-base);
+      line-height: 1.55;
+    }
+    .admin-dh-page-root .dh-sidebar,
+    .admin-dh-page-root .dh-sidebar * {
+      box-sizing: border-box;
+    }
+    .admin-dh-main {
+      order: 1;
+      flex: 1 1 0%;
+      min-width: 0;
+      min-height: 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 0 1.5rem 0 1.25rem;
+    }
+    .admin-dh-main .container.admin-content {
+      max-width: none;
+      margin: 0;
+      flex: 1 1 0%;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding: 1rem 0 2rem;
+      box-sizing: border-box;
+    }
+    @media (max-width: 900px) {
+      body.admin-dh-page.has-main-nav {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto !important;
+      }
+      body.admin-dh-page.has-main-nav .admin-dh-page-root.dh-page-root {
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+        flex-direction: column;
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+      .admin-dh-main {
+        overflow: visible;
+        min-height: 0;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .admin-dh-main .container.admin-content {
+        overflow: visible;
+        flex: none;
+        min-height: 0;
+      }
+      .admin-dh-page-root .dh-sidebar {
+        position: static;
+        height: auto;
+        max-height: none;
+        width: 100%;
+        min-width: 0;
+        flex: 0 0 auto;
+        align-self: stretch;
+      }
+    }
+    @media (max-width: 480px) {
+      .admin-dh-main .container.admin-content {
+        padding: 0 0 0.75rem !important;
+      }
+    }
+
     .container {
       max-width: 1400px;
       margin: 0 auto;
@@ -114,6 +267,514 @@
     .page-subtitle {
       color: var(--text-secondary);
       font-size: 0.9375rem;
+    }
+
+    .admin-content .adm-greeting-line {
+      margin-bottom: 1.25rem;
+    }
+    .admin-content .adm-greeting-line .page-title {
+      margin-bottom: 0;
+    }
+    .admin-content .adm-greeting-accent {
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .adm-sec-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.55rem;
+      padding: 0.55rem 0.85rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+    .adm-sec-banner--warn {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+    }
+    .adm-sec-banner--ok {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+    }
+    .adm-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.65rem;
+      margin-bottom: 0.9rem;
+    }
+    @media (max-width: 1400px) {
+      .adm-kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .adm-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .adm-kpi { min-height: 0; }
+    }
+    .adm-kpi {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 1px);
+      padding: 0.85rem 0.95rem;
+      min-height: 7.75rem;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+    .adm-kpi:hover {
+      box-shadow: var(--shadow);
+      transform: translateY(-1px);
+    }
+    .adm-kpi::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      border-radius: 0 0 calc(var(--radius) + 1px) calc(var(--radius) + 1px);
+    }
+    .adm-kpi--green::after { background: var(--primary); }
+    .adm-kpi--blue::after { background: #2563eb; }
+    .adm-kpi--amber::after { background: #d97706; }
+    .adm-kpi--red::after { background: #dc2626; }
+    .adm-kpi--purple::after { background: #7c3aed; }
+    .adm-kpi--teal::after { background: #0891b2; }
+    .adm-kpi-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .adm-kpi-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.12rem;
+    }
+    .adm-kpi--green .adm-kpi-icon { background: rgba(18, 84, 53, 0.1); }
+    .adm-kpi--blue .adm-kpi-icon { background: #eff6ff; }
+    .adm-kpi--amber .adm-kpi-icon { background: #fffbeb; }
+    .adm-kpi--red .adm-kpi-icon { background: #fef2f2; }
+    .adm-kpi--purple .adm-kpi-icon { background: #f5f3ff; }
+    .adm-kpi--teal .adm-kpi-icon { background: #ecfeff; }
+    .adm-kpi-trend {
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.14rem 0.42rem;
+      border-radius: 99px;
+      background: #f1f5f9;
+      color: var(--text-muted);
+    }
+    .adm-kpi-val {
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      color: var(--text);
+    }
+    .adm-kpi-label {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 0.22rem;
+    }
+    .adm-kpi-foot {
+      margin-top: 0.5rem;
+      padding-top: 0.48rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+    .adm-kpi-foot strong {
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+    @keyframes adm-fi-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .adm-kpi-grid.adm-fi .adm-kpi {
+      animation: adm-fi-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .adm-kpi-grid.adm-fi .adm-kpi:nth-child(1) { animation-delay: 0.04s; }
+    .adm-kpi-grid.adm-fi .adm-kpi:nth-child(2) { animation-delay: 0.08s; }
+    .adm-kpi-grid.adm-fi .adm-kpi:nth-child(3) { animation-delay: 0.12s; }
+    .adm-kpi-grid.adm-fi .adm-kpi:nth-child(4) { animation-delay: 0.16s; }
+    .adm-kpi-grid.adm-fi .adm-kpi:nth-child(5) { animation-delay: 0.2s; }
+    .adm-kpi-grid.adm-fi .adm-kpi:nth-child(6) { animation-delay: 0.24s; }
+
+    /* Overview panels — bento-style: modules | (workflow + ops stack); then security | audit */
+    .adm-section-kicker {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin: 0 0 0.35rem 0;
+    }
+    /* Chart.js insight strip */
+    .adm-charts-strip {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+      gap: 0.75rem;
+      margin-bottom: 0.35rem;
+    }
+    @media (max-width: 960px) {
+      .adm-charts-strip { grid-template-columns: 1fr; }
+    }
+    .adm-chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 2px);
+      overflow: hidden;
+      box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.06);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .adm-chart-card-head {
+      padding: 0.65rem 0.9rem 0.5rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #fafbfc 0%, #fff 100%);
+    }
+    .adm-chart-card-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+    .adm-chart-card-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin: 0.15rem 0 0 0;
+    }
+    .adm-chart-card-body {
+      padding: 0.65rem 0.85rem 0.75rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .adm-chart-canvas-wrap {
+      position: relative;
+      width: 100%;
+      min-height: 0;
+    }
+    .adm-chart-canvas-wrap--donut {
+      height: 220px;
+    }
+    .adm-chart-canvas-wrap--bar {
+      height: 260px;
+    }
+    .adm-chart-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.28rem;
+      margin-top: 0.55rem;
+      padding-top: 0.55rem;
+      border-top: 1px solid var(--border);
+    }
+    .adm-overview-panels {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .adm-panel-row {
+      display: grid;
+      gap: 0.75rem;
+      align-items: start;
+    }
+    /* Top: wide submissions column + stacked workflow & operations (no empty “third column”) */
+    .adm-panel-row--overview-top {
+      grid-template-columns: minmax(0, 1.22fr) minmax(280px, 1fr);
+      align-items: stretch;
+    }
+    .adm-overview-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      min-width: 0;
+    }
+    .adm-overview-stack > .adm-panel {
+      flex: 0 0 auto;
+    }
+    .adm-panel--modules {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      align-self: stretch;
+      border-left: 3px solid var(--primary);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+    }
+    /* Fills space below the scroll area when this column is stretched taller than the list */
+    .adm-panel--modules::after {
+      content: '';
+      flex: 1 1 0;
+      min-height: 0;
+      background: linear-gradient(180deg, #f1f5f9 0%, #fff 55%);
+      pointer-events: none;
+    }
+    .adm-panel--modules .adm-panel-head {
+      flex: 0 0 auto;
+      background: linear-gradient(180deg, rgba(18, 84, 53, 0.04) 0%, transparent 100%);
+    }
+    /* Bottom: narrow security | wide audit; top-align so short security doesn’t leave a white slab */
+    .adm-panel-row--split {
+      grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.75fr);
+      align-items: start;
+    }
+    .adm-panel--security .adm-panel-body {
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+    }
+    @media (max-width: 1100px) {
+      .adm-panel-row--overview-top {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 1024px) {
+      .adm-panel-row--split {
+        grid-template-columns: 1fr;
+      }
+    }
+    .adm-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 2px);
+      padding: 0;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      overflow: hidden;
+      align-self: start;
+      width: 100%;
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .adm-panel:hover {
+      box-shadow: 0 4px 14px -4px rgba(15, 23, 42, 0.1);
+      border-color: #e2e8f0;
+    }
+    .adm-panel-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.62rem 0.85rem 0.5rem;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+    }
+    .adm-panel-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .adm-panel-title::before {
+      content: '';
+      width: 3px;
+      height: 15px;
+      flex-shrink: 0;
+      background: linear-gradient(180deg, var(--primary), #1a7a4d);
+      border-radius: 99px;
+    }
+    .adm-panel-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.14rem;
+    }
+    .adm-panel-tag {
+      font-size: 0.62rem;
+      font-weight: 600;
+      padding: 0.12rem 0.45rem;
+      border-radius: 99px;
+      background: var(--primary-muted);
+      color: var(--primary);
+    }
+    .adm-panel-body {
+      padding: 0.5rem 0.85rem 0.65rem;
+    }
+    .adm-panel--modules .adm-panel-body#admModuleBars {
+      flex: 0 1 auto;
+      min-height: 0;
+      max-height: min(52vh, 520px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 0.45rem;
+      scrollbar-gutter: stable;
+      background: linear-gradient(180deg, #fafbfc 0%, #fff 40%);
+    }
+    .adm-panel--modules .adm-panel-body#admModuleBars::-webkit-scrollbar {
+      width: 6px;
+    }
+    .adm-panel--modules .adm-panel-body#admModuleBars::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 99px;
+    }
+    .adm-panel--modules .adm-panel-body#admModuleBars::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 99px;
+    }
+    .adm-panel--ops .adm-panel-body {
+      padding-bottom: 0.6rem;
+    }
+    .adm-panel--audit .adm-panel-head {
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.035) 0%, transparent 100%);
+    }
+    .adm-module-bars--dense .adm-mb-row {
+      margin-bottom: 0.22rem;
+    }
+    .adm-module-bars--dense .adm-mb-label {
+      font-size: 0.7rem;
+      margin-bottom: 0.1rem;
+    }
+    .adm-mb-row {
+      margin-bottom: 0.35rem;
+    }
+    .adm-mb-row:last-child { margin-bottom: 0; }
+    .adm-mb-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.16rem;
+      line-height: 1.25;
+    }
+    .adm-mb-label strong { color: var(--text); font-weight: 600; }
+    .adm-mb-track {
+      height: 5px;
+      background: #f1f5f9;
+      border-radius: 99px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .adm-mb-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--primary) 0%, #1a7a4d 100%);
+      min-width: 2px;
+      transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .adm-wf-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.28rem;
+      align-content: flex-start;
+    }
+    .adm-wf-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.28rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.18rem 0.42rem;
+      border-radius: 99px;
+      background: var(--primary-muted);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+    }
+    .adm-wf-chip span {
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.62rem;
+      padding: 0.06rem 0.34rem;
+      border-radius: 99px;
+      font-weight: 700;
+    }
+    .adm-mb-fill--blue { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+    .adm-mb-fill--amber { background: linear-gradient(90deg, #d97706, #fbbf24); }
+    .adm-mb-fill--pink { background: linear-gradient(90deg, #db2777, #f472b6); }
+    .adm-ops-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+      align-content: start;
+    }
+    .adm-ops-card {
+      padding: 0.48rem 0.55rem;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid #e8eef3;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+    }
+    .adm-panel--ops .adm-ops-card:hover {
+      border-color: #d8e2ec;
+      box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.08);
+    }
+    .adm-ops-card-label {
+      font-size: 0.64rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .adm-ops-card-val {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-top: 0.08rem;
+      letter-spacing: -0.03em;
+    }
+    .adm-ops-card-sub {
+      font-size: 0.64rem;
+      color: var(--text-secondary);
+      margin-top: 0.06rem;
+      line-height: 1.25;
+    }
+    .adm-security {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0;
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+    .adm-security--ok {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #065f46;
+    }
+    .adm-audit-list {
+      max-height: 240px;
+      overflow-y: auto;
+      font-size: 0.75rem;
+      padding: 0;
+    }
+    .adm-audit-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.4rem;
+      padding: 0.28rem 0;
+      border-bottom: 1px solid var(--border);
+      align-items: start;
+    }
+    .adm-audit-row:last-child { border-bottom: none; }
+    .adm-audit-meta {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .adm-audit-action {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .adm-panel-placeholder {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      padding: 0.25rem 0;
+      margin: 0;
     }
     
     .users-section {
@@ -1211,14 +1872,60 @@
     }
   </style>
 </head>
-<body>
-  {% set active_page = 'admin' %}
+<body class="has-main-nav admin-dh-page">
   {% include 'partials/main_navbar.html' with context %}
 
+  <div class="dh-page-root admin-dh-page-root">
+    <aside class="dh-sidebar" id="adminDhSidebar" aria-label="Administration menu">
+      <div class="sb-brand">
+        <div class="sb-brand-text">
+          <span class="name">Injaaz</span>
+          <span class="tagline">Administration</span>
+        </div>
+      </div>
+      <nav class="sb-nav">
+        <div class="dh-sb-section">
+          <div class="sb-section-label">Overview</div>
+          <a href="#section-users" class="sb-nav-item active">Users <span class="sb-badge" id="admSbUserCount">0</span></a>
+          <a href="#section-documents" class="sb-nav-item">Documents <span class="sb-badge" id="admSbDocCount">0</span></a>
+        </div>
+        <div class="dh-sb-section">
+          <div class="sb-section-label">Tools</div>
+          <a href="/admin/mmr/" class="sb-nav-item">Report generation</a>
+          <a href="/admin/mmr-chargeable" class="sb-nav-item">Chargeable rules</a>
+        </div>
+        <div class="dh-sb-section">
+          <div class="sb-section-label">Modules</div>
+          <a href="/admin/devices" class="sb-nav-item">Devices</a>
+          <a href="/admin/bd" class="sb-nav-item">Business development</a>
+          <a href="/admin/personal-progress" class="sb-nav-item">Personal progress</a>
+        </div>
+        <div class="dh-sb-section">
+          <div class="sb-section-label">System</div>
+          <a href="/dochub" class="sb-nav-item">DocHub</a>
+          <a href="/dashboard" class="sb-nav-item">App home</a>
+        </div>
+      </nav>
+      <div class="sb-footer">
+        <div class="sb-user-row" id="admSbUserRow" role="button" tabindex="0" title="Open profile"
+             onclick="if(typeof openProfileModal==='function'){openProfileModal();}"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();if(typeof openProfileModal==='function')openProfileModal();}">
+          <div class="sb-avatar" id="admSbAvatar">—</div>
+          <div class="sb-user-text">
+            <div class="sb-user-name" id="admSbName">Loading…</div>
+            <div class="sb-user-role" id="admSbRole">—</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="admin-dh-main">
   <div class="container admin-content">
-    <div class="page-header">
-      <h1 class="page-title">Administrative Dashboard</h1>
-      <p class="page-subtitle">Manage users, permissions, access controls, and view all generated documents</p>
+
+    <div class="page-header adm-greeting-line">
+      <h1 class="page-title">
+        <span id="admGreetingPrefix">Welcome</span>, <span class="adm-greeting-accent" id="admGreetingName">Admin</span>
+      </h1>
     </div>
 
     <!-- MMR Report Generation Module -->
@@ -1275,7 +1982,7 @@
 
     <div id="alertContainer"></div>
 
-    <div class="users-section">
+    <div class="users-section" id="section-users">
       <div class="section-header">
         <h2 class="section-title">All Users</h2>
         <div class="section-controls">
@@ -1300,7 +2007,7 @@
       </div>
     </div>
 
-    <div class="users-section">
+    <div class="users-section" id="section-documents">
       <div class="section-header">
         <h2 class="section-title">Generated Documents</h2>
         <div class="section-controls">
@@ -1327,6 +2034,8 @@
       <div id="documentsTableContainer">
         <p>Loading documents...</p>
       </div>
+    </div>
+  </div>
     </div>
   </div>
 
@@ -1920,6 +2629,7 @@
         if (data.success) {
           users = data.users;
           renderUsersTable();
+          updateAdminSidebarBadges();
         } else {
           showAlert('Failed to load users', 'error');
         }
@@ -2436,6 +3146,7 @@
         if (data.success) {
           documents = data.documents;
           renderDocumentsTable();
+          updateAdminSidebarBadges();
         } else {
           showAlert('Failed to load documents', 'error');
           document.getElementById('documentsTableContainer').innerHTML = '<p class="no-documents">Failed to load documents</p>';
@@ -3279,7 +3990,55 @@
       }
     }
 
+    function updateAdminSidebarBadges() {
+      const sbU = document.getElementById('admSbUserCount');
+      const sbD = document.getElementById('admSbDocCount');
+      if (sbU) sbU.textContent = String(typeof users !== 'undefined' && Array.isArray(users) ? users.length : 0);
+      if (sbD) sbD.textContent = String(typeof documents !== 'undefined' && Array.isArray(documents) ? documents.length : 0);
+    }
+
+    function initAdminGreeting() {
+      const prefixEl = document.getElementById('admGreetingPrefix');
+      const nameEl = document.getElementById('admGreetingName');
+      if (!prefixEl || !nameEl) return;
+      const h = new Date().getHours();
+      let greet = 'Good evening';
+      if (h < 12) greet = 'Good morning';
+      else if (h < 17) greet = 'Good afternoon';
+      prefixEl.textContent = greet;
+      let displayName = 'Admin';
+      try {
+        const raw = localStorage.getItem('user');
+        const u = raw ? JSON.parse(raw) : null;
+        if (u && (u.full_name || u.username)) displayName = u.full_name || u.username;
+      } catch (e) {}
+      nameEl.textContent = displayName;
+    }
+
+    function initAdminSidebarUser() {
+      const av = document.getElementById('admSbAvatar');
+      const nm = document.getElementById('admSbName');
+      const rl = document.getElementById('admSbRole');
+      if (!nm || !rl) return;
+      try {
+        const raw = localStorage.getItem('user');
+        const u = raw ? JSON.parse(raw) : null;
+        const name = (u && (u.full_name || u.username)) ? (u.full_name || u.username) : 'User';
+        const role = (u && u.role) ? String(u.role) : '—';
+        nm.textContent = name;
+        rl.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+        const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(function (p) { return p[0]; }).join('').toUpperCase() || '—';
+        if (av) av.textContent = initials.slice(0, 3);
+      } catch (e) {
+        nm.textContent = 'User';
+        rl.textContent = '—';
+        if (av) av.textContent = '—';
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+      initAdminGreeting();
+      initAdminSidebarUser();
       checkPasswordChangeRequired();
       loadUsers();
       loadDocuments();

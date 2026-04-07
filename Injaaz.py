@@ -869,22 +869,27 @@ def create_app():
     @app.route('/admin/dashboard')
     def admin_dashboard():
         """Admin dashboard - requires admin authentication"""
-        return render_template('admin_dashboard.html')
+        return render_template('admin_dashboard.html', active_page='admin')
 
     @app.route('/admin/mmr-chargeable')
     def mmr_chargeable_settings_page():
         """Report setting: chargeable / BaseUnit rules (admin UI)."""
-        return render_template('mmr_chargeable_settings.html')
+        return render_template('mmr_chargeable_settings.html', active_page='mmr-chargeable')
 
     @app.route('/admin/devices')
     def admin_devices():
         """Device management - admin only"""
-        return render_template('admin_device_management.html')
+        return render_template('admin_device_management.html', active_page='devices')
 
     @app.route('/admin/bd')
     def admin_bd():
         """Business Development module - admin only"""
-        return render_template('admin_bd_module.html')
+        return render_template('admin_bd_module.html', active_page='bd-module')
+
+    @app.route('/admin/personal-progress')
+    def admin_personal_progress():
+        """Personal work-in-progress tracker — admin only"""
+        return render_template('admin_personal_progress.html', active_page='personal-progress')
 
     @app.route('/dochub')
     def dochub():

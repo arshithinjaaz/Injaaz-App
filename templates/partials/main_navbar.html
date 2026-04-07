@@ -1,5 +1,6 @@
 {# Main dashboard navigation bar - use across all modules #}
-{# Optional: active_page = 'home' | 'about' | 'admin' | 'report' | 'hr' | 'inspection' | 'procurement' | 'all-submissions' | 'pending-review' | 'submitted-forms' | 'bd-email' | 'dochub' #}
+{# Optional: active_page = 'home' | 'about' | 'admin' | 'personal-progress' | 'report' | 'mmr-chargeable' | 'hr' | ... #}
+{# Include with `with context` so routes can pass active_page: {% include 'partials/main_navbar.html' with context %} #}
 <nav class="nav" id="nav">
   <div class="nav-container">
     <a href="/dashboard" class="logo" aria-label="Injaaz Home">
@@ -43,10 +44,10 @@
           <a href="/api/workflow/history" {% if active_page == 'all-submissions' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Review History</a>
         </li>
         <li id="report-gen-menu-item" style="display: none;">
-          <a href="/admin/mmr/" {% if active_page == 'report' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Report Generation</a>
+          <a href="/admin/mmr/" {% if active_page == 'report' or active_page == 'mmr-chargeable' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Report Generation</a>
         </li>
         <li id="admin-menu-item" style="display: none;">
-          <a href="/admin/dashboard" {% if active_page == 'admin' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Administrative</a>
+          <a href="/admin/dashboard" {% if active_page == 'admin' or active_page == 'personal-progress' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Administrative</a>
         </li>
         <li id="device-management-menu-item" style="display: none;">
           <a href="/admin/devices" {% if active_page == 'devices' %}style="color: var(--primary); font-weight: 600;"{% endif %}>Device Management</a>

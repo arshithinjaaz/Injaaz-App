@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify, render_template, current_app, sen
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import (
     db, User, AuditLog, Device, BDProject, BDFollowUp, BDContact, BDActivity,
-    DocHubAccess, MmrChargeableConfig
+    DocHubAccess, MmrChargeableConfig, AdminPersonalProject, AdminPersonalProgressStep,
 )
 from app.middleware import admin_required
 from common.error_responses import error_response, success_response
@@ -1125,6 +1125,160 @@ def get_workflow_stats():
     except Exception as e:
         current_app.logger.error(f"Error getting workflow stats: {str(e)}", exc_info=True)
         return error_response('Failed to get statistics', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/dashboard-overview', methods=['GET'])
+@jwt_required()
+@admin_required
+def dashboard_overview():
+    """Single aggregated payload for the admin dashboard (users, submissions, devices, BD, DocHub, audit)."""
+    try:
+        from app.models import Submission
+        from sqlalchemy import func, or_, and_
+
+        # --- Users ---
+        user_total = User.query.count()
+        user_active = User.query.filter_by(is_active=True).count()
+        user_inactive = max(0, user_total - user_active)
+        role_rows = db.session.query(User.role, func.count(User.id)).group_by(User.role).all()
+        by_role = {str(r or 'unknown'): c for r, c in role_rows}
+        default_password_count = User.query.filter_by(password_changed=False).count()
+        by_designation_active = db.session.query(
+            User.designation, func.count(User.id)
+        ).filter(
+            User.is_active.is_(True),
+            User.designation.isnot(None),
+            User.designation != ''
+        ).group_by(User.designation).all()
+        designation_breakdown = {str(d or 'unknown'): c for d, c in by_designation_active}
+
+        # --- Submissions (inspection documents) ---
+        sub_total = Submission.query.count()
+        mod_rows = db.session.query(Submission.module_type, func.count(Submission.id)).group_by(
+            Submission.module_type
+        ).all()
+        by_module = {str(m or 'unknown'): c for m, c in mod_rows}
+
+        pipeline_open = Submission.query.filter(
+            and_(
+                or_(
+                    Submission.workflow_status.is_(None),
+                    ~Submission.workflow_status.in_(['completed', 'closed_by_admin', 'rejected'])
+                ),
+                or_(
+                    Submission.status.is_(None),
+                    ~Submission.status.in_(['completed', 'closed'])
+                )
+            )
+        ).count()
+
+        completed_closed = Submission.query.filter(
+            or_(
+                Submission.workflow_status.in_(['completed', 'closed_by_admin']),
+                Submission.status.in_(['completed', 'closed'])
+            )
+        ).count()
+
+        rejected_count = Submission.query.filter(Submission.workflow_status == 'rejected').count()
+
+        in_review_notified = Submission.query.filter(
+            or_(
+                Submission.workflow_status.like('%reviewing%'),
+                Submission.workflow_status.like('%notified%')
+            )
+        ).count()
+
+        ws_rows = db.session.query(Submission.workflow_status, func.count(Submission.id)).group_by(
+            Submission.workflow_status
+        ).all()
+        workflow_status_breakdown = {str(ws or 'unknown'): c for ws, c in ws_rows}
+
+        # --- Devices ---
+        dev_total = Device.query.count()
+        dev_online = Device.query.filter_by(status='online').count()
+        dev_offline = Device.query.filter_by(status='offline').count()
+        dev_pending = Device.query.filter_by(status='update').count()
+
+        # --- Business development (light aggregates) ---
+        bd_projects = BDProject.query.count()
+        bd_pipeline_value = float(db.session.query(func.coalesce(func.sum(BDProject.value_amount), 0)).scalar() or 0)
+        bd_active = BDProject.query.filter(BDProject.status.in_(['active', 'proposal', 'prospect'])).count()
+        bd_contacts = BDContact.query.count()
+        now = datetime.utcnow()
+        bd_overdue_fu = BDFollowUp.query.filter(
+            BDFollowUp.status != 'done',
+            BDFollowUp.due_at.isnot(None),
+            BDFollowUp.due_at < now
+        ).count()
+        bd_open_fu = BDFollowUp.query.filter(BDFollowUp.status != 'done').count()
+        won = BDProject.query.filter_by(status='won').count()
+        lost = BDProject.query.filter_by(status='lost').count()
+        bd_win_rate = int(round((won / (won + lost)) * 100)) if (won + lost) > 0 else 0
+
+        # --- DocHub & admin tools ---
+        dochub_access_grants = DocHubAccess.query.filter_by(can_access=True).count()
+        pp_projects = AdminPersonalProject.query.count()
+
+        # --- Recent audit (security / visibility) ---
+        recent_logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(12).all()
+        audit_recent = []
+        for log in recent_logs:
+            uname = None
+            if log.user_id:
+                u = User.query.get(log.user_id)
+                uname = u.username if u else None
+            audit_recent.append({
+                'id': log.id,
+                'action': log.action,
+                'resource_type': log.resource_type,
+                'resource_id': log.resource_id,
+                'created_at': log.created_at.isoformat() if log.created_at else None,
+                'username': uname or '—'
+            })
+
+        return success_response({
+            'generated_at': datetime.utcnow().isoformat() + 'Z',
+            'users': {
+                'total': user_total,
+                'active': user_active,
+                'inactive': user_inactive,
+                'by_role': by_role,
+                'designation_active': designation_breakdown,
+                'default_password_count': default_password_count,
+            },
+            'submissions': {
+                'total': sub_total,
+                'by_module': by_module,
+                'pipeline_open': pipeline_open,
+                'completed_or_closed': completed_closed,
+                'rejected': rejected_count,
+                'in_review_or_notified': in_review_notified,
+                'workflow_status_breakdown': workflow_status_breakdown,
+            },
+            'devices': {
+                'total': dev_total,
+                'online': dev_online,
+                'offline': dev_offline,
+                'pending_updates': dev_pending,
+            },
+            'bd': {
+                'projects_total': bd_projects,
+                'pipeline_value': bd_pipeline_value,
+                'active_deals': bd_active,
+                'contacts': bd_contacts,
+                'followups_open': bd_open_fu,
+                'followups_overdue': bd_overdue_fu,
+                'win_rate': bd_win_rate,
+            },
+            'tools': {
+                'dochub_access_grants': dochub_access_grants,
+                'personal_progress_projects': pp_projects,
+            },
+            'audit_recent': audit_recent,
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error building dashboard overview: {str(e)}", exc_info=True)
+        return error_response('Failed to load dashboard overview', status_code=500, error_code='DATABASE_ERROR')
 
 
 @admin_bp.route('/designations', methods=['GET'])
@@ -2252,4 +2406,267 @@ def bd_create_contact():
         db.session.rollback()
         current_app.logger.error(f"Error creating BD contact: {str(e)}", exc_info=True)
         return error_response('Failed to create contact', status_code=500, error_code='DATABASE_ERROR')
+
+
+# ============== Personal progress (admin workspace) ==============
+
+_PERSONAL_PROJECT_STATUSES = frozenset({'planning', 'active', 'on_hold', 'done', 'archived'})
+_PERSONAL_STEP_STATUSES = frozenset({'pending', 'in_progress', 'done', 'blocked', 'skipped'})
+
+
+def _pp_parse_date(val):
+    if not val:
+        return None
+    try:
+        return datetime.fromisoformat(str(val).replace('Z', '+00:00')).date()
+    except Exception:
+        return _parse_iso_date(val)
+
+
+def _pp_clear_other_focus(user_id, except_project_id=None):
+    q = AdminPersonalProject.query.filter_by(user_id=user_id, is_current_focus=True)
+    if except_project_id is not None:
+        q = q.filter(AdminPersonalProject.id != except_project_id)
+    q.update({'is_current_focus': False}, synchronize_session=False)
+
+
+def _pp_apply_step_status(step, status):
+    st = (status or 'pending').strip().lower()
+    if st not in _PERSONAL_STEP_STATUSES:
+        st = 'pending'
+    step.status = st
+    if st == 'done':
+        if not step.completed_at:
+            step.completed_at = datetime.utcnow()
+    else:
+        step.completed_at = None
+
+
+def _pp_sync_steps(project, steps_payload, max_steps=120):
+    """Replace/update steps from ordered list; preserves ids when possible."""
+    if steps_payload is None:
+        return
+    if not isinstance(steps_payload, list):
+        raise ValueError('steps must be a list')
+    if len(steps_payload) > max_steps:
+        raise ValueError(f'At most {max_steps} steps per project')
+
+    incoming_ids = set()
+    for item in steps_payload:
+        if not isinstance(item, dict):
+            continue
+        sid = item.get('id')
+        if sid is not None:
+            incoming_ids.add(int(sid))
+
+    for row in list(project.steps.all()):
+        if row.id not in incoming_ids:
+            db.session.delete(row)
+
+    db.session.flush()
+    existing = {s.id: s for s in project.steps.all()}
+
+    for order, raw in enumerate(steps_payload):
+        if not isinstance(raw, dict):
+            continue
+        title = (raw.get('title') or '').strip()
+        if not title:
+            continue
+        sid = raw.get('id')
+        if sid is not None:
+            step = existing.get(int(sid))
+            if step and step.project_id == project.id:
+                step.title = title[:255]
+                step.description = (raw.get('description') or '').strip() or None
+                _pp_apply_step_status(step, raw.get('status'))
+                step.sort_order = order
+                step.due_date = _pp_parse_date(raw.get('dueDate'))
+                step.notes = (raw.get('notes') or '').strip() or None
+                continue
+        step = AdminPersonalProgressStep(
+            project_id=project.id,
+            title=title[:255],
+            description=(raw.get('description') or '').strip() or None,
+            sort_order=order,
+            due_date=_pp_parse_date(raw.get('dueDate')),
+            notes=(raw.get('notes') or '').strip() or None,
+        )
+        _pp_apply_step_status(step, raw.get('status'))
+        db.session.add(step)
+
+
+@admin_bp.route('/personal-progress', methods=['GET'])
+@jwt_required()
+@admin_required
+def personal_progress_list():
+    """List current admin user's personal projects with steps and rollups."""
+    try:
+        user_id = int(get_jwt_identity())
+        status_filter = (request.args.get('status') or '').strip().lower()
+        focus_only = request.args.get('focus') in ('1', 'true', 'yes')
+
+        q = AdminPersonalProject.query.filter_by(user_id=user_id)
+        if status_filter and status_filter != 'all':
+            q = q.filter(AdminPersonalProject.status == status_filter)
+        if focus_only:
+            q = q.filter_by(is_current_focus=True)
+
+        projects = q.order_by(
+            AdminPersonalProject.is_current_focus.desc(),
+            AdminPersonalProject.sort_order.asc(),
+            AdminPersonalProject.updated_at.desc(),
+        ).all()
+
+        data = [p.to_dict(include_steps=True) for p in projects]
+        summary = {
+            'total': len(data),
+            'active': sum(1 for p in projects if (p.status or '') == 'active'),
+            'withFocus': sum(1 for p in projects if p.is_current_focus),
+        }
+        return success_response({'projects': data, 'summary': summary})
+    except Exception as e:
+        current_app.logger.error(f'personal_progress_list: {e}', exc_info=True)
+        return error_response('Failed to load personal progress', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/personal-progress/projects', methods=['POST'])
+@jwt_required()
+@admin_required
+def personal_progress_create_project():
+    try:
+        user_id = int(get_jwt_identity())
+        data = request.get_json() or {}
+        title = (data.get('title') or '').strip()
+        if not title:
+            return error_response('Title is required', status_code=400, error_code='VALIDATION_ERROR')
+
+        st = (data.get('status') or 'active').strip().lower()
+        if st not in _PERSONAL_PROJECT_STATUSES:
+            st = 'active'
+        pr = (data.get('priority') or 'med').strip().lower()
+        if pr not in ('low', 'med', 'high'):
+            pr = 'med'
+
+        focus = bool(data.get('isCurrentFocus') or data.get('is_current_focus'))
+        if focus:
+            _pp_clear_other_focus(user_id)
+
+        tags = data.get('tags') or []
+        if isinstance(tags, str):
+            tags = [t.strip() for t in tags.split(',') if t.strip()]
+        if not isinstance(tags, list):
+            tags = []
+
+        project = AdminPersonalProject(
+            user_id=user_id,
+            title=title[:255],
+            summary=(data.get('summary') or '').strip() or None,
+            status=st,
+            priority=pr,
+            category=(data.get('category') or '').strip()[:80] or None,
+            start_date=_pp_parse_date(data.get('startDate') or data.get('start_date')),
+            target_date=_pp_parse_date(data.get('targetDate') or data.get('target_date')),
+            link_url=(data.get('linkUrl') or data.get('link_url') or '').strip()[:500] or None,
+            tags=tags,
+            notes=(data.get('notes') or '').strip() or None,
+            is_current_focus=focus,
+            sort_order=int(data.get('sortOrder') or data.get('sort_order') or 0),
+        )
+        db.session.add(project)
+        db.session.flush()
+
+        steps_in = data.get('steps')
+        if steps_in is not None:
+            _pp_sync_steps(project, steps_in)
+
+        db.session.commit()
+        project = AdminPersonalProject.query.get(project.id)
+        return success_response({'project': project.to_dict(include_steps=True)}, message='Project created', status_code=201)
+    except ValueError as ve:
+        db.session.rollback()
+        return error_response(str(ve), status_code=400, error_code='VALIDATION_ERROR')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'personal_progress_create_project: {e}', exc_info=True)
+        return error_response('Failed to create project', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/personal-progress/projects/<int:project_id>', methods=['PUT'])
+@jwt_required()
+@admin_required
+def personal_progress_update_project(project_id):
+    try:
+        user_id = int(get_jwt_identity())
+        project = AdminPersonalProject.query.filter_by(id=project_id, user_id=user_id).first_or_404()
+        data = request.get_json() or {}
+
+        if 'title' in data:
+            t = (data.get('title') or '').strip()
+            if not t:
+                return error_response('Title cannot be empty', status_code=400, error_code='VALIDATION_ERROR')
+            project.title = t[:255]
+
+        if 'summary' in data:
+            project.summary = (data.get('summary') or '').strip() or None
+        if 'status' in data:
+            st = (data.get('status') or project.status or 'active').strip().lower()
+            project.status = st if st in _PERSONAL_PROJECT_STATUSES else project.status
+        if 'priority' in data:
+            pr = (data.get('priority') or 'med').strip().lower()
+            project.priority = pr if pr in ('low', 'med', 'high') else project.priority
+        if 'category' in data:
+            project.category = (data.get('category') or '').strip()[:80] or None
+        if 'startDate' in data or 'start_date' in data:
+            project.start_date = _pp_parse_date(data.get('startDate', data.get('start_date')))
+        if 'targetDate' in data or 'target_date' in data:
+            project.target_date = _pp_parse_date(data.get('targetDate', data.get('target_date')))
+        if 'linkUrl' in data or 'link_url' in data:
+            project.link_url = (data.get('linkUrl') or data.get('link_url') or '').strip()[:500] or None
+        if 'notes' in data:
+            project.notes = (data.get('notes') or '').strip() or None
+        if 'sortOrder' in data or 'sort_order' in data:
+            project.sort_order = int(data.get('sortOrder', data.get('sort_order') or 0))
+
+        if 'tags' in data:
+            tags = data.get('tags') or []
+            if isinstance(tags, str):
+                tags = [t.strip() for t in tags.split(',') if t.strip()]
+            project.tags = tags if isinstance(tags, list) else []
+
+        if 'isCurrentFocus' in data or 'is_current_focus' in data:
+            focus = bool(data.get('isCurrentFocus', data.get('is_current_focus')))
+            if focus:
+                _pp_clear_other_focus(user_id, except_project_id=project.id)
+            project.is_current_focus = focus
+
+        if 'steps' in data:
+            _pp_sync_steps(project, data.get('steps'))
+
+        project.updated_at = datetime.utcnow()
+        db.session.commit()
+        project = AdminPersonalProject.query.get(project_id)
+        return success_response({'project': project.to_dict(include_steps=True)}, message='Saved')
+    except ValueError as ve:
+        db.session.rollback()
+        return error_response(str(ve), status_code=400, error_code='VALIDATION_ERROR')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'personal_progress_update_project: {e}', exc_info=True)
+        return error_response('Failed to update project', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/personal-progress/projects/<int:project_id>', methods=['DELETE'])
+@jwt_required()
+@admin_required
+def personal_progress_delete_project(project_id):
+    try:
+        user_id = int(get_jwt_identity())
+        project = AdminPersonalProject.query.filter_by(id=project_id, user_id=user_id).first_or_404()
+        db.session.delete(project)
+        db.session.commit()
+        return success_response({}, message='Project deleted')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'personal_progress_delete_project: {e}', exc_info=True)
+        return error_response('Failed to delete project', status_code=500, error_code='DATABASE_ERROR')
 

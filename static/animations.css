@@ -100,7 +100,7 @@ textarea {
 
 /* Upload zone & interactive blocks */
 .upload-zone,
-.upload-side-actions .btn {
+.upload-col-main .btn {
   transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out),
     transform 0.15s var(--ease-out);
 }
