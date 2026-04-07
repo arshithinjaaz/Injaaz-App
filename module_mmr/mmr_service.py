@@ -1716,39 +1716,60 @@ def _tower_for_row(client: str, contract: str) -> str | None:
     return None
 
 
-def format_per_tower_chargeable_html_for_email(df: pd.DataFrame) -> str:
-    """Build HTML tables for email body: one table per tower (Askaan+Saqr, Orient, Garden, C1).
-    Each table: Service Name | Chargeable Resolved | Chargeable Pending | Total row | Grand total.
-    Uses resolved chargeable logic (Garden City AC = Non-Chargeable). Inline CSS for email compatibility.
+def _tower_chargeable_sections(df: pd.DataFrame) -> list[tuple[str, pd.DataFrame]]:
+    """Per-tower chargeable-only breakdown by Service Group (Resolved / Pending).
+
+    Returns [(display_name, agg_df), ...] in _TOWER_CONFIG order. ``agg`` has columns
+    ``Service Group``, ``resolved``, ``pending``. Empty when required columns are
+    missing or there are no matching rows.
     """
     required = {'Space', 'Status', 'Service Group', 'Client', 'Contract'}
     if not required.issubset(set(df.columns)):
-        return ''
+        return []
     work = df.copy()
     work['_space'] = _get_resolved_chargeable_series(df)
     work['_status'] = work['Status'].apply(_normalise_status_bucket)
-    work['_tower'] = work.apply(lambda r: _tower_for_row(r.get('Client'), r.get('Contract')), axis=1)
+    work['_tower'] = work.apply(
+        lambda r: _tower_for_row(r.get('Client'), r.get('Contract')), axis=1
+    )
     work = work[work['_space'] == 'Chargeable']
     work = work[work['_tower'].notna()]
-
     if len(work) == 0:
-        return ''
+        return []
 
-    tables_html = []
+    out: list[tuple[str, pd.DataFrame]] = []
     for display_name, _ in _TOWER_CONFIG:
         tower_df = work[work['_tower'] == display_name]
         if len(tower_df) == 0:
             continue
         agg = (
             tower_df.groupby('Service Group', dropna=False)
-            .apply(lambda g: pd.Series({
-                'resolved': len(g[g['_status'] == 'Resolved']),
-                'pending': len(g[g['_status'] == 'Pending']),
-            }), include_groups=False)
+            .apply(
+                lambda g: pd.Series(
+                    {
+                        'resolved': len(g[g['_status'] == 'Resolved']),
+                        'pending': len(g[g['_status'] == 'Pending']),
+                    }
+                ),
+                include_groups=False,
+            )
             .reset_index()
         )
         agg['Service Group'] = agg['Service Group'].fillna('').astype(str).str.strip()
         agg = agg.sort_values('Service Group')
+        if len(agg) == 0:
+            continue
+        out.append((display_name, agg))
+    return out
+
+
+def format_per_tower_chargeable_html_for_email(df: pd.DataFrame) -> str:
+    """Build HTML tables for email body: one table per tower (Askaan+Saqr, Orient, Garden, C1).
+    Each table: Service Name | Chargeable Resolved | Chargeable Pending | Total row | Grand total.
+    Uses resolved chargeable logic (Garden City AC = Non-Chargeable). Inline CSS for email compatibility.
+    """
+    tables_html = []
+    for display_name, agg in _tower_chargeable_sections(df):
         resolved_total = int(agg['resolved'].sum())
         pending_total = int(agg['pending'].sum())
         grand_total = resolved_total + pending_total
@@ -1818,9 +1839,11 @@ def generate_report_excel(df: pd.DataFrame) -> bytes:
 
     Sheet layout:
       1. All Work Orders
-      2–N. Client sheets (one per client, all their contracts combined)
+      2. Dashboard
+      3. Chargeable / Non-Chargeable Analysis (filterable summary)
+      4. Chargeable by Project (tower tables)
+      5–N. Client sheets (one per client, all their contracts combined)
            Exception: "Aqar Community Management" → one sheet per *contract*
-      Last. Chargeable / Non-Chargeable Analysis (filterable summary table)
     """
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
@@ -1835,6 +1858,10 @@ def generate_report_excel(df: pd.DataFrame) -> bytes:
 
     # Sheet 2 – Dashboard (KPI + charts)
     _write_dashboard_sheet(wb, work)
+
+    # Sheets 3–4 – chargeable summaries (next to Dashboard)
+    _write_chargeable_analysis(wb, work)
+    _write_tower_chargeable_summary_sheet(wb, work)
 
     # Client-wise sheets
     clients = sorted(work['Client'].replace('', None).dropna().unique().tolist())
@@ -1855,9 +1882,6 @@ def generate_report_excel(df: pd.DataFrame) -> bytes:
         else:
             name = str(client)[:31]
             _write_data_sheet(wb, client_df.copy(), name)
-
-    # Chargeable / Non-Chargeable Analysis (filterable summary)
-    _write_chargeable_analysis(wb, work)
 
     buf = BytesIO()
     wb.save(buf)
@@ -2107,20 +2131,20 @@ def _write_dashboard_sheet(wb: openpyxl.Workbook, df: pd.DataFrame):
     current_row = _write_logo_header(ws, 'Dashboard Overview', TOTAL_COLS)
 
     # ── KPI CARDS (full width, 4 per row across A–H) ────────────────
-    total   = len(df)
-    pending = len(df[df['Status'].str.lower() == 'pending'])    if 'Status'   in df.columns else 0
-    p1      = len(df[df['Priority'].str.upper() == 'P1'])       if 'Priority' in df.columns else 0
-    p3      = len(df[df['Priority'].str.upper() == 'P3'])       if 'Priority' in df.columns else 0
-    n_cli   = df['Client'].replace('', None).dropna().nunique() if 'Client'   in df.columns else 0
-    n_ctr   = df['Contract'].replace('', None).dropna().nunique() if 'Contract' in df.columns else 0
+    total = len(df)
+    pending = len(df[df['Status'].str.lower() == 'pending']) if 'Status' in df.columns else 0
+    p1 = len(df[df['Priority'].str.upper() == 'P1']) if 'Priority' in df.columns else 0
+    p3 = len(df[df['Priority'].str.upper() == 'P3']) if 'Priority' in df.columns else 0
+    n_cli = df['Client'].replace('', None).dropna().nunique() if 'Client' in df.columns else 0
+    n_ctr = df['Contract'].replace('', None).dropna().nunique() if 'Contract' in df.columns else 0
 
     kpis = [
-        (total,   'WORK ORDERS',  PRIMARY),
-        (pending, 'PENDING',      SECONDARY),
-        (p1,      'PRIORITY P1',  'E65100'),
-        (p3,      'PRIORITY P3',  '43A047'),
-        (n_cli,   'CLIENTS',      PRIMARY),
-        (n_ctr,   'CONTRACTS',    PRIMARY),
+        (total, 'WORK ORDERS', PRIMARY),
+        (pending, 'PENDING', SECONDARY),
+        (p1, 'PRIORITY P1', 'E65100'),
+        (p3, 'PRIORITY P3', '43A047'),
+        (n_cli, 'CLIENTS', PRIMARY),
+        (n_ctr, 'CONTRACTS', PRIMARY),
     ]
 
     kpi_bg = PatternFill(start_color='F0FAF4', end_color='F0FAF4', fill_type='solid')
@@ -2131,11 +2155,11 @@ def _write_dashboard_sheet(wb: openpyxl.Workbook, df: pd.DataFrame):
         bottom=Side(style='thin', color='C8E6C9'),
     )
 
-    # 2 rows × 3 KPIs each — columns A, C, F (with merge for wider cards)
+    # 2 rows × 3 KPIs each — columns A:B, C:D, F:H (skip E gutter)
     kpi_cols = [
-        (1, 2),   # merge A:B
-        (3, 4),   # merge C:D
-        (6, 8),   # merge F:H  (skip E gutter)
+        (1, 2),
+        (3, 4),
+        (6, 8),
     ]
     for batch in range(2):
         vr = current_row
@@ -2513,3 +2537,141 @@ def _write_chargeable_analysis(wb: openpyxl.Workbook, df: pd.DataFrame):
     ws.page_setup.paperSize = ws.PAPERSIZE_A4
     ws.page_setup.fitToWidth = 1
     ws.oddFooter.right.text = "Page &P of &N"
+
+
+def _write_tower_chargeable_summary_sheet(wb: openpyxl.Workbook, df: pd.DataFrame):
+    """Stacked tables per tower project (Askaan+Saqr, Orient, Garden City, C1): chargeable WOs only,
+    by Service Group with Resolved / Pending counts — matches ``format_per_tower_chargeable_html_for_email``.
+    """
+    ws = wb.create_sheet('Chargeable by Project')
+    ncols = 3
+    ws.column_dimensions['A'].width = 36
+    ws.column_dimensions['B'].width = 14
+    ws.column_dimensions['C'].width = 14
+
+    sections = _tower_chargeable_sections(df)
+    current_row = _write_logo_header(ws, 'Chargeable by Project', ncols)
+
+    if not sections:
+        msg = ws.cell(
+            row=current_row,
+            column=1,
+            value=(
+                'No tower-project chargeable rows in this export. Tables appear when Client/Contract '
+                'text matches Askaan+Saqr, Orient, Garden City, or C1 Tower (chargeable work orders only).'
+            ),
+        )
+        msg.alignment = Alignment(horizontal='left', vertical='top', wrap_text=True)
+        ws.merge_cells(
+            start_row=current_row, start_column=1, end_row=current_row, end_column=ncols
+        )
+        ws.row_dimensions[current_row].height = 48
+        ws.page_setup.orientation = 'portrait'
+        ws.page_setup.paperSize = ws.PAPERSIZE_A4
+        return
+
+    sub_fill = _section_fill()
+    hdr_white = Font(bold=True, color=WHITE, size=10, name='Calibri')
+    hdr_dark = Font(bold=True, size=10, color=SECONDARY, name='Calibri')
+
+    for display_name, agg in sections:
+        resolved_total = int(agg['resolved'].sum())
+        pending_total = int(agg['pending'].sum())
+        grand_total = resolved_total + pending_total
+
+        ws.merge_cells(
+            start_row=current_row, start_column=1, end_row=current_row, end_column=ncols
+        )
+        top = ws.cell(row=current_row, column=1, value=display_name)
+        top.font = hdr_white
+        top.fill = _header_fill()
+        top.alignment = Alignment(horizontal='center', vertical='center')
+        top.border = _border(PRIMARY)
+        for c in range(2, ncols + 1):
+            ws.cell(row=current_row, column=c).fill = _header_fill()
+            ws.cell(row=current_row, column=c).border = _border(PRIMARY)
+        ws.row_dimensions[current_row].height = 26
+        current_row += 1
+
+        ws.cell(row=current_row, column=1, value='Service Name')
+        c1 = ws.cell(row=current_row, column=1)
+        c1.font = hdr_dark
+        c1.fill = sub_fill
+        c1.alignment = Alignment(horizontal='center', vertical='center')
+        c1.border = _border()
+        ws.merge_cells(
+            start_row=current_row, start_column=2, end_row=current_row, end_column=ncols
+        )
+        chg = ws.cell(row=current_row, column=2, value='Chargeable')
+        chg.font = hdr_dark
+        chg.fill = sub_fill
+        chg.alignment = Alignment(horizontal='center', vertical='center')
+        chg.border = _border()
+        ws.cell(row=current_row, column=3).fill = sub_fill
+        ws.cell(row=current_row, column=3).border = _border()
+        ws.row_dimensions[current_row].height = 22
+        current_row += 1
+
+        for c, val in enumerate(['', 'Resolved', 'Pending'], 1):
+            cell = ws.cell(row=current_row, column=c, value=val or None)
+            cell.font = Font(bold=True, size=9, name='Calibri')
+            cell.fill = sub_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = _border()
+        ws.row_dimensions[current_row].height = 20
+        current_row += 1
+
+        di = 0
+        for _, r in agg.iterrows():
+            sg = (r['Service Group'] or '').strip()
+            if not sg:
+                continue
+            res = int(r['resolved'])
+            pen = int(r['pending'])
+            ws.cell(row=current_row, column=1, value=sg)
+            ws.cell(row=current_row, column=2, value=res)
+            ws.cell(row=current_row, column=3, value=pen)
+            _style_data_row(ws, current_row, ncols, alt=(di % 2 == 1))
+            ws.cell(row=current_row, column=2).alignment = Alignment(
+                horizontal='center', vertical='center'
+            )
+            ws.cell(row=current_row, column=3).alignment = Alignment(
+                horizontal='center', vertical='center'
+            )
+            di += 1
+            current_row += 1
+
+        ws.cell(row=current_row, column=1, value='Total')
+        ws.cell(row=current_row, column=2, value=resolved_total)
+        ws.cell(row=current_row, column=3, value=pending_total)
+        for c in range(1, ncols + 1):
+            cell = ws.cell(row=current_row, column=c)
+            cell.font = hdr_white
+            cell.fill = _header_fill()
+            cell.alignment = Alignment(
+                horizontal='left' if c == 1 else 'center', vertical='center'
+            )
+            cell.border = _border(PRIMARY)
+        ws.row_dimensions[current_row].height = 24
+        current_row += 1
+
+        ws.cell(row=current_row, column=1, value='')
+        c_a = ws.cell(row=current_row, column=1)
+        c_a.fill = sub_fill
+        c_a.border = _border()
+        ws.merge_cells(
+            start_row=current_row, start_column=2, end_row=current_row, end_column=ncols
+        )
+        gt_cell = ws.cell(row=current_row, column=2, value=grand_total)
+        gt_cell.font = Font(bold=True, size=11, color=SECONDARY, name='Calibri')
+        gt_cell.fill = sub_fill
+        gt_cell.alignment = Alignment(horizontal='center', vertical='center')
+        gt_cell.border = _border()
+        ws.cell(row=current_row, column=3).fill = sub_fill
+        ws.cell(row=current_row, column=3).border = _border()
+        ws.row_dimensions[current_row].height = 22
+        current_row += 2
+
+    ws.page_setup.orientation = 'portrait'
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
+    ws.page_setup.fitToWidth = 1
