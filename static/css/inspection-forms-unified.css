@@ -463,7 +463,7 @@ body.inspection-form [id*="ReadOnly"].form-control{
 /* ─── Dividers ───────────────────────────────────── */
 body.inspection-form hr{border-color:var(--if-border-l);opacity:1}
 
-/* ─── Mobile ─────────────────────────────────────── */
+/* ─── Mobile: tablet (≤900px) ─────────────────────── */
 @media (max-width:900px){
   body.inspection-form .container{
     margin-top:100px !important;
@@ -481,7 +481,9 @@ body.inspection-form hr{border-color:var(--if-border-l);opacity:1}
     padding-bottom:.2rem !important;
     scroll-behavior:smooth;
     -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
   }
+  body.inspection-form .nav-tabs::-webkit-scrollbar{display:none}
   body.inspection-form .nav-tabs .nav-link{
     padding:.55rem 1rem;
     font-size:.82rem;
@@ -501,7 +503,63 @@ body.inspection-form hr{border-color:var(--if-border-l);opacity:1}
   body.inspection-form .tab-content{padding:1.1rem 1.1rem !important}
   body.inspection-form .inspection-form-bar{padding:.75rem 1rem 0 !important}
 }
+
+/* ─── Mobile: large phone (≤768px) ─────────────────── */
+@media (max-width:768px){
+  body.inspection-form .container{
+    margin-top:90px !important;
+    margin-left:.75rem !important;
+    margin-right:.75rem !important;
+    max-width:calc(100% - 1.5rem) !important;
+    border-radius:12px;
+  }
+  body.inspection-form .nav-tabs{
+    top:-78px;
+    left:.25rem;
+    max-width:calc(100vw - .5rem);
+  }
+  body.inspection-form .tab-content{padding:1rem .875rem !important}
+  body.inspection-form .form-control,
+  body.inspection-form .form-select,
+  body.inspection-form textarea.form-control{font-size:16px}
+  body.inspection-form .col-md-6,
+  body.inspection-form .col-md-4,
+  body.inspection-form .col-md-3,
+  body.inspection-form [class*="col-"]{flex:0 0 100% !important;max-width:100% !important}
+  body.inspection-form .row{margin-left:0 !important;margin-right:0 !important}
+  .if-form-title{font-size:1.15rem}
+  .if-form-hd{padding:1.1rem 1rem}
+  body.inspection-form .editable-item-card{padding:.875rem !important}
+  body.inspection-form .col-12.mb-section{padding:.875rem}
+  body.inspection-form .signature-container{min-height:100px}
+  body.inspection-form canvas.signature-pad,
+  body.inspection-form #techSignaturePad,
+  body.inspection-form #opManSignaturePad{height:130px !important}
+  body.inspection-form .d-flex.justify-content-between.gap-2,
+  body.inspection-form .d-flex.gap-2{flex-wrap:wrap;gap:.5rem !important}
+  body.inspection-form .btn{font-size:15px}
+  body.inspection-form .inspection-form-bar{padding:.625rem .75rem 0 !important}
+}
+
+/* ─── Mobile: small phone (≤480px) ───────────────────── */
 @media (max-width:480px){
-  body.inspection-form .nav-tabs .nav-item:not(:last-child)::after{width:24px}
-  body.inspection-form .nav-tabs .nav-link{padding:.5rem .8rem;font-size:.78rem;gap:.4rem}
+  body.inspection-form .nav-tabs .nav-item:not(:last-child)::after{width:20px}
+  body.inspection-form .nav-tabs .nav-link{padding:.45rem .7rem;font-size:.75rem;gap:.35rem}
+  body.inspection-form .nav-tabs .nav-link::before{width:22px;height:22px;min-width:22px;font-size:.7rem}
+  body.inspection-form .container{
+    margin-top:85px !important;
+    margin-left:.5rem !important;
+    margin-right:.5rem !important;
+    max-width:calc(100% - 1rem) !important;
+  }
+  body.inspection-form .nav-tabs{
+    top:-72px;
+    left:.1rem;
+    max-width:calc(100vw - .2rem);
+  }
+  .if-form-title{font-size:1rem}
+  .if-form-hd{padding:1rem .875rem}
+  body.inspection-form .tab-content{padding:.875rem .75rem !important}
+  body.inspection-form .section-heading,
+  body.inspection-form .section-heading-no-border{font-size:.75rem !important}
 }
