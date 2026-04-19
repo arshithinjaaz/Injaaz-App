@@ -1844,3 +1844,144 @@ canvas[id*="signature"] {
   .d-mobile-block { display: block !important; }
   .d-mobile-flex  { display: flex !important; }
 }
+
+/* ═══════════════════════════════════════════════
+   MOBILE UI POLISH — Better visual experience
+   ═══════════════════════════════════════════════ */
+
+/* ── Procurement: KPI tiles – fix padding/gap on mobile ── */
+@media (max-width: 768px) {
+  /* proc-kpi-strip inline CSS has padding:0 2.5rem, gap:1.5rem, margin:-2.75rem — all too aggressive */
+  .proc-kpi-strip {
+    grid-template-columns: repeat(2, 1fr) !important;
+    padding: 0 1rem !important;
+    gap: .625rem !important;
+    margin-top: 0 !important;     /* remove negative margin that causes hero clipping */
+    max-width: 100% !important;
+  }
+  header.hero.proc-hero {
+    padding-bottom: 1.5rem !important;   /* tighter hero on mobile */
+  }
+  .kpi-pill {
+    padding: .875rem 1rem !important;
+    gap: .75rem !important;
+    border-radius: 12px !important;
+  }
+  .kpi-pill-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    flex-shrink: 0 !important;
+  }
+  .kpi-pill-val { font-size: 1.35rem !important; }
+  .kpi-pill-lbl { font-size: .65rem !important; }
+
+  /* Generic kpi-strip fallback */
+  .kpi-strip {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: .75rem !important;
+    overflow-x: visible !important;
+  }
+  .kpi-tile {
+    min-width: 0 !important;
+    flex: none !important;
+    width: 100% !important;
+    padding: .875rem 1rem !important;
+  }
+  .kpi-tile .kpi-value { font-size: 1.5rem !important; }
+  .kpi-tile .kpi-label { font-size: .72rem !important; }
+
+  /* Procurement dept-grid: 2 columns on tablet */
+  .dept-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: .75rem !important;
+  }
+
+  /* Better back-button touch target */
+  .back-btn {
+    min-height: 40px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+
+  /* Inspection form: better section card spacing */
+  body.inspection-form .card {
+    border-radius: 12px !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* HR dashboard cards: full-width tap target */
+  .hr-module-card,
+  .workflow-card {
+    min-height: 64px !important;
+  }
+
+  /* Wider touch targets on all nav icon buttons */
+  .notification-btn,
+  .todo-nav-btn {
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
+
+  /* Section heading bar on inspection forms */
+  body.inspection-form .section-header,
+  body.inspection-form .card-header {
+    padding: .875rem 1rem !important;
+    font-size: .8rem !important;
+  }
+
+  /* Better form label sizing on all forms */
+  .form-label,
+  label.form-label {
+    font-size: .85rem !important;
+    font-weight: 600 !important;
+    margin-bottom: .3rem !important;
+  }
+
+  /* Input group icon buttons */
+  .input-group-text {
+    padding: .5rem .75rem !important;
+  }
+}
+
+/* ── Small phone (≤480px) ── */
+@media (max-width: 480px) {
+  /* KPI tiles: full-width stack on very small screens */
+  .kpi-strip {
+    grid-template-columns: 1fr 1fr !important;
+    gap: .5rem !important;
+  }
+  .kpi-tile { padding: .75rem .875rem !important; }
+  .kpi-tile .kpi-value { font-size: 1.3rem !important; }
+
+  /* Procurement dept-grid: single column */
+  .dept-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Better modal sizing */
+  .modal-dialog {
+    margin: .5rem !important;
+  }
+  .modal-content {
+    border-radius: 12px !important;
+  }
+
+  /* Inspection form: tighter form section padding */
+  body.inspection-form .card-body {
+    padding: .875rem !important;
+  }
+
+  /* Table on small screens: horizontal scroll with snap */
+  .table-responsive {
+    -webkit-overflow-scrolling: touch !important;
+    scroll-snap-type: x mandatory !important;
+  }
+
+  /* Float buttons: keep above keyboard */
+  .fab, .float-btn {
+    bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem)) !important;
+    right: 1rem !important;
+  }
+}

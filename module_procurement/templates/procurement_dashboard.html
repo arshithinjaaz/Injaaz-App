@@ -55,12 +55,24 @@
       max-width: 1400px; margin: -2.75rem auto 0;
       padding: 0 2.5rem; position: relative; z-index: 10;
     }
-    @media (max-width: 900px) { .proc-kpi-strip { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 900px) { .proc-kpi-strip { grid-template-columns: repeat(2,1fr); gap: 1rem; } }
+    @media (max-width: 768px) {
+      .proc-kpi-strip { padding: 0 1rem; gap: .625rem; margin-top: 0; max-width: 100%; width: 100%; box-sizing: border-box; }
+      header.hero.proc-hero { padding-bottom: 1.5rem; }
+      .kpi-pill { padding: .875rem 1rem; gap: .625rem; border-radius: 12px; min-width: 0; overflow: hidden; }
+      .kpi-pill-icon { width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0; }
+      .kpi-pill-icon svg { width: 18px; height: 18px; }
+      .kpi-pill-val { font-size: 1.3rem; line-height: 1; }
+      .kpi-pill-lbl { font-size: .63rem; letter-spacing: .04em; line-height: 1.3; }
+      .proc-main { padding: 1.5rem 1rem 3rem; }
+    }
+    /* Single column on very small phones to avoid cramped tiles */
+    @media (max-width: 360px) { .proc-kpi-strip { grid-template-columns: 1fr; } }
     @media (max-width: 480px) { .proc-kpi-strip { grid-template-columns: 1fr; } }
     .kpi-pill {
       background: #fff; border-radius: 16px; padding: 1.35rem 1.4rem;
       border: 1px solid var(--border); box-shadow: 0 8px 30px rgba(0,0,0,0.09);
-      display: flex; align-items: center; gap: 1rem;
+      display: flex; align-items: center; gap: 1rem; min-width: 0;
     }
     .kpi-pill-icon {
       width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;

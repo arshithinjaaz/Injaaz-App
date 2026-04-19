@@ -127,42 +127,96 @@ body.hr-form-unified{
 
 /* ── Mobile: large phone / small tablet (≤768px) ── */
 @media(max-width:768px){
-  .hr-form-unified .page-inner{padding:1rem .75rem}
+  .hr-form-unified .page-inner{padding:.875rem .75rem}
   .hr-form-unified .form-body{padding:1.25rem 1rem}
   .hr-form-unified .doc-ft,.hr-form-unified .submit-bar{padding-left:1rem;padding-right:1rem}
-  .hr-form-unified .hd{padding:1.35rem 1rem;flex-direction:column;align-items:flex-start;gap:.75rem}
-  .hr-form-unified .hd h1{font-size:1.25rem}
-  .hr-form-unified .hd-sub{font-size:.65rem}
-  .hr-form-unified .hd-logo{height:52px;max-width:52px}
-  .hr-form-unified .sec{padding:1.1rem 1rem}
+
+  /* Compact header: row layout, smaller logo tucked right */
+  .hr-form-unified .hd{
+    padding:1.1rem 1.25rem;
+    flex-direction:row;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem
+  }
+  .hr-form-unified .hd h1{font-size:1.15rem;line-height:1.25}
+  .hr-form-unified .hd-sub{font-size:.63rem;margin-top:.25rem}
+  .hr-form-unified .hd-logo{height:44px;max-width:44px;opacity:.8}
+
+  .hr-form-unified .sec{padding:1rem 1rem}
+  .hr-form-unified .sec-hd{font-size:.7rem;margin-bottom:.875rem;padding-bottom:.5rem}
+
   .hr-form-unified .grid-2,.hr-form-unified .grid-3{grid-template-columns:1fr;gap:1rem 0}
-  .hr-form-unified .step-bar{padding:.75rem 1rem;gap:0;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;justify-content:flex-start}
+
+  /* Step bar: horizontally scrollable chips — no wrapping */
+  .hr-form-unified .step-bar{
+    padding:.625rem 1rem;
+    gap:0;
+    overflow-x:auto;
+    flex-wrap:nowrap;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    justify-content:flex-start;
+    border-bottom:1px solid var(--bd-l)
+  }
   .hr-form-unified .step-bar::-webkit-scrollbar{display:none}
-  .hr-form-unified .step-item{padding:.5rem .875rem;font-size:.82rem;flex-shrink:0;white-space:nowrap}
-  .hr-form-unified .step-connector{width:32px;flex-shrink:0}
+  .hr-form-unified .step-item{
+    padding:.45rem .9rem;
+    font-size:.8rem;
+    flex-shrink:0;
+    white-space:nowrap;
+    border-radius:999px
+  }
+  .hr-form-unified .step-item .num{width:24px;height:24px;font-size:.72rem}
+  .hr-form-unified .step-connector{width:24px;flex-shrink:0}
+
+  /* Step hint: tighter */
+  .hr-form-unified .step-hint{
+    font-size:.825rem;
+    padding:.75rem 1rem;
+    gap:.6rem;
+    margin-bottom:1rem
+  }
+  .hr-form-unified .step-hint svg{width:16px;height:16px}
+
+  /* Full-width action buttons */
   .hr-form-unified .submit-bar{flex-direction:column;align-items:stretch;gap:.75rem}
-  .hr-form-unified .btn-submit,.hr-form-unified .btn-reset{width:100%;justify-content:center;text-align:center}
+  .hr-form-unified .btn-submit,.hr-form-unified .btn-reset{width:100%;justify-content:center}
   .hr-form-unified .step-nav{flex-direction:column;gap:.75rem}
   .hr-form-unified .btn-next,.hr-form-unified .btn-back{width:100%;justify-content:center}
-  .hr-form-unified .step-hint{font-size:.85rem;padding:.875rem 1rem}
+
+  /* iOS zoom prevention */
   .hr-form-unified .fld-inp{font-size:16px}
   .hr-form-unified .rating-select{font-size:16px}
+  .hr-form-unified select.fld-inp{font-size:16px}
+
   .hr-form-unified .yn-row{flex-wrap:wrap;gap:.75rem}
   .hr-form-unified .sig-modal{width:calc(100vw - 2rem);max-width:calc(100vw - 2rem)}
-  .hr-form-unified .sig-canvas-box canvas{height:150px}
+  .hr-form-unified .sig-canvas-box canvas{height:140px}
 }
 
 /* ── Mobile: small phone (≤480px) ── */
 @media(max-width:480px){
-  .hr-form-unified .page-inner{padding:.75rem .5rem}
+  .hr-form-unified .page-inner{padding:.625rem .5rem}
   .hr-form-unified .form-body{padding:1rem .875rem}
-  .hr-form-unified .hd{padding:1.1rem .875rem}
-  .hr-form-unified .hd h1{font-size:1.1rem}
+
+  /* Even more compact header on small phones */
+  .hr-form-unified .hd{padding:.875rem 1rem}
+  .hr-form-unified .hd h1{font-size:1.05rem}
+  .hr-form-unified .hd-logo{height:36px;max-width:36px}
+
   .hr-form-unified .sec{padding:.875rem .875rem}
+
+  /* Step chips: number only, active shows label */
   .hr-form-unified .step-item span:last-child{display:none}
   .hr-form-unified .step-item .num{margin-right:0}
   .hr-form-unified .step-item.active span:last-child{display:inline}
-  .hr-form-unified .step-connector{width:20px}
+  .hr-form-unified .step-item{padding:.4rem .6rem}
+  .hr-form-unified .step-connector{width:16px}
+
+  /* Compact step hint */
+  .hr-form-unified .step-hint{font-size:.8rem;padding:.65rem .875rem}
+
   .hr-form-unified .sig-modal-body{padding:.875rem 1rem}
   .hr-form-unified .sig-modal-hd{padding:.875rem 1rem}
   .hr-form-unified .doc-ft-meta{flex-direction:column;gap:.35rem;align-items:center}
