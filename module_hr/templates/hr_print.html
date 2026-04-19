@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Print - {{ form_title }} - {{ submission_id }}</title>
+  <link rel="stylesheet" href="/static/css/hr-forms.css">
+  <style>
+    @media screen {
+      body { background: #f1f5f9; padding: 2rem; }
+      .print-actions { margin-bottom: 1.5rem; }
+      .print-actions button { margin-right: 0.5rem; }
+    }
+    @media print {
+      body { background: white; padding: 0; }
+      .print-actions { display: none !important; }
+      .doc-form { box-shadow: none; border: 1px solid #e2e8f0; }
+      .doc-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-actions">
+    <button onclick="window.print()" class="btn btn-primary">Print</button>
+    <button onclick="window.close()" class="btn btn-secondary">Close</button>
+  </div>
+
+  <div class="doc-form" style="max-width: 900px; margin: 0 auto;">
+    <div class="doc-header">
+      <div class="doc-header-left">
+        <p class="doc-company">INJAAZ FACILITY MANAGEMENT</p>
+        <h1 class="doc-title">{{ form_title }}</h1>
+      </div>
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="INJAAZ" class="doc-logo">
+    </div>
+    <div class="doc-form-content" style="padding: 1.5rem 2.5rem;">
+      {{ form_html | safe }}
+      {% if doc_no %}
+      <div class="doc-footer" style="margin-top: 1.5rem;">
+        <span>DOC NO: {{ doc_no }}</span>
+        <span>DATE: {{ doc_date }}</span>
+        <span>ISSUE: 00</span>
+        <span>REVISION: 00</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      if (window.location.search.indexOf('auto=1') !== -1) {
+        window.print();
+      }
+    };
+  </script>
+</body>
+</html>

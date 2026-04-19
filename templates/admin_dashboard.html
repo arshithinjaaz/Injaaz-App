@@ -1,0 +1,4052 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <title>Administration - Injaaz Application</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dochub-page.css') }}">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --primary: #125435;
+      --primary-hover: #0d3d24;
+      --primary-muted: rgba(18,84,53,0.08);
+      --primary-border: rgba(18,84,53,0.2);
+      --text: #0f172a;
+      --text-dark: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --text-light: #94a3b8;
+      --bg: #f1f5f9;
+      --bg-light: #f8fafc;
+      --bg-card: #ffffff;
+      --border: #e2e8f0;
+      --secondary: #e2e8f0;
+      --danger: #dc2626;
+      --danger-muted: rgba(220,38,38,0.08);
+      --danger-border: rgba(220,38,38,0.25);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 20px 40px -8px rgba(0,0,0,0.1);
+      /* Fixed main nav (dashboard.css .nav / .nav-container min-height) — content must start below it */
+      --main-nav-h: 72px;
+    }
+    
+    /* Same stack as dashboard.css / DocHub / main nav */
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      background-attachment: fixed;
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+    }
+    
+    .navbar {
+      background: linear-gradient(135deg, #0a3520 0%, var(--primary) 50%, #1a7a4d 100%);
+      color: white;
+      padding: 0.875rem 1.5rem;
+      box-shadow: 0 4px 20px rgba(18,84,53,0.3);
+    }
+    
+    .navbar-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: white;
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+    
+    .navbar-brand img {
+      height: 38px;
+      filter: brightness(0) invert(1);
+    }
+    .navbar-brand:hover {
+      opacity: 0.95;
+    }
+    
+    .nav-actions .btn {
+      background: rgba(255,255,255,0.95);
+      color: var(--primary);
+      font-weight: 600;
+      box-shadow: var(--shadow-sm);
+    }
+    .nav-actions .btn:hover {
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    
+    /* DocHub-aligned sidebar: match dochub-page.css body.dochub-page-v2 tokens + breakpoints */
+    body.admin-dh-page {
+      --sb-bg: #125435;
+      --accent: #125435;
+      --accent-2: #1a7a4d;
+      --sidebar-w: 288px;
+      --radius: 10px;
+      --dh-fs-base: 17px;
+      --dh-fs-sidebar: 16px;
+      --dh-fs-sidebar-label: 12px;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: var(--font-body);
+      background: #f5faf7;
+    }
+    @media (max-width: 1280px) {
+      body.admin-dh-page {
+        --sidebar-w: 252px;
+      }
+    }
+    @media (max-width: 1100px) {
+      body.admin-dh-page {
+        --sidebar-w: 232px;
+      }
+    }
+    /* DocHub method: viewport-locked body + flex column; only main column scrolls (see dochub-page.css body.dochub-page-v2.has-main-nav + .dh-page-root) */
+    body.admin-dh-page.has-main-nav {
+      --nav-offset: 5.5rem;
+      padding-top: var(--nav-offset) !important;
+      min-height: 100dvh;
+      min-height: 100svh;
+      height: 100dvh;
+      height: 100svh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden !important;
+      /* Lock page scroll: main column scrolls (DocHub). !important beats mobile_responsive body rules above 768px. */
+      overflow-y: hidden !important;
+      box-sizing: border-box;
+    }
+    body.admin-dh-page.has-main-nav .admin-dh-page-root.dh-page-root {
+      flex: 1 1 0%;
+      min-height: 0;
+      width: 100%;
+      height: 100%;
+      max-height: none;
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: row;
+      direction: ltr;
+      align-items: stretch;
+      align-content: stretch;
+      gap: 0;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      box-sizing: border-box;
+    }
+    /* Use global .nav from dashboard.css (white bar, hairline, scroll shadow) — same as Report setting & other modules */
+    .admin-dh-page-root .dh-sidebar {
+      order: 0;
+      flex: 0 0 var(--sidebar-w);
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      min-height: 0;
+      align-self: stretch;
+      position: relative;
+      top: auto;
+      height: auto;
+      max-height: none;
+      border-radius: 0;
+      overflow: hidden;
+      box-shadow: none;
+      font-family: var(--font-body);
+      font-size: var(--dh-fs-base);
+      line-height: 1.55;
+    }
+    .admin-dh-page-root .dh-sidebar,
+    .admin-dh-page-root .dh-sidebar * {
+      box-sizing: border-box;
+    }
+    .admin-dh-main {
+      order: 1;
+      flex: 1 1 0%;
+      min-width: 0;
+      min-height: 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 0 1.5rem 0 1.25rem;
+    }
+    .admin-dh-main .container.admin-content {
+      max-width: none;
+      margin: 0;
+      flex: 1 1 0%;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding: 1rem 0 2rem;
+      box-sizing: border-box;
+    }
+    @media (max-width: 900px) {
+      body.admin-dh-page.has-main-nav {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto !important;
+      }
+      body.admin-dh-page.has-main-nav .admin-dh-page-root.dh-page-root {
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+        flex-direction: column;
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+      .admin-dh-main {
+        overflow: visible;
+        min-height: 0;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .admin-dh-main .container.admin-content {
+        overflow: visible;
+        flex: none;
+        min-height: 0;
+      }
+      .admin-dh-page-root .dh-sidebar {
+        position: static;
+        height: auto;
+        max-height: none;
+        width: 100%;
+        min-width: 0;
+        flex: 0 0 auto;
+        align-self: stretch;
+      }
+    }
+    @media (max-width: 480px) {
+      .admin-dh-main .container.admin-content {
+        padding: 0 0 0.75rem !important;
+      }
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: calc(var(--main-nav-h) + 1.75rem) 1.5rem 3rem;
+    }
+    
+    .page-header {
+      margin-bottom: 2rem;
+    }
+    
+    .page-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.02em;
+    }
+    
+    .page-subtitle {
+      color: var(--text-secondary);
+      font-size: 0.9375rem;
+    }
+
+    .admin-content .adm-greeting-line {
+      margin-bottom: 1.25rem;
+    }
+    .admin-content .adm-greeting-line .page-title {
+      margin-bottom: 0;
+    }
+    .admin-content .adm-greeting-accent {
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .adm-sec-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.55rem;
+      padding: 0.55rem 0.85rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+    .adm-sec-banner--warn {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+    }
+    .adm-sec-banner--ok {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+    }
+    .adm-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.65rem;
+      margin-bottom: 0.9rem;
+    }
+    @media (max-width: 1400px) {
+      .adm-kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .adm-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .adm-kpi { min-height: 0; }
+    }
+    .adm-kpi {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 1px);
+      padding: 0.85rem 0.95rem;
+      min-height: 7.75rem;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+    .adm-kpi:hover {
+      box-shadow: var(--shadow);
+      transform: translateY(-1px);
+    }
+    .adm-kpi::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      border-radius: 0 0 calc(var(--radius) + 1px) calc(var(--radius) + 1px);
+    }
+    .adm-kpi--green::after { background: var(--primary); }
+    .adm-kpi--blue::after { background: #2563eb; }
+    .adm-kpi--amber::after { background: #d97706; }
+    .adm-kpi--red::after { background: #dc2626; }
+    .adm-kpi--purple::after { background: #7c3aed; }
+    .adm-kpi--teal::after { background: #0891b2; }
+    .adm-kpi-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .adm-kpi-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.12rem;
+    }
+    .adm-kpi--green .adm-kpi-icon { background: rgba(18, 84, 53, 0.1); }
+    .adm-kpi--blue .adm-kpi-icon { background: #eff6ff; }
+    .adm-kpi--amber .adm-kpi-icon { background: #fffbeb; }
+    .adm-kpi--red .adm-kpi-icon { background: #fef2f2; }
+    .adm-kpi--purple .adm-kpi-icon { background: #f5f3ff; }
+    .adm-kpi--teal .adm-kpi-icon { background: #ecfeff; }
+    .adm-kpi-trend {
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.14rem 0.42rem;
+      border-radius: 99px;
+      background: #f1f5f9;
+      color: var(--text-muted);
+    }
+    .adm-kpi-val {
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      color: var(--text);
+    }
+    .adm-kpi-label {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 0.22rem;
+    }
+    .adm-kpi-foot {
+      margin-top: 0.5rem;
+      padding-top: 0.48rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+    .adm-kpi-foot strong {
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+    @keyframes adm-fi-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .adm-kpi-grid.adm-fi .adm-kpi {
+      animation: adm-fi-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .adm-kpi-grid.adm-fi .adm-kpi:nth-child(1) { animation-delay: 0.04s; }
+    .adm-kpi-grid.adm-fi .adm-kpi:nth-child(2) { animation-delay: 0.08s; }
+    .adm-kpi-grid.adm-fi .adm-kpi:nth-child(3) { animation-delay: 0.12s; }
+    .adm-kpi-grid.adm-fi .adm-kpi:nth-child(4) { animation-delay: 0.16s; }
+    .adm-kpi-grid.adm-fi .adm-kpi:nth-child(5) { animation-delay: 0.2s; }
+    .adm-kpi-grid.adm-fi .adm-kpi:nth-child(6) { animation-delay: 0.24s; }
+
+    /* Overview panels — bento-style: modules | (workflow + ops stack); then security | audit */
+    .adm-section-kicker {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin: 0 0 0.35rem 0;
+    }
+    /* Chart.js insight strip */
+    .adm-charts-strip {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+      gap: 0.75rem;
+      margin-bottom: 0.35rem;
+    }
+    @media (max-width: 960px) {
+      .adm-charts-strip { grid-template-columns: 1fr; }
+    }
+    .adm-chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 2px);
+      overflow: hidden;
+      box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.06);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .adm-chart-card-head {
+      padding: 0.65rem 0.9rem 0.5rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #fafbfc 0%, #fff 100%);
+    }
+    .adm-chart-card-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+    .adm-chart-card-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin: 0.15rem 0 0 0;
+    }
+    .adm-chart-card-body {
+      padding: 0.65rem 0.85rem 0.75rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .adm-chart-canvas-wrap {
+      position: relative;
+      width: 100%;
+      min-height: 0;
+    }
+    .adm-chart-canvas-wrap--donut {
+      height: 220px;
+    }
+    .adm-chart-canvas-wrap--bar {
+      height: 260px;
+    }
+    .adm-chart-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.28rem;
+      margin-top: 0.55rem;
+      padding-top: 0.55rem;
+      border-top: 1px solid var(--border);
+    }
+    .adm-overview-panels {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .adm-panel-row {
+      display: grid;
+      gap: 0.75rem;
+      align-items: start;
+    }
+    /* Top: wide submissions column + stacked workflow & operations (no empty “third column”) */
+    .adm-panel-row--overview-top {
+      grid-template-columns: minmax(0, 1.22fr) minmax(280px, 1fr);
+      align-items: stretch;
+    }
+    .adm-overview-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      min-width: 0;
+    }
+    .adm-overview-stack > .adm-panel {
+      flex: 0 0 auto;
+    }
+    .adm-panel--modules {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      align-self: stretch;
+      border-left: 3px solid var(--primary);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+    }
+    /* Fills space below the scroll area when this column is stretched taller than the list */
+    .adm-panel--modules::after {
+      content: '';
+      flex: 1 1 0;
+      min-height: 0;
+      background: linear-gradient(180deg, #f1f5f9 0%, #fff 55%);
+      pointer-events: none;
+    }
+    .adm-panel--modules .adm-panel-head {
+      flex: 0 0 auto;
+      background: linear-gradient(180deg, rgba(18, 84, 53, 0.04) 0%, transparent 100%);
+    }
+    /* Bottom: narrow security | wide audit; top-align so short security doesn’t leave a white slab */
+    .adm-panel-row--split {
+      grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.75fr);
+      align-items: start;
+    }
+    .adm-panel--security .adm-panel-body {
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+    }
+    @media (max-width: 1100px) {
+      .adm-panel-row--overview-top {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 1024px) {
+      .adm-panel-row--split {
+        grid-template-columns: 1fr;
+      }
+    }
+    .adm-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 2px);
+      padding: 0;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      overflow: hidden;
+      align-self: start;
+      width: 100%;
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .adm-panel:hover {
+      box-shadow: 0 4px 14px -4px rgba(15, 23, 42, 0.1);
+      border-color: #e2e8f0;
+    }
+    .adm-panel-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.62rem 0.85rem 0.5rem;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+    }
+    .adm-panel-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .adm-panel-title::before {
+      content: '';
+      width: 3px;
+      height: 15px;
+      flex-shrink: 0;
+      background: linear-gradient(180deg, var(--primary), #1a7a4d);
+      border-radius: 99px;
+    }
+    .adm-panel-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.14rem;
+    }
+    .adm-panel-tag {
+      font-size: 0.62rem;
+      font-weight: 600;
+      padding: 0.12rem 0.45rem;
+      border-radius: 99px;
+      background: var(--primary-muted);
+      color: var(--primary);
+    }
+    .adm-panel-body {
+      padding: 0.5rem 0.85rem 0.65rem;
+    }
+    .adm-panel--modules .adm-panel-body#admModuleBars {
+      flex: 0 1 auto;
+      min-height: 0;
+      max-height: min(52vh, 520px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 0.45rem;
+      scrollbar-gutter: stable;
+      background: linear-gradient(180deg, #fafbfc 0%, #fff 40%);
+    }
+    .adm-panel--modules .adm-panel-body#admModuleBars::-webkit-scrollbar {
+      width: 6px;
+    }
+    .adm-panel--modules .adm-panel-body#admModuleBars::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 99px;
+    }
+    .adm-panel--modules .adm-panel-body#admModuleBars::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 99px;
+    }
+    .adm-panel--ops .adm-panel-body {
+      padding-bottom: 0.6rem;
+    }
+    .adm-panel--audit .adm-panel-head {
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.035) 0%, transparent 100%);
+    }
+    .adm-module-bars--dense .adm-mb-row {
+      margin-bottom: 0.22rem;
+    }
+    .adm-module-bars--dense .adm-mb-label {
+      font-size: 0.7rem;
+      margin-bottom: 0.1rem;
+    }
+    .adm-mb-row {
+      margin-bottom: 0.35rem;
+    }
+    .adm-mb-row:last-child { margin-bottom: 0; }
+    .adm-mb-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.16rem;
+      line-height: 1.25;
+    }
+    .adm-mb-label strong { color: var(--text); font-weight: 600; }
+    .adm-mb-track {
+      height: 5px;
+      background: #f1f5f9;
+      border-radius: 99px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .adm-mb-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--primary) 0%, #1a7a4d 100%);
+      min-width: 2px;
+      transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .adm-wf-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.28rem;
+      align-content: flex-start;
+    }
+    .adm-wf-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.28rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.18rem 0.42rem;
+      border-radius: 99px;
+      background: var(--primary-muted);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+    }
+    .adm-wf-chip span {
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.62rem;
+      padding: 0.06rem 0.34rem;
+      border-radius: 99px;
+      font-weight: 700;
+    }
+    .adm-mb-fill--blue { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+    .adm-mb-fill--amber { background: linear-gradient(90deg, #d97706, #fbbf24); }
+    .adm-mb-fill--pink { background: linear-gradient(90deg, #db2777, #f472b6); }
+    .adm-ops-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+      align-content: start;
+    }
+    .adm-ops-card {
+      padding: 0.48rem 0.55rem;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid #e8eef3;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+    }
+    .adm-panel--ops .adm-ops-card:hover {
+      border-color: #d8e2ec;
+      box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.08);
+    }
+    .adm-ops-card-label {
+      font-size: 0.64rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .adm-ops-card-val {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-top: 0.08rem;
+      letter-spacing: -0.03em;
+    }
+    .adm-ops-card-sub {
+      font-size: 0.64rem;
+      color: var(--text-secondary);
+      margin-top: 0.06rem;
+      line-height: 1.25;
+    }
+    .adm-security {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0;
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+    .adm-security--ok {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #065f46;
+    }
+    .adm-audit-list {
+      max-height: 240px;
+      overflow-y: auto;
+      font-size: 0.75rem;
+      padding: 0;
+    }
+    .adm-audit-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.4rem;
+      padding: 0.28rem 0;
+      border-bottom: 1px solid var(--border);
+      align-items: start;
+    }
+    .adm-audit-row:last-child { border-bottom: none; }
+    .adm-audit-meta {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .adm-audit-action {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .adm-panel-placeholder {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      padding: 0.25rem 0;
+      margin: 0;
+    }
+    
+    .users-section {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.2s ease;
+    }
+    .users-section:hover {
+      box-shadow: 0 8px 24px -4px rgba(0,0,0,0.08);
+    }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    
+    .section-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 1.2em;
+      flex-shrink: 0;
+      background: linear-gradient(180deg, var(--primary) 0%, #1a7a4d 100%);
+      border-radius: 4px;
+    }
+    
+    .table-scroll-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+    .table-scroll-wrapper::-webkit-scrollbar { height: 8px; }
+    .table-scroll-wrapper::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
+    .table-scroll-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+    .users-table {
+      width: 100%;
+      min-width: 880px;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    
+    .users-table th,
+    .users-table td {
+      padding: 0.875rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .users-table th {
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .users-table thead tr th:first-child { border-radius: var(--radius-sm) 0 0 0; }
+    .users-table thead tr th:last-child { border-radius: 0 var(--radius-sm) 0 0; }
+    
+    .users-table td { color: var(--text); }
+    
+    .users-table tbody tr {
+      transition: background 0.15s ease;
+    }
+    .users-table tbody tr:hover {
+      background: #f8fafc;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.55rem;
+      border-radius: 8px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    
+    .badge-admin { background: #dbeafe; color: #1e40af; }
+    .badge-inspector { background: #fef3c7; color: #92400e; }
+    .badge-user { background: #f1f5f9; color: var(--text-secondary); }
+    .badge-active { background: #d1fae5; color: #065f46; }
+    .badge-inactive { background: #fee2e2; color: #991b1b; }
+    
+    .access-badges {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .access-badge {
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 500;
+    }
+    
+    .access-badge.hvac { background: #e0f2fe; color: #0369a1; }
+    .access-badge.civil { background: #fef9c3; color: #a16207; }
+    .access-badge.cleaning { background: #fce7f3; color: #9d174d; }
+    
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    
+    .btn {
+      padding: 0.4rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border: 1px solid transparent;
+    }
+    
+    .btn-sm { padding: 0.3rem 0.55rem; font-size: 0.75rem; }
+    
+    .btn-reset, .btn-toggle, .btn-access, .btn-activity {
+      background: var(--primary-muted);
+      color: var(--primary);
+      border-color: var(--primary-border);
+    }
+    .btn-reset:hover, .btn-toggle:hover, .btn-access:hover, .btn-activity:hover {
+      background: rgba(18,84,53,0.14);
+      border-color: rgba(18,84,53,0.35);
+    }
+
+    .btn-danger {
+      background: var(--danger-muted);
+      color: var(--danger);
+      border-color: var(--danger-border);
+    }
+    .btn-danger:hover { background: rgba(220,38,38,0.12); }
+
+    .btn-outline-danger {
+      background: var(--danger-muted);
+      color: var(--danger);
+      border-color: var(--danger-border);
+    }
+    .btn-outline-danger:hover { background: rgba(220,38,38,0.12); }
+
+    .btn-refresh {
+      background: var(--bg-card);
+      color: var(--primary);
+      border-color: var(--border);
+    }
+    .btn-refresh:hover { background: var(--primary-muted); }
+
+    .users-section .btn-primary {
+      background: var(--primary-muted);
+      color: var(--primary);
+      border-color: var(--primary-border);
+    }
+    .users-section .btn-primary:hover { background: rgba(18,84,53,0.14); }
+
+    .documents-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .bulk-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .checkbox-select-all {
+      margin-right: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .checkbox-select-all input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .documents-table input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.4);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal.active { display: flex; }
+    
+    .modal-content {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      max-width: 500px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+      animation: modalIn 0.25s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.98) translateY(-10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    
+    .modal-header {
+      margin-bottom: 1.5rem;
+    }
+    
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--text-dark);
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9375rem;
+      transition: all 0.2s ease;
+    }
+    .form-control:hover {
+      border-color: #cbd5e1;
+    }
+    
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-muted);
+    }
+    
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .checkbox-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      margin-top: 2rem;
+    }
+    
+    .modal .btn-primary {
+      background: var(--primary);
+      color: white;
+      border: none;
+    }
+    .modal .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+    
+    .btn-cancel {
+      background: var(--secondary);
+      color: var(--text-dark);
+    }
+    
+    .btn-cancel:hover {
+      background: #d1d5db;
+    }
+    
+    .alert {
+      padding: 1rem 1.25rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 1rem;
+      font-weight: 500;
+      animation: contentFadeIn 0.4s ease;
+    }
+    
+    .alert-success {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+    
+    .alert-error {
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    
+    .temp-password {
+      background: #fef3c7;
+      padding: 1rem;
+      border-radius: 6px;
+      margin-top: 1rem;
+      font-family: monospace;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-align: center;
+      color: #92400e;
+    }
+
+    .documents-table {
+      width: 100%;
+      min-width: 960px;
+      margin-top: 1rem;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    .documents-table th,
+    .documents-table td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .documents-table th {
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .documents-table tbody tr {
+      transition: background 0.15s ease;
+    }
+    .documents-table tbody tr:hover { background: #f8fafc; }
+
+    .module-badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.6875rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    .module-badge.hvac { background: #e0f2fe; color: #0369a1; }
+    .module-badge.civil { background: #fef9c3; color: #a16207; }
+    .module-badge.cleaning { background: #fce7f3; color: #9d174d; }
+
+    .status-badge, .workflow-badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.6875rem;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+    .status-badge.completed, .workflow-badge.approved, .workflow-badge.active { background: #dcfce7; color: #15803d; }
+    .status-badge.processing, .workflow-badge.notified { background: #fef9c3; color: #a16207; }
+    .status-badge.submitted, .workflow-badge.submitted { background: #e0f2fe; color: #0369a1; }
+    .status-badge.draft, .workflow-badge.closed { background: #f1f5f9; color: var(--text-secondary); }
+    .status-badge.closed { background: #f1f5f9; color: var(--text-secondary); }
+    .status-badge.active { background: #dcfce7; color: #15803d; }
+    .workflow-badge.reviewing { background: #fce7f3; color: #9d174d; }
+    .workflow-badge.rejected { background: #fee2e2; color: #b91c1c; }
+
+    .section-controls {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .dashboard-filter {
+      min-width: 140px;
+      max-width: 100%;
+      padding: 0.5rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      color: var(--text-dark);
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .dashboard-filter:hover {
+      border-color: #cbd5e1;
+    }
+    .dashboard-filter:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-muted);
+    }
+
+    .status-toggle-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      transition: all 0.2s ease;
+    }
+    .status-toggle-group:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-muted);
+    }
+
+    .status-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      color: #111827;
+      font-weight: 500;
+    }
+
+    .status-toggle input[type="checkbox"] {
+      width: 34px;
+      height: 18px;
+      appearance: none;
+      background: #e5e7eb;
+      border-radius: 999px;
+      position: relative;
+      outline: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .status-toggle input[type="checkbox"]::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+      transition: transform 0.2s ease;
+    }
+
+    .status-toggle input[type="checkbox"]:checked {
+      background: var(--primary);
+    }
+
+    .status-toggle input[type="checkbox"]:checked::after {
+      transform: translateX(16px);
+    }
+
+    .designation-select {
+      min-width: 120px;
+      font-size: 0.8125rem;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      color: var(--text-dark);
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      max-width: 150px;
+    }
+    
+    .designation-select:hover:not(:disabled) {
+      border-color: var(--primary);
+    }
+    
+    .designation-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-muted);
+    }
+    .designation-select:disabled {
+      background: var(--bg-light);
+      cursor: wait;
+      opacity: 0.6;
+    }
+
+    .download-links {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-download {
+      padding: 0.35rem 0.65rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      background: var(--primary-muted);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-download:hover {
+      background: rgba(18,84,53,0.12);
+      border-color: rgba(18,84,53,0.3);
+    }
+
+    .btn-download:disabled {
+      background: var(--bg-light);
+      color: var(--text-muted);
+      border-color: var(--border);
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    /* Report Generation card */
+    .report-gen-card {
+      background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #d1fae5 100%);
+      border: 1px solid rgba(16,185,129,0.25);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      box-shadow: 0 4px 20px rgba(18,84,53,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    .report-gen-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--primary) 0%, #1a7a4d 100%);
+    }
+    .report-gen-content {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .report-gen-icon {
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(18,84,53,0.1);
+      border-radius: var(--radius-sm);
+      font-size: 1.5rem;
+    }
+    .report-gen-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 0.25rem;
+    }
+    .report-gen-desc {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      max-width: 500px;
+      line-height: 1.5;
+    }
+    .btn-report-gen {
+      background: linear-gradient(135deg, var(--primary) 0%, #1a7a4d 100%);
+      color: white !important;
+      padding: 0.6rem 1.25rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      white-space: nowrap;
+      border: none;
+      box-shadow: 0 2px 8px rgba(18,84,53,0.25);
+      transition: all 0.2s ease;
+    }
+    .btn-report-gen:hover {
+      background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
+      box-shadow: 0 4px 16px rgba(18,84,53,0.3);
+    }
+    .report-gen-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .btn-automation {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+    .btn-automation-pending {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #92400e;
+      border: 1px solid rgba(245,158,11,0.4);
+    }
+    .btn-automation-pending:hover {
+      background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+      box-shadow: 0 2px 8px rgba(245,158,11,0.25);
+    }
+    .btn-automation-completed {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      color: #065f46;
+      border: 1px solid rgba(16,185,129,0.4);
+    }
+    .btn-automation-completed:hover {
+      background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
+      box-shadow: 0 2px 8px rgba(16,185,129,0.25);
+    }
+    .btn-automation-disabled {
+      background: #f1f5f9;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      cursor: default;
+    }
+    .btn-automation-paused {
+      background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+      color: #4b5563;
+      border: 1px solid var(--border);
+    }
+    .btn-automation-paused:hover { opacity: .95; }
+    .automation-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: automationPulse 2s ease-in-out infinite;
+    }
+    .btn-automation-completed .automation-dot { background: #059669; }
+    .btn-automation-pending .automation-dot { background: #d97706; }
+    .btn-automation-paused .automation-dot { background: #6b7280; }
+    @keyframes automationPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    /* Automation modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.5);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 1rem;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal-automation {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      max-width: 480px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+      transform: scale(0.96);
+      transition: transform 0.2s ease;
+    }
+    .modal-overlay.active .modal-automation {
+      transform: scale(1);
+    }
+    .modal-automation-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-automation-header.modal-automation-header--close-left {
+      justify-content: flex-start;
+      gap: 0.75rem;
+    }
+    .modal-automation-header--close-left .modal-automation-title {
+      flex: 1;
+      min-width: 0;
+      margin: 0;
+    }
+    .modal-automation-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .modal-automation-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .modal-automation-close:hover {
+      background: var(--secondary);
+      color: var(--text);
+    }
+    .modal-automation-body {
+      padding: 1.5rem;
+    }
+    .modal-report-folder {
+      max-width: 600px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-report-folder .modal-automation-body {
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .modal-report-folder .report-folder-subtitle {
+      font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5;
+    }
+    .report-folder-list {
+      max-height: none;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin; scrollbar-color: rgba(18,84,53,0.25) transparent;
+    }
+    .report-folder-list::-webkit-scrollbar { width: 8px; }
+    .report-folder-list::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
+    .report-folder-list::-webkit-scrollbar-thumb { background: rgba(18,84,53,0.2); border-radius: 4px; }
+    .report-folder-list::-webkit-scrollbar-thumb:hover { background: rgba(18,84,53,0.35); }
+    .report-folder-item {
+      display: flex; align-items: stretch; gap: 1rem;
+      padding: 1rem 1.25rem; border-radius: 10px;
+      margin-bottom: 0.75rem; font-size: 0.8125rem;
+      background: #fff; border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .report-folder-item:hover {
+      border-color: rgba(18,84,53,0.25);
+      box-shadow: 0 4px 12px rgba(18,84,53,0.08);
+    }
+    .report-folder-item:last-child { margin-bottom: 0; }
+    .report-folder-item > .report-folder-content {
+      flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
+    }
+    .report-folder-name {
+      color: var(--text); font-weight: 500; line-height: 1.4;
+      word-break: break-word; hyphens: auto;
+    }
+    .report-folder-meta {
+      font-size: 0.75rem; color: var(--text-muted); margin-top: 0.35rem;
+      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+    }
+    .report-folder-meta span { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .report-folder-actions {
+      display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;
+    }
+    .report-folder-open {
+      padding: 0.5rem 0.85rem; font-size: 0.8125rem; font-weight: 500;
+      background: transparent; color: var(--primary);
+      border: 1px solid var(--primary); border-radius: 8px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .report-folder-open:hover {
+      background: rgba(18,84,53,0.06); border-color: var(--primary-hover);
+    }
+    .report-folder-dl {
+      padding: 0.5rem 0.85rem; font-size: 0.8125rem; font-weight: 500;
+      background: var(--primary); color: #fff; border: none;
+      border-radius: 8px; cursor: pointer; transition: all 0.2s;
+    }
+    .report-folder-dl:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .report-folder-empty {
+      text-align: center; padding: 3rem 2rem; color: var(--text-muted);
+      font-size: 0.9375rem; line-height: 1.6; background: #fafafa;
+      border-radius: 10px; border: 1px dashed var(--border);
+    }
+    .automation-detail-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      margin-bottom: 1rem;
+    }
+    .automation-detail-row:last-child { margin-bottom: 0; }
+    .automation-detail-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .automation-detail-value {
+      font-size: 0.9375rem;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .automation-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+    .automation-status-badge.success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .automation-status-badge.pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .automation-status-badge.paused {
+      background: #e5e7eb;
+      color: #4b5563;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .user-name {
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .user-email { font-size: 0.75rem; color: var(--text-muted); }
+    .no-documents { text-align: center; padding: 2rem; color: var(--text-muted); }
+
+    .admin-content {
+      animation: contentFadeIn 0.4s ease;
+    }
+    @keyframes contentFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @media (max-width: 1200px) {
+      .container {
+        padding: calc(var(--main-nav-h) + 1.25rem) 1.5rem 1.25rem !important;
+      }
+      
+      .users-section {
+        padding: 1.5rem !important;
+      }
+      
+      .dashboard-filter {
+        min-width: 120px !important;
+      }
+      
+      .users-table {
+        min-width: 800px !important;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .navbar {
+        padding: 0.75rem 1rem !important;
+      }
+      
+      .navbar-container {
+        flex-wrap: wrap !important;
+        gap: 0.75rem !important;
+      }
+      
+      .navbar-brand {
+        font-size: 1.1rem !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+      }
+      
+      .navbar-brand img {
+        height: 36px !important;
+        filter: brightness(0) invert(1);
+      }
+      
+      .navbar-brand span {
+        font-size: 0.9rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+      
+      .nav-actions {
+        width: 100% !important;
+        justify-content: flex-end !important;
+      }
+      
+      .btn {
+        font-size: 0.875rem !important;
+        padding: 0.5rem 0.875rem !important;
+      }
+      
+      .container {
+        padding: calc(var(--main-nav-h) + 1rem) 1rem 1rem !important;
+        width: 100% !important;
+      }
+      
+      .page-title {
+        font-size: 1.5rem !important;
+      }
+      
+      .page-subtitle {
+        font-size: 0.9rem !important;
+      }
+      
+      .users-section {
+        padding: 1.25rem !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+      }
+      
+      .section-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+      }
+      
+      .section-controls {
+        width: 100% !important;
+        justify-content: flex-start !important;
+      }
+      
+      .dashboard-filter {
+        min-width: 100% !important;
+      }
+      
+      .section-title {
+        font-size: 1.25rem !important;
+      }
+      
+      .table-scroll-wrapper {
+        margin-left: -0.25rem !important;
+        margin-right: -0.25rem !important;
+        border-radius: 6px !important;
+        border-left: none !important;
+        border-right: none !important;
+      }
+      
+      .users-table {
+        font-size: 0.8rem !important;
+        min-width: 700px !important;
+      }
+      
+      .documents-table {
+        font-size: 0.8rem !important;
+        min-width: 750px !important;
+      }
+      
+      .documents-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.75rem !important;
+      }
+      
+      .users-table th,
+      .users-table td,
+      .documents-table th,
+      .documents-table td {
+        padding: 0.75rem 0.5rem !important;
+      }
+      
+      .action-buttons .btn-sm {
+        padding: 0.35rem 0.5rem !important;
+        font-size: 0.8rem !important;
+      }
+
+      .download-links {
+        flex-direction: column !important;
+      }
+
+      .btn-download {
+        width: 100% !important;
+        justify-content: center !important;
+      }
+      
+      .modal {
+        padding: 0.5rem !important;
+      }
+      
+      .modal-content {
+        padding: 1.25rem !important;
+      }
+      
+      .modal-title {
+        font-size: 1.25rem !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .navbar-brand span {
+        font-size: 0.8rem !important;
+      }
+      
+      .container {
+        padding: calc(var(--main-nav-h) + 0.75rem) 1rem 0.75rem !important;
+      }
+      
+      .page-title {
+        font-size: 1.35rem !important;
+      }
+      
+      .page-subtitle {
+        font-size: 0.85rem !important;
+      }
+      
+      .users-section {
+        padding: 1rem !important;
+        border-radius: 8px !important;
+      }
+      
+      .users-table,
+      .documents-table {
+        font-size: 0.75rem !important;
+        min-width: 600px !important;
+      }
+      
+      .section-title {
+        font-size: 1.1rem !important;
+      }
+      
+      .action-buttons .btn-sm {
+        padding: 0.3rem 0.4rem !important;
+        font-size: 0.75rem !important;
+      }
+    }
+  </style>
+</head>
+<body class="has-main-nav admin-dh-page">
+  {% include 'partials/main_navbar.html' with context %}
+
+  <div class="dh-page-root admin-dh-page-root">
+    <aside class="dh-sidebar" id="adminDhSidebar" aria-label="Administration menu">
+      <div class="sb-brand">
+        <div class="sb-brand-text">
+          <span class="name">Injaaz</span>
+          <span class="tagline">Administration</span>
+        </div>
+      </div>
+      <nav class="sb-nav">
+        <div class="dh-sb-section">
+          <div class="sb-section-label">Overview</div>
+          <a href="#section-users" class="sb-nav-item active">Users <span class="sb-badge" id="admSbUserCount">0</span></a>
+          <a href="#section-documents" class="sb-nav-item">Documents <span class="sb-badge" id="admSbDocCount">0</span></a>
+        </div>
+        <div class="dh-sb-section">
+          <div class="sb-section-label">Tools</div>
+          <a href="/admin/mmr/" class="sb-nav-item">Report generation</a>
+          <a href="/admin/mmr-chargeable" class="sb-nav-item">Chargeable rules</a>
+        </div>
+        <div class="dh-sb-section">
+          <div class="sb-section-label">Modules</div>
+          <a href="/admin/devices" class="sb-nav-item">Devices</a>
+          <a href="/admin/bd" class="sb-nav-item">Business development</a>
+          <a href="/admin/personal-progress" class="sb-nav-item">Personal progress</a>
+        </div>
+        <div class="dh-sb-section">
+          <div class="sb-section-label">System</div>
+          <a href="/dochub" class="sb-nav-item">DocHub</a>
+          <a href="/dashboard" class="sb-nav-item">App home</a>
+        </div>
+      </nav>
+      <div class="sb-footer">
+        <div class="sb-user-row" id="admSbUserRow" role="button" tabindex="0" title="Open profile"
+             onclick="if(typeof openProfileModal==='function'){openProfileModal();}"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();if(typeof openProfileModal==='function')openProfileModal();}">
+          <div class="sb-avatar" id="admSbAvatar">—</div>
+          <div class="sb-user-text">
+            <div class="sb-user-name" id="admSbName">Loading…</div>
+            <div class="sb-user-role" id="admSbRole">—</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="admin-dh-main">
+  <div class="container admin-content">
+
+    <div class="page-header adm-greeting-line">
+      <h1 class="page-title">
+        <span id="admGreetingPrefix">Welcome</span>, <span class="adm-greeting-accent" id="admGreetingName">Admin</span>
+      </h1>
+    </div>
+
+    <!-- MMR Report Generation Module -->
+    <div class="report-gen-card">
+      <div class="report-gen-content">
+        <div class="report-gen-icon">📊</div>
+        <div>
+          <h2 class="report-gen-title">Report Generation</h2>
+          <p class="report-gen-desc">
+            Upload your Reactive Work Order Excel, view a live dashboard by client, contract, service group
+            &amp; status, download a professional multi-sheet report, and schedule daily email delivery.
+          </p>
+        </div>
+      </div>
+      <div class="report-gen-actions">
+        <button type="button" id="btnReportFolder" class="btn btn-outline" onclick="openReportFolderModal()" title="View saved reports" style="background:rgba(255,255,255,0.9);color:var(--primary);border-color:var(--primary);">
+          📁 Report Folder
+        </button>
+        <button type="button" id="btnAutomation" class="btn-automation btn-automation-disabled" onclick="openAutomationModal()" disabled title="Automation status">
+          <span class="automation-dot"></span>
+          <span id="automationLabel">—</span>
+        </button>
+        <a href="/admin/mmr/" class="btn btn-report-gen">Open Report Generation</a>
+      </div>
+    </div>
+
+    <!-- Report folder modal -->
+    <div id="reportFolderModal" class="modal-overlay" onclick="if(event.target===this)closeReportFolderModal()">
+      <div class="modal-automation modal-report-folder" onclick="event.stopPropagation()">
+        <div class="modal-automation-header modal-automation-header--close-left">
+          <button type="button" class="modal-automation-close" onclick="closeReportFolderModal()" title="Close" aria-label="Close">×</button>
+          <h3 class="modal-automation-title">📁 Report Folder</h3>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="loadReportFolder(); showAlert('List refreshed', 'info')" title="Refresh list" style="margin-left:auto;flex-shrink:0">↻</button>
+        </div>
+        <div class="modal-automation-body">
+          <p class="report-folder-subtitle">Reports sent via email or saved manually from Report Generation.</p>
+          <div id="reportFolderList" class="report-folder-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Automation status modal -->
+    <div id="automationModal" class="modal-overlay" onclick="if(event.target===this)closeAutomationModal()">
+      <div class="modal-automation" onclick="event.stopPropagation()">
+        <div class="modal-automation-header modal-automation-header--close-left">
+          <button type="button" class="modal-automation-close" onclick="closeAutomationModal()" title="Close" aria-label="Close">&times;</button>
+          <h3 class="modal-automation-title">📧 Email Automation</h3>
+        </div>
+        <div class="modal-automation-body" id="automationModalBody">
+          <p style="color:var(--text-muted)">Loading…</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="alertContainer"></div>
+
+    <div class="users-section" id="section-users">
+      <div class="section-header">
+        <h2 class="section-title">All Users</h2>
+        <div class="section-controls">
+          <div class="status-toggle-group" aria-label="User status filter">
+            <label class="status-toggle">
+              <input type="checkbox" id="statusActiveToggle" checked onchange="setUsersStatusFilters()">
+              <span id="statusToggleLabel">Active</span>
+            </label>
+          </div>
+          <select id="usersDesignationFilter" class="dashboard-filter" onchange="setUsersDesignationFilter(this.value)">
+            <option value="all" selected>All Users</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="operations_manager">Operations Manager</option>
+            <option value="business_development">Business Development</option>
+            <option value="procurement">Procurement</option>
+            <option value="general_manager">General Manager</option>
+          </select>
+        </div>
+      </div>
+      <div id="usersTableContainer">
+        <p>Loading users...</p>
+      </div>
+    </div>
+
+    <div class="users-section" id="section-documents">
+      <div class="section-header">
+        <h2 class="section-title">Generated Documents</h2>
+        <div class="section-controls">
+          <select id="documentsFilter" class="dashboard-filter" onchange="setDocumentsFilter(this.value)">
+            <option value="active" selected>Active</option>
+            <option value="completed">Completed</option>
+            <option value="closed">Closed</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button class="btn btn-refresh" onclick="loadDocuments()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="documents-header">
+        <div class="checkbox-select-all">
+          <input type="checkbox" id="selectAllDocuments" onchange="toggleSelectAllDocuments()">
+          <label for="selectAllDocuments">Select All</label>
+        </div>
+        <div class="bulk-actions">
+          <button class="btn btn-outline-danger" onclick="closeSelectedDocuments()" id="closeSelectedBtn" disabled>
+            Close Selected
+          </button>
+        </div>
+      </div>
+      <div id="documentsTableContainer">
+        <p>Loading documents...</p>
+      </div>
+    </div>
+  </div>
+    </div>
+  </div>
+
+  <!-- Access Control Modal -->
+  <div id="accessModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Manage Module Access</h2>
+      </div>
+      <form id="accessForm">
+        <input type="hidden" id="accessUserId">
+        <div class="form-group">
+          <label class="form-label">User:</label>
+          <input type="text" id="accessUserName" class="form-control" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Module Access:</label>
+          <div class="checkbox-group">
+            <div class="checkbox-item">
+              <input type="checkbox" id="accessHvac" name="access_hvac">
+              <label for="accessHvac">Window 1: HVAC & MEP Form</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="accessCivil" name="access_civil">
+              <label for="accessCivil">Window 2: Civil Works Form</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="accessCleaning" name="access_cleaning">
+              <label for="accessCleaning">Window 3: Cleaning Form</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-cancel" onclick="closeAccessModal()">Cancel</button>
+          <button type="submit" class="btn btn-access">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- User Activity Modal -->
+  <div id="userActivityModal" class="modal">
+    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 class="modal-title" id="userActivityTitle">User Activity</h2>
+        <button type="button" class="modal-close" onclick="closeUserActivityModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; line-height: 1;">&times;</button>
+      </div>
+      <div id="userActivityContent" style="padding: 1rem 0;">
+        <div style="text-align: center; padding: 2rem;">
+          <div class="spinner" style="border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+          <p style="margin-top: 1rem; color: #666;">Loading user activity...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* User Activity Modal Styles */
+    .activity-section {
+      margin-bottom: 1.5rem;
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 1rem;
+      border: 1px solid #e2e8f0;
+    }
+    .activity-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .activity-section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .activity-badge {
+      background: var(--primary);
+      color: white;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .activity-badge.reviewed {
+      background: #3b82f6;
+    }
+    .activity-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    .activity-table th {
+      text-align: left;
+      padding: 0.625rem 0.75rem;
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .activity-table td {
+      padding: 0.625rem 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+    }
+    .activity-table tr:last-child td {
+      border-bottom: none;
+    }
+    .activity-table tr:hover td {
+      background: #f8fafc;
+    }
+    .activity-table tr.clickable-row {
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .activity-table tr.clickable-row:hover td {
+      background: #e0f2fe;
+    }
+    .btn-view-form {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-view-form:hover {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    }
+    .btn-view-form svg {
+      width: 16px;
+      height: 16px;
+    }
+    .status-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-badge.completed { background: #dcfce7; color: #166534; }
+    .status-badge.pending { background: #fef3c7; color: #92400e; }
+    .status-badge.submitted { background: #dbeafe; color: #1e40af; }
+    .status-badge.rejected { background: #fee2e2; color: #991b1b; }
+    .module-badge-sm {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+    .module-badge-sm.hvac { background: #dbeafe; color: #1e40af; }
+    .module-badge-sm.civil { background: #f3e8ff; color: #6b21a8; }
+    .module-badge-sm.cleaning { background: #dcfce7; color: #166534; }
+    .user-info-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--primary);
+      border-radius: var(--radius);
+      margin-bottom: 1.5rem;
+      color: white;
+    }
+    .user-info-avatar {
+      width: 56px;
+      height: 56px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    .user-info-details h3 {
+      margin: 0 0 0.25rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .user-info-details p {
+      margin: 0;
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+    .user-stats {
+      display: flex;
+      gap: 1.5rem;
+      margin-left: auto;
+    }
+    .user-stat {
+      text-align: center;
+    }
+    .user-stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .user-stat-label {
+      font-size: 0.7rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: #64748b;
+    }
+    .empty-state-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.5;
+    }
+    .btn-activity {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+  </style>
+
+  <!-- Edit Submission Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Submission</h2>
+        <button type="button" class="modal-close" onclick="closeEditModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+      </div>
+      <form id="editForm">
+        <input type="hidden" id="editSubmissionId">
+        <div class="form-group">
+          <label class="form-label">Submission ID:</label>
+          <input type="text" id="editSubmissionIdDisplay" class="form-control" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Module:</label>
+          <input type="text" id="editModule" class="form-control" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Site/Project Name: <span style="color: red;">*</span></label>
+          <input type="text" id="editSiteName" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Visit Date: <span style="color: red;">*</span></label>
+          <input type="date" id="editVisitDate" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 600; margin-bottom: 1rem; display: block;">Form Fields:</label>
+          <div id="editFormFields" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; background: #fafafa;">
+            <p style="color: #666; text-align: center;">Loading form fields...</p>
+          </div>
+        </div>
+        <input type="hidden" id="editFormDataJson">
+        <div class="modal-actions">
+          <button type="button" class="btn btn-cancel" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let users = [];
+    let usersDesignationFilter = 'all';
+    let usersStatusFilters = { active: true };
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+      window.location.href = '/login';
+    }
+
+    async function refreshAccessToken() {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (!refreshToken) {
+        return null;
+      }
+
+      try {
+        const response = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${refreshToken}`
+          },
+          credentials: 'include'
+        });
+
+        if (response.status === 401 || response.status === 422) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+          return null;
+        }
+
+        const data = await response.json();
+        if (data.access_token) {
+          localStorage.setItem('access_token', data.access_token);
+          return data.access_token;
+        }
+        return null;
+      } catch (error) {
+        console.error('Error refreshing token:', error);
+        return null;
+      }
+    }
+
+    async function authenticatedFetch(url, options = {}) {
+      let accessToken = localStorage.getItem('access_token');
+      if (!accessToken) {
+        return new Response(null, { status: 401 });
+      }
+
+      let response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      if (response.status !== 401) {
+        return response;
+      }
+
+      const newToken = await refreshAccessToken();
+      if (!newToken) {
+        return response;
+      }
+
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Authorization': `Bearer ${newToken}`
+        }
+      });
+
+      return response;
+    }
+
+    function handleUnauthorized(response) {
+      if (response.status === 401 || response.status === 403) {
+        showAlert('Access denied. Please log in again.', 'error');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 1500);
+        return true;
+      }
+      return false;
+    }
+
+    let automationStatus = null;
+
+    async function loadAutomationStatus() {
+      try {
+        const response = await authenticatedFetch('/admin/mmr/api/automation-status');
+        if (!response.ok) return;
+        automationStatus = await response.json();
+        updateAutomationButton();
+      } catch (e) {
+        console.error('Automation status load failed:', e);
+      }
+    }
+
+    function updateAutomationButton() {
+      const btn = document.getElementById('btnAutomation');
+      const label = document.getElementById('automationLabel');
+      if (!btn || !label) return;
+      if (!automationStatus) {
+        btn.className = 'btn-automation btn-automation-disabled';
+        btn.disabled = true;
+        label.textContent = '—';
+        return;
+      }
+      btn.disabled = false;
+      const status = automationStatus.automation_status;
+      if (status === 'completed') {
+        btn.className = 'btn-automation btn-automation-completed';
+        label.textContent = 'Completed';
+      } else if (status === 'pending') {
+        btn.className = 'btn-automation btn-automation-pending';
+        const next = automationStatus.next_run_at || '';
+        const excelReq = !automationStatus.excel_uploaded ? ' · Upload required' : '';
+        label.textContent = next ? `Pending · Next ${next}${excelReq}` : `Pending${excelReq}`;
+      } else if (status === 'paused') {
+        btn.className = 'btn-automation btn-automation-paused';
+        label.textContent = 'Paused · Upload to resume';
+      } else {
+        btn.className = 'btn-automation btn-automation-disabled';
+        label.textContent = 'Disabled';
+      }
+    }
+
+    function openAutomationModal() {
+      const modal = document.getElementById('automationModal');
+      const body = document.getElementById('automationModalBody');
+      if (!modal || !body) return;
+      if (!automationStatus) {
+        body.innerHTML = '<p style="color:var(--text-muted)">No automation data.</p>';
+        modal.classList.add('active');
+        return;
+      }
+      const s = automationStatus;
+      const h = String(s.schedule_hour ?? 10).padStart(2, '0');
+      const m = String(s.schedule_minute ?? 0).padStart(2, '0');
+      const status = s.automation_status;
+      const r = s.last_run;
+      let html = '';
+      if (status === 'completed') {
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Status</span><span class="automation-status-badge success">✓ Today's run completed</span></div>`;
+      } else if (status === 'pending') {
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Status</span><span class="automation-status-badge pending">⏳ Pending</span></div>`;
+      } else if (status === 'paused') {
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Status</span><span class="automation-status-badge paused">⏸ Paused</span></div>`;
+      }
+      if (s.schedule_enabled) {
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Schedule</span><span class="automation-detail-value">Daily at ${h}:${m} (GST)</span></div>`;
+      }
+      if (s.schedule_enabled) {
+        if (s.excel_uploaded) {
+          html += `<div class="automation-detail-row"><span class="automation-detail-label">Excel file</span><span class="automation-detail-value" style="color:#059669">✓ Uploaded</span></div>`;
+        } else {
+          html += `<div class="automation-detail-row"><span class="automation-detail-label">Excel file</span><span class="automation-detail-value" style="color:var(--danger)">⚠ Upload required – open Report Generation and browse file</span></div>`;
+        }
+      }
+      if (s.schedule_enabled && !s.schedule_paused) {
+        const nextMsg = s.next_run_tomorrow ? `Tomorrow at ${h}:${m} (GST)` : (s.next_run_at ? `Today at ${s.next_run_at}` : `${h}:${m}`);
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Next run</span><span class="automation-detail-value">${nextMsg}</span></div>`;
+      } else if (status === 'paused') {
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Next run</span><span class="automation-detail-value">Upload new Excel in Report Generation to resume – runs at ${h}:${m} (GST)</span></div>`;
+      }
+      if (r) {
+        html += `<div class="automation-detail-row" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)"><span class="automation-detail-label">Last run</span><span class="automation-detail-value">${r.at_formatted || r.at} · ${r.status === 'success' ? '✓ Sent' : 'Failed'}</span></div>`;
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">To</span><span class="automation-detail-value">${(r.to || '—').replace(/,/g, ', ')}</span></div>`;
+        if (r.cc) html += `<div class="automation-detail-row"><span class="automation-detail-label">CC</span><span class="automation-detail-value">${r.cc.replace(/,/g, ', ')}</span></div>`;
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Subject</span><span class="automation-detail-value">${r.subject || '—'}</span></div>`;
+        html += `<div class="automation-detail-row"><span class="automation-detail-label">Recipients</span><span class="automation-detail-value">${r.recipient_count || 0}</span></div>`;
+      }
+      if (s.schedule_enabled) {
+        html += `<div class="automation-dialog-actions" style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap">`;
+        if (s.schedule_paused) {
+          const canResume = s.excel_uploaded;
+          html += `<button type="button" class="btn btn-primary" onclick="resumeAutomation()" ${!canResume ? 'disabled' : ''}>▶ Resume</button>`;
+          html += `<span style="font-size:.8rem;color:var(--text-muted);align-self:center">${canResume ? 'Ready to resume' : 'Upload Excel in Report Generation first'}</span>`;
+        } else {
+          html += `<button type="button" class="btn btn-outline" onclick="pauseAutomation()">⏸ Pause</button>`;
+        }
+        html += `</div>`;
+      }
+      if (!s.schedule_enabled) {
+        html = `<p style="color:var(--text-muted)">Automation is disabled. Open Report Generation and enable the daily schedule to send emails automatically.</p>`;
+      }
+      body.innerHTML = html;
+      modal.classList.add('active');
+    }
+
+    async function pauseAutomation() {
+      try {
+        const resp = await authenticatedFetch('/admin/mmr/api/automation-pause', { method: 'POST' });
+        if (resp.ok) {
+          showAlert('Automation paused', 'success');
+          await loadAutomationStatus();
+          openAutomationModal();
+        } else showAlert('Failed to pause', 'error');
+      } catch (e) { showAlert('Failed to pause', 'error'); }
+    }
+
+    async function resumeAutomation() {
+      try {
+        const resp = await authenticatedFetch('/admin/mmr/api/automation-resume', { method: 'POST' });
+        const data = await resp.json();
+        if (resp.ok) {
+          showAlert('Automation resumed', 'success');
+          await loadAutomationStatus();
+          closeAutomationModal();
+        } else showAlert(data.error || 'Failed to resume', 'error');
+      } catch (e) { showAlert('Failed to resume', 'error'); }
+    }
+
+    function closeAutomationModal() {
+      document.getElementById('automationModal')?.classList.remove('active');
+    }
+
+    async function loadReportFolder() {
+      try {
+        const resp = await authenticatedFetch('/admin/mmr/api/report-folder');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        renderReportFolderList(data.files || []);
+      } catch (e) {
+        console.error('Report folder load failed:', e);
+      }
+    }
+
+    function escapeAttr(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function openReportFromAdmin(btn) {
+      try {
+        const filters = JSON.parse(btn?.dataset?.filters || '{}');
+        sessionStorage.setItem('mmr_restore_filters', JSON.stringify(filters || {}));
+        window.location.href = '/admin/mmr/';
+      } catch (e) {
+        showAlert('Could not open report', 'error');
+      }
+    }
+
+    function renderReportFolderList(files) {
+      const el = document.getElementById('reportFolderList');
+      if (!el) return;
+      if (!files.length) {
+        el.innerHTML = '<div class="report-folder-empty">No reports saved yet. Open Report Generation to send emails or save to folder.</div>';
+        return;
+      }
+      const sortedFiles = [...files].sort((a, b) => {
+        const ta = a?.modified ? new Date(a.modified).getTime() : 0;
+        const tb = b?.modified ? new Date(b.modified).getTime() : 0;
+        return tb - ta;
+      });
+      el.innerHTML = sortedFiles.map(f => {
+        const dt = f.modified ? new Date(f.modified).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '';
+        const size = f.size ? (f.size < 1024 ? f.size + ' B' : (f.size / 1024).toFixed(1) + ' KB') : '';
+        const fn = (f.name || '').replace(/"/g, '&quot;');
+        const filtersAttr = escapeAttr(JSON.stringify(f.filters || {}));
+        const filenameAttr = escapeAttr(f.name || '');
+        return `<div class="report-folder-item">
+          <div class="report-folder-content">
+            <div class="report-folder-name">${escapeHtml(f.name)}</div>
+            <div class="report-folder-meta">${dt ? '<span>' + dt + '</span>' : ''}${dt && size ? ' · ' : ''}${size ? '<span>' + size + '</span>' : ''}</div>
+          </div>
+          <div class="report-folder-actions">
+            <button type="button" class="report-folder-open" data-filters="${filtersAttr}" data-filename="${filenameAttr}" onclick="openReportFromAdmin(this)" title="Open report in dashboard">Open</button>
+            <button type="button" class="report-folder-dl" onclick="downloadReportFile(this.dataset.fn)" data-fn="${fn}">Download</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function openReportFolderModal() {
+      document.getElementById('reportFolderModal')?.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      loadReportFolder();
+    }
+
+    function closeReportFolderModal() {
+      document.getElementById('reportFolderModal')?.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    async function downloadReportFile(filename) {
+      if (!filename) return;
+      try {
+        const resp = await authenticatedFetch('/admin/mmr/api/report-folder/download/' + encodeURIComponent(String(filename)));
+        if (!resp.ok) throw new Error('Download failed');
+        const blob = await resp.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } catch (e) {
+        showAlert('Download failed', 'error');
+      }
+    }
+
+    async function loadUsers() {
+      try {
+        const response = await authenticatedFetch('/api/admin/users');
+
+        if (handleUnauthorized(response)) return;
+
+        const data = await response.json();
+        if (data.success) {
+          users = data.users;
+          renderUsersTable();
+          updateAdminSidebarBadges();
+        } else {
+          showAlert('Failed to load users', 'error');
+        }
+      } catch (error) {
+        console.error('Error loading users:', error);
+        showAlert('Error loading users', 'error');
+      }
+    }
+
+    function renderUsersTable() {
+      const container = document.getElementById('usersTableContainer');
+
+      const filteredUsers = users.filter(user => {
+        if (usersStatusFilters.active && !user.is_active) return false;
+        if (!usersStatusFilters.active && user.is_active) return false;
+        if (usersDesignationFilter !== 'all') {
+          return user.designation === usersDesignationFilter;
+        }
+        return true;
+      });
+
+      if (filteredUsers.length === 0) {
+        container.innerHTML = '<p>No users found.</p>';
+        return;
+      }
+      
+      // Check if current user needs to change password
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      if (currentUser && !currentUser.password_changed) {
+        showAlert('⚠️ SECURITY WARNING: You are using the default password. Please change it immediately!', 'error', true);
+      }
+
+      let html = `
+        <div class="table-scroll-wrapper">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Username</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Designation</th>
+              <th>Status</th>
+              <th>Module Access</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      filteredUsers.forEach(user => {
+        const roleBadge = user.role === 'admin' ? 'badge-admin' : 
+                         user.role === 'inspector' ? 'badge-inspector' : 'badge-user';
+        const statusBadge = user.is_active ? 'badge-active' : 'badge-inactive';
+        
+        html += `
+          <tr>
+            <td data-label="ID">${user.id}</td>
+            <td data-label="Username"><strong>${user.username}</strong></td>
+            <td data-label="Full Name">${user.full_name || '-'}</td>
+            <td data-label="Email">${user.email}</td>
+            <td data-label="Role"><span class="badge ${roleBadge}">${user.role}</span></td>
+            <td data-label="Designation">
+              <select class="designation-select" onchange="setDesignation(${user.id}, this.value, this)" data-original-value="${user.designation || ''}" data-user-id="${user.id}">
+                <option value="">None</option>
+                <option value="supervisor" ${user.designation === 'supervisor' ? 'selected' : ''}>Supervisor</option>
+                <option value="operations_manager" ${user.designation === 'operations_manager' ? 'selected' : ''}>Operations Manager</option>
+                <option value="business_development" ${user.designation === 'business_development' ? 'selected' : ''}>Business Development</option>
+                <option value="procurement" ${user.designation === 'procurement' ? 'selected' : ''}>Procurement</option>
+                <option value="general_manager" ${user.designation === 'general_manager' ? 'selected' : ''}>General Manager</option>
+              </select>
+            </td>
+            <td data-label="Status"><span class="badge ${statusBadge}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
+            <td data-label="Module Access">
+              <div class="access-badges">
+                ${user.access_hvac ? '<span class="access-badge hvac">HVAC</span>' : ''}
+                ${user.access_civil ? '<span class="access-badge civil">Civil</span>' : ''}
+                ${user.access_cleaning ? '<span class="access-badge cleaning">Cleaning</span>' : ''}
+                ${!user.access_hvac && !user.access_civil && !user.access_cleaning && user.role !== 'admin' ? '<span style="color: var(--text-light);">No access</span>' : ''}
+              </div>
+            </td>
+            <td data-label="Actions">
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-activity" onclick="openUserActivityModal(${user.id})" title="View user activity">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px;">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                  Activity
+                </button>
+                <button class="btn btn-sm btn-reset" onclick="resetPassword(${user.id}, '${user.username}')">Reset Password</button>
+                <button class="btn btn-sm btn-toggle" onclick="toggleActive(${user.id}, ${user.is_active})">
+                  ${user.is_active ? 'Deactivate' : 'Activate'}
+                </button>
+                ${user.role !== 'admin' ? `<button class="btn btn-sm btn-access" onclick="openAccessModal(${user.id})">Manage Access</button>` : ''}
+                <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id}, '${user.username}')" id="deleteUserBtn_${user.id}">Delete</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+          </tbody>
+        </table>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function setUsersDesignationFilter(value) {
+      usersDesignationFilter = value;
+      renderUsersTable();
+    }
+
+    function setUsersStatusFilters() {
+      const activeToggle = document.getElementById('statusActiveToggle');
+      const label = document.getElementById('statusToggleLabel');
+      const isActive = !!(activeToggle && activeToggle.checked);
+      usersStatusFilters = { active: isActive };
+      if (label) {
+        label.textContent = isActive ? 'Active' : 'Inactive';
+      }
+      renderUsersTable();
+    }
+
+    async function resetPassword(userId, username) {
+      if (!confirm(`Reset password for user "${username}"? A temporary password will be generated.`)) {
+        return;
+      }
+
+      try {
+        const response = await authenticatedFetch(`/api/admin/users/${userId}/reset-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (handleUnauthorized(response)) return;
+
+        const data = await response.json();
+        if (data.success) {
+          showAlert(`Password reset successful for ${username}. Temporary password: ${data.temp_password}`, 'success', true);
+        } else {
+          showAlert(data.error || 'Failed to reset password', 'error');
+        }
+      } catch (error) {
+        console.error('Error resetting password:', error);
+        showAlert('Error resetting password', 'error');
+      }
+    }
+
+    async function toggleActive(userId, currentStatus) {
+      const action = currentStatus ? 'deactivate' : 'activate';
+      if (!confirm(`Are you sure you want to ${action} this user?`)) {
+        return;
+      }
+
+      try {
+        const response = await authenticatedFetch(`/api/admin/users/${userId}/toggle-active`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (handleUnauthorized(response)) return;
+
+        const data = await response.json();
+        if (data.success) {
+          showAlert(data.message, 'success');
+          loadUsers();
+        } else {
+          showAlert(data.error || 'Failed to update user status', 'error');
+        }
+      } catch (error) {
+        console.error('Error toggling user status:', error);
+        showAlert('Error updating user status', 'error');
+      }
+    }
+
+    function openAccessModal(userId) {
+      const user = users.find(u => u.id === userId);
+      if (!user) return;
+
+      document.getElementById('accessUserId').value = userId;
+      document.getElementById('accessUserName').value = user.username;
+      document.getElementById('accessHvac').checked = user.access_hvac || false;
+      document.getElementById('accessCivil').checked = user.access_civil || false;
+      document.getElementById('accessCleaning').checked = user.access_cleaning || false;
+      document.getElementById('accessModal').classList.add('active');
+    }
+
+    function closeAccessModal() {
+      document.getElementById('accessModal').classList.remove('active');
+    }
+
+    // User Activity Modal Functions
+    async function openUserActivityModal(userId) {
+      const modal = document.getElementById('userActivityModal');
+      const content = document.getElementById('userActivityContent');
+      const title = document.getElementById('userActivityTitle');
+      
+      // Show loading state
+      content.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+          <div class="spinner" style="border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+          <p style="margin-top: 1rem; color: #666;">Loading user activity...</p>
+        </div>
+      `;
+      modal.classList.add('active');
+      
+      try {
+        const response = await authenticatedFetch(`/api/admin/users/${userId}/activity`);
+        if (handleUnauthorized(response)) return;
+        
+        const data = await response.json();
+        if (data.success) {
+          renderUserActivity(data, content, title);
+        } else {
+          content.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc2626;">Failed to load user activity</div>`;
+        }
+      } catch (error) {
+        console.error('Error loading user activity:', error);
+        content.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc2626;">Error loading user activity</div>`;
+      }
+    }
+    
+    function renderUserActivity(data, container, titleEl) {
+      const user = data.user;
+      const submitted = data.submitted_forms || [];
+      const reviewed = data.reviewed_forms || [];
+      
+      // Get initials
+      const initials = user.full_name 
+        ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+        : user.username.slice(0, 2).toUpperCase();
+      
+      // Format designation
+      const designationMap = {
+        'supervisor': 'Supervisor',
+        'operations_manager': 'Operations Manager',
+        'business_development': 'Business Development',
+        'procurement': 'Procurement',
+        'general_manager': 'General Manager'
+      };
+      const designation = designationMap[user.designation] || user.designation || 'Not assigned';
+      
+      titleEl.textContent = `Activity: ${user.full_name || user.username}`;
+      
+      let html = `
+        <div class="user-info-card">
+          <div class="user-info-avatar">${initials}</div>
+          <div class="user-info-details">
+            <h3>${user.full_name || user.username}</h3>
+            <p>${designation} • ${user.role}</p>
+          </div>
+          <div class="user-stats">
+            <div class="user-stat">
+              <div class="user-stat-value">${data.submitted_count}</div>
+              <div class="user-stat-label">Submitted</div>
+            </div>
+            <div class="user-stat">
+              <div class="user-stat-value">${data.reviewed_count}</div>
+              <div class="user-stat-label">Reviewed</div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Submitted Forms Section
+      html += `
+        <div class="activity-section">
+          <div class="activity-section-header">
+            <div class="activity-section-title">
+              📄 Forms Submitted
+              <span class="activity-badge">${submitted.length}</span>
+            </div>
+          </div>
+      `;
+      
+      if (submitted.length > 0) {
+        html += `
+          <table class="activity-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Module</th>
+                <th>Site Name</th>
+                <th>Visit Date</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        submitted.forEach(form => {
+          const moduleClass = form.module_type === 'hvac_mep' ? 'hvac' : form.module_type === 'civil' ? 'civil' : 'cleaning';
+          const moduleLabel = form.module_type === 'hvac_mep' ? 'HVAC' : form.module_type === 'civil' ? 'Civil' : 'Cleaning';
+          const statusClass = form.workflow_status === 'completed' ? 'completed' : form.workflow_status === 'rejected' ? 'rejected' : 'pending';
+          const created = form.created_at ? new Date(form.created_at).toLocaleDateString() : '-';
+          
+          html += `
+            <tr class="clickable-row" onclick="viewFormFromActivity('${form.module_type}', '${form.submission_id}')">
+              <td><code style="font-size: 0.75rem;">${form.submission_id}</code></td>
+              <td><span class="module-badge-sm ${moduleClass}">${moduleLabel}</span></td>
+              <td>${form.site_name}</td>
+              <td>${form.visit_date || '-'}</td>
+              <td><span class="status-badge ${statusClass}">${form.workflow_status}</span></td>
+              <td>${created}</td>
+              <td>
+                <button class="btn-view-form" onclick="event.stopPropagation(); viewFormFromActivity('${form.module_type}', '${form.submission_id}')" title="View Form">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        html += `</tbody></table>`;
+      } else {
+        html += `
+          <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <p>No forms submitted yet</p>
+          </div>
+        `;
+      }
+      html += `</div>`;
+      
+      // Reviewed Forms Section
+      html += `
+        <div class="activity-section">
+          <div class="activity-section-header">
+            <div class="activity-section-title">
+              ✅ Forms Reviewed
+              <span class="activity-badge reviewed">${reviewed.length}</span>
+            </div>
+          </div>
+      `;
+      
+      if (reviewed.length > 0) {
+        html += `
+          <table class="activity-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Module</th>
+                <th>Site Name</th>
+                <th>Submitted By</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        reviewed.forEach(form => {
+          const moduleClass = form.module_type === 'hvac_mep' ? 'hvac' : form.module_type === 'civil' ? 'civil' : 'cleaning';
+          const moduleLabel = form.module_type === 'hvac_mep' ? 'HVAC' : form.module_type === 'civil' ? 'Civil' : 'Cleaning';
+          const statusClass = form.workflow_status === 'completed' ? 'completed' : form.workflow_status === 'rejected' ? 'rejected' : 'pending';
+          const created = form.created_at ? new Date(form.created_at).toLocaleDateString() : '-';
+          
+          html += `
+            <tr class="clickable-row" onclick="viewFormFromActivity('${form.module_type}', '${form.submission_id}')">
+              <td><code style="font-size: 0.75rem;">${form.submission_id}</code></td>
+              <td><span class="module-badge-sm ${moduleClass}">${moduleLabel}</span></td>
+              <td>${form.site_name}</td>
+              <td>${form.supervisor || '-'}</td>
+              <td><span class="status-badge ${statusClass}">${form.workflow_status}</span></td>
+              <td>${created}</td>
+              <td>
+                <button class="btn-view-form" onclick="event.stopPropagation(); viewFormFromActivity('${form.module_type}', '${form.submission_id}')" title="View Form">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        html += `</tbody></table>`;
+      } else {
+        html += `
+          <div class="empty-state">
+            <div class="empty-state-icon">✓</div>
+            <p>No forms reviewed yet</p>
+          </div>
+        `;
+      }
+      html += `</div>`;
+      
+      container.innerHTML = html;
+    }
+    
+    // Helper function to get the form URL based on module type
+    function getFormViewUrl(moduleType, submissionId) {
+      if (moduleType === 'hvac_mep') {
+        return `/hvac-mep/form?edit=${submissionId}&review=true`;
+      } else if (moduleType === 'civil') {
+        return `/civil/form?edit=${submissionId}&review=true`;
+      } else if (moduleType === 'cleaning') {
+        return `/cleaning/form?edit=${submissionId}&review=true`;
+      }
+      return '#';
+    }
+    
+    // Function to view form from activity modal
+    function viewFormFromActivity(moduleType, submissionId) {
+      const url = getFormViewUrl(moduleType, submissionId);
+      if (url !== '#') {
+        window.location.href = url;
+      }
+    }
+    
+    function closeUserActivityModal() {
+      document.getElementById('userActivityModal').classList.remove('active');
+    }
+    
+    // Close user activity modal on outside click
+    document.getElementById('userActivityModal').addEventListener('click', (e) => {
+      if (e.target.id === 'userActivityModal') {
+        closeUserActivityModal();
+      }
+    });
+
+    document.getElementById('accessForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById('accessUserId').value;
+      
+      const accessData = {
+        access_hvac: document.getElementById('accessHvac').checked,
+        access_civil: document.getElementById('accessCivil').checked,
+        access_cleaning: document.getElementById('accessCleaning').checked
+      };
+
+      try {
+        const response = await authenticatedFetch(`/api/admin/users/${userId}/update-access`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(accessData)
+        });
+
+        if (handleUnauthorized(response)) return;
+
+        const data = await response.json();
+        if (data.success) {
+          showAlert('User access updated successfully', 'success');
+          closeAccessModal();
+          loadUsers();
+        } else {
+          showAlert(data.error || 'Failed to update user access', 'error');
+        }
+      } catch (error) {
+        console.error('Error updating access:', error);
+        showAlert('Error updating user access', 'error');
+      }
+    });
+
+    function showAlert(message, type = 'success', showPassword = false) {
+      const container = document.getElementById('alertContainer');
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert alert-${type}`;
+      
+      if (showPassword && message.includes('Temporary password:')) {
+        const parts = message.split('Temporary password:');
+        alertDiv.innerHTML = `
+          ${parts[0]}Temporary password:
+          <div class="temp-password">${parts[1].trim()}</div>
+          <small>Please copy this password and share it securely with the user.</small>
+        `;
+      } else {
+        alertDiv.textContent = message;
+      }
+      
+      container.innerHTML = '';
+      container.appendChild(alertDiv);
+      
+      setTimeout(() => {
+        alertDiv.remove();
+      }, showPassword ? 30000 : 5000);
+    }
+
+    // Close modal on outside click
+    document.getElementById('accessModal').addEventListener('click', (e) => {
+      if (e.target.id === 'accessModal') {
+        closeAccessModal();
+      }
+    });
+
+    // Documents Management
+    let documents = [];
+    let documentsFilter = 'active';
+
+    async function loadDocuments() {
+      try {
+        const response = await authenticatedFetch('/api/admin/documents');
+
+        if (handleUnauthorized(response)) return;
+
+        const data = await response.json();
+        if (data.success) {
+          documents = data.documents;
+          renderDocumentsTable();
+          updateAdminSidebarBadges();
+        } else {
+          showAlert('Failed to load documents', 'error');
+          document.getElementById('documentsTableContainer').innerHTML = '<p class="no-documents">Failed to load documents</p>';
+        }
+      } catch (error) {
+        console.error('Error loading documents:', error);
+        showAlert('Error loading documents', 'error');
+        document.getElementById('documentsTableContainer').innerHTML = '<p class="no-documents">Error loading documents</p>';
+      }
+    }
+
+    function setDocumentsFilter(value) {
+      documentsFilter = value;
+      renderDocumentsTable();
+    }
+
+    function renderDocumentsTable() {
+      const container = document.getElementById('documentsTableContainer');
+
+      const filteredDocuments = documents.filter(doc => {
+        const workflowStatus = doc.workflow_status || '';
+        const status = doc.status || '';
+        const isReviewing = workflowStatus.includes('reviewing') || workflowStatus.includes('notified');
+
+        if (documentsFilter === 'active') {
+          return !['completed', 'closed_by_admin', 'rejected'].includes(workflowStatus)
+            && !['completed', 'closed'].includes(status);
+        }
+        if (documentsFilter === 'completed') {
+          return workflowStatus === 'completed' || status === 'completed';
+        }
+        if (documentsFilter === 'closed') {
+          return workflowStatus === 'closed_by_admin' || status === 'closed';
+        }
+        if (documentsFilter === 'rejected') {
+          return workflowStatus === 'rejected';
+        }
+        return true;
+      });
+
+      if (filteredDocuments.length === 0) {
+        container.innerHTML = '<p>No documents found.</p>';
+        return;
+      }
+
+      let html = `
+        <div class="table-scroll-wrapper">
+        <table class="documents-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;"><input type="checkbox" id="selectAllHeader" onchange="toggleSelectAllDocuments()"></th>
+              <th>Document ID</th>
+              <th>Module</th>
+              <th>Site/Project</th>
+              <th>Visit Date</th>
+              <th>Created By</th>
+              <th>Status</th>
+              <th>Workflow Status</th>
+              <th>Created At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      filteredDocuments.forEach(doc => {
+        const moduleClass = doc.module_type === 'hvac_mep' ? 'hvac' : 
+                           doc.module_type === 'civil' ? 'civil' : 'cleaning';
+        let statusClass = doc.status === 'completed' ? 'completed' :
+                           doc.status === 'processing' ? 'processing' :
+                           doc.status === 'submitted' ? 'submitted' :
+                           doc.status === 'closed' ? 'closed' : 'draft';
+        
+        // Workflow status badge class
+        let workflowClass = 'submitted';
+        if (doc.workflow_status === 'approved' || doc.workflow_status === 'completed') workflowClass = 'approved';
+        else if (doc.workflow_status?.includes('reviewing')) workflowClass = 'reviewing';
+        else if (doc.workflow_status?.includes('notified')) workflowClass = 'notified';
+        else if (doc.workflow_status === 'rejected') workflowClass = 'rejected';
+        else if (doc.workflow_status === 'closed_by_admin') workflowClass = 'closed';
+
+        // Format workflow status for display
+        let workflowDisplay = doc.workflow_status || 'Submitted';
+        workflowDisplay = workflowDisplay.replace(/_/g, ' ');
+
+        if (documentsFilter === 'active') {
+          statusClass = 'active';
+          workflowClass = 'active';
+          workflowDisplay = 'Active';
+        }
+        
+        // Helper function to ensure UTC date strings are properly parsed
+        const parseUTCDate = (dateString) => {
+          if (!dateString) return null;
+          let utcString = dateString;
+          if (!utcString.endsWith('Z') && !utcString.includes('+') && !utcString.includes('-', 10)) {
+            utcString = utcString + 'Z';
+          }
+          return new Date(utcString);
+        };
+        
+        // Add log info if supervisor has reviewed
+        let supervisorLog = '';
+        if (doc.supervisor_reviewed_at) {
+          const reviewDate = parseUTCDate(doc.supervisor_reviewed_at).toLocaleString('en-US', {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai'
+          });
+          supervisorLog = `<div style="font-size: 0.7rem; color: var(--success); margin-top: 0.25rem;">✓ Reviewed: ${reviewDate} (GST)</div>`;
+        }
+        
+        // Visit date formatting (date-only, no timezone indicator needed)
+        const visitDate = doc.visit_date ? parseUTCDate(doc.visit_date + 'T00:00:00Z').toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'Asia/Dubai'
+        }) : 'N/A';
+        
+        // Format created_at properly
+        let createdDate = 'N/A';
+        if (doc.created_at) {
+          const date = parseUTCDate(doc.created_at);
+          if (!isNaN(date.getTime())) {
+            createdDate = date.toLocaleString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+              timeZone: 'Asia/Dubai'
+            }) + ' (GST)';
+          }
+        }
+        
+        const userName = doc.user ? (doc.user.full_name || doc.user.username) : 'Unknown';
+        const userEmail = doc.user ? doc.user.email : 'N/A';
+
+        html += `
+          <tr>
+            <td data-label="Select"><input type="checkbox" class="document-checkbox" value="${doc.submission_id}" onchange="updateDocumentCloseButton()"></td>
+            <td data-label="Document ID"><code style="font-size: 0.85rem;">${doc.submission_id}</code></td>
+            <td data-label="Module"><span class="module-badge ${moduleClass}">${doc.module_display}</span></td>
+            <td data-label="Site/Project"><strong>${doc.site_name}</strong></td>
+            <td data-label="Visit Date">${visitDate}</td>
+            <td data-label="Created By">
+              <div class="user-info">
+                <span class="user-name">${userName}</span>
+                <span class="user-email">${userEmail}</span>
+              </div>
+            </td>
+            <td data-label="Status"><span class="status-badge ${statusClass}">${documentsFilter === 'active' ? 'Active' : doc.status}</span></td>
+            <td data-label="Workflow Status">
+              <span class="workflow-badge ${workflowClass}">${workflowDisplay}</span>
+              ${supervisorLog}
+            </td>
+            <td data-label="Created At">${createdDate}</td>
+            <td data-label="Actions">
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                ${doc.excel_url ? `<a href="${doc.excel_url}" target="_blank" class="btn-download" title="Download Excel">📊 Excel</a>` : ''}
+                ${doc.pdf_url ? `<a href="${doc.pdf_url}" target="_blank" class="btn-download" title="Download PDF">📄 PDF</a>` : ''}
+                <button class="btn btn-sm btn-primary" onclick="editSubmission('${doc.submission_id}', '${doc.module_type}')" title="Edit Submission">✏️ Edit</button>
+                ${doc.workflow_status !== 'closed_by_admin' ? `<button class="btn btn-sm btn-outline-danger" onclick="closeSubmission('${doc.submission_id}')" title="Close Submission">Close</button>` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+          </tbody>
+        </table>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    async function closeSubmission(submissionId) {
+      const reason = window.prompt('Optional reason for closing this form:') || '';
+      if (!window.confirm('Close this form? It will become read-only for all users.')) {
+        return;
+      }
+      try {
+        const response = await authenticatedFetch(`/api/admin/submissions/${submissionId}/close`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ reason })
+        });
+        if (handleUnauthorized(response)) return;
+        const data = await response.json();
+        if (data.success) {
+          showAlert('Form closed by admin', 'success');
+          loadDocuments();
+        } else {
+          showAlert(data.error || 'Failed to close form', 'error');
+        }
+      } catch (error) {
+        console.error('Error closing form:', error);
+        showAlert('Error closing form', 'error');
+      }
+    }
+
+    // Set user designation
+    async function setDesignation(userId, designation) {
+      // Get the select element from the event
+      const selectElement = window.event ? window.event.target : (arguments[2] || document.querySelector(`select[data-user-id="${userId}"]`));
+      
+      if (!selectElement) {
+        showAlert('Error: Could not find designation selector', 'error');
+        return;
+      }
+
+      try {
+        // Show loading state on the select element
+        const originalValue = selectElement.dataset.originalValue || '';
+        selectElement.disabled = true;
+        selectElement.style.opacity = '0.6';
+        selectElement.style.cursor = 'wait';
+
+        // Prepare the designation value (empty string becomes null)
+        const designationValue = designation === '' || designation === 'None' ? null : designation;
+
+        const response = await authenticatedFetch(`/api/admin/users/${userId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ designation: designationValue })
+        });
+
+        if (handleUnauthorized(response)) return;
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // Update the original value tracker
+          selectElement.dataset.originalValue = designationValue || '';
+          
+          // Update the user in the local array
+          const userIndex = users.findIndex(u => u.id === userId);
+          if (userIndex !== -1) {
+            users[userIndex].designation = designationValue;
+          }
+
+          // Show success message
+          showAlert(`Designation updated to ${designationValue || 'None'}`, 'success');
+        } else {
+          // Revert to original value on error
+          selectElement.value = originalValue || '';
+          showAlert(data.error || 'Failed to update designation', 'error');
+        }
+      } catch (error) {
+        console.error('Error setting designation:', error);
+        // Revert to original value on error
+        const originalValue = selectElement.dataset.originalValue || '';
+        selectElement.value = originalValue || '';
+        showAlert('Error updating designation. Please try again.', 'error');
+      } finally {
+        // Re-enable the select element
+        selectElement.disabled = false;
+        selectElement.style.opacity = '1';
+        selectElement.style.cursor = 'pointer';
+      }
+    }
+
+    // Delete user function
+    async function deleteUser(userId, username) {
+      // Get current user ID from localStorage
+      let currentUserId = null;
+      try {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          currentUserId = user.id;
+        }
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+      
+      // Prevent deleting yourself
+      if (userId === currentUserId) {
+        showAlert('You cannot delete your own account', 'error');
+        return;
+      }
+      
+      if (!confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const response = await authenticatedFetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (handleUnauthorized(response)) return;
+
+        const data = await response.json();
+        if (data.success) {
+          showAlert(data.message, 'success');
+          loadUsers();
+        } else {
+          showAlert(data.error || 'Failed to delete user', 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        showAlert('Error deleting user', 'error');
+      }
+    }
+
+    // Documents bulk delete functions (toggleSelectAll defined above)
+
+    // toggleSelectAll for documents
+    function toggleSelectAllDocuments() {
+      const selectAll = document.getElementById('selectAllDocuments') || document.getElementById('selectAllHeader');
+      if (selectAll) {
+        const checkboxes = document.querySelectorAll('.document-checkbox');
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        updateDocumentCloseButton();
+      }
+    }
+
+    function updateDocumentCloseButton() {
+      const checked = document.querySelectorAll('.document-checkbox:checked');
+      const closeBtn = document.getElementById('closeSelectedBtn');
+      if (!closeBtn) return;
+      closeBtn.disabled = checked.length === 0;
+      closeBtn.textContent = checked.length > 0 ? `Close Selected (${checked.length})` : 'Close Selected';
+    }
+
+    async function closeSelectedDocuments() {
+      const checked = document.querySelectorAll('.document-checkbox:checked');
+      if (checked.length === 0) {
+        showAlert('Please select at least one document to close', 'error');
+        return;
+      }
+
+      const submissionIds = Array.from(checked).map(cb => cb.value);
+      const count = submissionIds.length;
+      const reason = window.prompt('Optional reason for closing these forms:') || '';
+
+      if (!confirm(`Close ${count} document(s)? They will become read-only for all users.`)) {
+        return;
+      }
+
+      try {
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const submissionId of submissionIds) {
+          const response = await authenticatedFetch(`/api/admin/submissions/${submissionId}/close`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ reason })
+          });
+
+          if (handleUnauthorized(response)) return;
+
+          const data = await response.json();
+          if (response.ok && data.success) {
+            successCount += 1;
+          } else {
+            failCount += 1;
+          }
+        }
+
+        if (successCount > 0) {
+          showAlert(`Closed ${successCount} document(s)` + (failCount ? `, ${failCount} failed` : ''), 'success');
+        } else {
+          showAlert('Failed to close documents', 'error');
+        }
+        loadDocuments();
+      } catch (error) {
+        console.error('Error closing documents:', error);
+        showAlert('Error closing documents', 'error');
+      }
+    }
+
+    // Edit Submission - Redirect to form page
+    function editSubmission(submissionId, moduleType) {
+      // Redirect to the appropriate form page with submission_id parameter
+      let formUrl = '';
+      if (moduleType === 'hvac_mep') {
+        // Use review=true for HVAC & MEP to show the same view as supervisor
+        formUrl = `/hvac-mep/form?edit=${submissionId}&review=true`;
+      } else if (moduleType === 'civil') {
+        formUrl = `/civil/form?edit=${submissionId}&review=true`;
+      } else if (moduleType === 'cleaning') {
+        formUrl = `/cleaning/form?edit=${submissionId}&review=true`;
+      } else {
+        showAlert('Unknown module type', 'error');
+        return;
+      }
+      window.location.href = formUrl;
+    }
+
+    // OLD MODAL FUNCTIONS - KEEPING FOR REFERENCE BUT NOT USED
+    let isEditModalLoading = false;
+    
+    async function openEditModal(submissionId) {
+      // Prevent multiple simultaneous requests
+      if (isEditModalLoading) {
+        console.log('Edit modal is already loading, please wait...');
+        return;
+      }
+      
+      // Prevent opening if modal is already open
+      if (document.getElementById('editModal').classList.contains('active')) {
+        console.log('Edit modal is already open');
+        return;
+      }
+      
+      try {
+        isEditModalLoading = true;
+        
+        // Show loading state
+        document.getElementById('editFormFields').innerHTML = '<p style="color: #666; text-align: center;">Loading form data...</p>';
+        document.getElementById('editModal').classList.add('active');
+        
+        // Fetch submission data
+        const response = await authenticatedFetch(`/api/admin/submissions/${submissionId}`);
+
+        if (handleUnauthorized(response)) return;
+
+        if (!response.ok) {
+          showAlert('Failed to load submission data', 'error');
+          return;
+        }
+
+        const data = await response.json();
+        if (!data.success || !data.submission) {
+          showAlert('Submission not found', 'error');
+          closeEditModal();
+          return;
+        }
+
+        const submission = data.submission;
+        
+        // Populate form
+        document.getElementById('editSubmissionId').value = submission.submission_id;
+        document.getElementById('editSubmissionIdDisplay').value = submission.submission_id;
+        document.getElementById('editModule').value = submission.module_type === 'hvac_mep' ? 'HVAC & MEP' : 
+                                                      submission.module_type === 'civil' ? 'Civil Works' : 
+                                                      'Cleaning Services';
+        document.getElementById('editSiteName').value = submission.site_name || '';
+        
+        // Format visit date for input
+        if (submission.visit_date) {
+          const visitDate = new Date(submission.visit_date);
+          document.getElementById('editVisitDate').value = visitDate.toISOString().split('T')[0];
+        }
+        
+        // Parse form_data if it's a string, otherwise use as-is
+        let formData = submission.form_data;
+        if (typeof formData === 'string') {
+          try {
+            formData = JSON.parse(formData);
+          } catch (e) {
+            console.error('Error parsing form_data:', e);
+            showAlert('Error parsing form data. Please check the submission.', 'error');
+            return;
+          }
+        }
+        
+        // Store form data for later use
+        window.currentFormData = formData;
+        window.currentModuleType = submission.module_type;
+        
+        // Render dynamic form fields
+        renderFormFields(submission.module_type, formData);
+        
+      } catch (error) {
+        console.error('Error opening edit modal:', error);
+        showAlert(`Error loading submission data: ${error.message || error}`, 'error');
+        document.getElementById('editFormFields').innerHTML = '<p style="color: #dc2626; text-align: center;">Error loading form data. Please try again.</p>';
+        // Don't close modal on error, let user see the error
+      } finally {
+        isEditModalLoading = false;
+      }
+    }
+
+    function closeEditModal() {
+      if (isEditModalLoading) {
+        console.log('Cannot close modal while loading');
+        return;
+      }
+      
+      document.getElementById('editModal').classList.remove('active');
+      document.getElementById('editForm').reset();
+      document.getElementById('editFormFields').innerHTML = '<p style="color: #666; text-align: center;">Loading form fields...</p>';
+      window.currentFormData = null;
+      window.currentModuleType = null;
+      isEditModalLoading = false;
+    }
+
+    function escapeHtml(text) {
+      if (text == null) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function renderFormFields(moduleType, formData) {
+      const container = document.getElementById('editFormFields');
+      let html = '';
+      
+      if (!formData || typeof formData !== 'object') {
+        container.innerHTML = '<p style="color: #dc2626; text-align: center;">Error: Invalid form data structure</p>';
+        return;
+      }
+      
+      if (moduleType === 'hvac_mep') {
+        // HVAC & MEP form
+        html += '<div style="margin-bottom: 1.5rem;"><h4 style="margin-bottom: 1rem; color: var(--primary);">Inspection Items</h4>';
+        
+        if (formData.items && Array.isArray(formData.items)) {
+          formData.items.forEach((item, index) => {
+            const asset = escapeHtml(item.asset || '');
+            const system = escapeHtml(item.system || '');
+            const description = escapeHtml(item.description || '');
+            const photoUrls = item.photo_urls || item.photos || [];
+            const photoUrlsJson = JSON.stringify(Array.isArray(photoUrls) ? photoUrls : [], null, 2);
+            
+            html += `
+              <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: white;">
+                <h5 style="margin-bottom: 0.75rem; color: #374151;">Item ${index + 1}</h5>
+                <div style="display: grid; gap: 1rem;">
+                  <div>
+                    <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">Asset:</label>
+                    <input type="text" class="form-control edit-field" data-field="items.${index}.asset" value="${asset}" style="width: 100%;">
+                  </div>
+                  <div>
+                    <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">System:</label>
+                    <input type="text" class="form-control edit-field" data-field="items.${index}.system" value="${system}" style="width: 100%;">
+                  </div>
+                  <div>
+                    <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">Description:</label>
+                    <textarea class="form-control edit-field" data-field="items.${index}.description" rows="3" style="width: 100%;">${description}</textarea>
+                  </div>
+                  <div>
+                    <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">Photo URLs:</label>
+                    <textarea class="form-control edit-field" data-field="items.${index}.photo_urls" rows="2" style="width: 100%; font-family: monospace; font-size: 0.85rem;" placeholder='["url1", "url2"]'>${escapeHtml(photoUrlsJson)}</textarea>
+                    <small style="color: #666;">Enter as JSON array of URLs</small>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+        } else {
+          html += '<p style="color: #666;">No inspection items found</p>';
+        }
+        
+        html += '</div>';
+        
+        // Signatures (read-only if they exist)
+        html += '<div style="margin-bottom: 1.5rem;"><h4 style="margin-bottom: 1rem; color: var(--primary);">Signatures</h4>';
+        
+        if (formData.tech_signature || formData.techSignatureData) {
+          const sigData = formData.tech_signature || formData.techSignatureData || '';
+          html += `
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Technician Signature (Read-only):</label>
+              ${sigData.startsWith('data:image') ? `<img src="${sigData}" style="max-width: 100%; border: 1px solid #e5e7eb; border-radius: 4px; background: white; padding: 0.5rem;" alt="Technician Signature">` : '<p style="color: #666;">No signature available</p>'}
+            </div>
+          `;
+        }
+        
+        if (formData.opMan_signature || formData.opManSignatureData) {
+          const sigData = formData.opMan_signature || formData.opManSignatureData || '';
+          html += `
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Operations Manager Signature (Read-only):</label>
+              ${sigData.startsWith('data:image') ? `<img src="${sigData}" style="max-width: 100%; border: 1px solid #e5e7eb; border-radius: 4px; background: white; padding: 0.5rem;" alt="Operations Manager Signature">` : '<p style="color: #666;">No signature available</p>'}
+            </div>
+          `;
+        }
+        
+        html += '</div>';
+        
+      } else if (moduleType === 'civil') {
+        // Civil Works form
+        html += '<div style="display: grid; gap: 1rem;">';
+        
+        const fields = [
+          { key: 'building_name', label: 'Building Name', type: 'text' },
+          { key: 'email', label: 'Contact Email', type: 'email' },
+          { key: 'location', label: 'Location on Site', type: 'text' },
+          { key: 'severity', label: 'Severity', type: 'text' },
+          { key: 'notes', label: 'Notes', type: 'textarea' }
+        ];
+        
+        fields.forEach(field => {
+          const value = escapeHtml(formData[field.key] || '');
+          if (field.type === 'textarea') {
+            html += `
+              <div>
+                <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">${field.label}:</label>
+                <textarea class="form-control edit-field" data-field="${field.key}" rows="4" style="width: 100%;">${value}</textarea>
+              </div>
+            `;
+          } else {
+            html += `
+              <div>
+                <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">${field.label}:</label>
+                <input type="${field.type}" class="form-control edit-field" data-field="${field.key}" value="${value}" style="width: 100%;">
+              </div>
+            `;
+          }
+        });
+        
+        // Photos
+        if (formData.photos && Array.isArray(formData.photos)) {
+          html += `
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Photos:</label>
+              <textarea class="form-control edit-field" data-field="photos" rows="3" style="width: 100%; font-family: monospace; font-size: 0.85rem;">${escapeHtml(JSON.stringify(formData.photos, null, 2))}</textarea>
+              <small style="color: #666;">Enter as JSON array</small>
+            </div>
+          `;
+        }
+        
+        // Signature (read-only if exists)
+        if (formData.signature || formData.signatureData) {
+          const sigData = formData.signature || formData.signatureData || '';
+          html += `
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Signature (Read-only):</label>
+              ${sigData.startsWith('data:image') ? `<img src="${sigData}" style="max-width: 100%; border: 1px solid #e5e7eb; border-radius: 4px; background: white; padding: 0.5rem;" alt="Signature">` : '<p style="color: #666;">No signature available</p>'}
+            </div>
+          `;
+        }
+        
+        html += '</div>';
+        
+      } else if (moduleType === 'cleaning') {
+        // Cleaning Services form
+        html += '<div style="display: grid; gap: 1rem;">';
+        
+        const fields = [
+          { key: 'building_name', label: 'Building Name', type: 'text' },
+          { key: 'email', label: 'Contact Email', type: 'email' },
+          { key: 'area', label: 'Area / Zone', type: 'text' },
+          { key: 'checklist', label: 'Checklist Notes', type: 'textarea' }
+        ];
+        
+        fields.forEach(field => {
+          const value = escapeHtml(formData[field.key] || '');
+          if (field.type === 'textarea') {
+            html += `
+              <div>
+                <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">${field.label}:</label>
+                <textarea class="form-control edit-field" data-field="${field.key}" rows="4" style="width: 100%;">${value}</textarea>
+              </div>
+            `;
+          } else {
+            html += `
+              <div>
+                <label style="display: block; margin-bottom: 0.25rem; font-weight: 500; color: #374151;">${field.label}:</label>
+                <input type="${field.type}" class="form-control edit-field" data-field="${field.key}" value="${value}" style="width: 100%;">
+              </div>
+            `;
+          }
+        });
+        
+        // Photos
+        if (formData.photos && Array.isArray(formData.photos)) {
+          html += `
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Photos:</label>
+              <textarea class="form-control edit-field" data-field="photos" rows="3" style="width: 100%; font-family: monospace; font-size: 0.85rem;">${escapeHtml(JSON.stringify(formData.photos, null, 2))}</textarea>
+              <small style="color: #666;">Enter as JSON array</small>
+            </div>
+          `;
+        }
+        
+        // Signature (read-only if exists)
+        if (formData.signature || formData.signatureData) {
+          const sigData = formData.signature || formData.signatureData || '';
+          html += `
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Signature (Read-only):</label>
+              ${sigData.startsWith('data:image') ? `<img src="${sigData}" style="max-width: 100%; border: 1px solid #e5e7eb; border-radius: 4px; background: white; padding: 0.5rem;" alt="Signature">` : '<p style="color: #666;">No signature available</p>'}
+            </div>
+          `;
+        }
+        
+        html += '</div>';
+      }
+      
+      container.innerHTML = html;
+    }
+
+    function collectFormData(moduleType) {
+      if (!window.currentFormData) {
+        console.error('No form data available');
+        return {};
+      }
+      
+      const formData = JSON.parse(JSON.stringify(window.currentFormData)); // Deep copy
+      
+      // Collect all edit-field values
+      document.querySelectorAll('.edit-field').forEach(field => {
+        const fieldPath = field.getAttribute('data-field');
+        if (!fieldPath) return;
+        
+        const value = field.value;
+        
+        if (fieldPath.includes('.')) {
+          // Nested path like items.0.asset
+          const parts = fieldPath.split('.');
+          let current = formData;
+          
+          try {
+            for (let i = 0; i < parts.length - 1; i++) {
+              const part = parts[i];
+              const nextPart = parts[i + 1];
+              
+              // Handle array indices
+              if (!isNaN(nextPart)) {
+                if (!current[part]) current[part] = [];
+                if (!current[part][parseInt(nextPart)]) current[part][parseInt(nextPart)] = {};
+                current = current[part][parseInt(nextPart)];
+                i++; // Skip next part as we already handled it
+              } else {
+                if (!current[part]) current[part] = {};
+                current = current[part];
+              }
+            }
+            
+            const lastPart = parts[parts.length - 1];
+            if (lastPart.includes('_urls') || lastPart === 'photos') {
+              // Parse JSON for arrays
+              try {
+                current[lastPart] = JSON.parse(value);
+              } catch (e) {
+                console.warn('Failed to parse JSON for', lastPart, ':', e);
+                current[lastPart] = value;
+              }
+            } else {
+              current[lastPart] = value;
+            }
+          } catch (e) {
+            console.error('Error setting nested field', fieldPath, ':', e);
+          }
+        } else {
+          // Simple path
+          if (fieldPath === 'photos') {
+            try {
+              formData[fieldPath] = JSON.parse(value);
+            } catch (e) {
+              console.warn('Failed to parse photos JSON:', e);
+              formData[fieldPath] = value;
+            }
+          } else {
+            formData[fieldPath] = value;
+          }
+        }
+      });
+      
+      // Preserve signatures (they are read-only, so keep original)
+      if (moduleType === 'hvac_mep') {
+        if (window.currentFormData.tech_signature) formData.tech_signature = window.currentFormData.tech_signature;
+        if (window.currentFormData.techSignatureData) formData.techSignatureData = window.currentFormData.techSignatureData;
+        if (window.currentFormData.opMan_signature) formData.opMan_signature = window.currentFormData.opMan_signature;
+        if (window.currentFormData.opManSignatureData) formData.opManSignatureData = window.currentFormData.opManSignatureData;
+      } else {
+        if (window.currentFormData.signature) formData.signature = window.currentFormData.signature;
+        if (window.currentFormData.signatureData) formData.signatureData = window.currentFormData.signatureData;
+      }
+      
+      return formData;
+    }
+
+    // Handle edit form submission
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submissionId = document.getElementById('editSubmissionId').value;
+      const siteName = document.getElementById('editSiteName').value;
+      const visitDate = document.getElementById('editVisitDate').value;
+      
+      // Collect form data from dynamic fields
+      const formData = collectFormData(window.currentModuleType);
+      
+      try {
+        const response = await authenticatedFetch(`/api/admin/submissions/${submissionId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            site_name: siteName,
+            visit_date: visitDate,
+            form_data: formData
+          })
+        });
+
+        if (handleUnauthorized(response)) return;
+
+        const data = await response.json();
+        if (data.success) {
+          showAlert('Submission updated successfully', 'success');
+          closeEditModal();
+          loadDocuments(); // Refresh documents list
+        } else {
+          showAlert(data.error || 'Failed to update submission', 'error');
+        }
+      } catch (error) {
+        console.error('Error updating submission:', error);
+        showAlert('Error updating submission', 'error');
+      }
+    });
+
+    // Close modal on outside click
+    document.getElementById('editModal').addEventListener('click', (e) => {
+      if (e.target.id === 'editModal') {
+        closeEditModal();
+      }
+    });
+
+    // Load users and documents on page load
+    // Check for password change requirement on page load
+    function checkPasswordChangeRequired() {
+      try {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          if (user && !user.password_changed) {
+            showAlert('⚠️ SECURITY WARNING: You are using the default password. Please change it immediately in your profile settings!', 'error', true);
+          }
+        }
+      } catch (e) {
+        console.error('Error checking password status:', e);
+      }
+    }
+
+    function updateAdminSidebarBadges() {
+      const sbU = document.getElementById('admSbUserCount');
+      const sbD = document.getElementById('admSbDocCount');
+      if (sbU) sbU.textContent = String(typeof users !== 'undefined' && Array.isArray(users) ? users.length : 0);
+      if (sbD) sbD.textContent = String(typeof documents !== 'undefined' && Array.isArray(documents) ? documents.length : 0);
+    }
+
+    function initAdminGreeting() {
+      const prefixEl = document.getElementById('admGreetingPrefix');
+      const nameEl = document.getElementById('admGreetingName');
+      if (!prefixEl || !nameEl) return;
+      const h = new Date().getHours();
+      let greet = 'Good evening';
+      if (h < 12) greet = 'Good morning';
+      else if (h < 17) greet = 'Good afternoon';
+      prefixEl.textContent = greet;
+      let displayName = 'Admin';
+      try {
+        const raw = localStorage.getItem('user');
+        const u = raw ? JSON.parse(raw) : null;
+        if (u && (u.full_name || u.username)) displayName = u.full_name || u.username;
+      } catch (e) {}
+      nameEl.textContent = displayName;
+    }
+
+    function initAdminSidebarUser() {
+      const av = document.getElementById('admSbAvatar');
+      const nm = document.getElementById('admSbName');
+      const rl = document.getElementById('admSbRole');
+      if (!nm || !rl) return;
+      try {
+        const raw = localStorage.getItem('user');
+        const u = raw ? JSON.parse(raw) : null;
+        const name = (u && (u.full_name || u.username)) ? (u.full_name || u.username) : 'User';
+        const role = (u && u.role) ? String(u.role) : '—';
+        nm.textContent = name;
+        rl.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+        const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(function (p) { return p[0]; }).join('').toUpperCase() || '—';
+        if (av) av.textContent = initials.slice(0, 3);
+      } catch (e) {
+        nm.textContent = 'User';
+        rl.textContent = '—';
+        if (av) av.textContent = '—';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initAdminGreeting();
+      initAdminSidebarUser();
+      checkPasswordChangeRequired();
+      loadUsers();
+      loadDocuments();
+      loadAutomationStatus();
+    });
+  </script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
+
