@@ -353,6 +353,13 @@ function updateModuleVisibility(user) {
       modulesGrid.style.gridTemplateColumns = '1fr';
       modulesGrid.style.maxWidth = '100%';
       modulesGrid.style.margin = '0';
+      // Remove inline display/visibility so CSS grid layout takes effect on cards
+      modulesGrid.querySelectorAll('.module-card').forEach(card => {
+        if (card.style.display !== 'none') {
+          card.style.removeProperty('display');
+          card.style.removeProperty('visibility');
+        }
+      });
     } else {
       if (visibleModules.length === 1) {
         modulesGrid.style.gridTemplateColumns = '1fr';

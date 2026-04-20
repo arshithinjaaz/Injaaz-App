@@ -1985,3 +1985,145 @@ canvas[id*="signature"] {
     right: 1rem !important;
   }
 }
+
+/* ═══════════════════════════════════════════════
+   GLOBAL MOBILE PATTERNS (all pages, ≤768px)
+   ═══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ── All data tables: horizontal scroll ── */
+  table:not(.no-scroll) {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+  table:not(.no-scroll) thead,
+  table:not(.no-scroll) tbody,
+  table:not(.no-scroll) tr {
+    display: table;
+    width: 100%;
+    table-layout: auto;
+  }
+
+  /* ── Page-level headers (h1 size) ── */
+  .page-header h1,
+  .page-title,
+  h1.page-title {
+    font-size: clamp(1.4rem, 6vw, 1.85rem) !important;
+  }
+
+  /* ── Wide banner/hero sections on sub-pages ── */
+  .page-banner {
+    padding: 1.25rem 1rem !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+  .page-banner .banner-right {
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+
+  /* ── Stat cards: 2-col grid ── */
+  .stats-grid,
+  .stat-grid,
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+
+  /* ── Action buttons row: wrap ── */
+  .actions-row,
+  .btn-row,
+  .button-group {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+  .actions-row .btn,
+  .btn-row .btn {
+    flex: 1 1 auto !important;
+    min-width: 120px !important;
+    justify-content: center !important;
+  }
+
+  /* ── DocHub toolbar ── */
+  .dh-toolbar,
+  .toolbar-strip {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+    padding: 0.625rem 0.875rem !important;
+  }
+
+  /* ── Admin pages with sidebar: padding fix ── */
+  body.has-main-nav.admin-dh-page {
+    padding-top: 4rem !important;
+  }
+
+  /* ── Submission / review cards ── */
+  .submission-card,
+  .review-card,
+  .form-card {
+    padding: 1rem !important;
+    border-radius: 10px !important;
+  }
+
+  /* ── Modal: full-width on small screens ── */
+  .modal-dialog {
+    margin: 0.75rem !important;
+    max-width: calc(100% - 1.5rem) !important;
+  }
+
+  /* ── Pagination: center and compact ── */
+  .pagination,
+  .pag-bar {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 0.25rem !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   PHONE-ONLY PATTERNS (≤600px)
+   ═══════════════════════════════════════════════ */
+@media (max-width: 600px) {
+
+  /* ── HR dashboard content area ── */
+  .hr-dashboard-content {
+    padding-top: 4.25rem !important;
+  }
+
+  /* ── Stat cards: compact values ── */
+  .stat-card .stat-value { font-size: 2rem !important; }
+  .stat-card h3 { font-size: 0.78rem !important; }
+
+  /* ── Filter / select dropdowns: full width ── */
+  .filter-section,
+  .filter-bar {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  .filter-section select,
+  .filter-bar select,
+  .filter-bar input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* ── Pending reviews item cards ── */
+  .review-item,
+  .pending-card {
+    padding: 0.875rem !important;
+    border-radius: 10px !important;
+  }
+  .review-item h3,
+  .pending-card h3 {
+    font-size: 0.95rem !important;
+  }
+
+  /* ── Workflow status badges: wrap ── */
+  .badge-row,
+  .status-badges {
+    flex-wrap: wrap !important;
+    gap: 0.375rem !important;
+  }
+}
