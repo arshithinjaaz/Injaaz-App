@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout *)",
+      "Bash(git push *)",
+      "Bash(gh pr create --title 'Claude Code changes' --body ' *)",
+      "Bash(where gh *)",
+      "Bash(winget list *)"
+    ]
+  }
+}
