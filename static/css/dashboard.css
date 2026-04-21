@@ -1844,45 +1844,51 @@ body.inspection-dashboard {
   
   .nav-right {
     flex: 0 0 auto !important;
-    gap: 0.375rem !important;
+    gap: 0.3rem !important;
   }
 
   /* Save Draft: icon-only on tablet/mobile to save space */
   .nav-save-draft-btn span { display: none !important; }
   .nav-save-draft-btn {
     padding: 0 !important;
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
     justify-content: center !important;
     margin-right: 0 !important;
+    border-radius: 7px !important;
   }
 
   .notification-btn {
-    width: 38px !important;
-    height: 38px !important;
+    width: 32px !important;
+    height: 32px !important;
     padding: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border-radius: 8px !important;
+    border-radius: 7px !important;
     background: var(--bg-light) !important;
     color: var(--text-mid) !important;
     border: 1px solid var(--border-color) !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
   }
-  
+
+  .notification-btn svg {
+    width: 17px !important;
+    height: 17px !important;
+  }
+
   .notification-btn:hover {
     background: var(--border-light) !important;
   }
 
   #pwa-install-btn.pwa-nav-icon {
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
     padding: 0 !important;
     background: var(--bg-light) !important;
     border: 1px solid var(--border-color) !important;
@@ -1939,13 +1945,13 @@ body.inspection-dashboard {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px !important;
-    min-height: 40px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
     border: 1px solid var(--border-color) !important;
     background: var(--bg-light) !important;
-    border-radius: 8px !important;
+    border-radius: 7px !important;
     cursor: pointer !important;
     padding: 0 !important;
     color: var(--text-dark) !important;
@@ -2027,21 +2033,23 @@ body.inspection-dashboard {
   /* Logout - compact on mobile */
   .logout-btn {
     font-size: 0.8rem !important;
-    padding: 0.45rem 0.6rem !important;
-    min-height: 38px !important;
-    min-width: 38px !important;
+    padding: 0 !important;
+    min-height: 32px !important;
+    min-width: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
     flex-shrink: 0 !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border-radius: 8px !important;
+    border-radius: 7px !important;
   }
-  
+
   .logout-btn svg {
-    width: 18px !important;
-    height: 18px !important;
+    width: 16px !important;
+    height: 16px !important;
   }
-  
+
   .logout-btn span {
     display: none !important;
   }
@@ -2198,15 +2206,20 @@ body.inspection-dashboard {
     top: 64px !important;
   }
 
-  /* Logout: icon-only */
+  /* Logout: icon-only, compact */
   .logout-btn span { display: none !important; }
   .logout-btn {
     padding: 0 !important;
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
     justify-content: center !important;
+    border-radius: 7px !important;
+  }
+  .logout-btn svg {
+    width: 16px !important;
+    height: 16px !important;
   }
 }
 
@@ -2285,15 +2298,16 @@ body.inspection-dashboard {
   .logout-btn span { display: none !important; }
   .logout-btn {
     padding: 0 !important;
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
     justify-content: center !important;
+    border-radius: 7px !important;
   }
   .logout-btn svg {
-    width: 18px !important;
-    height: 18px !important;
+    width: 16px !important;
+    height: 16px !important;
   }
 
   .mobile-menu-drawer {
