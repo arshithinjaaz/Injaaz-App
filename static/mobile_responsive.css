@@ -371,14 +371,9 @@
     transform: scale(0.98) !important;
   }
   
-  /* Form inputs - cleaner mobile look */
+  /* Form inputs - cleaner mobile look (class-based only, avoids table inputs) */
   .form-control,
-  .form-select,
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="number"],
-  textarea {
+  .form-select {
     border-radius: 10px !important;
     border: 1.5px solid rgba(18, 84, 53, 0.2) !important;
     box-shadow: none !important;
@@ -432,17 +427,11 @@
 
 /* Base Mobile Improvements */
 @media (max-width: 768px) {
-  /* Form inputs — prevent collapsed/flat look on mobile */
+  /* Form inputs — prevent collapsed/flat look on mobile.
+     IMPORTANT: Use class-based selectors only (.form-control, .form-select)
+     to avoid accidentally targeting inputs inside table cells. */
   .form-control,
-  .form-select,
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="number"],
-  input[type="tel"],
-  input[type="date"],
-  input[type="search"],
-  select {
+  .form-select {
     min-height: 46px !important;
     height: auto !important;
     font-size: 16px !important; /* Prevents zoom on iOS */
@@ -455,19 +444,46 @@
     color: #1a1a1a !important;
   }
 
+  /* Standalone inputs (not inside tables) */
+  form input[type="text"],
+  form input[type="email"],
+  form input[type="password"],
+  form input[type="number"],
+  form input[type="tel"],
+  form input[type="date"],
+  form input[type="search"],
+  form select,
+  .form-group input[type="text"],
+  .form-group input[type="email"],
+  .form-group input[type="password"],
+  .form-group select,
+  .bf-fld input,
+  .bf-fld select,
+  .pp-fld input,
+  .pp-fld select,
+  .dm-form-field input,
+  .dm-form-field select {
+    min-height: 46px !important;
+    height: auto !important;
+    font-size: 16px !important;
+    padding: 0.65rem 0.9rem !important;
+    border: 1.5px solid rgba(18, 84, 53, 0.2) !important;
+    border-radius: 10px !important;
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    line-height: 1.5 !important;
+    color: #1a1a1a !important;
+  }
+
   .form-control:focus,
-  .form-select:focus,
-  input[type="text"]:focus,
-  input[type="email"]:focus,
-  input[type="password"]:focus,
-  select:focus {
+  .form-select:focus {
     border-color: rgba(18, 84, 53, 0.5) !important;
     box-shadow: 0 0 0 3px rgba(18, 84, 53, 0.1) !important;
     outline: none !important;
   }
 
   textarea.form-control,
-  textarea {
+  form textarea {
     min-height: 90px !important;
     padding: 0.65rem 0.9rem !important;
     font-size: 16px !important;
@@ -485,10 +501,65 @@
     margin-top: 0.25em !important;
   }
 
-  /* Better touch targets for buttons */
+  /* ============================================================
+     TABLE OVERRIDES — prevent form-input / button rules from
+     bloating table rows. Tables use compact styling.
+     ============================================================ */
+  table select,
+  .designation-select,
+  .dashboard-filter,
+  td select {
+    min-height: unset !important;
+    height: auto !important;
+    padding: 0.35rem 0.5rem !important;
+    font-size: 0.8rem !important;
+    border: 1px solid rgba(18, 84, 53, 0.2) !important;
+    border-radius: 6px !important;
+    background-color: #fff !important;
+    line-height: 1.4 !important;
+  }
+
+  table input[type="text"],
+  table input[type="email"],
+  table input[type="search"],
+  table input[type="date"],
+  td input[type="text"],
+  td input[type="date"] {
+    min-height: unset !important;
+    height: 32px !important;
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.8rem !important;
+    border-radius: 6px !important;
+  }
+
+  /* Table action buttons — compact, not full-width */
+  table .btn,
+  td .btn,
+  .action-buttons .btn,
+  .action-buttons .btn-sm,
+  .documents-table .btn,
+  .users-table .btn {
+    min-height: unset !important;
+    height: auto !important;
+    padding: 0.3rem 0.55rem !important;
+    font-size: 0.75rem !important;
+    width: auto !important;
+    margin-bottom: 0.2rem !important;
+    border-radius: 6px !important;
+  }
+
+  /* btn-download links in tables */
+  .btn-download {
+    min-height: unset !important;
+    padding: 0.3rem 0.55rem !important;
+    font-size: 0.75rem !important;
+    width: auto !important;
+    margin-bottom: 0.2rem !important;
+  }
+
+  /* Better touch targets for FORM buttons only */
   .main-content .btn,
-  form .btn,
-  .container .btn {
+  form .btn {
     min-height: 44px;
     font-size: 15px;
   }
@@ -590,10 +661,8 @@
     max-width: 100% !important;
   }
   
-  /* Buttons - Mobile Optimized (only inside main content, not nav) */
-  .main-content .btn,
-  form .btn,
-  .container .btn {
+  /* Buttons - Mobile Optimized (form context buttons — scoped away from tables) */
+  form .btn {
     padding: 0.7rem 1.25rem !important;
     font-size: 0.95rem !important;
     margin-bottom: 0.5rem !important;
@@ -604,10 +673,9 @@
     -webkit-tap-highlight-color: rgba(18, 84, 53, 0.2) !important;
   }
 
-  /* Only full-width when alone in its container (submit/primary buttons) */
+  /* Only full-width when it's a standalone primary/submit button */
   form .btn[type="submit"],
-  form .btn-primary,
-  .container .btn-primary {
+  form .btn-primary {
     width: 100% !important;
   }
 
@@ -964,12 +1032,12 @@
 @media (max-width: 576px) {
   /* Even smaller adjustments */
   .container {
-    padding: 0.75rem 0.5rem !important;
-    margin: 0.25rem !important;
+    padding: 0.75rem 0.625rem !important;
+    margin: 0 !important;
   }
-  
+
   h2 {
-    font-size: 1.35rem !important;
+    font-size: 1.25rem !important;
   }
   
   /* Single photo per row on very small screens */
@@ -1075,7 +1143,8 @@
     outline: none !important;
   }
   
-  /* Prevent accidental zooming on iOS + ensure proper sizing */
+  /* Prevent accidental zooming on iOS — font-size only (not min-height,
+     to avoid inflating table-cell inputs) */
   input[type="text"],
   input[type="email"],
   input[type="tel"],
@@ -1085,6 +1154,19 @@
   select,
   textarea {
     font-size: 16px !important;
+  }
+
+  /* For non-table form inputs, also fix sizing */
+  form input[type="text"],
+  form input[type="email"],
+  form input[type="tel"],
+  form input[type="number"],
+  form input[type="date"],
+  form input[type="password"],
+  form select,
+  form textarea,
+  .form-control,
+  .form-select {
     padding: 0.65rem 0.9rem !important;
     min-height: 46px !important;
     border: 1.5px solid rgba(18, 84, 53, 0.2) !important;
