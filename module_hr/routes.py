@@ -603,8 +603,8 @@ def hr_approve(submission_id):
     
     data = request.get_json() or {}
     
-    # Update submission (copy JSON so SQLAlchemy detects the change)
-    form_data = dict(submission.form_data or {})
+    # Update submission
+    form_data = submission.form_data or {}
     form_data['hr_reviewed_by_id'] = user.id
     form_data['hr_reviewed_by_name'] = user.full_name or user.username
     form_data['hr_reviewed_at'] = datetime.now().isoformat()
@@ -667,8 +667,8 @@ def hr_reject(submission_id):
     
     data = request.get_json() or {}
     
-    # Update submission (copy JSON so SQLAlchemy detects the change)
-    form_data = dict(submission.form_data or {})
+    # Update submission
+    form_data = submission.form_data or {}
     form_data['hr_rejected_by_id'] = user.id
     form_data['hr_rejected_by_name'] = user.full_name or user.username
     form_data['hr_rejected_at'] = datetime.now().isoformat()
@@ -723,8 +723,8 @@ def gm_approve(submission_id):
     
     data = request.get_json() or {}
     
-    # Update submission (copy JSON so SQLAlchemy detects the change)
-    form_data = dict(submission.form_data or {})
+    # Update submission
+    form_data = submission.form_data or {}
     form_data['gm_approved_by_id'] = user.id
     form_data['gm_approved_by_name'] = user.full_name or user.username
     form_data['gm_approved_at'] = datetime.now().isoformat()
@@ -788,8 +788,8 @@ def gm_reject(submission_id):
     
     data = request.get_json() or {}
     
-    # Update submission (copy JSON so SQLAlchemy detects the change)
-    form_data = dict(submission.form_data or {})
+    # Update submission
+    form_data = submission.form_data or {}
     form_data['gm_rejected_by_id'] = user.id
     form_data['gm_rejected_by_name'] = user.full_name or user.username
     form_data['gm_rejected_at'] = datetime.now().isoformat()

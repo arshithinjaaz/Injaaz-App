@@ -34,7 +34,6 @@ Run the setup script to automate the entire setup process:
 ## 📚 Documentation
 
 - **[docs/APPLICATION_OVERVIEW.md](docs/APPLICATION_OVERVIEW.md)** - High-level application overview (modules, architecture)
-- **[docs/PROJECT_SCOPE_METHODS_AND_TECHNIQUES.md](docs/PROJECT_SCOPE_METHODS_AND_TECHNIQUES.md)** - Full project scope, engineering methods, libraries, and patterns
 - **[SETUP.md](SETUP.md)** - Complete setup guide with troubleshooting
 - **[QUICK_START.md](QUICK_START.md)** - Fast 5-minute setup
 - **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Codebase organization

@@ -2,43 +2,9 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Forms Dashboard</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
-  <style>
-    body{
-      font-family:system-ui,Arial;
-      margin:24px auto;
-      max-width:900px;
-      padding:0 16px;
-      box-sizing:border-box;
-    }
-    h1 { margin-bottom: 12px; }
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0 0 16px;
-      display: grid;
-      gap: 10px;
-    }
-    li a {
-      display: block;
-      padding: 11px 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 10px;
-      text-decoration: none;
-      color: #0f172a;
-      background: #fff;
-      min-height: 44px;
-      box-sizing: border-box;
-    }
-    li a:hover { border-color: #125435; background: #f8faf8; }
-    @media (max-width: 768px) {
-      body { margin: 14px auto; padding: 0 12px; }
-      h1 { font-size: 1.35rem; }
-    }
-  </style>
+  <style>body{font-family:system-ui,Arial;margin:24px}</style>
 </head>
 <body>
   <h1>Forms Dashboard</h1>

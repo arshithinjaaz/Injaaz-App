@@ -5,46 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
   <title>{{ schema.title }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <style>
-    body{
-      font-family:system-ui,Arial;
-      margin:24px auto;
-      max-width:900px;
-      padding:0 16px;
-      box-sizing:border-box;
-    }
-    h1 { margin-bottom: 8px; }
-    label{display:block;margin-top:10px;font-weight:600}
-    input[type=text],input[type=email],textarea,input[type=file]{
-      width:100%;
-      padding:10px 12px;
-      margin-top:6px;
-      box-sizing:border-box;
-      border:1px solid #d1d5db;
-      border-radius:10px;
-      font-size:16px;
-      font-family:inherit;
-    }
-    textarea { min-height: 110px; resize: vertical; }
-    button[type=submit]{
-      margin-top:14px;
-      padding:11px 16px;
-      border:none;
-      border-radius:10px;
-      background:#125435;
-      color:#fff;
-      font-weight:600;
-      font-size:16px;
-      cursor:pointer;
-      min-height:44px;
-    }
-    .small{font-size:0.9em;color:#666;line-height:1.4}
-    @media (max-width: 768px) {
-      body { margin: 14px auto; padding: 0 12px; }
-      h1 { font-size: 1.35rem; }
-      button[type=submit] { width: 100%; }
-    }
+    body{font-family:system-ui,Arial;margin:24px;max-width:900px}
+    label{display:block;margin-top:8px}
+    input[type=text],input[type=email],textarea{width:100%;padding:8px;box-sizing:border-box}
+    .small{font-size:0.9em;color:#666}
   </style>
 </head>
 <body>

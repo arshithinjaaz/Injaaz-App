@@ -1827,8 +1827,84 @@
       .modal-title {
         font-size: 1.25rem !important;
       }
+
+      /* ---- Protect table elements from global mobile form/button rules ---- */
+      /* Table action buttons must stay compact */
+      .action-buttons .btn,
+      .action-buttons .btn-sm,
+      table .btn,
+      td .btn,
+      .btn-download {
+        min-height: unset !important;
+        height: auto !important;
+        padding: 0.3rem 0.55rem !important;
+        font-size: 0.75rem !important;
+        width: auto !important;
+        margin-bottom: 0.2rem !important;
+      }
+
+      /* Designation select inside table — compact */
+      .designation-select {
+        min-height: unset !important;
+        height: auto !important;
+        padding: 0.35rem 0.5rem !important;
+        font-size: 0.8rem !important;
+        border: 1px solid rgba(18, 84, 53, 0.2) !important;
+        border-radius: 6px !important;
+        background-color: #fff !important;
+        max-width: 130px !important;
+      }
+
+      /* Section-level filter selects — ok to be slightly larger but not 46px */
+      .dashboard-filter {
+        min-height: unset !important;
+        height: 38px !important;
+        padding: 0.35rem 0.65rem !important;
+        font-size: 0.85rem !important;
+        border-radius: 8px !important;
+      }
+
+      /* Status toggle — preserve pill toggle shape */
+      .status-toggle input[type="checkbox"] {
+        min-height: unset !important;
+        height: 18px !important;
+        width: 34px !important;
+        padding: 0 !important;
+        border: none !important;
+        border-radius: 999px !important;
+        background-color: unset !important;
+      }
+
+      /* Document checkboxes — stay small */
+      .documents-table input[type="checkbox"],
+      .checkbox-select-all input[type="checkbox"],
+      #selectAllDocuments,
+      #selectAllHeader {
+        min-height: unset !important;
+        height: 18px !important;
+        width: 18px !important;
+        padding: 0 !important;
+        border: none !important;
+        border-radius: 3px !important;
+        background-color: unset !important;
+      }
+
+      /* Table row height — let content dictate height */
+      .users-table tr,
+      .documents-table tr {
+        height: auto !important;
+      }
+
+      /* Refresh button in section header */
+      .btn-refresh {
+        min-height: unset !important;
+        padding: 0.4rem 0.75rem !important;
+        font-size: 0.85rem !important;
+        width: auto !important;
+        margin-bottom: 0 !important;
+      }
     }
-    
+
     @media (max-width: 480px) {
       .navbar-brand span {
         font-size: 0.8rem !important;

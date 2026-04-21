@@ -97,16 +97,210 @@
             min-height: 0;
         }
 
+        /* ── Mobile-only: full-screen splash + full-screen slide-up ──────── */
         @media (max-width: 767px) {
+            /*
+             * mobile_responsive.css sets html/body to height:auto !important, so
+             * height:100% on main collapses and the absolute hero has ~0 height.
+             * Fill the viewport with min-height instead (flex:1 still applies on body).
+             */
             .login-main {
-                overflow: visible;
+                overflow: hidden;
                 position: relative;
+                flex: 1 1 auto;
+                align-self: stretch;
+                width: 100%;
+                min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+                min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
             }
             .login-hero {
-                flex: 0 0 auto;
-                min-height: 55vh;
-                max-height: 62vh;
-                padding: 2rem 1.5rem 5rem;
+                position: absolute;
+                inset: 0;
+                min-height: 100%;
+                max-height: none;
+                padding: 1.5rem 2.5rem calc(env(safe-area-inset-bottom, 0px) + 10.75rem);
+                flex: none;
+                width: 100%;
+                /* row is default — flex-end is horizontal; column + flex-end = bottom */
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                align-items: flex-start;
+                text-align: left;
+                /* hero scales back when sheet opens */
+                transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+                            opacity 0.45s ease;
+                transform-origin: center 40%;
+            }
+            .login-hero.hero-exit {
+                transform: scale(0.92);
+                opacity: 0.55;
+            }
+            .login-hero-inner {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .login-hero-kicker,
+            .login-hero-lede {
+                text-align: left;
+            }
+            .login-hero-title {
+                font-size: clamp(2.25rem, 9vw, 3rem);
+                line-height: 1.08;
+            }
+            .login-hero-lede {
+                max-width: 18rem;
+                font-size: 0.975rem;
+                opacity: 0.9;
+            }
+
+            /* Mobile CTA buttons inside hero */
+            .mobile-hero-cta {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+                margin-top: 2rem;
+                width: 100%;
+                max-width: 19rem;
+            }
+            .btn-mobile-signin {
+                width: 100%;
+                min-height: 54px;
+                padding: 0.9rem 1.75rem;
+                background: rgba(255,255,255,0.15);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border: 1.5px solid rgba(255,255,255,0.45);
+                border-radius: 100px;
+                color: #fff;
+                font-family: 'Manrope', sans-serif;
+                font-size: 1.05rem;
+                font-weight: 700;
+                letter-spacing: 0.01em;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                transition: background 0.22s ease, transform 0.18s ease,
+                            box-shadow 0.22s ease;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            }
+            .btn-mobile-signin:hover {
+                background: rgba(255,255,255,0.22);
+                box-shadow: 0 6px 28px rgba(0,0,0,0.18);
+            }
+            .btn-mobile-signin:active {
+                transform: scale(0.96);
+                background: rgba(255,255,255,0.28);
+            }
+            .btn-mobile-signup-link {
+                text-align: left;
+                color: rgba(255,255,255,0.65);
+                font-size: 0.875rem;
+                margin: 0;
+            }
+            .btn-mobile-signup-link a {
+                color: var(--lp-primary-fixed-dim);
+                text-decoration: none;
+                font-weight: 700;
+            }
+
+            /* Backdrop (subtle, not needed for full screen but adds depth during transition) */
+            .mobile-backdrop {
+                display: block;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0);
+                z-index: 40;
+                pointer-events: none;
+            }
+
+            /* Full-screen slide-up sheet */
+            .login-canvas {
+                position: fixed;
+                inset: 0;
+                z-index: 50;
+                background: #fff;
+                border-radius: 0;
+                padding: calc(env(safe-area-inset-top, 0px) + 0.75rem) 2rem
+                         calc(env(safe-area-inset-bottom, 0px) + 2rem);
+                transform: translateY(100%);
+                transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+                overflow-y: auto;
+                overflow-x: hidden;
+                /* centre the card vertically */
+                display: flex !important;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 0;
+                box-shadow: none;
+                margin-top: 0;
+            }
+            .login-canvas.sheet-open {
+                transform: translateY(0);
+            }
+
+            /* Pill handle at top of sheet */
+            .sheet-handle {
+                position: absolute;
+                top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+                left: 0;
+                right: 0;
+                display: flex;
+                justify-content: center;
+                padding: 0.5rem 0;
+                cursor: pointer;
+            }
+            .sheet-handle-bar {
+                width: 36px;
+                height: 4px;
+                background: #d0d5dd;
+                border-radius: 100px;
+                transition: background 0.2s;
+            }
+            .sheet-handle:hover .sheet-handle-bar {
+                background: #adb5bd;
+            }
+
+            /* Back button — top-left of sheet */
+            .sheet-back-btn {
+                position: absolute;
+                top: calc(env(safe-area-inset-top, 0px) + 0.6rem);
+                left: 1.25rem;
+                display: flex;
+                align-items: center;
+                gap: 0.3rem;
+                background: none;
+                border: none;
+                padding: 0.5rem;
+                color: var(--lp-outline);
+                font-size: 0.8rem;
+                font-family: inherit;
+                cursor: pointer;
+                border-radius: 8px;
+                transition: background 0.18s, color 0.18s;
+                z-index: 2;
+            }
+            .sheet-back-btn:hover {
+                background: var(--lp-surface-highest);
+                color: var(--lp-primary);
+            }
+
+            /* Card fills width, max-width centred */
+            .login-card {
+                width: 100%;
+                max-width: 26rem;
+                padding: 0;
+                border-radius: 0;
+                box-shadow: none;
+                border: none;
+                background: transparent;
+                /* push down past the fixed handle/back-btn */
+                padding-top: 3.5rem;
             }
         }
 
@@ -220,76 +414,49 @@
             overflow: hidden;
         }
 
+        /* Mobile sheet inner sizing */
         @media (max-width: 767px) {
-            .login-canvas {
-                margin-top: -2.5rem;
-                position: relative;
-                z-index: 10;
-                background: white;
-                border-radius: 22px 22px 0 0;
-                padding: 1.5rem 1.25rem 1.5rem;
-                align-items: center;
-                justify-content: flex-start;
-                overflow-y: auto;
-                box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
-            }
-            .login-card {
-                max-width: 100%;
-                width: 100%;
-                padding: 0;
-                border-radius: 0;
-                box-shadow: none;
-                border: none;
-                background: transparent;
-            }
             .login-card-logo {
-                margin-bottom: 0.5rem;
+                margin-bottom: 1rem;
             }
             .login-card-logo img {
-                width: 36px;
-                height: 36px;
-                border-radius: 8px;
+                width: 76px;
+                height: 76px;
+                border-radius: 12px;
             }
             .login-card-intro {
-                margin-bottom: 0.6rem;
+                margin-bottom: 1.5rem;
             }
             .login-card-intro h1 {
-                font-size: 0.95rem;
-                margin-bottom: 0.1rem;
+                font-size: 1.5rem;
+                margin-bottom: 0.3rem;
             }
             .login-card-intro .subtitle {
-                font-size: 0.68rem;
-                line-height: 1.35;
-            }
-            .lp-label {
-                font-size: 0.58rem;
-                margin-bottom: 0.15rem;
+                font-size: 0.875rem;
+                line-height: 1.5;
             }
             .form-group {
-                margin-bottom: 0.45rem;
+                margin-bottom: 1.125rem;
+            }
+            .lp-label {
+                margin-bottom: 0.35rem;
+            }
+            .lp-input-icon {
+                left: 1rem;
+                font-size: 1.35rem;
+                width: 1.35rem;
+                text-align: center;
             }
             input.lp-input[type="text"],
             input.lp-input[type="password"] {
-                padding: 0.45rem 0.65rem 0.45rem 2rem;
-                font-size: 0.78rem;
-                border-radius: 0.35rem;
-            }
-            .lp-input-icon {
-                left: 0.55rem;
-            }
-            .lp-input-icon svg {
-                width: 13px;
-                height: 13px;
-            }
-            .btn-login {
-                padding: 0.55rem 1rem;
-                font-size: 0.78rem;
-                margin-top: 0.15rem;
-                border-radius: 0.35rem;
+                padding: 0.95rem 1.125rem 0.95rem 3.35rem;
+                min-height: 52px;
+                border-radius: 0.65rem;
+                box-sizing: border-box;
             }
             .register-link {
-                font-size: 0.68rem;
-                margin-top: 0.6rem;
+                margin-top: 1.5rem;
+                margin-bottom: 0;
             }
         }
 
@@ -306,9 +473,9 @@
         }
 
         .login-card-logo img {
-            width: 64px;
-            height: 64px;
-            border-radius: 12px;
+            width: 84px;
+            height: 84px;
+            border-radius: 14px;
         }
 
         .login-card-intro {
@@ -476,16 +643,19 @@
             text-decoration-color: var(--lp-primary-fixed-dim);
         }
 
+        /* Hide mobile-only elements on desktop */
+        .mobile-hero-cta,
+        .mobile-backdrop,
+        .sheet-handle,
+        .sheet-back-btn {
+            display: none;
+        }
+
         @media (max-width: 767px) {
             html.login-root,
             body.login-page {
                 overflow: hidden !important;
-                overflow-x: hidden !important;
-                overflow-y: hidden !important;
-            }
-
-            body.login-page {
-                background: var(--lp-surface) !important;
+                background: var(--lp-primary) !important;
             }
 
             input.lp-input[type="text"],
@@ -494,21 +664,25 @@
             }
 
             .btn-login {
-                min-height: 48px;
+                min-height: 54px;
+                border-radius: 100px;
+                font-size: 0.95rem;
             }
+
+            /* Show mobile-only elements */
+            .mobile-hero-cta   { display: flex; }
+            .mobile-backdrop   { display: block; }
+            .sheet-handle      { display: flex; }
+            .sheet-back-btn    { display: flex; }
         }
 
         @media (max-width: 480px) {
-            .login-card {
-                border-radius: 0;
-                border-left: none;
-                border-right: none;
-                box-shadow: none;
-            }
-
             .login-canvas {
-                padding-left: max(1rem, env(safe-area-inset-left));
-                padding-right: max(1rem, env(safe-area-inset-right));
+                padding-left: max(1.25rem, env(safe-area-inset-left));
+                padding-right: max(1.25rem, env(safe-area-inset-right));
+            }
+            .sheet-back-btn {
+                left: max(0.75rem, env(safe-area-inset-left));
             }
         }
 
@@ -535,17 +709,41 @@
 </head>
 <body class="login-page">
     <main class="login-main">
-        <section class="login-hero" aria-hidden="true">
+        <section class="login-hero" aria-hidden="false">
             <div class="login-hero-inner">
                 <p class="login-hero-kicker">Injaaz Platform</p>
                 <h2 class="login-hero-title">All Operations.<br><span>One Platform.</span></h2>
                 <p class="login-hero-lede">The hub for your teams to run logistics, facilities, and day-to-day operations in one place.</p>
+
+                <!-- Mobile-only splash CTAs -->
+                <div class="mobile-hero-cta">
+                    <button class="btn-mobile-signin" id="mobile-signin-btn" type="button">
+                        <span>Sign in</span>
+                        <span class="material-symbols-outlined" style="font-size:1.1rem" aria-hidden="true">arrow_forward</span>
+                    </button>
+                    <p class="btn-mobile-signup-link">
+                        Create an account? <a href="{{ url_for('register_page') }}">Sign up</a>
+                    </p>
+                </div>
             </div>
         </section>
 
-        <section class="login-canvas">
+        <!-- Mobile sheet backdrop -->
+        <div class="mobile-backdrop" id="mobile-backdrop"></div>
+
+        <section class="login-canvas" id="login-canvas">
+            <!-- Mobile drag handle -->
+            <div class="sheet-handle" id="sheet-handle" aria-hidden="true">
+                <div class="sheet-handle-bar"></div>
+            </div>
+            <!-- Mobile back button -->
+            <button class="sheet-back-btn" id="sheet-back-btn" type="button" aria-label="Close sign-in panel">
+                <span class="material-symbols-outlined" style="font-size:1rem">arrow_back_ios</span>
+                <span>Back</span>
+            </button>
+
             <div class="login-card">
-                <div class="login-card-logo logo">
+                <div class="login-card-logo">
                     <img src="{{ url_for('static', filename='icons/icon-192x192.png') }}" alt="Injaaz Logo">
                 </div>
 
@@ -589,6 +787,74 @@
     </main>
 
     <script>
+        /* ── Mobile full-screen slide-up logic ──────────────────────────── */
+        const isMobile = () => window.innerWidth <= 767;
+
+        const canvas      = document.getElementById('login-canvas');
+        const hero        = document.querySelector('.login-hero');
+        const mobileBtn   = document.getElementById('mobile-signin-btn');
+        const backBtn     = document.getElementById('sheet-back-btn');
+        const sheetHandle = document.getElementById('sheet-handle');
+
+        function openSheet() {
+            if (!isMobile()) return;
+            canvas.classList.add('sheet-open');
+            hero && hero.classList.add('hero-exit');
+            // Focus first input after transition settles
+            setTimeout(() => {
+                const first = canvas.querySelector('input');
+                if (first) first.focus({ preventScroll: true });
+            }, 420);
+        }
+
+        function closeSheet() {
+            canvas.classList.remove('sheet-open');
+            hero && hero.classList.remove('hero-exit');
+            // Blur any focused input so keyboard hides
+            if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+            }
+        }
+
+        if (mobileBtn) mobileBtn.addEventListener('click', openSheet);
+        if (backBtn)   backBtn.addEventListener('click', closeSheet);
+
+        // Tap handle to close
+        if (sheetHandle) sheetHandle.addEventListener('click', closeSheet);
+
+        // Swipe-down to close on sheet handle
+        if (sheetHandle) {
+            let startY = 0;
+            sheetHandle.addEventListener('touchstart', e => {
+                startY = e.touches[0].clientY;
+            }, { passive: true });
+            sheetHandle.addEventListener('touchend', e => {
+                if (e.changedTouches[0].clientY - startY > 50) closeSheet();
+            }, { passive: true });
+        }
+
+        // Also swipe-down anywhere in the canvas (fast flick)
+        if (canvas) {
+            let touchStartY = 0;
+            canvas.addEventListener('touchstart', e => {
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+            canvas.addEventListener('touchend', e => {
+                const delta = e.changedTouches[0].clientY - touchStartY;
+                // Only dismiss if scrolled to very top and swiped down fast
+                if (delta > 80 && canvas.scrollTop <= 0) closeSheet();
+            }, { passive: true });
+        }
+
+        // Auto-open if a validation error is already present (e.g. server redirect)
+        window.addEventListener('DOMContentLoaded', () => {
+            if (isMobile()) {
+                const err = document.getElementById('error-message');
+                if (err && err.textContent.trim()) openSheet();
+            }
+        });
+
+        /* ── Login form logic ───────────────────────────────────────────── */
         const loginForm = document.getElementById('login-form');
         const loginBtn = document.getElementById('login-btn');
         const loading = document.getElementById('loading');

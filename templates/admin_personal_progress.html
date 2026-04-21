@@ -78,6 +78,12 @@ body.has-main-nav{padding-top:5.5rem}
 .pp-step-actions button{width:36px;height:36px;border-radius:8px;border:1.5px solid var(--pp-line);background:#fff;cursor:pointer;font-size:.85rem}
 .pp-step-row{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
 @media(max-width:560px){.pp-step-row{grid-template-columns:1fr}}
+@media(max-width:768px){
+  .pp-fld input,.pp-fld select,.pp-fld textarea{padding:.65rem .875rem;min-height:44px;border:1.5px solid rgba(18,84,53,0.2)}
+  .pp-fld label{font-size:.75rem}
+  .pp-m-foot{gap:.5rem}
+  .pp-m-foot .pp-btn{width:100%}
+}
 .pp-m-foot{padding:.85rem 1.15rem;border-top:1.5px solid var(--pp-line);display:flex;flex-wrap:wrap;gap:.5rem;justify-content:flex-end;flex-shrink:0;background:var(--pp-card)}
 .pp-m-foot .pp-btn-danger{background:#b91c1c;box-shadow:none}
 #ppToast{position:fixed;bottom:1.5rem;right:1.5rem;left:auto;max-width:min(360px,calc(100% - 2rem));background:var(--pp-accent);color:#fff;padding:.75rem 1rem;border-radius:12px;font-weight:600;font-size:.9rem;box-shadow:var(--pp-sh);z-index:400;transform:translateY(120%);opacity:0;transition:.3s}

@@ -4,12 +4,12 @@ Admin Routes - User management and access control
 from flask import Blueprint, request, jsonify, render_template, current_app, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import (
-    db, User, AuditLog, Device, DeviceHandover, BDProject, BDFollowUp, BDContact, BDActivity,
+    db, User, AuditLog, Device, BDProject, BDFollowUp, BDContact, BDActivity,
     DocHubAccess, MmrChargeableConfig, AdminPersonalProject, AdminPersonalProgressStep,
 )
 from app.middleware import admin_required
 from common.error_responses import error_response, success_response
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from io import BytesIO, StringIO
 import json
 import os
@@ -1195,8 +1195,9 @@ def dashboard_overview():
 
         # --- Devices ---
         dev_total = Device.query.count()
-        dev_active = Device.query.filter_by(status='active').count()
-        dev_inactive = Device.query.filter_by(status='inactive').count()
+        dev_online = Device.query.filter_by(status='online').count()
+        dev_offline = Device.query.filter_by(status='offline').count()
+        dev_pending = Device.query.filter_by(status='update').count()
 
         # --- Business development (light aggregates) ---
         bd_projects = BDProject.query.count()
@@ -1256,8 +1257,9 @@ def dashboard_overview():
             },
             'devices': {
                 'total': dev_total,
-                'active': dev_active,
-                'inactive': dev_inactive,
+                'online': dev_online,
+                'offline': dev_offline,
+                'pending_updates': dev_pending,
             },
             'bd': {
                 'projects_total': bd_projects,
@@ -1417,64 +1419,6 @@ def list_devices():
         return error_response('Failed to fetch devices', status_code=500, error_code='DATABASE_ERROR')
 
 
-def _sanitize_asset_owner_name(raw) -> str | None:
-    if raw is None:
-        return None
-    s = str(raw).strip()
-    if not s or s.lower() == 'nan':
-        return None
-    return s[:255]
-
-
-def _parse_assignment_date(value):
-    """Return a date or None. Accepts ISO strings, common formats, Excel/pandas dates."""
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    try:
-        import pandas as pd
-        if pd.isna(value):
-            return None
-    except Exception:
-        pass
-    if hasattr(value, 'to_pydatetime'):
-        try:
-            return value.to_pydatetime().date()
-        except Exception:
-            pass
-    if hasattr(value, 'date') and callable(getattr(value, 'date', None)):
-        try:
-            d = value.date()
-            if isinstance(d, date) and not isinstance(d, datetime):
-                return d
-        except Exception:
-            pass
-    s = str(value).strip()
-    if not s or s.lower() == 'nan':
-        return None
-    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
-        try:
-            return datetime.strptime(s[:10], fmt).date()
-        except ValueError:
-            continue
-    try:
-        return datetime.strptime(s[:10], '%Y-%m-%d').date()
-    except ValueError:
-        return None
-
-
-def _sanitize_device_comment(raw) -> str | None:
-    if raw is None:
-        return None
-    s = str(raw).strip()
-    if not s:
-        return None
-    return s[:10000]
-
-
 @admin_bp.route('/devices', methods=['POST'])
 @jwt_required()
 @admin_required
@@ -1485,15 +1429,17 @@ def create_device():
         name = (data.get('name') or '').strip()
         device_type = (data.get('device_type') or 'Laptop').strip()
         os = (data.get('os') or 'Windows 11').strip()
+        user_email = (data.get('assigned_user_email') or '').strip()
         serial = (data.get('serial_or_asset_tag') or '').strip()
-        note = _sanitize_device_comment(data.get('comment'))
-        asset_owner = _sanitize_asset_owner_name(data.get('asset_owner_name'))
-        assign_date = _parse_assignment_date(data.get('assignment_date'))
-        st_raw = str(data.get('status') or 'active').strip().lower()
-        status_val = st_raw if st_raw in ('active', 'inactive') else 'active'
 
         if not name:
             return error_response('Device name is required', status_code=400, error_code='VALIDATION_ERROR')
+
+        assigned_user_id = None
+        if user_email:
+            user = User.query.filter_by(email=user_email).first()
+            if user:
+                assigned_user_id = user.id
 
         # Generate unique device_id
         import random
@@ -1510,13 +1456,10 @@ def create_device():
             name=name,
             device_type=device_type,
             os=os,
-            status=status_val,
+            status='idle',
             health=random.randint(80, 100),
-            assigned_user_id=None,
-            asset_owner_name=asset_owner,
-            assignment_date=assign_date,
+            assigned_user_id=assigned_user_id,
             serial_or_asset_tag=serial or None,
-            comment=note,
             last_active_at=datetime.utcnow()
         )
         db.session.add(device)
@@ -1532,88 +1475,13 @@ def create_device():
         return error_response('Failed to enroll device', status_code=500, error_code='DATABASE_ERROR')
 
 
-@admin_bp.route('/devices/<int:id>', methods=['PATCH'])
-@jwt_required()
-@admin_required
-def patch_device(id):
-    """Update device fields (e.g. admin comment)."""
-    try:
-        device = Device.query.get(id)
-        if not device:
-            return error_response('Device not found', status_code=404, error_code='NOT_FOUND')
-        data = request.get_json() or {}
-        allowed_types = {'Laptop', 'Desktop', 'Mobile', 'Server', 'Tablet'}
-
-        if 'status' in data:
-            st = str(data.get('status') or '').strip().lower()
-            if st not in ('active', 'inactive'):
-                return error_response(
-                    'status must be "active" or "inactive"',
-                    status_code=400,
-                    error_code='VALIDATION_ERROR',
-                )
-        if 'name' in data:
-            name = (data.get('name') or '').strip()
-            if not name:
-                return error_response('Device name cannot be empty', status_code=400, error_code='VALIDATION_ERROR')
-        if 'device_type' in data:
-            dt = (data.get('device_type') or '').strip()
-            if dt not in allowed_types:
-                return error_response(
-                    'device_type must be one of: Laptop, Desktop, Mobile, Server, Tablet',
-                    status_code=400,
-                    error_code='VALIDATION_ERROR',
-                )
-
-        if 'name' in data:
-            device.name = (data.get('name') or '').strip()
-        if 'device_type' in data:
-            device.device_type = (data.get('device_type') or '').strip()
-        if 'os' in data:
-            device.os = (data.get('os') or '').strip() or 'Windows 11'
-        if 'serial_or_asset_tag' in data:
-            raw = data.get('serial_or_asset_tag')
-            if raw is None:
-                device.serial_or_asset_tag = None
-            else:
-                s = str(raw).strip()
-                device.serial_or_asset_tag = s or None
-        if 'asset_owner_name' in data:
-            device.asset_owner_name = _sanitize_asset_owner_name(data.get('asset_owner_name'))
-        if 'assignment_date' in data:
-            raw = data.get('assignment_date')
-            if raw in (None, ''):
-                device.assignment_date = None
-            else:
-                ad = _parse_assignment_date(raw)
-                if ad is None:
-                    return error_response(
-                        'assignment_date must be a valid date (e.g. YYYY-MM-DD)',
-                        status_code=400,
-                        error_code='VALIDATION_ERROR',
-                    )
-                device.assignment_date = ad
-        if 'comment' in data:
-            device.comment = _sanitize_device_comment(data.get('comment'))
-        if 'status' in data:
-            device.status = str(data.get('status') or '').strip().lower()
-        db.session.commit()
-        return success_response({'device': device.to_dict()})
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error updating device: {str(e)}", exc_info=True)
-        return error_response('Failed to update device', status_code=500, error_code='DATABASE_ERROR')
-
-
 @admin_bp.route('/devices/<int:id>', methods=['DELETE'])
 @jwt_required()
 @admin_required
 def delete_device(id):
     """Remove a device"""
     try:
-        device = Device.query.get(id)
-        if not device:
-            return error_response('Device not found', status_code=404, error_code='NOT_FOUND')
+        device = Device.query.get_or_404(id)
         name = device.name
         db.session.delete(device)
         db.session.commit()
@@ -1624,45 +1492,6 @@ def delete_device(id):
         return error_response('Failed to remove device', status_code=500, error_code='DATABASE_ERROR')
 
 
-@admin_bp.route('/devices/bulk-delete', methods=['POST'])
-@jwt_required()
-@admin_required
-def bulk_delete_devices():
-    """Remove multiple devices by primary key id (from Device Inventory checkboxes)."""
-    try:
-        data = request.get_json() or {}
-        raw_ids = data.get('ids')
-        if not isinstance(raw_ids, list) or not raw_ids:
-            return error_response(
-                'ids (non-empty list of integers) is required',
-                status_code=400,
-                error_code='VALIDATION_ERROR',
-            )
-        clean_ids = []
-        for x in raw_ids[:500]:
-            try:
-                clean_ids.append(int(x))
-            except (TypeError, ValueError):
-                continue
-        if not clean_ids:
-            return error_response('No valid device ids', status_code=400, error_code='VALIDATION_ERROR')
-
-        devices = Device.query.filter(Device.id.in_(clean_ids)).all()
-        deleted = 0
-        for dev in devices:
-            db.session.delete(dev)
-            deleted += 1
-        db.session.commit()
-        return success_response({
-            'deleted': deleted,
-            'requested': len(clean_ids),
-        })
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error bulk-deleting devices: {str(e)}", exc_info=True)
-        return error_response('Failed to remove devices', status_code=500, error_code='DATABASE_ERROR')
-
-
 @admin_bp.route('/devices/stats', methods=['GET'])
 @jwt_required()
 @admin_required
@@ -1670,12 +1499,14 @@ def device_stats():
     """Get device statistics for dashboard"""
     try:
         total = Device.query.count()
-        active = Device.query.filter_by(status='active').count()
-        inactive = Device.query.filter_by(status='inactive').count()
+        online = Device.query.filter_by(status='online').count()
+        offline = Device.query.filter_by(status='offline').count()
+        pending_updates = Device.query.filter_by(status='update').count()
         return success_response({
             'total': total,
-            'active': active,
-            'inactive': inactive,
+            'online': online,
+            'offline': offline,
+            'pending_updates': pending_updates
         })
     except Exception as e:
         current_app.logger.error(f"Error getting device stats: {str(e)}", exc_info=True)
@@ -1751,22 +1582,13 @@ def import_devices_excel():
             'status': 'status',
             'health': 'health',
             'health percent': 'health',
-            'asset owner': 'asset_owner_name',
-            'asset owner name': 'asset_owner_name',
-            'owner name': 'asset_owner_name',
-            'owner': 'asset_owner_name',
-            'date of assignment': 'assignment_date',
-            'assignment date': 'assignment_date',
-            'assigned date': 'assignment_date',
+            'assigned user email': 'assigned_user_email',
+            'user email': 'assigned_user_email',
+            'email': 'assigned_user_email',
             'serial': 'serial_or_asset_tag',
             'serial number': 'serial_or_asset_tag',
             'asset tag': 'serial_or_asset_tag',
             'serial or asset tag': 'serial_or_asset_tag',
-            'comment': 'comment',
-            'notes': 'comment',
-            'note': 'comment',
-            'remarks': 'comment',
-            'extra comment': 'comment',
         }
 
         canonical_to_original = {}
@@ -1806,23 +1628,15 @@ def import_devices_excel():
 
         def normalize_status(value):
             s = str(value or '').strip().lower()
-            if s in ('active', 'inactive'):
+            if s in ['online', 'offline', 'update', 'idle']:
                 return s
-            if s in ('offline', 'update', 'off', 'disabled'):
-                return 'inactive'
-            if s in ('online', 'idle', 'on', 'enabled'):
-                return 'active'
-            if not s:
-                return 'active'
-            if 'inactive' in s or 'offline' in s:
-                return 'inactive'
-            if 'online' in s or 'idle' in s:
-                return 'active'
-            if 'update' in s or 'warn' in s:
-                return 'inactive'
-            if 'active' in s:
-                return 'active'
-            return 'active'
+            if 'warn' in s or 'update' in s:
+                return 'update'
+            if 'off' in s:
+                return 'offline'
+            if 'on' in s:
+                return 'online'
+            return 'idle'
 
         imported = 0
         skipped_duplicates = 0
@@ -1839,22 +1653,23 @@ def import_devices_excel():
 
                 device_type = str(cell(row, 'device_type', 'Laptop')).strip() or 'Laptop'
                 os = str(cell(row, 'os', 'Windows 11')).strip() or 'Windows 11'
-                status = normalize_status(cell(row, 'status', 'active'))
+                status = normalize_status(cell(row, 'status', 'idle'))
                 health = max(0, min(100, safe_int(cell(row, 'health', random.randint(75, 100)), random.randint(75, 100))))
-                owner_nm = _sanitize_asset_owner_name(cell(row, 'asset_owner_name', ''))
-                assign_dt = _parse_assignment_date(cell(row, 'assignment_date', None))
+                user_email = str(cell(row, 'assigned_user_email', '')).strip()
                 serial = str(cell(row, 'serial_or_asset_tag', '')).strip()
                 if serial.lower() == 'nan':
                     serial = ''
-                comment_cell = str(cell(row, 'comment', '')).strip()
-                if comment_cell.lower() == 'nan':
-                    comment_cell = ''
-                row_comment = _sanitize_device_comment(comment_cell)
 
                 dup_key = f"{name.lower()}|{serial.lower()}"
                 if dup_key in existing_keys:
                     skipped_duplicates += 1
                     continue
+
+                assigned_user_id = None
+                if user_email and user_email.lower() != 'nan':
+                    matched_user = User.query.filter_by(email=user_email).first()
+                    if matched_user:
+                        assigned_user_id = matched_user.id
 
                 # Generate unique device_id
                 for _ in range(80):
@@ -1872,11 +1687,8 @@ def import_devices_excel():
                     os=os,
                     status=status,
                     health=health,
-                    assigned_user_id=None,
-                    asset_owner_name=owner_nm,
-                    assignment_date=assign_dt,
+                    assigned_user_id=assigned_user_id,
                     serial_or_asset_tag=serial or None,
-                    comment=row_comment,
                     last_active_at=datetime.utcnow()
                 )
                 db.session.add(device)
@@ -1908,16 +1720,16 @@ def download_devices_sample_excel():
         import pandas as pd
 
         rows = [
-            {'Device Name': 'LAPTOP-HQ-001', 'Device Type': 'Laptop', 'OS': 'Windows 11 Pro', 'Status': 'active', 'Health': 96, 'Asset Owner Name': 'A. Khan', 'Date of Assignment': '2025-01-15', 'Serial / Asset Tag': 'AST-10001', 'Comment': 'Loaner for HQ — return by Q3'},
-            {'Device Name': 'DESKTOP-FIN-014', 'Device Type': 'Desktop', 'OS': 'Windows 10', 'Status': 'active', 'Health': 88, 'Asset Owner Name': '', 'Date of Assignment': '', 'Serial / Asset Tag': 'AST-10002', 'Comment': ''},
-            {'Device Name': 'MOBILE-OPS-022', 'Device Type': 'Mobile', 'OS': 'Android 15', 'Status': 'active', 'Health': 93, 'Asset Owner Name': '', 'Date of Assignment': '', 'Serial / Asset Tag': 'AST-10003', 'Comment': ''},
-            {'Device Name': 'TABLET-QA-005', 'Device Type': 'Tablet', 'OS': 'iOS 18', 'Status': 'inactive', 'Health': 72, 'Asset Owner Name': '', 'Date of Assignment': '', 'Serial / Asset Tag': 'AST-10004', 'Comment': ''},
-            {'Device Name': 'SERVER-DC-002', 'Device Type': 'Server', 'OS': 'Ubuntu 24.04', 'Status': 'active', 'Health': 91, 'Asset Owner Name': '', 'Date of Assignment': '', 'Serial / Asset Tag': 'AST-10005', 'Comment': ''},
-            {'Device Name': 'LAPTOP-BD-011', 'Device Type': 'Laptop', 'OS': 'macOS Sequoia', 'Status': 'inactive', 'Health': 54, 'Asset Owner Name': '', 'Date of Assignment': '', 'Serial / Asset Tag': 'AST-10006', 'Comment': ''},
-            {'Device Name': 'DESKTOP-HR-018', 'Device Type': 'Desktop', 'OS': 'Windows 11', 'Status': 'active', 'Health': 84, 'Asset Owner Name': '', 'Date of Assignment': '', 'Serial / Asset Tag': 'AST-10007', 'Comment': ''},
-            {'Device Name': 'LAPTOP-ENG-031', 'Device Type': 'Laptop', 'OS': 'Windows 11', 'Status': 'active', 'Health': 97, 'Asset Owner Name': '', 'Date of Assignment': '', 'Serial / Asset Tag': 'AST-10008', 'Comment': ''},
-            {'Device Name': 'MOBILE-FIELD-040', 'Device Type': 'Mobile', 'OS': 'Android 14', 'Status': 'inactive', 'Health': 67, 'Asset Owner Name': '', 'Date of Assignment': '', 'Serial / Asset Tag': 'AST-10009', 'Comment': ''},
-            {'Device Name': 'TABLET-MEET-003', 'Device Type': 'Tablet', 'OS': 'iPadOS 18', 'Status': 'active', 'Health': 89, 'Asset Owner Name': '', 'Date of Assignment': '', 'Serial / Asset Tag': 'AST-10010', 'Comment': ''},
+            {'Device Name': 'LAPTOP-HQ-001', 'Device Type': 'Laptop', 'OS': 'Windows 11 Pro', 'Status': 'online', 'Health': 96, 'Assigned User Email': 'admin@injaaz.ae', 'Serial / Asset Tag': 'AST-10001'},
+            {'Device Name': 'DESKTOP-FIN-014', 'Device Type': 'Desktop', 'OS': 'Windows 10', 'Status': 'idle', 'Health': 88, 'Assigned User Email': '', 'Serial / Asset Tag': 'AST-10002'},
+            {'Device Name': 'MOBILE-OPS-022', 'Device Type': 'Mobile', 'OS': 'Android 15', 'Status': 'online', 'Health': 93, 'Assigned User Email': '', 'Serial / Asset Tag': 'AST-10003'},
+            {'Device Name': 'TABLET-QA-005', 'Device Type': 'Tablet', 'OS': 'iOS 18', 'Status': 'update', 'Health': 72, 'Assigned User Email': '', 'Serial / Asset Tag': 'AST-10004'},
+            {'Device Name': 'SERVER-DC-002', 'Device Type': 'Server', 'OS': 'Ubuntu 24.04', 'Status': 'online', 'Health': 91, 'Assigned User Email': '', 'Serial / Asset Tag': 'AST-10005'},
+            {'Device Name': 'LAPTOP-BD-011', 'Device Type': 'Laptop', 'OS': 'macOS Sequoia', 'Status': 'offline', 'Health': 54, 'Assigned User Email': '', 'Serial / Asset Tag': 'AST-10006'},
+            {'Device Name': 'DESKTOP-HR-018', 'Device Type': 'Desktop', 'OS': 'Windows 11', 'Status': 'idle', 'Health': 84, 'Assigned User Email': '', 'Serial / Asset Tag': 'AST-10007'},
+            {'Device Name': 'LAPTOP-ENG-031', 'Device Type': 'Laptop', 'OS': 'Windows 11', 'Status': 'online', 'Health': 97, 'Assigned User Email': '', 'Serial / Asset Tag': 'AST-10008'},
+            {'Device Name': 'MOBILE-FIELD-040', 'Device Type': 'Mobile', 'OS': 'Android 14', 'Status': 'update', 'Health': 67, 'Assigned User Email': '', 'Serial / Asset Tag': 'AST-10009'},
+            {'Device Name': 'TABLET-MEET-003', 'Device Type': 'Tablet', 'OS': 'iPadOS 18', 'Status': 'online', 'Health': 89, 'Assigned User Email': '', 'Serial / Asset Tag': 'AST-10010'},
         ]
 
         df = pd.DataFrame(rows)
@@ -1936,96 +1748,6 @@ def download_devices_sample_excel():
     except Exception as e:
         current_app.logger.error(f"Error generating sample device Excel: {str(e)}", exc_info=True)
         return error_response('Failed to generate sample Excel', status_code=500, error_code='DATABASE_ERROR')
-
-
-DEVICE_HANDOVER_CONDITIONS = frozenset({'excellent', 'good', 'fair', 'poor'})
-
-
-@admin_bp.route('/devices/<int:device_id>/handovers', methods=['GET'])
-@jwt_required()
-@admin_required
-def list_device_handovers(device_id):
-    """List handover log entries for a device (newest first)."""
-    try:
-        device = Device.query.get(device_id)
-        if not device:
-            return error_response('Device not found', status_code=404, error_code='NOT_FOUND')
-        rows = DeviceHandover.query.filter_by(device_id=device_id).order_by(
-            DeviceHandover.handover_at.desc()
-        ).limit(100).all()
-        return success_response({'handovers': [h.to_dict() for h in rows]})
-    except Exception as e:
-        current_app.logger.error(f"Error listing device handovers: {str(e)}", exc_info=True)
-        return error_response('Failed to load handovers', status_code=500, error_code='DATABASE_ERROR')
-
-
-@admin_bp.route('/devices/<int:device_id>/handovers', methods=['POST'])
-@jwt_required()
-@admin_required
-def create_device_handover(device_id):
-    """Record an asset handover; optionally updates device owner fields."""
-    try:
-        device = Device.query.get(device_id)
-        if not device:
-            return error_response('Device not found', status_code=404, error_code='NOT_FOUND')
-        data = request.get_json() or {}
-        from_name = (data.get('from_person_name') or '').strip()
-        to_name = (data.get('to_person_name') or '').strip()
-        if not from_name:
-            return error_response('from_person_name is required', status_code=400, error_code='VALIDATION_ERROR')
-        if not to_name:
-            return error_response('to_person_name is required', status_code=400, error_code='VALIDATION_ERROR')
-        rating = (data.get('condition_rating') or '').strip().lower()
-        if rating not in DEVICE_HANDOVER_CONDITIONS:
-            return error_response(
-                'condition_rating must be one of: excellent, good, fair, poor',
-                status_code=400,
-                error_code='VALIDATION_ERROR',
-            )
-        handover_at = _parse_iso_datetime(data.get('handover_at')) or datetime.utcnow()
-
-        def _clip(s, n):
-            if s is None:
-                return None
-            t = str(s).strip()
-            return t[:n] if t else None
-
-        try:
-            uid = int(get_jwt_identity())
-        except (TypeError, ValueError):
-            uid = None
-
-        ho = DeviceHandover(
-            device_id=device.id,
-            handover_at=handover_at,
-            from_person_name=_clip(from_name, 255),
-            from_person_email=_clip(data.get('from_person_email'), 255),
-            from_person_phone=_clip(data.get('from_person_phone'), 80),
-            to_person_name=_clip(to_name, 255),
-            to_person_email=_clip(data.get('to_person_email'), 255),
-            to_person_phone=_clip(data.get('to_person_phone'), 80),
-            condition_rating=rating,
-            condition_detail=_clip(data.get('condition_detail'), 10000),
-            accessories_included=_clip(data.get('accessories_included'), 10000),
-            defects_reported=_clip(data.get('defects_reported'), 10000),
-            notes=_clip(data.get('notes'), 10000),
-            recorded_by_user_id=uid,
-        )
-        db.session.add(ho)
-
-        if data.get('apply_to_device'):
-            device.asset_owner_name = _clip(to_name, 255)
-            device.assignment_date = ho.handover_at.date() if ho.handover_at else date.today()
-
-        db.session.commit()
-        return success_response({
-            'handover': ho.to_dict(),
-            'device': device.to_dict(),
-        }, status_code=201)
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error creating device handover: {str(e)}", exc_info=True)
-        return error_response('Failed to record handover', status_code=500, error_code='DATABASE_ERROR')
 
 
 def _parse_iso_date(value):
