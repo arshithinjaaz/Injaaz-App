@@ -206,6 +206,7 @@
     }
     @media (max-width: 900px) {
       body.admin-dh-page.has-main-nav {
+        --nav-offset: 4rem;
         height: auto;
         min-height: 100vh;
         overflow-y: auto !important;
@@ -230,14 +231,9 @@
         flex: none;
         min-height: 0;
       }
+      /* Hide sidebar on mobile — use hamburger drawer for navigation */
       .admin-dh-page-root .dh-sidebar {
-        position: static;
-        height: auto;
-        max-height: none;
-        width: 100%;
-        min-width: 0;
-        flex: 0 0 auto;
-        align-self: stretch;
+        display: none !important;
       }
     }
     @media (max-width: 480px) {
