@@ -475,6 +475,15 @@ def _approve_current_cycle(approved_by: str = 'admin') -> bool:
     return True
 
 
+def _is_current_cycle_approved_for_send() -> bool:
+    """True when the active dispatch cycle exists and was explicitly approved (manual or scheduled send allowed)."""
+    log = _load_cycle_log()
+    cur = log.get('current')
+    if not isinstance(cur, dict):
+        return False
+    return cur.get('status') == 'approved'
+
+
 def _complete_current_cycle(sent_by: str, subject: str,
                              recipient_count: int, report_filename: str) -> int | None:
     """Mark current cycle sent, move it to history, clear current (await next Excel). Returns cycle_id."""
@@ -1081,6 +1090,7 @@ def get_automation_status():
         last_run and last_run['is_today'] and last_run['status'] == 'success'
     )
     waiting_fresh = bool(config.get('automation_waiting_for_fresh_upload'))
+    cycle_approved = _is_current_cycle_approved_for_send()
 
     return jsonify({
         'schedule_enabled': schedule_enabled,
@@ -1094,6 +1104,7 @@ def get_automation_status():
         'automation_waiting_for_fresh_upload': waiting_fresh,
         'last_run': last_run,
         'automation_status': automation_status,
+        'cycle_approved': cycle_approved,
     })
 
 
@@ -1198,6 +1209,14 @@ def resume_automation():
     path = _upload_path()
     if not os.path.exists(path):
         return jsonify({'error': 'Upload an Excel file first to resume automation.'}), 400
+    if not _is_current_cycle_approved_for_send():
+        return jsonify({
+            'error': (
+                'Approve this report first. Open the automation roadmap and click '
+                '“Mark Reviewed”, then resume.'
+            ),
+            'code': 'approval_required',
+        }), 400
     config = _load_config()
     if config.get('automation_waiting_for_fresh_upload'):
         try:
@@ -1369,6 +1388,15 @@ def send_email_now():
 
     if not os.path.exists(path):
         return jsonify({'error': 'No MMR file uploaded yet. Please upload an Excel file first.'}), 400
+
+    if not _is_current_cycle_approved_for_send():
+        return jsonify({
+            'error': (
+                'This report must be reviewed and approved before sending. '
+                'Open the automation roadmap and click “Mark Reviewed”, then try again.'
+            ),
+            'code': 'approval_required',
+        }), 403
 
     to_raw = data.get('to', '').strip()
     cc_raw = data.get('cc', '').strip()

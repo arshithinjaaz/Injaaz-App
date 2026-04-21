@@ -185,8 +185,14 @@ def login():
         
         # Store session for token revocation
         from flask_jwt_extended import decode_token
-        access_jti = decode_token(access_token)['jti']
-        access_exp = datetime.fromtimestamp(decode_token(access_token)['exp'])
+        decoded_access = decode_token(access_token)
+        access_jti = decoded_access['jti']
+        exp_ts = decoded_access.get('exp')
+        if exp_ts is not None:
+            access_exp = datetime.fromtimestamp(exp_ts)
+        else:
+            # Non-expiring access tokens (e.g. tests: JWT_ACCESS_TOKEN_EXPIRES = False)
+            access_exp = datetime.utcnow() + timedelta(days=365 * 100)
         
         session = Session(
             user_id=user.id,

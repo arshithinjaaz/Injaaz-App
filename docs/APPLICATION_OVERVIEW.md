@@ -79,6 +79,7 @@ Shared code lives under `app/`, `common/`, and domain folders such as `module_hv
 | Document | Contents |
 |----------|----------|
 | [README.md](../README.md) | Quick start, tech stack summary |
+| [PROJECT_SCOPE_METHODS_AND_TECHNIQUES.md](PROJECT_SCOPE_METHODS_AND_TECHNIQUES.md) | Full scope, methods, libraries, blueprint map |
 | [SETUP.md](../SETUP.md) | Full setup and environment |
 | [PROJECT_STRUCTURE.md](../PROJECT_STRUCTURE.md) | Directory layout |
 | [PROJECT_FLOW.md](../PROJECT_FLOW.md) | Application workflow |

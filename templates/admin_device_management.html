@@ -251,7 +251,7 @@
 
     .dm-stats-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 16px;
       margin-bottom: 28px;
     }
@@ -424,10 +424,35 @@
     .dm-status-pill.online::before { background: var(--green); box-shadow: 0 0 0 2px rgba(18,84,53,0.2); animation: dm-pulse 2s infinite; }
     .dm-status-pill.offline { background: var(--gray-50); color: var(--gray-400); }
     .dm-status-pill.offline::before { background: var(--gray-400); }
+    .dm-status-pill.active { background: #e8f5ee; color: var(--green); }
+    .dm-status-pill.active::before { background: var(--green); box-shadow: 0 0 0 2px rgba(18,84,53,0.2); }
+    .dm-status-pill.inactive { background: var(--gray-50); color: var(--gray-600); }
+    .dm-status-pill.inactive::before { background: var(--gray-400); }
     .dm-status-pill.warning { background: #fef3e2; color: var(--warning); }
     .dm-status-pill.warning::before { background: var(--warning); }
     .dm-status-pill.maintenance { background: #e8f0fb; color: var(--info); }
     .dm-status-pill.maintenance::before { background: var(--info); }
+    .dm-status-select {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 28px 6px 10px;
+      border-radius: 20px;
+      border: 1.5px solid var(--gray-200);
+      background: white;
+      color: var(--gray-900);
+      cursor: pointer;
+      max-width: 130px;
+      font-family: inherit;
+    }
+    .dm-status-select:focus {
+      outline: none;
+      border-color: var(--green-light);
+      box-shadow: 0 0 0 2px rgba(34, 160, 99, 0.2);
+    }
+    .dm-detail-status-select {
+      max-width: 160px;
+      border-radius: var(--radius-sm);
+    }
     @keyframes dm-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
     .dm-tag {
@@ -441,14 +466,6 @@
       border: 1px solid var(--gray-100);
     }
 
-    .dm-health-bar-wrap { width: 80px; }
-    .dm-health-label { font-size: 11px; font-weight: 600; margin-bottom: 4px; }
-    .dm-health-bar { height: 5px; background: var(--gray-100); border-radius: 3px; overflow: hidden; }
-    .dm-health-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
-    .dm-health-fill.good { background: var(--green); }
-    .dm-health-fill.ok { background: var(--warning); }
-    .dm-health-fill.bad { background: var(--danger); }
-
     .dm-action-btn {
       width: 28px; height: 28px;
       border-radius: 6px;
@@ -456,13 +473,457 @@
       border: 1.5px solid var(--gray-100);
       background: white;
       cursor: pointer;
-      color: var(--gray-400);
+      color: var(--gray-600);
       font-size: 14px;
       transition: all 0.15s;
       text-decoration: none;
+      padding: 0;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    button.dm-action-btn {
+      appearance: none;
+      -webkit-appearance: none;
+      font: inherit;
     }
     .dm-action-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-pale); }
     .dm-action-btn.danger:hover { border-color: var(--danger); color: var(--danger); background: #fdecea; }
+
+    .dm-btn-bulk-delete {
+      margin-left: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1.5px solid #f5c6c3;
+      background: #fdecea;
+      color: var(--danger);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .dm-btn-bulk-delete:hover:not(:disabled) {
+      background: #fad4d0;
+      border-color: var(--danger);
+    }
+    .dm-btn-bulk-delete:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .dm-notes-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 220px;
+    }
+    .dm-notes-preview {
+      font-size: 12px;
+      color: var(--gray-600);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+    }
+    .dm-notes-edit {
+      flex-shrink: 0;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      background: white;
+      color: var(--green);
+      cursor: pointer;
+    }
+    .dm-notes-edit:hover { background: var(--green-pale); border-color: var(--green); }
+    .dm-modal-body textarea#deviceCommentText {
+      width: 100%;
+      min-height: 120px;
+      padding: 10px 12px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      resize: vertical;
+    }
+
+    /* Device detail (asset) panel */
+    .dm-detail-modal.dm-modal {
+      max-width: 600px;
+      width: calc(100% - 2rem);
+      padding: 0;
+      overflow: hidden;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+    }
+    .dm-detail-hero {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 1.25rem 1rem 1.15rem 1.25rem;
+      background: linear-gradient(135deg, var(--green-pale) 0%, #fff 55%);
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .dm-detail-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: white;
+      border: 1.5px solid var(--green-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-sm);
+      margin-top: 2px;
+    }
+    .dm-detail-hero-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    .dm-detail-name-input {
+      width: 100%;
+      margin: 0;
+      padding: 8px 12px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      font-family: inherit;
+      color: var(--gray-900);
+      letter-spacing: -0.02em;
+      line-height: 1.3;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 10px;
+      background: white;
+      box-sizing: border-box;
+    }
+    .dm-detail-name-input:focus {
+      outline: none;
+      border-color: var(--green-light);
+      box-shadow: 0 0 0 2px rgba(34, 160, 99, 0.18);
+    }
+    .dm-detail-chip {
+      display: inline-flex;
+      align-self: flex-start;
+      align-items: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--green);
+      background: rgba(18,84,53,0.08);
+      padding: 5px 11px;
+      border-radius: 7px;
+      border: 1px solid rgba(18,84,53,0.12);
+    }
+    .dm-detail-hero-close {
+      flex-shrink: 0;
+      align-self: flex-start;
+      margin: 0;
+      position: static;
+    }
+    button.dm-detail-hero-close {
+      appearance: none;
+      -webkit-appearance: none;
+      font: inherit;
+    }
+    .dm-detail-body { padding: 1rem 1.25rem 1.25rem; }
+    .dm-detail-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 16px;
+      align-items: end;
+    }
+    @media (max-width: 560px) {
+      .dm-detail-form-grid { grid-template-columns: 1fr; }
+    }
+    .dm-detail-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;
+    }
+    .dm-detail-field.span-2 { grid-column: 1 / -1; }
+    .dm-detail-field .k,
+    .dm-detail-field label.k {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+    }
+    .dm-detail-control,
+    .dm-detail-field select.dm-detail-control,
+    .dm-detail-field input.dm-detail-control {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      color: var(--gray-900);
+      padding: 8px 10px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      background: white;
+    }
+    .dm-detail-control:focus {
+      outline: none;
+      border-color: var(--green-light);
+      box-shadow: 0 0 0 2px rgba(34, 160, 99, 0.15);
+    }
+    .dm-detail-readonly {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gray-700);
+      padding: 8px 0;
+      word-break: break-word;
+    }
+    .dm-detail-notes-block {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--gray-100);
+    }
+    .dm-detail-notes-head {
+      margin-bottom: 8px;
+    }
+    .dm-detail-notes-head .k { margin-bottom: 0; }
+    .dm-detail-notes-input {
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 120px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--gray-800);
+      font-family: inherit;
+      padding: 12px 14px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 10px;
+      background: var(--gray-50);
+      resize: vertical;
+    }
+    .dm-detail-notes-input:focus {
+      outline: none;
+      border-color: var(--green-light);
+      background: white;
+      box-shadow: 0 0 0 2px rgba(34, 160, 99, 0.12);
+    }
+    .dm-detail-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 1.25rem 1.25rem;
+    }
+    .dm-btn-save-changes {
+      padding: 9px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      background: var(--green);
+      color: white;
+      cursor: pointer;
+      font-family: inherit;
+      box-shadow: 0 2px 8px rgba(18,84,53,0.25);
+    }
+    .dm-btn-save-changes:hover:not(:disabled) { background: var(--green-mid); }
+    .dm-btn-save-changes:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .dm-detail-handover-panel {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--gray-100);
+    }
+    .dm-detail-handover-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .dm-btn-handover {
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1.5px solid var(--green-border);
+      background: white;
+      color: var(--green);
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .dm-btn-handover:hover { background: var(--green-pale); }
+    .dm-handover-history {
+      max-height: 220px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .dm-ho-card {
+      border: 1px solid var(--gray-100);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: var(--gray-50);
+      font-size: 12px;
+    }
+    .dm-ho-card-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .dm-ho-date { font-weight: 600; color: var(--gray-900); }
+    .dm-ho-cond {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .dm-ho-cond.excellent { background: #e8f5ee; color: var(--green); }
+    .dm-ho-cond.good { background: #e8f0fb; color: var(--info); }
+    .dm-ho-cond.fair { background: #fef3e2; color: var(--warning); }
+    .dm-ho-cond.poor { background: #fdecea; color: var(--danger); }
+    .dm-ho-flow { color: var(--gray-700); font-weight: 500; margin-bottom: 4px; }
+    .dm-ho-meta { font-size: 11px; color: var(--gray-500); line-height: 1.45; }
+    .dm-handover-empty {
+      font-size: 12px;
+      color: var(--gray-400);
+      padding: 12px;
+      text-align: center;
+      border: 1px dashed var(--gray-200);
+      border-radius: 10px;
+    }
+
+    .dm-handover-modal.dm-modal {
+      max-width: 640px;
+      width: calc(100% - 2rem);
+      max-height: min(92vh, 900px);
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow: hidden;
+    }
+    .dm-handover-body {
+      padding: 0 22px 18px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+    .dm-ho-intro {
+      font-size: 13px;
+      color: var(--gray-600);
+      line-height: 1.5;
+      margin: 0 0 16px;
+      padding: 10px 12px;
+      background: var(--green-pale);
+      border-radius: 10px;
+      border: 1px solid var(--green-border);
+    }
+    .dm-ho-section {
+      margin-bottom: 18px;
+    }
+    .dm-ho-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin: 0 0 10px;
+    }
+    .dm-ho-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 12px;
+    }
+    @media (max-width: 520px) {
+      .dm-ho-grid { grid-template-columns: 1fr; }
+    }
+    .dm-ho-field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 4px;
+    }
+    .dm-ho-field input, .dm-ho-field textarea, .dm-ho-field select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+    }
+    .dm-ho-field textarea { min-height: 72px; resize: vertical; }
+    .dm-ho-field-full { grid-column: 1 / -1; }
+    .dm-ho-rating-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .dm-ho-rating-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin: 0;
+    }
+    .dm-ho-rating-row input { accent-color: var(--green); width: auto; }
+    .dm-ho-rating-row label:has(input:checked) {
+      border-color: var(--green);
+      background: var(--green-pale);
+      color: var(--green);
+    }
+    .dm-ho-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--gray-700);
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .dm-ho-check input { margin-top: 3px; accent-color: var(--green); }
+    .dm-detail-footer .dm-btn-ghost {
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1.5px solid var(--gray-200);
+      background: white;
+      color: var(--gray-700);
+      cursor: pointer;
+    }
+    .dm-detail-footer .dm-btn-ghost:hover { background: var(--gray-50); }
+    .dm-detail-footer .dm-btn-danger-outline {
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1.5px solid #f5c6c3;
+      background: #fff;
+      color: var(--danger);
+      cursor: pointer;
+    }
+    .dm-detail-footer .dm-btn-danger-outline:hover { background: #fdecea; }
 
     .dm-right-panel { display: flex; flex-direction: column; gap: 16px; }
 
@@ -679,6 +1140,217 @@
     .dm-table-scroll { overflow-x: auto; }
     .dm-table-scroll::-webkit-scrollbar { height: 6px; }
     .dm-table-scroll::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 10px; }
+
+    /* Mobile-first UX tuning */
+    @media (max-width: 900px) {
+      .dm-topbar {
+        padding: 10px 14px;
+        height: auto;
+        min-height: 64px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .dm-page-title { font-size: 15px; }
+      .dm-page-title span { font-size: 13px; }
+      .dm-topbar-spacer { display: none; }
+      .dm-search-wrap {
+        order: 3;
+        width: 100%;
+      }
+      .dm-search-wrap input,
+      .dm-search-wrap input:focus {
+        width: 100%;
+      }
+      .dm-add-btn {
+        margin-left: auto;
+        min-height: 42px;
+        padding: 10px 14px;
+      }
+
+      .dm-content { padding: 14px; }
+      .dm-stats-grid,
+      .dm-main-grid,
+      .dm-bottom-grid {
+        gap: 12px;
+      }
+      .dm-card-header {
+        padding: 14px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .dm-card-header-right {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .dm-filter-tabs {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .dm-filter-tab {
+        min-height: 38px;
+        text-align: center;
+      }
+      .dm-btn-bulk-delete {
+        min-height: 38px;
+      }
+      .dm-table-scroll {
+        -webkit-overflow-scrolling: touch;
+      }
+      .dm-device-table {
+        min-width: 760px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .dm-stat-card {
+        padding: 14px;
+      }
+      .dm-stat-value {
+        font-size: 24px;
+      }
+      .dm-stat-label {
+        font-size: 12px;
+      }
+
+      .dm-modal-overlay {
+        align-items: flex-end;
+      }
+      .dm-modal {
+        width: 100vw;
+        max-width: 100vw;
+        border-radius: 16px 16px 0 0;
+        max-height: min(92vh, 900px);
+      }
+      .dm-modal-header {
+        padding: 16px 14px 12px;
+      }
+      .dm-modal-body {
+        padding: 14px;
+      }
+      .dm-modal-footer {
+        padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+        gap: 8px;
+      }
+      .dm-modal-footer .dm-btn-cancel,
+      .dm-modal-footer .dm-btn-save {
+        flex: 1;
+        min-height: 44px;
+        padding: 10px 12px;
+      }
+      .dm-form-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .dm-detail-modal.dm-modal,
+      .dm-handover-modal.dm-modal {
+        width: 100vw;
+        max-width: 100vw;
+        border-radius: 16px 16px 0 0;
+      }
+      .dm-detail-body {
+        padding: 12px 14px 14px;
+      }
+      .dm-detail-footer {
+        padding: 0 14px calc(14px + env(safe-area-inset-bottom));
+        flex-direction: column-reverse;
+        align-items: stretch;
+      }
+      .dm-detail-footer button {
+        width: 100%;
+        min-height: 44px;
+      }
+      .dm-detail-handover-top {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .dm-btn-handover {
+        width: 100%;
+        min-height: 42px;
+      }
+      .dm-handover-history {
+        max-height: 250px;
+      }
+      .dm-handover-body {
+        padding: 0 14px 14px;
+      }
+      .dm-ho-rating-row label {
+        min-height: 38px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .dm-content {
+        padding: 10px;
+      }
+      .dm-card {
+        border-radius: 12px;
+      }
+      .dm-card-title {
+        font-size: 14px;
+      }
+      .dm-card-sub {
+        font-size: 11px;
+      }
+      .dm-action-btn {
+        width: 32px;
+        height: 32px;
+      }
+      .dm-actions-grid {
+        grid-template-columns: 1fr;
+      }
+      .dm-compliance-list,
+      .dm-alerts-list {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .dm-detail-hero {
+        padding: 12px 12px 10px;
+        gap: 10px;
+      }
+      .dm-detail-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+      }
+      .dm-detail-name-input {
+        font-size: 1rem;
+      }
+      .dm-detail-chip {
+        font-size: 10px;
+      }
+
+      .dm-ho-intro {
+        margin-bottom: 12px;
+        font-size: 12px;
+      }
+      .dm-ho-section {
+        margin-bottom: 14px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      /* Prevent mobile browser zoom and improve touch targets */
+      .dm-search-wrap input,
+      .dm-form-field input,
+      .dm-form-field select,
+      .dm-modal-body textarea#deviceCommentText,
+      .dm-detail-control,
+      .dm-detail-notes-input,
+      .dm-ho-field input,
+      .dm-ho-field textarea,
+      .dm-ho-field select {
+        font-size: 16px;
+      }
+      .dm-device-check {
+        width: 18px;
+        height: 18px;
+      }
+    }
   </style>
 </head>
 <body class="has-main-nav">
@@ -769,22 +1441,15 @@
             <div class="dm-stat-header">
               <div class="dm-stat-icon blue">🟢</div>
             </div>
-            <div class="dm-stat-value" id="onlineVal">0</div>
-            <div class="dm-stat-label">Online Now</div>
-          </div>
-          <div class="dm-stat-card amber">
-            <div class="dm-stat-header">
-              <div class="dm-stat-icon amber">⚠️</div>
-            </div>
-            <div class="dm-stat-value" id="pendingVal">0</div>
-            <div class="dm-stat-label">Needs Update</div>
+            <div class="dm-stat-value" id="activeVal">0</div>
+            <div class="dm-stat-label">Active</div>
           </div>
           <div class="dm-stat-card red">
             <div class="dm-stat-header">
-              <div class="dm-stat-icon red">🔴</div>
+              <div class="dm-stat-icon red">⏸</div>
             </div>
-            <div class="dm-stat-value" id="offlineVal">0</div>
-            <div class="dm-stat-label">Offline</div>
+            <div class="dm-stat-value" id="inactiveVal">0</div>
+            <div class="dm-stat-label">Inactive</div>
           </div>
         </div>
 
@@ -795,13 +1460,13 @@
                 <div class="dm-card-title">Device Inventory</div>
                 <div class="dm-card-sub" id="deviceCount">0 devices</div>
               </div>
-              <div class="dm-card-header-right">
+              <div class="dm-card-header-right" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;justify-content:flex-end">
                 <div class="dm-filter-tabs">
                   <button type="button" class="dm-filter-tab active" data-tab="all">All</button>
-                  <button type="button" class="dm-filter-tab" data-tab="online">Online</button>
-                  <button type="button" class="dm-filter-tab" data-tab="offline">Offline</button>
-                  <button type="button" class="dm-filter-tab" data-tab="update">Alerts</button>
+                  <button type="button" class="dm-filter-tab" data-tab="active">Active</button>
+                  <button type="button" class="dm-filter-tab" data-tab="inactive">Inactive</button>
                 </div>
+                <button type="button" class="dm-btn-bulk-delete" id="btnBulkDeleteDevices" disabled title="Delete selected rows">🗑 Delete selected</button>
               </div>
             </div>
             <div class="dm-table-scroll">
@@ -812,9 +1477,9 @@
                     <th>Device</th>
                     <th>Status</th>
                     <th>Type</th>
-                    <th>User</th>
-                    <th>Health</th>
+                    <th>Owner</th>
                     <th>OS</th>
+                    <th>Notes</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -983,16 +1648,220 @@
             </select>
           </div>
         </div>
+        <div class="dm-form-row">
+          <div class="dm-form-field">
+            <label>Asset owner name</label>
+            <input type="text" id="newDevOwner" placeholder="Optional" maxlength="255" autocomplete="off">
+          </div>
+          <div class="dm-form-field">
+            <label>Date of assignment</label>
+            <input type="date" id="newDevAssignDate">
+          </div>
+        </div>
         <div class="dm-form-row full">
           <div class="dm-form-field">
-            <label>Assigned User Email</label>
-            <input type="email" id="newDevUser" placeholder="user@company.com">
+            <label>Notes (optional)</label>
+            <textarea id="newDevComment" placeholder="e.g. warranty expiry, loaner, location…" maxlength="10000" rows="3" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-family:inherit;font-size:13px;resize:vertical"></textarea>
           </div>
         </div>
       </div>
       <div class="dm-modal-footer">
         <button type="button" class="dm-btn-cancel" id="modalCancel">Cancel</button>
         <button type="button" class="dm-btn-save" id="enrollSubmitBtn">Enroll Device</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dm-modal-overlay" id="deviceDetailModal" data-device-id="">
+    <div class="dm-modal dm-detail-modal" onclick="event.stopPropagation()">
+      <div class="dm-detail-hero">
+        <div class="dm-detail-icon" id="deviceDetailIcon" aria-hidden="true">💻</div>
+        <div class="dm-detail-hero-main">
+          <input type="text" id="deviceDetailNameInput" class="dm-detail-name-input" maxlength="255" autocomplete="off" aria-label="Device display name" placeholder="Device name">
+          <span class="dm-detail-chip" id="deviceDetailChip">DEV-0000</span>
+        </div>
+        <button type="button" class="dm-modal-close dm-detail-hero-close" id="deviceDetailClose" aria-label="Close">✕</button>
+      </div>
+      <div class="dm-detail-body">
+        <div class="dm-detail-form-grid" id="deviceDetailForm">
+          <div class="dm-detail-field">
+            <label class="k" for="deviceDetailStatus">Status</label>
+            <select id="deviceDetailStatus" class="dm-detail-control dm-detail-status-select" aria-label="Device status">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <div class="dm-detail-field">
+            <label class="k" for="deviceDetailType">Type</label>
+            <select id="deviceDetailType" class="dm-detail-control">
+              <option>Laptop</option>
+              <option>Desktop</option>
+              <option>Mobile</option>
+              <option>Tablet</option>
+              <option>Server</option>
+            </select>
+          </div>
+          <div class="dm-detail-field">
+            <label class="k" for="deviceDetailOs">Operating system</label>
+            <select id="deviceDetailOs" class="dm-detail-control"></select>
+          </div>
+          <div class="dm-detail-field">
+            <label class="k" for="deviceDetailOwnerName">Asset owner name</label>
+            <input type="text" id="deviceDetailOwnerName" class="dm-detail-control" maxlength="255" placeholder="Optional" autocomplete="off">
+          </div>
+          <div class="dm-detail-field span-2">
+            <label class="k" for="deviceDetailAssignDate">Date of assignment</label>
+            <input type="date" id="deviceDetailAssignDate" class="dm-detail-control">
+          </div>
+          <div class="dm-detail-field span-2">
+            <label class="k" for="deviceDetailSerial">Serial / asset tag</label>
+            <input type="text" id="deviceDetailSerial" class="dm-detail-control" maxlength="100" placeholder="Serial number or asset tag" autocomplete="off">
+          </div>
+          <div class="dm-detail-field">
+            <span class="k">Last activity</span>
+            <span class="dm-detail-readonly" id="dvLast">—</span>
+          </div>
+          <div class="dm-detail-field">
+            <span class="k">Record updated</span>
+            <span class="dm-detail-readonly" id="dvUpdated">—</span>
+          </div>
+        </div>
+        <div class="dm-detail-handover-panel">
+          <div class="dm-detail-handover-top">
+            <span class="k" style="margin:0">Handover log</span>
+            <button type="button" class="dm-btn-handover" id="btnOpenDeviceHandover">＋ Record handover</button>
+          </div>
+          <div class="dm-handover-history" id="deviceHandoverHistoryList"></div>
+        </div>
+        <div class="dm-detail-notes-block">
+          <div class="dm-detail-notes-head">
+            <label class="k" for="deviceDetailNotes" style="margin:0">Notes</label>
+          </div>
+          <textarea id="deviceDetailNotes" class="dm-detail-notes-input" maxlength="10000" placeholder="IMEI, specs, accessories, warranty, location…" aria-label="Device notes"></textarea>
+        </div>
+      </div>
+      <div class="dm-detail-footer">
+        <button type="button" class="dm-btn-save-changes" id="deviceDetailSaveAll">Save changes</button>
+        <button type="button" class="dm-btn-danger-outline" id="deviceDetailDelete">Delete device</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dm-modal-overlay" id="deviceHandoverModal" data-device-id="">
+    <div class="dm-modal dm-handover-modal" onclick="event.stopPropagation()">
+      <div class="dm-modal-header" style="padding:18px 22px 12px;border-bottom:1px solid var(--gray-100)">
+        <div class="dm-modal-header-icon">🤝</div>
+        <div>
+          <div class="dm-modal-title">Record asset handover</div>
+          <div class="dm-modal-sub" id="hoDeviceSubtitle">Document transfer of custody and asset condition</div>
+        </div>
+        <button type="button" class="dm-modal-close dm-detail-hero-close" id="hoModalClose" aria-label="Close">✕</button>
+      </div>
+      <div class="dm-modal-body dm-handover-body">
+        <p class="dm-ho-intro">Capture who is handing over and who is receiving the asset, the agreed condition at transfer, included accessories, and any defects. This creates an audit entry linked to the device.</p>
+        <div class="dm-ho-section">
+          <div class="dm-ho-section-title">When</div>
+          <div class="dm-ho-field dm-ho-field-full">
+            <label for="hoHandoverAt">Handover date &amp; time</label>
+            <input type="datetime-local" id="hoHandoverAt">
+          </div>
+        </div>
+        <div class="dm-ho-section">
+          <div class="dm-ho-section-title">Handing over (from)</div>
+          <div class="dm-ho-grid">
+            <div class="dm-ho-field dm-ho-field-full">
+              <label for="hoFromName">Full name <span style="color:var(--danger)">*</span></label>
+              <input type="text" id="hoFromName" maxlength="255" autocomplete="name" placeholder="Person releasing the asset">
+            </div>
+            <div class="dm-ho-field">
+              <label for="hoFromEmail">Email</label>
+              <input type="email" id="hoFromEmail" maxlength="255" autocomplete="email" placeholder="Optional">
+            </div>
+            <div class="dm-ho-field">
+              <label for="hoFromPhone">Phone</label>
+              <input type="tel" id="hoFromPhone" maxlength="80" autocomplete="tel" placeholder="Optional">
+            </div>
+          </div>
+        </div>
+        <div class="dm-ho-section">
+          <div class="dm-ho-section-title">Receiving (to)</div>
+          <div class="dm-ho-grid">
+            <div class="dm-ho-field dm-ho-field-full">
+              <label for="hoToName">Full name <span style="color:var(--danger)">*</span></label>
+              <input type="text" id="hoToName" maxlength="255" autocomplete="name" placeholder="New custodian">
+            </div>
+            <div class="dm-ho-field">
+              <label for="hoToEmail">Email</label>
+              <input type="email" id="hoToEmail" maxlength="255" autocomplete="email" placeholder="Optional">
+            </div>
+            <div class="dm-ho-field">
+              <label for="hoToPhone">Phone</label>
+              <input type="tel" id="hoToPhone" maxlength="80" autocomplete="tel" placeholder="Optional">
+            </div>
+          </div>
+        </div>
+        <div class="dm-ho-section">
+          <div class="dm-ho-section-title">Asset condition &amp; quality</div>
+          <div class="dm-ho-rating-row" id="hoConditionGroup" role="radiogroup" aria-label="Overall condition">
+            <label><input type="radio" name="hoCondition" value="excellent"> Excellent</label>
+            <label><input type="radio" name="hoCondition" value="good" checked> Good</label>
+            <label><input type="radio" name="hoCondition" value="fair"> Fair</label>
+            <label><input type="radio" name="hoCondition" value="poor"> Poor</label>
+          </div>
+          <div class="dm-ho-field dm-ho-field-full" style="margin-top:10px">
+            <label for="hoConditionDetail">Condition details (cosmetic wear, screen, battery, performance…)</label>
+            <textarea id="hoConditionDetail" maxlength="10000" placeholder="Be specific — helps disputes and warranty."></textarea>
+          </div>
+        </div>
+        <div class="dm-ho-section">
+          <div class="dm-ho-section-title">Accessories &amp; inclusions</div>
+          <div class="dm-ho-field">
+            <label for="hoAccessories">What is included with the handover</label>
+            <textarea id="hoAccessories" maxlength="10000" placeholder="e.g. charger, case, stylus, dock, cables, original box…"></textarea>
+          </div>
+        </div>
+        <div class="dm-ho-section">
+          <div class="dm-ho-section-title">Defects &amp; issues noted</div>
+          <div class="dm-ho-field">
+            <label for="hoDefects">Known defects or damage at handover</label>
+            <textarea id="hoDefects" maxlength="10000" placeholder="Scratches, cracks, missing keys, swollen battery, etc."></textarea>
+          </div>
+        </div>
+        <div class="dm-ho-section">
+          <div class="dm-ho-section-title">Additional notes</div>
+          <div class="dm-ho-field">
+            <label for="hoNotes">Other remarks</label>
+            <textarea id="hoNotes" maxlength="10000" placeholder="Location, witness, IT wipe confirmation, etc."></textarea>
+          </div>
+        </div>
+        <label class="dm-ho-check">
+          <input type="checkbox" id="hoApplyToDevice" checked>
+          <span>Update device profile: set <strong>asset owner</strong> to the receiving person and <strong>assignment date</strong> to the handover date.</span>
+        </label>
+      </div>
+      <div class="dm-modal-footer" style="padding:14px 22px 18px;border-top:1px solid var(--gray-100);display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
+        <button type="button" class="dm-btn-cancel" id="hoModalCancel">Cancel</button>
+        <button type="button" class="dm-btn-save" id="hoModalSubmit">Submit handover</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dm-modal-overlay" id="deviceCommentModal">
+    <div class="dm-modal" onclick="event.stopPropagation()" style="max-width:480px">
+      <div class="dm-modal-header">
+        <div class="dm-modal-header-icon">📝</div>
+        <div>
+          <div class="dm-modal-title" id="deviceCommentModalTitle">Device notes</div>
+          <div class="dm-modal-sub" id="deviceCommentModalSub">Optional comment stored with this device</div>
+        </div>
+        <div class="dm-modal-close" id="deviceCommentModalClose">✕</div>
+      </div>
+      <div class="dm-modal-body">
+        <textarea id="deviceCommentText" maxlength="10000" placeholder="Add notes (visible to admins on this page)…"></textarea>
+      </div>
+      <div class="dm-modal-footer">
+        <button type="button" class="dm-btn-cancel" id="deviceCommentCancel">Cancel</button>
+        <button type="button" class="dm-btn-save" id="deviceCommentSave">Save notes</button>
       </div>
     </div>
   </div>
@@ -1006,6 +1875,7 @@
   let devicesData = [];
   let currentTab = 'all';
   let selected = new Set();
+  let deviceCommentEditingId = null;
 
   function getToken() { return localStorage.getItem('access_token'); }
   function apiHeaders() {
@@ -1014,36 +1884,52 @@
   }
   function escapeHtml(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
-  function statusClass(s) {
-    if (s === 'online') return 'online';
-    if (s === 'offline') return 'offline';
-    if (s === 'update') return 'warning';
-    return 'maintenance';
-  }
-  function statusLabel(s) {
-    const m = { online:'Online', offline:'Offline', update:'Warning', idle:'Idle' };
-    return m[s] || (s ? s.charAt(0).toUpperCase()+s.slice(1) : '—');
+  function normalizeDeviceStatus(s) {
+    const x = (s || '').toString().trim().toLowerCase();
+    if (x === 'active' || x === 'inactive') return x;
+    if (x === 'online' || x === 'idle') return 'active';
+    if (x === 'offline' || x === 'update') return 'inactive';
+    return 'inactive';
   }
   function deviceIcon(type) {
     const icons = { Laptop:'💻', Desktop:'🖥️', Mobile:'📱', Server:'🖥️', Tablet:'📟' };
     return icons[type] || '💻';
   }
-  function healthClass(h) {
-    if (h >= 80) return 'good';
-    if (h >= 55) return 'ok';
-    return 'bad';
+  function fmtDeviceDate(iso) {
+    if (!iso) return '—';
+    try {
+      const d = new Date(String(iso).replace('Z', '+00:00'));
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    } catch (_) { return '—'; }
+  }
+  function fmtAssignDateOnly(isoDate) {
+    if (!isoDate) return '—';
+    try {
+      const d = new Date(String(isoDate) + 'T12:00:00');
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString(undefined, { dateStyle: 'medium' });
+    } catch (_) { return '—'; }
+  }
+  function displayAssetOwner(d) {
+    const o = (d.asset_owner_name && String(d.asset_owner_name).trim()) || '';
+    if (o) return o;
+    return (d.assigned_user && String(d.assigned_user).trim()) || '';
   }
 
   function renderDevices(data) {
     const tbody = document.getElementById('deviceBody');
     const searchQ = (document.getElementById('searchInput').value || '').toLowerCase();
     let filtered = data.filter(d => {
-      const matchTab = currentTab === 'all' || d.status === currentTab;
+      const ns = normalizeDeviceStatus(d.status);
+      const matchTab = currentTab === 'all' || ns === currentTab;
       const matchSearch = !searchQ || 
         (d.name||'').toLowerCase().includes(searchQ) ||
         (d.device_id||'').toLowerCase().includes(searchQ) ||
+        (d.asset_owner_name||'').toLowerCase().includes(searchQ) ||
         (d.assigned_user||'').toLowerCase().includes(searchQ) ||
-        (d.os||'').toLowerCase().includes(searchQ);
+        (d.os||'').toLowerCase().includes(searchQ) ||
+        (d.comment||'').toLowerCase().includes(searchQ);
       return matchTab && matchSearch;
     });
 
@@ -1053,12 +1939,18 @@
       return;
     }
 
+    const filteredIds = new Set(filtered.map(d => d.id));
+    [...selected].forEach((sid) => {
+      if (!filteredIds.has(sid)) selected.delete(sid);
+    });
+
     tbody.innerHTML = filtered.map(d => {
-      const h = d.health || 0;
-      const hc = healthClass(h);
-      const sc = statusClass(d.status);
+      const ns = normalizeDeviceStatus(d.status);
+      const comm = String(d.comment || '').trim();
+      const preview = comm.length > 48 ? comm.slice(0, 48) + '…' : comm;
+      const previewHtml = comm ? escapeHtml(preview) : '—';
       return `
-      <tr data-id="${d.id}" onclick="window.dmSelectRow && window.dmSelectRow(this)">
+      <tr data-id="${d.id}" onclick="window.dmOpenDeviceDetail && window.dmOpenDeviceDetail(this)" title="View details">
         <td><input type="checkbox" class="dm-device-check row-cb" value="${d.id}" onclick="event.stopPropagation()"></td>
         <td>
           <div class="dm-device-name-cell">
@@ -1069,23 +1961,28 @@
             </div>
           </div>
         </td>
-        <td><span class="dm-status-pill ${sc}">${statusLabel(d.status)}</span></td>
+        <td onclick="event.stopPropagation()">
+          <select class="dm-status-select dm-row-status" data-device-id="${d.id}" data-prev="${ns}" aria-label="Status for ${escapeHtml(d.device_id || 'device')}">
+            <option value="active" ${ns === 'active' ? 'selected' : ''}>Active</option>
+            <option value="inactive" ${ns === 'inactive' ? 'selected' : ''}>Inactive</option>
+          </select>
+        </td>
         <td><span class="dm-tag">${escapeHtml(d.device_type)}</span></td>
         <td>
-          <div style="font-size:13px;font-weight:500;color:var(--gray-900)">${escapeHtml(d.assigned_user || '—')}</div>
-        </td>
-        <td>
-          <div class="dm-health-bar-wrap">
-            <div class="dm-health-label" style="color:${hc==='good'?'var(--green)':hc==='ok'?'var(--warning)':'var(--danger)'}">${h}%</div>
-            <div class="dm-health-bar">
-              <div class="dm-health-fill ${hc}" style="width:${h}%"></div>
-            </div>
-          </div>
+          <div style="font-size:13px;font-weight:500;color:var(--gray-900)">${escapeHtml(displayAssetOwner(d) || '—')}</div>
+          <div style="font-size:11px;color:var(--gray-400);margin-top:2px">${d.assignment_date ? escapeHtml(fmtAssignDateOnly(d.assignment_date)) : ''}</div>
         </td>
         <td><span class="dm-tag">${escapeHtml(d.os)}</span></td>
-        <td>
-          <div style="display:flex;gap:4px">
-            <span class="dm-action-btn" title="Remove" onclick="event.stopPropagation();window.dmRemoveDevice && window.dmRemoveDevice(${d.id})">🗑</span>
+        <td onclick="event.stopPropagation()">
+          <div class="dm-notes-cell">
+            <span class="dm-notes-preview" title="${comm ? escapeHtml(comm) : ''}">${previewHtml}</span>
+            <button type="button" class="dm-notes-edit" onclick="event.stopPropagation(); window.dmOpenCommentModal && window.dmOpenCommentModal(${d.id})">Edit</button>
+          </div>
+        </td>
+        <td onclick="event.stopPropagation()">
+          <div style="display:flex;gap:4px;justify-content:flex-end">
+            <button type="button" class="dm-action-btn danger" title="Delete device" aria-label="Delete ${escapeHtml(d.device_id || '')}"
+              onclick="event.stopPropagation(); window.dmRemoveDevice && window.dmRemoveDevice(${d.id})">🗑</button>
           </div>
         </td>
       </tr>`;
@@ -1094,27 +1991,192 @@
 
     tbody.querySelectorAll('.row-cb').forEach(cb => {
       cb.onchange = () => {
-        if (cb.checked) selected.add(parseInt(cb.value));
-        else selected.delete(parseInt(cb.value));
+        const vid = parseInt(cb.value, 10);
+        if (cb.checked) selected.add(vid);
+        else selected.delete(vid);
+        updateBulkDeleteButton();
+        syncSelectAllCheckbox();
+      };
+    });
+    updateBulkDeleteButton();
+    syncSelectAllCheckbox();
+
+    tbody.querySelectorAll('.dm-row-status').forEach(sel => {
+      sel.onchange = async function(ev) {
+        ev.stopPropagation();
+        const id = parseInt(sel.dataset.deviceId, 10);
+        const v = sel.value;
+        const d = devicesData.find(x => x.id === id);
+        const prev = sel.dataset.prev || (d ? normalizeDeviceStatus(d.status) : v);
+        if (!d || v === prev) return;
+        sel.disabled = true;
+        const ok = await applyDeviceStatusChange(id, v);
+        sel.disabled = false;
+        if (!ok) sel.value = prev;
+        else sel.dataset.prev = v;
       };
     });
   }
 
+  function initDetailOsDropdownOnce() {
+    const sel = document.getElementById('deviceDetailOs');
+    if (!sel || sel.dataset.inited === '1') return;
+    const opts = ['Windows 11', 'Windows 10', 'macOS Sequoia', 'macOS Sonoma', 'macOS Ventura', 'iOS 18', 'iPadOS 18', 'Android 15', 'Android 14', 'Android 13', 'Ubuntu 24.04', 'Ubuntu 22.04'];
+    opts.forEach((o) => {
+      const op = document.createElement('option');
+      op.value = o;
+      op.textContent = o;
+      sel.appendChild(op);
+    });
+    sel.dataset.inited = '1';
+  }
+
+  function ensureSelectOptionContains(selectEl, value) {
+    const v = String(value || '').trim();
+    if (!v) return;
+    const exists = [...selectEl.options].some((o) => o.value === v);
+    if (!exists) {
+      const op = document.createElement('option');
+      op.value = v;
+      op.textContent = v;
+      selectEl.insertBefore(op, selectEl.firstChild);
+    }
+    selectEl.value = v;
+  }
+
+  async function applyDevicePatch(id, payload) {
+    try {
+      const res = await fetch('/api/admin/devices/' + id, {
+        method: 'PATCH',
+        headers: apiHeaders(),
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(json.error || json.message || 'Failed to update device', true);
+        return null;
+      }
+      const dev = json.device;
+      if (dev && dev.id != null) {
+        const i = devicesData.findIndex((x) => x.id === dev.id);
+        if (i >= 0) devicesData[i] = { ...devicesData[i], ...dev };
+      }
+      const merged = devicesData.find((x) => x.id === id);
+      if (payload.status !== undefined && merged) {
+        updateStats();
+        updateActivity();
+        updateAlerts();
+        const ns = normalizeDeviceStatus(merged.status);
+        document.querySelectorAll('.dm-row-status[data-device-id="' + id + '"]').forEach((sel) => {
+          sel.value = ns;
+          sel.dataset.prev = ns;
+        });
+      }
+      renderDevices(devicesData);
+      const modal = document.getElementById('deviceDetailModal');
+      if (modal && modal.classList.contains('open') && parseInt(modal.dataset.deviceId, 10) === id && merged) {
+        populateDeviceDetail(merged);
+      }
+      return merged || dev;
+    } catch (e) {
+      showToast('Failed to update device', true);
+      return null;
+    }
+  }
+
+  async function applyDeviceStatusChange(id, status) {
+    const r = await applyDevicePatch(id, { status });
+    return r !== null;
+  }
+
+  function currentDetailId() {
+    const m = document.getElementById('deviceDetailModal');
+    const id = parseInt(m && m.dataset.deviceId || '', 10);
+    return Number.isFinite(id) ? id : null;
+  }
+
+  function buildDeviceDetailPayload(d) {
+    const name = (document.getElementById('deviceDetailNameInput').value || '').trim();
+    if (!name) {
+      showToast('Device name cannot be empty', true);
+      return null;
+    }
+    const status = document.getElementById('deviceDetailStatus').value;
+    const device_type = document.getElementById('deviceDetailType').value;
+    const os = document.getElementById('deviceDetailOs').value;
+    const ownerRaw = (document.getElementById('deviceDetailOwnerName').value || '').trim();
+    const adRaw = (document.getElementById('deviceDetailAssignDate').value || '').trim();
+    const serialRaw = (document.getElementById('deviceDetailSerial').value || '').trim();
+    const comment = document.getElementById('deviceDetailNotes').value || '';
+    const payload = {};
+    if (name !== String(d.name || '').trim()) payload.name = name;
+    if (status !== normalizeDeviceStatus(d.status)) payload.status = status;
+    if (device_type !== (d.device_type || 'Laptop')) payload.device_type = device_type;
+    if (os !== (d.os || '')) payload.os = os;
+    const prevOwner = (d.asset_owner_name && String(d.asset_owner_name).trim()) || '';
+    if (ownerRaw !== prevOwner) payload.asset_owner_name = ownerRaw || null;
+    const prevAd = d.assignment_date ? String(d.assignment_date).slice(0, 10) : '';
+    if (adRaw !== prevAd) payload.assignment_date = adRaw || null;
+    const prevSer = (d.serial_or_asset_tag && String(d.serial_or_asset_tag).trim()) || '';
+    if (serialRaw !== prevSer) payload.serial_or_asset_tag = serialRaw || null;
+    if (String(d.comment || '') !== comment) payload.comment = comment;
+    return payload;
+  }
+
+  async function saveDeviceDetailChanges() {
+    const id = currentDetailId();
+    if (id == null) return;
+    const d = devicesData.find((x) => x.id === id);
+    if (!d) return;
+    const payload = buildDeviceDetailPayload(d);
+    if (payload === null) return;
+    if (Object.keys(payload).length === 0) {
+      showToast('No changes to save');
+      return;
+    }
+    const btn = document.getElementById('deviceDetailSaveAll');
+    if (btn) btn.disabled = true;
+    const r = await applyDevicePatch(id, payload);
+    if (btn) btn.disabled = false;
+    if (r) showToast('Device updated');
+  }
+
+  function syncSelectAllCheckbox() {
+    const sa = document.getElementById('selectAll');
+    if (!sa) return;
+    const boxes = document.querySelectorAll('#deviceBody .row-cb');
+    if (!boxes.length) {
+      sa.checked = false;
+      sa.indeterminate = false;
+      return;
+    }
+    let n = 0;
+    boxes.forEach(cb => { if (cb.checked) n++; });
+    sa.checked = n === boxes.length;
+    sa.indeterminate = n > 0 && n < boxes.length;
+  }
+
+  function updateBulkDeleteButton() {
+    const btn = document.getElementById('btnBulkDeleteDevices');
+    if (!btn) return;
+    const n = selected.size;
+    btn.disabled = n === 0;
+    btn.textContent = n ? `🗑 Delete selected (${n})` : '🗑 Delete selected';
+  }
+
   function updateStats() {
     const total = devicesData.length;
-    const online = devicesData.filter(d => d.status === 'online').length;
-    const offline = devicesData.filter(d => d.status === 'offline').length;
-    const pending = devicesData.filter(d => d.status === 'update').length;
+    const active = devicesData.filter(d => normalizeDeviceStatus(d.status) === 'active').length;
+    const inactive = devicesData.filter(d => normalizeDeviceStatus(d.status) === 'inactive').length;
     const complianceFail = devicesData.filter(d => (d.health||0) < 55).length;
     document.getElementById('totalVal').textContent = total;
-    document.getElementById('onlineVal').textContent = online;
-    document.getElementById('offlineVal').textContent = offline;
-    document.getElementById('pendingVal').textContent = pending;
+    const av = document.getElementById('activeVal');
+    const iv = document.getElementById('inactiveVal');
+    if (av) av.textContent = active;
+    if (iv) iv.textContent = inactive;
     const sc = document.getElementById('sidebarDeviceCount');
-    const su = document.getElementById('sidebarUpdatesBadge');
     const scb = document.getElementById('sidebarComplianceBadge');
     if (sc) sc.textContent = total;
-    if (su) { su.textContent = pending; su.style.display = pending ? 'inline-flex' : 'none'; }
     if (scb) { scb.textContent = complianceFail; scb.style.display = complianceFail ? 'inline-flex' : 'none'; }
   }
 
@@ -1180,7 +2242,7 @@
     const recent = devicesData.slice(0, 5).map(d => ({
       msg: `<strong>${escapeHtml(d.device_id)}</strong> — ${escapeHtml(d.name)}`,
       time: d.last_active || '—',
-      ok: (d.status||'').includes('online') || (d.status||'').includes('idle')
+      ok: normalizeDeviceStatus(d.status) === 'active'
     }));
     if (!recent.length) {
       list.innerHTML = '<div class="dm-activity-item"><div class="dm-activity-dot green"></div><div><div class="dm-activity-text">No devices yet</div><div class="dm-activity-time">—</div></div></div>';
@@ -1198,12 +2260,10 @@
   }
 
   function updateAlerts() {
-    const pending = devicesData.filter(d => d.status === 'update').length;
-    const offline = devicesData.filter(d => d.status === 'offline').length;
+    const inactive = devicesData.filter(d => normalizeDeviceStatus(d.status) === 'inactive').length;
     const list = document.getElementById('alertsList');
     let html = '';
-    if (pending > 0) html += `<div class="dm-alert-item warn"><span class="dm-alert-icon">🔄</span><div class="dm-alert-body"><div class="dm-alert-title">Pending OS Updates</div><div class="dm-alert-desc">${pending} device(s) need attention</div></div></div>`;
-    if (offline > 0) html += `<div class="dm-alert-item critical"><span class="dm-alert-icon">🔴</span><div class="dm-alert-body"><div class="dm-alert-title">Offline Devices</div><div class="dm-alert-desc">${offline} device(s) offline</div></div></div>`;
+    if (inactive > 0) html += `<div class="dm-alert-item warn"><span class="dm-alert-icon">⏸</span><div class="dm-alert-body"><div class="dm-alert-title">Inactive devices</div><div class="dm-alert-desc">${inactive} device(s) marked inactive — set to Active when back in use</div></div></div>`;
     if (!html) html = `<div class="dm-alert-item info"><span class="dm-alert-icon">📋</span><div class="dm-alert-body"><div class="dm-alert-title">Device Management</div><div class="dm-alert-desc">Track and manage enrolled devices. Enroll new devices to get started.</div></div></div>`;
     list.innerHTML = html;
   }
@@ -1219,33 +2279,317 @@
   }
   window.showToast = showToast;
 
-  window.dmSelectRow = function(row) {
-    row.classList.toggle('selected');
-    const id = parseInt(row.dataset.id);
-    const cb = row.querySelector('.row-cb');
-    if (cb) {
-      cb.checked = !cb.checked;
-      if (cb.checked) selected.add(id);
-      else selected.delete(id);
+  function closeDeviceDetailModal() {
+    const el = document.getElementById('deviceDetailModal');
+    if (el) {
+      el.classList.remove('open');
+      el.dataset.deviceId = '';
     }
+  }
+
+  function currentDetailDeviceId() {
+    const dm = document.getElementById('deviceDetailModal');
+    if (!dm || !dm.classList.contains('open')) return null;
+    const id = parseInt(dm.dataset.deviceId, 10);
+    return Number.isFinite(id) ? id : null;
+  }
+
+  function toDatetimeLocalValue(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = function(n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+      'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function hoConditionLabel(r) {
+    var m = { excellent: 'Excellent', good: 'Good', fair: 'Fair', poor: 'Poor' };
+    return m[(r || 'good').toLowerCase()] || 'Good';
+  }
+
+  function renderHandoverHistory(rows) {
+    var el = document.getElementById('deviceHandoverHistoryList');
+    if (!el) return;
+    if (!rows || !rows.length) {
+      el.innerHTML = '<div class="dm-handover-empty">No handovers recorded yet.</div>';
+      return;
+    }
+    el.innerHTML = rows.map(function(h) {
+      var cond = (h.condition_rating || 'good').toLowerCase();
+      if (['excellent', 'good', 'fair', 'poor'].indexOf(cond) < 0) cond = 'good';
+      var dt = h.handover_at ? fmtDeviceDate(h.handover_at) : '—';
+      var flow = escapeHtml(h.from_person_name || '') + ' → ' + escapeHtml(h.to_person_name || '');
+      var bits = [];
+      var fe = (h.from_person_email || '').trim();
+      var fp = (h.from_person_phone || '').trim();
+      var te = (h.to_person_email || '').trim();
+      var tp = (h.to_person_phone || '').trim();
+      if (fe || fp) bits.push('From: ' + escapeHtml([fe, fp].filter(Boolean).join(' · ')));
+      if (te || tp) bits.push('To: ' + escapeHtml([te, tp].filter(Boolean).join(' · ')));
+      var cd = (h.condition_detail || '').trim();
+      if (cd) bits.push('<strong>Condition</strong> · ' + escapeHtml(cd));
+      var acc = (h.accessories_included || '').trim();
+      if (acc) bits.push('<strong>Included</strong> · ' + escapeHtml(acc));
+      var def = (h.defects_reported || '').trim();
+      if (def) bits.push('<strong>Defects</strong> · ' + escapeHtml(def));
+      var nt = (h.notes || '').trim();
+      if (nt) bits.push('<strong>Notes</strong> · ' + escapeHtml(nt));
+      var rec = (h.recorded_by || '').trim();
+      if (rec) bits.push('<span style="opacity:.85">Logged by ' + escapeHtml(rec) + '</span>');
+      var meta = bits.length ? '<div class="dm-ho-meta">' + bits.join('<br>') + '</div>' : '';
+      return '<div class="dm-ho-card">' +
+        '<div class="dm-ho-card-top">' +
+        '<span class="dm-ho-date">' + escapeHtml(dt) + '</span>' +
+        '<span class="dm-ho-cond ' + cond + '">' + escapeHtml(hoConditionLabel(h.condition_rating)) + '</span>' +
+        '</div>' +
+        '<div class="dm-ho-flow">' + flow + '</div>' +
+        meta +
+        '</div>';
+    }).join('');
+  }
+
+  async function loadDeviceHandovers(deviceId) {
+    var el = document.getElementById('deviceHandoverHistoryList');
+    if (!el) return;
+    el.innerHTML = '<div class="dm-handover-empty">Loading…</div>';
+    try {
+      var res = await fetch('/api/admin/devices/' + deviceId + '/handovers', { headers: apiHeaders() });
+      if (res.status === 401) { window.location.href = '/login'; return; }
+      if (!res.ok) {
+        el.innerHTML = '<div class="dm-handover-empty">Could not load handover history.</div>';
+        return;
+      }
+      var json = await res.json();
+      var rows = json.handovers || (json.data && json.data.handovers) || [];
+      renderHandoverHistory(rows);
+    } catch (_) {
+      el.innerHTML = '<div class="dm-handover-empty">Could not load handover history.</div>';
+    }
+  }
+
+  function closeDeviceHandoverModal() {
+    var el = document.getElementById('deviceHandoverModal');
+    if (el) {
+      el.classList.remove('open');
+      el.dataset.deviceId = '';
+    }
+  }
+
+  function openDeviceHandoverModal() {
+    var id = currentDetailDeviceId();
+    if (id == null) {
+      showToast('Open a device detail first', true);
+      return;
+    }
+    var d = devicesData.find(function(x) { return x.id === id; });
+    if (!d) return;
+    var modal = document.getElementById('deviceHandoverModal');
+    modal.dataset.deviceId = String(id);
+    document.getElementById('hoDeviceSubtitle').textContent = (d.name || 'Device') + ' · ' + (d.device_id || '');
+    document.getElementById('hoHandoverAt').value = toDatetimeLocalValue(new Date());
+    document.getElementById('hoFromName').value = displayAssetOwner(d) || '';
+    document.getElementById('hoFromEmail').value = '';
+    document.getElementById('hoFromPhone').value = '';
+    document.getElementById('hoToName').value = '';
+    document.getElementById('hoToEmail').value = '';
+    document.getElementById('hoToPhone').value = '';
+    var g = document.querySelector('input[name="hoCondition"][value="good"]');
+    if (g) g.checked = true;
+    document.getElementById('hoConditionDetail').value = '';
+    document.getElementById('hoAccessories').value = '';
+    document.getElementById('hoDefects').value = '';
+    document.getElementById('hoNotes').value = '';
+    document.getElementById('hoApplyToDevice').checked = true;
+    modal.classList.add('open');
+  }
+
+  async function submitDeviceHandover() {
+    var modal = document.getElementById('deviceHandoverModal');
+    var id = parseInt(modal.dataset.deviceId || '', 10);
+    if (!Number.isFinite(id)) return;
+    var fromName = (document.getElementById('hoFromName').value || '').trim();
+    var toName = (document.getElementById('hoToName').value || '').trim();
+    if (!fromName || !toName) {
+      showToast('Enter both handing-over and receiving names', true);
+      return;
+    }
+    var condEl = document.querySelector('input[name="hoCondition"]:checked');
+    var rating = condEl ? condEl.value : 'good';
+    var payload = {
+      from_person_name: fromName,
+      to_person_name: toName,
+      condition_rating: rating,
+      apply_to_device: !!document.getElementById('hoApplyToDevice').checked,
+    };
+    var hoAt = (document.getElementById('hoHandoverAt').value || '').trim();
+    if (hoAt) payload.handover_at = hoAt;
+    var fe = (document.getElementById('hoFromEmail').value || '').trim();
+    if (fe) payload.from_person_email = fe;
+    var fp = (document.getElementById('hoFromPhone').value || '').trim();
+    if (fp) payload.from_person_phone = fp;
+    var te = (document.getElementById('hoToEmail').value || '').trim();
+    if (te) payload.to_person_email = te;
+    var tp = (document.getElementById('hoToPhone').value || '').trim();
+    if (tp) payload.to_person_phone = tp;
+    var cd = (document.getElementById('hoConditionDetail').value || '').trim();
+    if (cd) payload.condition_detail = cd;
+    var acc = (document.getElementById('hoAccessories').value || '').trim();
+    if (acc) payload.accessories_included = acc;
+    var def = (document.getElementById('hoDefects').value || '').trim();
+    if (def) payload.defects_reported = def;
+    var nt = (document.getElementById('hoNotes').value || '').trim();
+    if (nt) payload.notes = nt;
+
+    var btn = document.getElementById('hoModalSubmit');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    try {
+      var res = await fetch('/api/admin/devices/' + id + '/handovers', {
+        method: 'POST',
+        headers: apiHeaders(),
+        body: JSON.stringify(payload),
+      });
+      var json = await res.json().catch(function() { return {}; });
+      if (!res.ok) {
+        showToast(json.error || json.message || 'Failed to record handover', true);
+        return;
+      }
+      var dev = json.device;
+      if (dev && dev.id != null) {
+        var i = devicesData.findIndex(function(x) { return x.id === dev.id; });
+        if (i >= 0) devicesData[i] = Object.assign({}, devicesData[i], dev);
+      }
+      closeDeviceHandoverModal();
+      renderDevices(devicesData);
+      var openId = currentDetailDeviceId();
+      if (openId === id) {
+        var fresh = devicesData.find(function(x) { return x.id === id; });
+        if (fresh) populateDeviceDetail(fresh);
+      }
+      await loadDeviceHandovers(id);
+      showToast('Handover recorded');
+    } catch (_) {
+      showToast('Failed to record handover', true);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Submit handover'; }
+    }
+  }
+
+  function populateDeviceDetail(d) {
+    initDetailOsDropdownOnce();
+    document.getElementById('deviceDetailIcon').textContent = deviceIcon(d.device_type);
+    const nameIn = document.getElementById('deviceDetailNameInput');
+    if (nameIn) nameIn.value = d.name || '';
+    document.getElementById('deviceDetailChip').textContent = d.device_id || '—';
+    const ds = document.getElementById('deviceDetailStatus');
+    if (ds) {
+      ds.value = normalizeDeviceStatus(d.status);
+      ds.dataset.deviceId = String(d.id);
+    }
+    const typeSel = document.getElementById('deviceDetailType');
+    if (typeSel) {
+      ensureSelectOptionContains(typeSel, d.device_type || 'Laptop');
+    }
+    const osSel = document.getElementById('deviceDetailOs');
+    if (osSel) {
+      ensureSelectOptionContains(osSel, d.os || 'Windows 11');
+    }
+    const ownerIn = document.getElementById('deviceDetailOwnerName');
+    if (ownerIn) ownerIn.value = (d.asset_owner_name != null && String(d.asset_owner_name).trim()) ? String(d.asset_owner_name).trim() : '';
+    const adIn = document.getElementById('deviceDetailAssignDate');
+    if (adIn) adIn.value = d.assignment_date ? String(d.assignment_date).slice(0, 10) : '';
+    const serialIn = document.getElementById('deviceDetailSerial');
+    if (serialIn) {
+      serialIn.value = (d.serial_or_asset_tag && String(d.serial_or_asset_tag).trim()) || '';
+    }
+    document.getElementById('dvLast').textContent = d.last_active || '—';
+    document.getElementById('dvUpdated').textContent = fmtDeviceDate(d.updated_at || d.created_at);
+    const notesTa = document.getElementById('deviceDetailNotes');
+    if (notesTa) notesTa.value = String(d.comment || '');
+    const delBtn = document.getElementById('deviceDetailDelete');
+    if (delBtn) delBtn.dataset.deviceId = String(d.id);
+  }
+
+  window.dmOpenDeviceDetail = function(row) {
+    if (!row || !row.dataset) return;
+    const id = parseInt(row.dataset.id, 10);
+    if (!Number.isFinite(id)) return;
+    const d = devicesData.find(x => x.id === id);
+    if (!d) return;
+    populateDeviceDetail(d);
+    const ov = document.getElementById('deviceDetailModal');
+    ov.dataset.deviceId = String(d.id);
+    ov.classList.add('open');
+    loadDeviceHandovers(d.id);
   };
 
-  window.dmRemoveDevice = async function(id) {
-    if (!confirm('Remove this device?')) return;
+  async function parseApiError(res) {
     try {
-      const res = await fetch('/api/admin/devices/' + id, { method: 'DELETE', headers: apiHeaders() });
-      if (!res.ok) { showToast('Failed to remove device', true); return; }
-      devicesData = devicesData.filter(d => d.id !== id);
-      selected.delete(id);
+      const j = await res.json();
+      return j.error || j.message || res.statusText || 'Request failed';
+    } catch (_) {
+      return res.statusText || 'Request failed';
+    }
+  }
+
+  window.dmRemoveDevice = async function(id) {
+    const numId = parseInt(id, 10);
+    if (!Number.isFinite(numId)) {
+      showToast('Invalid device id', true);
+      return;
+    }
+    if (!confirm('Delete this device from inventory? This cannot be undone.')) return;
+    try {
+      const res = await fetch('/api/admin/devices/' + numId, { method: 'DELETE', headers: apiHeaders() });
+      if (!res.ok) {
+        showToast(await parseApiError(res), true);
+        return;
+      }
+      devicesData = devicesData.filter(d => d.id !== numId);
+      selected.delete(numId);
+      closeDeviceDetailModal();
       renderDevices(devicesData);
       updateStats();
       updateDonut();
       updateCompliance();
       updateActivity();
       updateAlerts();
-      showToast('Device removed');
+      showToast('Device deleted');
     } catch (e) {
       showToast('Failed to remove device', true);
+    }
+  };
+
+  window.dmBulkRemoveDevices = async function() {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+    if (!confirm(`Delete ${ids.length} selected device(s)? This cannot be undone.`)) return;
+    try {
+      const res = await fetch('/api/admin/devices/bulk-delete', {
+        method: 'POST',
+        headers: apiHeaders(),
+        body: JSON.stringify({ ids }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(json.error || json.message || 'Failed to delete devices', true);
+        return;
+      }
+      const deleted = Number(json.deleted != null ? json.deleted : 0);
+      const idSet = new Set(ids);
+      const detailOpen = document.getElementById('deviceDetailModal');
+      const openDid = detailOpen && detailOpen.dataset.deviceId ? parseInt(detailOpen.dataset.deviceId, 10) : NaN;
+      if (Number.isFinite(openDid) && idSet.has(openDid)) closeDeviceDetailModal();
+      devicesData = devicesData.filter(d => !idSet.has(d.id));
+      ids.forEach(i => selected.delete(i));
+      renderDevices(devicesData);
+      updateStats();
+      updateDonut();
+      updateCompliance();
+      updateActivity();
+      updateAlerts();
+      showToast(deleted ? `Deleted ${deleted} device(s)` : 'No devices removed');
+    } catch (e) {
+      showToast('Failed to delete devices', true);
     }
   };
 
@@ -1273,21 +2617,36 @@
     const name = (document.getElementById('newDevName').value || '').trim();
     const type = document.getElementById('newDevType').value;
     const os = document.getElementById('newDevOS').value;
-    const user = (document.getElementById('newDevUser').value || '').trim();
+    const owner = (document.getElementById('newDevOwner') && document.getElementById('newDevOwner').value || '').trim();
+    const assignDate = (document.getElementById('newDevAssignDate') && document.getElementById('newDevAssignDate').value || '').trim();
     const serial = (document.getElementById('newDevSerial').value || '').trim();
+    const comment = (document.getElementById('newDevComment') && document.getElementById('newDevComment').value || '').trim();
     if (!name) { showToast('Please fill in device name', true); return; }
     try {
       const res = await fetch('/api/admin/devices', {
         method: 'POST',
         headers: apiHeaders(),
-        body: JSON.stringify({ name, device_type: type, os, assigned_user_email: user || undefined, serial_or_asset_tag: serial || undefined })
+        body: JSON.stringify({
+          name,
+          device_type: type,
+          os,
+          asset_owner_name: owner || undefined,
+          assignment_date: assignDate || undefined,
+          serial_or_asset_tag: serial || undefined,
+          comment: comment || undefined,
+        })
       });
       const json = await res.json();
       if (!res.ok) { showToast(json.message || json.error || 'Failed to enroll device', true); return; }
       document.getElementById('enrollModal').classList.remove('open');
       document.getElementById('newDevName').value = '';
-      document.getElementById('newDevUser').value = '';
+      const no = document.getElementById('newDevOwner');
+      if (no) no.value = '';
+      const nd = document.getElementById('newDevAssignDate');
+      if (nd) nd.value = '';
       document.getElementById('newDevSerial').value = '';
+      const nc = document.getElementById('newDevComment');
+      if (nc) nc.value = '';
       loadDevices();
       showToast('✅ Device enrolled successfully');
     } catch (e) {
@@ -1367,8 +2726,17 @@
   }
 
   function exportCSV() {
-    const rows = [['ID','Name','Status','Type','OS','User','Health']];
-    devicesData.forEach(d => rows.push([d.device_id,d.name,d.status,d.device_type,d.os,d.assigned_user||'',d.health||0]));
+    const rows = [['ID','Name','Status','Type','OS','Asset owner','Assignment date','Notes']];
+    devicesData.forEach(d => rows.push([
+      d.device_id,
+      d.name,
+      normalizeDeviceStatus(d.status),
+      d.device_type,
+      d.os,
+      displayAssetOwner(d) || '',
+      d.assignment_date ? String(d.assignment_date).slice(0, 10) : '',
+      String(d.comment || '').replace(/\r?\n/g, ' '),
+    ]));
     const a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(rows.map(r=>r.join(',')).join('\n'));
     a.download = 'devices_export.csv';
@@ -1386,12 +2754,70 @@
     };
   });
   document.getElementById('selectAll').onchange = function() {
-    document.querySelectorAll('.row-cb').forEach(cb => {
+    document.querySelectorAll('#deviceBody .row-cb').forEach(cb => {
       cb.checked = this.checked;
-      if (this.checked) selected.add(parseInt(cb.value));
-      else selected.delete(parseInt(cb.value));
+      const vid = parseInt(cb.value, 10);
+      if (this.checked) selected.add(vid);
+      else selected.delete(vid);
     });
+    updateBulkDeleteButton();
   };
+  document.getElementById('btnBulkDeleteDevices').onclick = () => window.dmBulkRemoveDevices && window.dmBulkRemoveDevices();
+
+  window.dmOpenCommentModal = function(id) {
+    const d = devicesData.find(x => x.id === id);
+    if (!d) return;
+    deviceCommentEditingId = id;
+    const tit = document.getElementById('deviceCommentModalTitle');
+    const sub = document.getElementById('deviceCommentModalSub');
+    if (tit) tit.textContent = d.name || 'Device notes';
+    if (sub) sub.textContent = d.device_id ? `ID: ${d.device_id}` : '';
+    const ta = document.getElementById('deviceCommentText');
+    if (ta) ta.value = String(d.comment || '').trim();
+    document.getElementById('deviceCommentModal').classList.add('open');
+  };
+  function closeDeviceCommentModal() {
+    deviceCommentEditingId = null;
+    const el = document.getElementById('deviceCommentModal');
+    if (el) el.classList.remove('open');
+  }
+  async function saveDeviceComment() {
+    const id = deviceCommentEditingId;
+    const ta = document.getElementById('deviceCommentText');
+    if (id == null || !ta) return;
+    const btn = document.getElementById('deviceCommentSave');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    try {
+      const res = await fetch('/api/admin/devices/' + id, {
+        method: 'PATCH',
+        headers: apiHeaders(),
+        body: JSON.stringify({ comment: ta.value }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(json.error || json.message || 'Failed to save notes', true);
+        return;
+      }
+      const dev = json.device;
+      if (dev && dev.id != null) {
+        const i = devicesData.findIndex(x => x.id === dev.id);
+        if (i >= 0) devicesData[i] = { ...devicesData[i], ...dev };
+        const dm = document.getElementById('deviceDetailModal');
+        const detailNotes = document.getElementById('deviceDetailNotes');
+        if (dm && dm.classList.contains('open') && detailNotes && parseInt(dm.dataset.deviceId, 10) === dev.id) {
+          detailNotes.value = String(dev.comment || '');
+        }
+      }
+      closeDeviceCommentModal();
+      renderDevices(devicesData);
+      showToast('Notes saved');
+    } catch (e) {
+      showToast('Failed to save notes', true);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Save notes'; }
+    }
+  }
+
   document.getElementById('exportBtn').onclick = exportCSV;
   document.getElementById('enrollBtn2').onclick = () => document.getElementById('enrollModal').classList.add('open');
   document.getElementById('importExcelBtn').onclick = () => document.getElementById('deviceExcelInput')?.click();
@@ -1405,6 +2831,61 @@
   document.getElementById('modalCancel').onclick = () => document.getElementById('enrollModal').classList.remove('open');
   document.getElementById('enrollSubmitBtn').onclick = enrollDevice;
   document.getElementById('enrollModal').onclick = function(e) { if (e.target === this) this.classList.remove('open'); };
+
+  document.getElementById('deviceDetailClose').onclick = closeDeviceDetailModal;
+  document.getElementById('deviceDetailModal').onclick = function(e) { if (e.target === this) closeDeviceDetailModal(); };
+
+  (function bindDeviceHandover() {
+    var btn = document.getElementById('btnOpenDeviceHandover');
+    if (btn) btn.onclick = openDeviceHandoverModal;
+    var ho = document.getElementById('deviceHandoverModal');
+    if (ho) ho.onclick = function(e) { if (e.target === this) closeDeviceHandoverModal(); };
+    var hc = document.getElementById('hoModalClose');
+    if (hc) hc.onclick = closeDeviceHandoverModal;
+    var hcan = document.getElementById('hoModalCancel');
+    if (hcan) hcan.onclick = closeDeviceHandoverModal;
+    var hs = document.getElementById('hoModalSubmit');
+    if (hs) hs.onclick = submitDeviceHandover;
+  })();
+
+  (function bindDeviceDetailSave() {
+    const saveBtn = document.getElementById('deviceDetailSaveAll');
+    if (saveBtn) saveBtn.addEventListener('click', saveDeviceDetailChanges);
+    const notesTa = document.getElementById('deviceDetailNotes');
+    if (notesTa) {
+      notesTa.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          saveDeviceDetailChanges();
+        }
+      });
+    }
+  })();
+  document.getElementById('deviceDetailDelete').onclick = function() {
+    const id = parseInt(this.dataset.deviceId, 10);
+    if (Number.isFinite(id)) window.dmRemoveDevice && window.dmRemoveDevice(id);
+  };
+
+  document.getElementById('deviceCommentModalClose').onclick = closeDeviceCommentModal;
+  document.getElementById('deviceCommentCancel').onclick = closeDeviceCommentModal;
+  document.getElementById('deviceCommentSave').onclick = saveDeviceComment;
+  document.getElementById('deviceCommentModal').onclick = function(e) { if (e.target === this) closeDeviceCommentModal(); };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    var hom = document.getElementById('deviceHandoverModal');
+    if (hom && hom.classList.contains('open')) {
+      closeDeviceHandoverModal();
+      return;
+    }
+    const cm = document.getElementById('deviceCommentModal');
+    if (cm && cm.classList.contains('open')) {
+      closeDeviceCommentModal();
+      return;
+    }
+    const d = document.getElementById('deviceDetailModal');
+    if (d && d.classList.contains('open')) closeDeviceDetailModal();
+  });
 
   document.querySelectorAll('.dm-nav-item[data-dm-nav]').forEach(el => {
     el.addEventListener('click', function(e) {

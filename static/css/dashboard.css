@@ -22,7 +22,7 @@
   --bg-card: #ffffff;
   --border-color: #e5e7eb;
   --border-light: #f3f4f6;
-  /* Main nav + module toolbars (matches BizFlow --line); avoids harsh “black” hairline on CDN/deploy */
+  /* Main nav + module toolbars (matches BizFlow --line); avoids harsh ???black??? hairline on CDN/deploy */
   --nav-hairline: #e2ede8;
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -304,7 +304,7 @@ body.inspection-dashboard {
 }
 
 /* ===========================================
-   Dashboard hero — split: left copy, right widget
+   Dashboard hero ??? split: left copy, right widget
    =========================================== */
 .hero {
   padding: 7.5rem 0 4rem;
@@ -534,8 +534,9 @@ body.inspection-dashboard {
   content: '';
   position: absolute;
   left: 0;
-  bottom: -5px;
-  width: 100%;
+  right: 0;
+  width: auto;
+  bottom: -0.2em;
   height: 4px;
   background: linear-gradient(90deg, var(--primary), var(--primary-light));
   border-radius: 4px;
@@ -585,7 +586,7 @@ body.inspection-dashboard {
   background: var(--border-color);
 }
 
-/* Right: dashboard widget — wide, compact height */
+/* Right: dashboard widget ??? wide, compact height */
 .hero-right {
   flex: 0 0 auto;
   width: 640px;
@@ -822,7 +823,7 @@ body.inspection-dashboard {
 }
 
 /* ===========================================
-   Module Cards — Simple + Modern
+   Module Cards ??? Simple + Modern
    =========================================== */
 
 @keyframes cardReveal {
@@ -907,7 +908,7 @@ body.inspection-dashboard {
   animation: cardReveal 0.55s var(--ease-out) forwards;
 }
 
-/* Left color accent stripe — visible on hover */
+/* Left color accent stripe ??? visible on hover */
 .module-card::before {
   content: '';
   position: absolute;
@@ -954,7 +955,7 @@ body.inspection-dashboard {
   transform: scaleY(1);
 }
 
-/* HR “Recent Submissions” — same surface as footer (no white floating slab) */
+/* HR ???Recent Submissions??? ??? same surface as footer (no white floating slab) */
 .hr-dashboard .submissions-panel.module-card {
   background: var(--bg-body) !important;
   box-shadow: none !important;
@@ -1129,7 +1130,7 @@ body.inspection-dashboard {
   color: var(--primary);
 }
 
-/* Copyright line — clean sans (~14px; reference: small muted gray) */
+/* Copyright line ??? clean sans (~14px; reference: small muted gray) */
 .footer-copy {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 0.8125rem; /* 13px */
@@ -1142,7 +1143,7 @@ body.inspection-dashboard {
   border: none;
 }
 
-/* “Built by” name — Grape Nuts (Google Fonts) */
+/* ???Built by??? name ??? Grape Nuts (Google Fonts) */
 .footer-built-by-name {
   display: inline-block;
   vertical-align: middle;
@@ -1612,14 +1613,14 @@ body.inspection-dashboard {
     font-size: 0.55rem !important;
   }
 
-  /* Keep welcome text full size - do not shrink */
+  /* Welcome line: must not run under fixed-width icon cluster (dashboard loads after mobile_responsive) */
   .nav-welcome,
   #welcome-text {
     font-size: 1.08rem !important;
     font-weight: 600 !important;
-    max-width: none !important;
-    overflow: visible !important;
-    text-overflow: unset !important;
+    max-width: min(52vw, calc(100vw - 14rem)) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     white-space: nowrap !important;
   }
 
@@ -1830,16 +1831,15 @@ body.inspection-dashboard {
     font-size: 0.65rem !important;
   }
   
-  /* Full welcome text visible at 768px and above (750px+) */
   .nav-welcome,
   #welcome-text {
     font-size: 1rem !important;
     font-weight: 600 !important;
     color: var(--text-dark) !important;
     white-space: nowrap !important;
-    max-width: none !important;
-    overflow: visible !important;
-    text-overflow: unset !important;
+    max-width: min(52vw, calc(100vw - 14rem)) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
   
   .nav-right {
@@ -2198,9 +2198,10 @@ body.inspection-dashboard {
   .nav-welcome,
   #welcome-text {
     font-size: 0.9rem !important;
-    max-width: none !important;
-    overflow: visible !important;
-    text-overflow: unset !important;
+    max-width: min(52vw, calc(100vw - 14rem)) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
   
   .mobile-menu-drawer {
@@ -2259,7 +2260,7 @@ body.inspection-dashboard {
 }
 
 /* ===========================================
-   Responsive - Very Small Mobile (≤375px)
+   Responsive - Very Small Mobile (???375px)
    =========================================== */
 @media (max-width: 375px) {
   .hero {
@@ -2312,6 +2313,136 @@ body.inspection-dashboard {
 /* ===========================================
    Profile Modal Enhancements
    =========================================== */
+
+/* ===========================================
+   Native mobile polish pass (global main navbar + modules)
+   =========================================== */
+@media (max-width: 768px) {
+  /* Keep header controls aligned and easier to tap */
+  .nav-container {
+    min-height: 58px !important;
+    height: auto !important;
+    align-items: center !important;
+  }
+
+  .nav-right {
+    gap: 0.45rem !important;
+    align-items: center !important;
+  }
+
+  .mobile-menu-toggle,
+  .notification-btn,
+  #pwa-install-btn.pwa-nav-icon,
+  .logout-btn {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    border-radius: 10px !important;
+  }
+
+  .notification-btn svg,
+  #pwa-install-btn.pwa-nav-icon svg,
+  .logout-btn svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* Trim visual clutter and avoid clipped welcome line */
+  .logo-brand {
+    display: none !important;
+  }
+
+  .nav-welcome,
+  #welcome-text {
+    display: block !important;
+    max-width: min(52vw, calc(100vw - 14rem)) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 0.9rem !important;
+    line-height: 1.15 !important;
+  }
+
+  /* HR/Inspection-like hero pages: remove excess dead space above content */
+  .hero.hr-hero,
+  .hero.inspection-hero,
+  .hero.proc-hero,
+  .hero.review-hero {
+    padding: 3.8rem 0 1.35rem !important;
+  }
+
+  .hero.hr-hero .back-btn,
+  .hero.inspection-hero .back-btn,
+  .hero.proc-hero .back-btn {
+    margin-bottom: 0.8rem !important;
+    font-size: 0.95rem !important;
+  }
+
+  /* Module cards with no description should not leave big empty gaps */
+  .module-description:empty {
+    display: none !important;
+    margin: 0 !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .nav-container {
+    padding: 0 0.75rem !important;
+    min-height: 54px !important;
+  }
+
+  .logo img {
+    height: 24px !important;
+  }
+
+  .nav-welcome,
+  #welcome-text {
+    max-width: 16vw !important;
+    font-size: 0.84rem !important;
+  }
+
+  /* Reduce top icon count to keep native spacing on narrow phones */
+  #pwa-install-slot {
+    display: none !important;
+  }
+
+  .mobile-menu-toggle,
+  .notification-btn,
+  .logout-btn {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+  }
+
+  .hero.hr-hero,
+  .hero.inspection-hero,
+  .hero.proc-hero,
+  .hero.review-hero {
+    padding: 3.3rem 0 1.1rem !important;
+  }
+
+  .module-card {
+    border-radius: 12px !important;
+  }
+
+  .card-body {
+    padding: 1rem !important;
+  }
+}
+
+@media (max-width: 420px) {
+  /* Prioritize actions over long heading text at very small widths */
+  .nav-welcome,
+  #welcome-text {
+    display: none !important;
+  }
+
+  .nav-container {
+    gap: 0.35rem !important;
+  }
+}
 
 #profileModal .contact-modal-content {
   padding: 0 !important;
@@ -2629,7 +2760,7 @@ body.inspection-dashboard {
 }
 
 .notification-empty::before {
-  content: '🔔';
+  content: '????';
   display: block;
   font-size: 2rem;
   margin-bottom: 0.5rem;
@@ -2648,7 +2779,7 @@ body.inspection-dashboard {
 }
 
 /* ===========================================
-   Global nav — To-do floating panel (main_navbar, no overlay)
+   Global nav ??? To-do floating panel (main_navbar, no overlay)
    =========================================== */
 .todo-nav-wrapper {
   position: relative;
@@ -2979,5 +3110,691 @@ body.inspection-dashboard {
     right: 10px;
     left: 10px;
     width: auto;
+  }
+}
+
+
+/* =====================================================================
+   DEFINITIVE MOBILE OVERRIDE ? appended last, always wins cascade
+   Root fixes applied here:
+   1. Specificity: .module-card:not([style*="display: none"]) selector matches
+      the (0,2,0) base rule so display:grid finally beats display:block
+   2. hero-right widget hidden on phones ? modules visible immediately
+   3. nav welcome-text consistent across all phone widths
+   4. hero padding tightened when widget is removed
+   ===================================================================== */
+
+/* -- Tablet & below (900px): single-column list layout -- */
+@media (max-width: 900px) {
+  .modules-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+
+  /*
+   * Sub-module pages (HR, Inspection, Procurement, Review) already have
+   * main { padding-top: 5.5rem } clearing the fixed nav.
+   * Their .hero inline padding should stay minimal so content isn't buried.
+   * Matches mobile_responsive.css specificity (0,2,0) ? wins because
+   * dashboard.css loads later.
+   */
+  .hero.hr-hero,
+  .hero.inspection-hero,
+  .hero.proc-hero,
+  .hero.review-hero {
+    padding: 1.5rem 0 1.25rem !important;
+  }
+
+  /*
+   * SPECIFICITY FIX:
+   * Base rule ".module-card:not([style*='display: none'])" has (0,2,0).
+   * The old mobile ".module-card" had only (0,1,0) so display:block won.
+   * Using the same :not() selector here equalises specificity; since this
+   * block comes last in the file, display:grid now always wins.
+   */
+  .module-card:not([style*="display: none"]) {
+    display: grid !important;
+    grid-template-columns: 44px 1fr 32px !important;
+    grid-template-rows: auto auto !important;
+    gap: 0.15rem 0.8rem !important;
+    align-items: center !important;
+    padding: 0.875rem 1rem !important;
+    border-radius: 12px !important;
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* card-body becomes invisible pass-through so children flow into module-card's grid */
+  .module-card .card-body {
+    display: contents !important;
+    padding: 0 !important;
+    height: auto !important;
+  }
+
+  /* Decorative label ? hidden on mobile */
+  .module-card .module-number {
+    display: none !important;
+  }
+
+  /* Icon: left column, spans both rows */
+  .module-card .module-icon {
+    grid-column: 1 !important;
+    grid-row: 1 / 3 !important;
+    align-self: center !important;
+    width: 44px !important;
+    height: 44px !important;
+    margin-bottom: 0 !important;
+    flex-shrink: 0 !important;
+    border-radius: 11px !important;
+    background: var(--border-light) !important;
+  }
+
+  .module-card .module-icon svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  /* Title: middle column, row 1, anchored to bottom of cell */
+  .module-card .module-title {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    align-self: end !important;
+    margin-bottom: 0 !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Description: middle column, row 2, anchored to top of cell */
+  .module-card .module-description {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    align-self: start !important;
+    margin-bottom: 0 !important;
+    font-size: 0.78rem !important;
+    line-height: 1.4 !important;
+    color: var(--text-light) !important;
+    overflow: hidden !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+  }
+
+  /* Arrow: right column, spans both rows, icon-only pill */
+  .module-card .module-arrow {
+    grid-column: 3 !important;
+    grid-row: 1 / 3 !important;
+    align-self: center !important;
+    margin-top: 0 !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0 !important;
+    background: var(--border-light) !important;
+    border-radius: 8px !important;
+    flex-shrink: 0 !important;
+    color: var(--primary) !important;
+  }
+
+  .module-card .module-arrow svg {
+    width: 15px !important;
+    height: 15px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Touch feedback */
+  .module-card:active {
+    transform: scale(0.985) !important;
+    transition: transform 0.1s ease !important;
+  }
+}
+
+/* -- Phone (768px): remove heavy widget so modules are above the fold -- */
+@media (max-width: 768px) {
+  /* Stats/widget panel: hidden on phones ? saves ~200px of scroll */
+  .hero-right {
+    display: none !important;
+  }
+
+  /* Hero without widget: compact */
+  .hero-split .hero-content {
+    flex-direction: column !important;
+    gap: 0 !important;
+    padding: 0 1.25rem !important;
+  }
+
+  /*
+   * Only reduce hero padding on the MAIN dashboard (page-dashboard).
+   * Sub-module pages (hr-dashboard, inspection pages) already have
+   * main { padding-top: 5.5rem } so their .hero inline padding is separate.
+   */
+  .page-dashboard .hero {
+    padding: 4.5rem 0 1rem !important;
+  }
+
+  /* Sub-module heroes: keep compact since main carries the nav clearance.
+     Double-class selector matches mobile_responsive.css specificity (0,2,0)
+     and wins because dashboard.css loads later in the cascade. */
+  .hero.hr-hero,
+  .hero.inspection-hero,
+  .hero.proc-hero,
+  .hero.review-hero {
+    padding: 1.75rem 0 1.25rem !important;
+  }
+
+  .hero-left {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Welcome text: always truncate on phones (fixes 420?480px overflow) */
+  .nav-welcome,
+  #welcome-text {
+    display: block !important;
+    max-width: clamp(80px, 24vw, 140px) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: clamp(0.8rem, 3vw, 0.9rem) !important;
+    font-weight: 600 !important;
+  }
+}
+
+/* -- Small phones (560px) -- */
+@media (max-width: 560px) {
+  .module-card:not([style*="display: none"]) {
+    grid-template-columns: 38px 1fr 28px !important;
+    padding: 0.75rem 0.875rem !important;
+    gap: 0.1rem 0.65rem !important;
+  }
+
+  .module-card .module-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 9px !important;
+  }
+
+  .module-card .module-icon svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .module-card .module-title {
+    font-size: 0.875rem !important;
+  }
+
+  .module-card .module-description {
+    font-size: 0.75rem !important;
+    -webkit-line-clamp: 1 !important;
+  }
+
+  .module-card .module-arrow {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    border-radius: 7px !important;
+  }
+
+  .module-card .module-arrow svg {
+    width: 13px !important;
+    height: 13px !important;
+  }
+
+  .page-dashboard .hero {
+    padding: 4rem 0 0.875rem !important;
+  }
+
+  .hero.hr-hero,
+  .hero.inspection-hero,
+  .hero.proc-hero,
+  .hero.review-hero {
+    padding: 1.5rem 0 1rem !important;
+  }
+
+  .hero-split .hero-content {
+    padding: 0 1rem !important;
+  }
+
+  .hero-title {
+    font-size: clamp(1.55rem, 7.5vw, 1.85rem) !important;
+  }
+
+  .hero-subtitle {
+    font-size: 0.855rem !important;
+    margin-top: 0.75rem !important;
+  }
+
+  .modules-section {
+    padding: 1.5rem 0 3.5rem !important;
+  }
+
+  .modules-grid {
+    gap: 0.4rem !important;
+  }
+}
+
+/* -- Narrow phones (430px) -- */
+@media (max-width: 430px) {
+  /* At this width welcome text crowds the nav icons ? hide it */
+  .nav-welcome,
+  #welcome-text {
+    display: none !important;
+  }
+
+  .module-card:not([style*="display: none"]) {
+    grid-template-columns: 36px 1fr 26px !important;
+    padding: 0.7rem 0.8rem !important;
+    gap: 0.1rem 0.55rem !important;
+    border-radius: 10px !important;
+  }
+
+  .module-card .module-icon {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 8px !important;
+  }
+
+  .module-card .module-icon svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .module-card .module-title {
+    font-size: 0.85rem !important;
+  }
+
+  .module-card .module-arrow {
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    border-radius: 6px !important;
+  }
+
+  .page-dashboard .hero {
+    padding: 3.75rem 0 0.75rem !important;
+  }
+
+  .hero.hr-hero,
+  .hero.inspection-hero,
+  .hero.proc-hero,
+  .hero.review-hero {
+    padding: 1.25rem 0 0.875rem !important;
+  }
+
+  .hero-title {
+    font-size: clamp(1.45rem, 8vw, 1.7rem) !important;
+  }
+
+  .modules-section {
+    padding: 1.25rem 0 3rem !important;
+  }
+
+  .modules-inner {
+    padding: 0 0.875rem !important;
+  }
+
+  .modules-grid {
+    gap: 0.35rem !important;
+  }
+}
+
+/* -- Very small phones (375px) -- */
+@media (max-width: 375px) {
+  .nav-container {
+    padding: 0 0.75rem !important;
+  }
+
+  .page-dashboard .hero {
+    padding: 3.5rem 0 0.625rem !important;
+  }
+
+  .hero.hr-hero,
+  .hero.inspection-hero,
+  .hero.proc-hero,
+  .hero.review-hero {
+    padding: 1rem 0 0.75rem !important;
+  }
+
+  .hero-split .hero-content {
+    padding: 0 0.875rem !important;
+  }
+
+  .hero-title {
+    font-size: clamp(1.35rem, 9vw, 1.6rem) !important;
+  }
+
+  .hero-subtitle {
+    font-size: 0.825rem !important;
+    margin-top: 0.625rem !important;
+  }
+
+  .modules-inner {
+    padding: 0 0.75rem !important;
+  }
+}
+
+
+/* =====================================================================
+   MOBILE NATIVE-APP REDESIGN
+   - Transparent icon nav buttons (no white-box look)
+   - Branded green module card icons
+   - Compact hero for phones
+   - Bottom navigation bar (native-app pattern)
+   ===================================================================== */
+
+/* -- Bottom navigation bar � always hidden on desktop -- */
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  /* -- Show bottom nav on tablet/phone -- */
+  .mobile-bottom-nav {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1001 !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    height: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+    align-items: stretch !important;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .mbn-item {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    color: #94a3b8 !important;
+    text-decoration: none !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.01em !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+    padding: 0 4px !important;
+    -webkit-tap-highlight-color: transparent !important;
+    transition: color 0.15s ease !important;
+    min-height: 58px !important;
+    position: relative !important;
+  }
+
+  .mbn-item:active {
+    color: #125435 !important;
+    background: rgba(18, 84, 53, 0.05) !important;
+  }
+
+  .mbn-item.mbn-active {
+    color: #125435 !important;
+  }
+
+  .mbn-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  .mbn-icon svg {
+    width: 22px !important;
+    height: 22px !important;
+    stroke: currentColor !important;
+    flex-shrink: 0 !important;
+  }
+
+  .mbn-item.mbn-active .mbn-icon::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 6px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 32px !important;
+    height: 32px !important;
+    background: rgba(18, 84, 53, 0.1) !important;
+    border-radius: 10px !important;
+  }
+
+  .mbn-label {
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.015em !important;
+    line-height: 1 !important;
+  }
+
+  /* Push all page content up so it isn't hidden behind the bottom bar */
+  body {
+    padding-bottom: calc(58px + env(safe-area-inset-bottom, 8px)) !important;
+  }
+
+  /* -- NAV: transparent icon buttons � no white box look -- */
+  .notification-wrapper .notification-btn,
+  .todo-nav-wrapper .notification-btn,
+  .todo-nav-wrapper .todo-nav-btn {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #374151 !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .notification-wrapper .notification-btn:active,
+  .todo-nav-wrapper .notification-btn:active,
+  .todo-nav-wrapper .todo-nav-btn:active {
+    background: rgba(0, 0, 0, 0.06) !important;
+  }
+
+  /* SVG icons: proper size and color in transparent buttons */
+  .notification-wrapper .notification-btn svg,
+  .todo-nav-wrapper .notification-btn svg,
+  .todo-nav-wrapper .todo-nav-btn svg {
+    width: 22px !important;
+    height: 22px !important;
+    stroke: #374151 !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Notification badge: stay visible */
+  .notification-badge {
+    position: absolute !important;
+    top: 4px !important;
+    right: 4px !important;
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 9px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    background: #ef4444 !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+    border: 1.5px solid #fff !important;
+  }
+
+  /* PWA install: hidden on mobile � clutters the narrow nav */
+  #pwa-install-slot,
+  #pwa-install-btn {
+    display: none !important;
+  }
+
+  /* Hamburger: styled as bordered tap target (primary drawer trigger) */
+  .mobile-menu-toggle {
+    background: transparent !important;
+    border: 1.5px solid #e5e7eb !important;
+    color: #111827 !important;
+    border-radius: 9px !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+  }
+
+  /* Logout: transparent icon-only */
+  .logout-btn {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #374151 !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .logout-btn svg {
+    width: 22px !important;
+    height: 22px !important;
+    stroke: #374151 !important;
+  }
+
+  .logout-btn span {
+    display: none !important;
+  }
+
+  /* -- MODULE CARDS: branded green visual identity -- */
+  /* Icon: soft green background, brand-green stroke */
+  .module-card .module-icon {
+    background: rgba(18, 84, 53, 0.09) !important;
+    border-radius: 11px !important;
+  }
+
+  .module-card .module-icon svg {
+    stroke: #125435 !important;
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* Arrow: soft green pill */
+  .module-card .module-arrow {
+    background: rgba(18, 84, 53, 0.09) !important;
+    color: #125435 !important;
+    border-radius: 8px !important;
+  }
+
+  .module-card .module-arrow svg {
+    stroke: #125435 !important;
+  }
+
+  /* Card: clean white, subtle shadow */
+  .module-card:not([style*="display: none"]) {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05), 0 0 0 0.5px rgba(0,0,0,0.04) !important;
+  }
+
+  /* Active tap: scale + greenish tint */
+  .module-card:active {
+    background: #f0fdf4 !important;
+    transform: scale(0.982) !important;
+    transition: transform 0.08s ease, background 0.08s ease !important;
+  }
+
+  /* Title: stronger weight */
+  .module-card .module-title {
+    color: #111827 !important;
+    font-weight: 700 !important;
+  }
+
+  /* Description: lighter */
+  .module-card .module-description {
+    color: #6b7280 !important;
+  }
+
+  /* Section label: uppercase micro-text */
+  .modules-section-label {
+    font-size: 0.62rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.13em !important;
+    color: #94a3b8 !important;
+    text-transform: uppercase !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  /* -- HERO: App-like header, tight -- */
+  .hero-tagline {
+    font-size: 0.62rem !important;
+    letter-spacing: 0.14em !important;
+    padding: 0.3rem 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+    font-weight: 700 !important;
+  }
+
+  .hero-title {
+    font-size: clamp(1.75rem, 7vw, 2.2rem) !important;
+    line-height: 1.12 !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  .hero-subtitle {
+    font-size: 0.875rem !important;
+    line-height: 1.6 !important;
+    margin-top: 0.75rem !important;
+    color: #6b7280 !important;
+  }
+
+  /* Modules section: tighter */
+  .modules-section {
+    padding: 1.25rem 0 1.5rem !important;
+  }
+
+  .modules-grid {
+    gap: 0.5rem !important;
+  }
+}
+
+/* -- Small phone tweaks -- */
+@media (max-width: 430px) {
+  .mbn-label {
+    font-size: 9px !important;
+  }
+
+  .mbn-icon svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* Hero even tighter */
+  .hero-subtitle {
+    display: none !important;
+  }
+
+  .hero-cta-row {
+    display: none !important;
+  }
+
+  .page-dashboard .hero {
+    padding: 3.75rem 0 0.625rem !important;
+  }
+
+  .modules-section {
+    padding: 1rem 0 1.25rem !important;
   }
 }

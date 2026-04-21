@@ -1783,7 +1783,7 @@
         <div>
           <div class="card-title" style="margin-bottom:.75rem">⏰ Schedule</div>
           <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem">
-            Automatically send the report every day at the configured time (using the last uploaded Excel file). Uses the <strong>Report format</strong> (Daily/Monthly) on the left for subject, body, and attachment filename.
+            Automatically send the report every day at the configured time (using the last uploaded Excel file). A scheduled send runs <strong>only after</strong> you open the automation roadmap and <strong>Mark Reviewed</strong> for that upload. Uses the <strong>Report format</strong> (Daily/Monthly) on the left for subject, body, and attachment filename.
           </p>
           <div class="schedule-row">
             <div class="toggle-wrap">
@@ -2915,7 +2915,8 @@ async function sendEmailNow() {
       await loadCycleData();
     } else toast('❌ ' + (data.error || 'Email failed'), 'error');
   } finally {
-    btn.disabled = false; btn.textContent = '✉️ Send Email Now';
+    btn.textContent = '✉️ Send Email Now';
+    updateMmrSendEmailGate();
   }
 }
 
@@ -2989,15 +2990,18 @@ async function loadAutomationStatus() {
       automationStatus = null;
       updateAutomationButton();
       updateUploadSideInsight();
+      updateMmrSendEmailGate();
       return;
     }
     automationStatus = await resp.json();
     updateAutomationButton();
+    updateMmrSendEmailGate();
   } catch (e) {
     console.error('Automation status load failed:', e);
     automationStatus = null;
     updateAutomationButton();
     updateUploadSideInsight();
+    updateMmrSendEmailGate();
   }
 }
 
@@ -3028,10 +3032,16 @@ function buildInsightSmartHtml(s) {
     sub =
       'Upload a new Excel file when you want the next cycle. The current workbook stays on the server until you replace or clear it.';
   } else if (s.automation_status === 'pending') {
-    title = 'Before the run';
-    sub = s.excel_uploaded
-      ? 'You can filter, chart, and download until send time. Change recipients in Email Report if you need to.'
-      : 'Upload a workbook so the scheduled job has a report to deliver.';
+    if (s.schedule_enabled && !s.schedule_paused && s.excel_uploaded && s.cycle_approved === false) {
+      title = 'Approval required';
+      sub =
+        'Until you open the roadmap and click Mark Reviewed, the daily time will skip sending — no email goes out.';
+    } else {
+      title = 'Before the run';
+      sub = s.excel_uploaded
+        ? 'You can filter, chart, and download until send time. Change recipients in Email Report if you need to.'
+        : 'Upload a workbook so the scheduled job has a report to deliver.';
+    }
   } else {
     title = 'Automation';
     sub = 'Open the roadmap from the automation button for the full timeline and controls.';
@@ -3072,9 +3082,13 @@ function updateUploadSideInsight() {
       s.next_run_at ||
       `${String(s.schedule_hour ?? 10).padStart(2, '0')}:${String(s.schedule_minute ?? 0).padStart(2, '0')}`;
     const day = s.next_run_tomorrow ? 'Tomorrow' : 'Today';
-    mainParts.push(
-      `<p>Next automatic send <strong>${day}</strong> at <strong>${mmrEscInsight(t)}</strong> GST.</p>`
-    );
+    let nextPara =
+      `<p>Next automatic send <strong>${day}</strong> at <strong>${mmrEscInsight(t)}</strong> GST.</p>`;
+    if (s.cycle_approved === false) {
+      nextPara +=
+        '<p class="upload-side-insight-muted">Runs only after you <strong>approve</strong> this cycle in the automation roadmap.</p>';
+    }
+    mainParts.push(nextPara);
   }
   if (s.last_run && s.last_run.status === 'success' && s.last_run.at_formatted) {
     const n = Number(s.last_run.recipient_count) || 0;
@@ -3142,7 +3156,7 @@ function updateAutomationButton() {
     label.textContent = next
       ? `Automation started${nextBit}${excelReq}`
       : `Automation started${excelReq}`;
-    btn.title = 'Daily automation is active. The report sends at the next scheduled time. The dashboard stays usable while this runs. Open for the full roadmap.';
+    btn.title = 'Daily automation is active. The report sends at the next scheduled time only after you approve the current cycle in the roadmap. Open for the full roadmap.';
   } else if (status === 'paused') {
     btn.className = 'btn-automation btn-automation-paused';
     label.textContent = 'Paused · Upload to resume';
@@ -3859,8 +3873,29 @@ async function loadCycleData() {
     if (!resp.ok) return;
     cycleLog = await resp.json();
     renderRoadmap();
+    updateMmrSendEmailGate();
   } catch (e) {
     console.error('Cycle data load failed:', e);
+  }
+}
+
+/** Manual send is allowed only when the current cycle is approved (same gate as scheduled automation). */
+function updateMmrSendEmailGate() {
+  const btn = document.getElementById('btnSendEmail');
+  if (!btn) return;
+  let approved = false;
+  const cur = cycleLog?.current;
+  if (cur && cur.status === 'approved') approved = true;
+  else if (automationStatus && automationStatus.cycle_approved === true) approved = true;
+
+  if (approved) {
+    btn.disabled = false;
+    btn.removeAttribute('title');
+  } else {
+    btn.disabled = true;
+    btn.title = cur
+      ? 'Open the automation roadmap and click “Mark Reviewed” before sending.'
+      : 'Upload an Excel file and approve the cycle in the roadmap before sending.';
   }
 }
 
@@ -3967,10 +4002,10 @@ function renderRoadmap() {
 
   // Card 3 – Send
   const schedNote = (s.schedule_enabled && !s3)
-    ? `<br><small>Auto scheduled at ${String(s.schedule_hour ?? 10).padStart(2,'0')}:${String(s.schedule_minute ?? 0).padStart(2,'0')} GST</small>`
+    ? `<br><small>Scheduled sends only run after <strong>approval</strong> below. Time: ${String(s.schedule_hour ?? 10).padStart(2,'0')}:${String(s.schedule_minute ?? 0).padStart(2,'0')} GST</small>`
     : '';
   const automationRunning = s.schedule_enabled && !s.schedule_paused;
-  const sendBtnHtml = (s1 && !s3)
+  const sendBtnHtml = (s1 && s2 && !s3)
     ? (automationRunning
         ? `<button class="sc-btn sc-btn-send" disabled style="opacity:.85;cursor:default">✓ Automation started</button>`
         : `<button class="sc-btn sc-btn-send" id="roadmapStartBtn" onclick="startAutomationFromRoadmap()">▶ Start the automation</button>`)
@@ -3979,7 +4014,9 @@ function renderRoadmap() {
     s3
       ? `✓ Sent to <strong>${current.recipient_count || 0}</strong> recipients${current.sent_by ? ` by <strong>${escHtml(current.sent_by)}</strong>` : ''}`
       : s1
-        ? `Ready to dispatch.${schedNote}`
+        ? (s2
+            ? `Ready to dispatch.${schedNote}`
+            : `Approve step 2 first — then manual send, Save Config, and scheduled runs are allowed.${schedNote}`)
         : 'Awaiting upload.',
     s3 ? fmtDT(current.sent_at) : null, sendBtnHtml);
 

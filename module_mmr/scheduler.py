@@ -44,7 +44,8 @@ def _run_scheduled_report(app):
                                   append_automation_activity,
                                   _save_report_to_folder, _save_email_report_to_network,
                                   _format_report_date, _format_report_date_range_str,
-                                  _REPORT_DATE_PLACEHOLDER, _report_filename, _complete_current_cycle)
+                                  _REPORT_DATE_PLACEHOLDER, _report_filename, _complete_current_cycle,
+                                  _is_current_cycle_approved_for_send)
             from .mmr_service import parse_excel, generate_report_excel, get_report_date_range_from_df, get_report_date_from_excel, format_chargeable_summary_for_email, format_per_tower_chargeable_html_for_email
             from common.email_service import send_email
 
@@ -63,6 +64,16 @@ def _run_scheduled_report(app):
                     'Scheduled run skipped: no Excel file on the server',
                     None,
                     meta={'reason': 'no_file'},
+                )
+                return
+
+            if not _is_current_cycle_approved_for_send():
+                logger.info('MMR scheduler: current cycle not approved, skipping send')
+                append_automation_activity(
+                    'run_skipped',
+                    'Scheduled run skipped: report not approved',
+                    'Open the automation roadmap and click “Mark Reviewed” before the scheduled send.',
+                    meta={'reason': 'not_approved'},
                 )
                 return
 
