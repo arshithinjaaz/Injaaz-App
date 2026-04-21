@@ -684,22 +684,31 @@
       .dm-topbar {
         padding: 0 1rem;
         height: auto;
-        min-height: 56px;
+        min-height: 52px;
         flex-wrap: wrap;
         gap: 8px;
         top: 4rem;
         padding-top: 8px;
         padding-bottom: 8px;
       }
-      .dm-page-title { font-size: 14px; flex: 1 1 100%; }
+      .dm-page-title { font-size: 13px; flex: 1 1 100%; }
       .dm-topbar-spacer { display: none; }
       .dm-search-wrap { flex: 1 1 auto; }
       .dm-search-wrap input { width: 100%; }
       .dm-search-wrap input:focus { width: 100%; }
-      .dm-add-btn { flex-shrink: 0; padding: 8px 12px; font-size: 12px; }
-      .dm-content { padding: 1rem; }
-      .dm-device-table th, .dm-device-table td { padding: 0.6rem 0.75rem; font-size: 0.78rem; }
-      .dm-stat-card { padding: 14px 16px; }
+      .dm-add-btn { flex-shrink: 0; padding: 7px 11px; font-size: 12px; }
+      .dm-content { padding: 0.875rem; }
+      .dm-device-table th, .dm-device-table td { padding: 0.5rem 0.625rem; font-size: 0.75rem; }
+      .dm-stat-card { padding: 12px 14px; }
+      /* Modal form fields — prevent collapsed look */
+      .dm-form-row { grid-template-columns: 1fr; gap: 10px; margin-bottom: 10px; }
+      .dm-form-field input, .dm-form-field select {
+        font-size: 16px; padding: 0.65rem 0.875rem;
+        min-height: 44px; border-radius: 10px;
+      }
+      .dm-modal-body { padding: 14px 16px; }
+      .dm-modal-footer { padding: 10px 16px 16px; flex-direction: column; }
+      .dm-modal-footer button { width: 100%; padding: 12px; }
     }
   </style>
 </head>

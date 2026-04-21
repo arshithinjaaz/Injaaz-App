@@ -3079,3 +3079,30 @@ label.dh-table-ref-col-check {
     font-size: 12px;
   }
 }
+
+/* Mobile fixes — form inputs, sidebar and layout */
+@media (max-width: 768px) {
+  .topbar-tools .dh-search input {
+    width: 100% !important;
+    font-size: 16px !important;
+    padding: 0.6rem 0.875rem !important;
+    min-height: 42px !important;
+    border-radius: 10px !important;
+  }
+
+  .dh-topbar {
+    flex-wrap: wrap;
+    height: auto !important;
+    min-height: 52px;
+    padding: 0.5rem 0.875rem;
+    gap: 0.5rem;
+  }
+
+  .dh-body {
+    grid-template-columns: 1fr;
+  }
+
+  .doc-panel {
+    max-height: 260px;
+  }
+}
