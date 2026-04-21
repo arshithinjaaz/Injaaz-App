@@ -36,6 +36,7 @@ from app.models import db, User
 from app.middleware import token_required, module_access_required
 from app.services.cloudinary_service import upload_local_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from common.workflow_notifications import send_inspection_submitted
 
 # Rate limiting helper (import from auth routes)
 def get_limiter():
@@ -748,6 +749,13 @@ def submit():
         )
         sub_id = submission.submission_id
 
+        # Trigger inspection email notification for real-time supervisor submission.
+        try:
+            submitter_user = User.query.get(user_id) if user_id else None
+            send_inspection_submitted(submission, submitter_user)
+        except Exception as notify_err:
+            logger.warning(f"Submission email notification failed for {sub_id}: {notify_err}")
+
         # Create job in database
         job = create_job_db(submission)
         job_id = job.job_id
@@ -1283,6 +1291,13 @@ def submit_with_urls():
             )
             sub_id = submission_db.submission_id
             logger.info(f"✅ Created submission {sub_id} with {len(items)} items")
+
+            # Trigger inspection email notification on real HVAC submission.
+            try:
+                submitter_user = User.query.get(user_id) if user_id else None
+                send_inspection_submitted(submission_db, submitter_user)
+            except Exception as notify_err:
+                logger.warning(f"Submission email notification failed for {sub_id}: {notify_err}")
         
         # Create job in database
         job = create_job_db(submission_db)
