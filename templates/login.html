@@ -98,10 +98,15 @@
         }
 
         @media (max-width: 767px) {
+            .login-main {
+                overflow: visible;
+                position: relative;
+            }
             .login-hero {
-                flex: 0 1 42%;
-                max-height: 44vh;
-                padding: 1.25rem 1.5rem;
+                flex: 0 0 auto;
+                min-height: 45vh;
+                max-height: 50vh;
+                padding: 2rem 1.5rem 4.5rem;
             }
         }
 
@@ -215,42 +220,115 @@
             overflow: hidden;
         }
 
+        @media (max-width: 767px) {
+            .login-canvas {
+                margin-top: -2.5rem;
+                position: relative;
+                z-index: 10;
+                background: white;
+                border-radius: 22px 22px 0 0;
+                padding: 1.75rem 1.5rem 2rem;
+                align-items: center;
+                justify-content: center;
+                overflow-y: auto;
+                box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+            }
+            .login-card {
+                max-width: 100%;
+                width: 100%;
+                padding: 0;
+                border-radius: 0;
+                box-shadow: none;
+                border: none;
+                background: transparent;
+            }
+            .login-card-logo {
+                margin-bottom: 0.5rem;
+            }
+            .login-card-logo img {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+            }
+            .login-card-intro {
+                margin-bottom: 0.6rem;
+            }
+            .login-card-intro h1 {
+                font-size: 0.95rem;
+                margin-bottom: 0.1rem;
+            }
+            .login-card-intro .subtitle {
+                font-size: 0.68rem;
+                line-height: 1.35;
+            }
+            .lp-label {
+                font-size: 0.58rem;
+                margin-bottom: 0.15rem;
+            }
+            .form-group {
+                margin-bottom: 0.45rem;
+            }
+            input.lp-input[type="text"],
+            input.lp-input[type="password"] {
+                padding: 0.45rem 0.65rem 0.45rem 2rem;
+                font-size: 0.78rem;
+                border-radius: 0.35rem;
+            }
+            .lp-input-icon {
+                left: 0.55rem;
+            }
+            .lp-input-icon svg {
+                width: 13px;
+                height: 13px;
+            }
+            .btn-login {
+                padding: 0.55rem 1rem;
+                font-size: 0.78rem;
+                margin-top: 0.15rem;
+                border-radius: 0.35rem;
+            }
+            .register-link {
+                font-size: 0.68rem;
+                margin-top: 0.6rem;
+            }
+        }
+
         @media (min-width: 768px) {
             .login-card {
-                padding: 2.25rem 2.5rem;
+                padding: 1.75rem 2rem;
                 margin-top: 0;
             }
         }
 
         .login-card-logo {
-            text-align: center;
-            margin-bottom: 1.25rem;
+            text-align: left;
+            margin-bottom: 0.75rem;
         }
 
         .login-card-logo img {
-            width: 72px;
-            height: 72px;
-            border-radius: 12px;
+            width: 56px;
+            height: 56px;
+            border-radius: 11px;
         }
 
         .login-card-intro {
-            margin-bottom: 1.75rem;
+            margin-bottom: 1rem;
         }
 
         .login-card-intro h1 {
             font-family: 'Manrope', sans-serif;
-            font-size: 1.5rem;
+            font-size: 1.15rem;
             font-weight: 700;
             color: var(--lp-primary);
-            margin: 0 0 0.35rem;
+            margin: 0 0 0.2rem;
             text-align: left;
         }
 
         .login-card-intro .subtitle {
             margin: 0;
-            font-size: 0.875rem;
+            font-size: 0.775rem;
             color: var(--lp-on-surface-variant);
-            line-height: 1.5;
+            line-height: 1.4;
             text-align: left;
         }
 
@@ -277,13 +355,13 @@
         }
 
         .form-group {
-            margin-bottom: 1.25rem;
+            margin-bottom: 0.875rem;
         }
 
         .lp-label {
             display: block;
-            margin-bottom: 0.35rem;
-            font-size: 0.6875rem;
+            margin-bottom: 0.25rem;
+            font-size: 0.625rem;
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -300,7 +378,7 @@
 
         .lp-input-icon {
             position: absolute;
-            left: 1rem;
+            left: 0.75rem;
             top: 50%;
             transform: translateY(-50%);
             color: var(--lp-outline);
@@ -311,10 +389,10 @@
         input.lp-input[type="text"],
         input.lp-input[type="password"] {
             width: 100%;
-            padding: 1rem 1rem 1rem 2.85rem;
+            padding: 0.65rem 0.875rem 0.65rem 2.5rem;
             border: none;
-            border-radius: 0.5rem;
-            font-size: 1rem;
+            border-radius: 0.45rem;
+            font-size: 0.875rem;
             font-family: inherit;
             background: var(--lp-surface-highest);
             color: var(--lp-on-surface);
@@ -334,13 +412,13 @@
 
         .btn-login {
             width: 100%;
-            padding: 1rem 1.25rem;
-            margin-top: 0.5rem;
+            padding: 0.7rem 1.25rem;
+            margin-top: 0.35rem;
             background: var(--lp-primary-container);
             color: var(--lp-on-primary);
             border: none;
-            border-radius: 0.5rem;
-            font-size: 1rem;
+            border-radius: 0.45rem;
+            font-size: 0.875rem;
             font-weight: 700;
             font-family: inherit;
             cursor: pointer;
