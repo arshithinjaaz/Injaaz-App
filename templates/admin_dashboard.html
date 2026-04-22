@@ -1958,6 +1958,7 @@
       <nav class="sb-nav">
         <div class="dh-sb-section">
           <div class="sb-section-label">Overview</div>
+          <a href="#section-notification-settings" class="sb-nav-item">Notification settings</a>
           <a href="#section-users" class="sb-nav-item active">Users <span class="sb-badge" id="admSbUserCount">0</span></a>
           <a href="#section-documents" class="sb-nav-item">Documents <span class="sb-badge" id="admSbDocCount">0</span></a>
         </div>
@@ -2048,6 +2049,51 @@
         </div>
         <div class="modal-automation-body" id="automationModalBody">
           <p style="color:var(--text-muted)">Loading…</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="users-section" id="section-notification-settings">
+      <div class="section-header">
+        <h2 class="section-title">Notification Settings</h2>
+        <div class="section-controls">
+          <button class="btn btn-refresh" type="button" onclick="loadNotificationConfig()">↻ Refresh</button>
+          <button class="btn btn-primary" type="button" onclick="saveNotificationConfig()">Save Settings</button>
+        </div>
+      </div>
+      <p style="color:var(--text-secondary);margin-bottom:1rem;">
+        Configure To/CC recipients for workflow emails. Use comma-separated emails.
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;">
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:1rem;">
+          <h3 style="margin:0 0 .6rem;color:var(--text-dark);font-size:1rem;">Inspection Forms</h3>
+          <div class="form-group">
+            <label class="form-label" for="inspectionTo">To</label>
+            <textarea id="inspectionTo" class="form-control" rows="2" placeholder="ops@company.com, manager@company.com"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="inspectionCc">CC</label>
+            <textarea id="inspectionCc" class="form-control" rows="2" placeholder="teamlead@company.com"></textarea>
+          </div>
+          <label style="display:flex;align-items:center;gap:.5rem;">
+            <input type="checkbox" id="inspectionIncludeSubmitter" checked>
+            <span>Include submitter in To</span>
+          </label>
+        </div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:1rem;">
+          <h3 style="margin:0 0 .6rem;color:var(--text-dark);font-size:1rem;">HR Forms</h3>
+          <div class="form-group">
+            <label class="form-label" for="hrTo">To</label>
+            <textarea id="hrTo" class="form-control" rows="2" placeholder="hr@company.com"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="hrCc">CC</label>
+            <textarea id="hrCc" class="form-control" rows="2" placeholder="gm@company.com"></textarea>
+          </div>
+          <label style="display:flex;align-items:center;gap:.5rem;">
+            <input type="checkbox" id="hrIncludeSubmitter" checked>
+            <span>Include submitter in To</span>
+          </label>
         </div>
       </div>
     </div>
@@ -2470,6 +2516,83 @@
         return true;
       }
       return false;
+    }
+
+    function parseEmailList(value) {
+      return (value || '')
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean);
+    }
+
+    function applyNotificationConfig(config) {
+      const inspection = (config && config.inspection) || {};
+      const hr = (config && config.hr) || {};
+
+      const inspectionToEl = document.getElementById('inspectionTo');
+      const inspectionCcEl = document.getElementById('inspectionCc');
+      const inspectionIncEl = document.getElementById('inspectionIncludeSubmitter');
+      const hrToEl = document.getElementById('hrTo');
+      const hrCcEl = document.getElementById('hrCc');
+      const hrIncEl = document.getElementById('hrIncludeSubmitter');
+
+      if (inspectionToEl) inspectionToEl.value = (inspection.to || []).join(', ');
+      if (inspectionCcEl) inspectionCcEl.value = (inspection.cc || []).join(', ');
+      if (inspectionIncEl) inspectionIncEl.checked = inspection.include_submitter !== false;
+      if (hrToEl) hrToEl.value = (hr.to || []).join(', ');
+      if (hrCcEl) hrCcEl.value = (hr.cc || []).join(', ');
+      if (hrIncEl) hrIncEl.checked = hr.include_submitter !== false;
+    }
+
+    async function loadNotificationConfig() {
+      try {
+        const response = await authenticatedFetch('/api/admin/notification-config');
+        if (handleUnauthorized(response)) return;
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to load notification settings');
+        }
+        applyNotificationConfig((data.data && data.data.config) || {});
+      } catch (error) {
+        console.error('Notification config load failed:', error);
+        showAlert('Failed to load notification settings', 'error');
+      }
+    }
+
+    async function saveNotificationConfig() {
+      try {
+        const payload = {
+          config: {
+            inspection: {
+              to: parseEmailList(document.getElementById('inspectionTo')?.value),
+              cc: parseEmailList(document.getElementById('inspectionCc')?.value),
+              include_submitter: !!document.getElementById('inspectionIncludeSubmitter')?.checked,
+            },
+            hr: {
+              to: parseEmailList(document.getElementById('hrTo')?.value),
+              cc: parseEmailList(document.getElementById('hrCc')?.value),
+              include_submitter: !!document.getElementById('hrIncludeSubmitter')?.checked,
+            },
+          },
+        };
+
+        const response = await authenticatedFetch('/api/admin/notification-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (handleUnauthorized(response)) return;
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to save notification settings');
+        }
+        applyNotificationConfig((data.data && data.data.config) || payload.config);
+        showAlert('Notification settings saved', 'success');
+      } catch (error) {
+        console.error('Notification config save failed:', error);
+        showAlert('Failed to save notification settings', 'error');
+      }
     }
 
     let automationStatus = null;
@@ -4112,6 +4235,7 @@
       initAdminGreeting();
       initAdminSidebarUser();
       checkPasswordChangeRequired();
+      loadNotificationConfig();
       loadUsers();
       loadDocuments();
       loadAutomationStatus();

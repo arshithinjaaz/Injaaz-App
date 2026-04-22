@@ -751,6 +751,17 @@ class MmrChargeableConfig(db.Model):
         return f'<MmrChargeableConfig id={self.id}>'
 
 
+class NotificationConfig(db.Model):
+    """Single-row JSON settings for workflow notification recipients."""
+    __tablename__ = 'notification_config'
+
+    id = db.Column(db.Integer, primary_key=True)
+    config_json = db.Column(JSON, nullable=False)
+
+    def __repr__(self):
+        return f'<NotificationConfig id={self.id}>'
+
+
 class Notification(db.Model):
     """User notifications for workflow updates"""
     __tablename__ = 'notifications'
