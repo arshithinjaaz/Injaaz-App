@@ -30,6 +30,7 @@ def _cron_timezone():
 _scheduler: BackgroundScheduler | None = None
 _JOB_ID = 'mmr_daily_report'
 _REMINDER_JOB_ID = 'mmr_upload_reminder'
+_REMINDER_RECIPIENTS = ['arshith@injaaz.ae', 'arshithinjaaz@gmail.com']
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -187,7 +188,7 @@ def _run_upload_reminder(app):
 
             from flask import current_app
 
-            from .routes import _load_config, _save_config, _validate_injaaz_emails, append_automation_activity
+            from .routes import _load_config, _save_config, append_automation_activity
             from common.email_service import is_email_configured, send_email
 
             config = _load_config()
@@ -208,21 +209,10 @@ def _run_upload_reminder(app):
                 logger.warning('MMR upload reminder: email not configured, skipping')
                 return
 
-            to_raw = config.get('to', '').strip()
-            if not to_raw:
-                logger.warning('MMR upload reminder: no recipients configured')
-                return
-            to_list, err = _validate_injaaz_emails(to_raw)
-            if err or not to_list:
-                logger.warning('MMR upload reminder: invalid To addresses')
-                return
-
-            cc_raw = config.get('cc', '').strip()
+            # Reminder recipients are intentionally fixed (independent from MMR To/CC config).
+            # This allows explicit reminder routing without affecting main daily report emails.
+            to_list = list(_REMINDER_RECIPIENTS)
             cc_list = None
-            if cc_raw:
-                cl, cce = _validate_injaaz_emails(cc_raw)
-                if not cce and cl:
-                    cc_list = cl
 
             sh = int(config.get('schedule_hour', 10))
             sm = int(config.get('schedule_minute', 0))
