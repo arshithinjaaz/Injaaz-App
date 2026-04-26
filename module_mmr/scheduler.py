@@ -1,6 +1,6 @@
 """
 APScheduler wrapper for the MMR daily email.
-Runs a cron job at the configured time (default 10:00 AM) and a reminder one hour earlier.
+Runs a cron job at the configured time (default 10:00 AM).
 
 Schedule hour/minute are interpreted in Dubai time (Asia/Dubai), not server UTC.
 Override with env MMR_SCHEDULE_TIMEZONE (e.g. UTC for debugging).
@@ -29,7 +29,8 @@ def _cron_timezone():
 
 _scheduler: BackgroundScheduler | None = None
 _JOB_ID = 'mmr_daily_report'
-_REMINDER_JOB_ID = 'mmr_upload_reminder'
+# Legacy id from pre-removal upload reminder job — still unregistered in update_schedule.
+_LEGACY_REMINDER_JOB_ID = 'mmr_upload_reminder'
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -173,89 +174,6 @@ def _run_scheduled_report(app):
                 pass
 
 
-def _reminder_hour_minute(schedule_hour: int, schedule_minute: int) -> tuple[int, int]:
-    """One hour before the main job, same minute (e.g. 10:00 → 09:00)."""
-    h = (int(schedule_hour) - 1) % 24
-    return h, int(schedule_minute)
-
-
-def _run_upload_reminder(app):
-    """Email ops ~1h before the scheduled send when a fresh Excel is still required."""
-    with app.app_context():
-        try:
-            from datetime import datetime
-
-            from flask import current_app
-
-            from .routes import _load_config, _save_config, _validate_injaaz_emails, append_automation_activity
-            from common.email_service import is_email_configured, send_email
-
-            config = _load_config()
-            if not config.get('schedule_enabled'):
-                return
-            if not config.get('automation_waiting_for_fresh_upload'):
-                return
-            if not config.get('schedule_paused'):
-                return
-
-            tz = _cron_timezone()
-            now = datetime.now(tz)
-            today = now.date().isoformat()
-            if config.get('last_upload_reminder_sent_date') == today:
-                return
-
-            if not is_email_configured(current_app):
-                logger.warning('MMR upload reminder: email not configured, skipping')
-                return
-
-            to_raw = config.get('to', '').strip()
-            if not to_raw:
-                logger.warning('MMR upload reminder: no recipients configured')
-                return
-            to_list, err = _validate_injaaz_emails(to_raw)
-            if err or not to_list:
-                logger.warning('MMR upload reminder: invalid To addresses')
-                return
-
-            cc_raw = config.get('cc', '').strip()
-            cc_list = None
-            if cc_raw:
-                cl, cce = _validate_injaaz_emails(cc_raw)
-                if not cce and cl:
-                    cc_list = cl
-
-            sh = int(config.get('schedule_hour', 10))
-            sm = int(config.get('schedule_minute', 0))
-            tz_label = getattr(tz, 'key', str(tz))
-            body = (
-                f'This is a reminder: MMR email automation is scheduled for '
-                f'{sh:02d}:{sm:02d} ({tz_label}).\n\n'
-                f'Please upload a fresh CAFM Excel file on the MMR dashboard before that time. '
-                f'If no new file is uploaded, the automation will not run.\n\n'
-                f'After each successful send, a new upload is required for the next scheduled run.'
-            )
-            subject = f"[MMR Reminder] Upload today's Excel before {sh:02d}:{sm:02d}"
-            ok = send_email(
-                recipient=to_list,
-                subject=subject,
-                body=body,
-                cc=cc_list,
-            )
-            if ok:
-                config = _load_config()
-                config['last_upload_reminder_sent_date'] = today
-                _save_config(config)
-                append_automation_activity(
-                    'reminder_sent',
-                    'Reminder email sent (upload Excel before the scheduled send)',
-                    f'Scheduled send: {sh:02d}:{sm:02d} {tz_label}.',
-                    meta={'schedule_hour': sh, 'schedule_minute': sm},
-                )
-                logger.info('MMR upload reminder sent')
-        except Exception:
-            logger.exception('MMR upload reminder failed')
-
-
 # ──────────────────────────────────────────────────────────────────────────────
 # Public API
 # ──────────────────────────────────────────────────────────────────────────────
@@ -278,10 +196,9 @@ def init_scheduler(app):
             tz = _cron_timezone()
             sh = int(config.get('schedule_hour', 10))
             sm = int(config.get('schedule_minute', 0))
-            rh, rm = _reminder_hour_minute(sh, sm)
             logger.info(
-                'MMR scheduler: report %02d:%02d, reminder %02d:%02d %s (startup)',
-                sh, sm, rh, rm, getattr(tz, 'key', str(tz)),
+                'MMR scheduler: report %02d:%02d %s (startup)',
+                sh, sm, getattr(tz, 'key', str(tz)),
             )
     except Exception:
         logger.exception('MMR scheduler: error reading config during init')
@@ -298,23 +215,17 @@ def update_schedule(config: dict, app):
         init_scheduler(app)
         return
 
-    for jid in (_JOB_ID, _REMINDER_JOB_ID):
+    for jid in (_JOB_ID, _LEGACY_REMINDER_JOB_ID):
         if _scheduler.get_job(jid):
             _scheduler.remove_job(jid)
 
     if config.get('schedule_enabled'):
         _add_job(config, app)
         tz = _cron_timezone()
-        rh, rm = _reminder_hour_minute(
-            int(config.get('schedule_hour', 10)),
-            int(config.get('schedule_minute', 0)),
-        )
         logger.info(
-            'MMR scheduler: report %02d:%02d, reminder %02d:%02d %s',
+            'MMR scheduler: report %02d:%02d %s',
             int(config.get('schedule_hour', 10)),
             int(config.get('schedule_minute', 0)),
-            rh,
-            rm,
             getattr(tz, 'key', str(tz)),
         )
     else:
@@ -331,13 +242,5 @@ def _add_job(config: dict, app):
         CronTrigger(hour=sh, minute=sm, timezone=tz),
         args=[app],
         id=_JOB_ID,
-        replace_existing=True,
-    )
-    rh, rm = _reminder_hour_minute(sh, sm)
-    _scheduler.add_job(
-        _run_upload_reminder,
-        CronTrigger(hour=rh, minute=rm, timezone=tz),
-        args=[app],
-        id=_REMINDER_JOB_ID,
         replace_existing=True,
     )
