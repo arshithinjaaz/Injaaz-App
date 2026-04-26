@@ -73,6 +73,11 @@
   
   /* Font families — iOS/macOS: San Francisco via -apple-system; others fall through system-ui / platform UI */
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Footer “built by” name — Caveat (loaded in base_head / about) */
+  --font-footer-author: "Caveat", "Segoe Script", "Apple Chancery", cursive;
+  /* Author name colour — brand green on light UI; mint on dark footers */
+  --text-footer-author: var(--color-brand);
+  --text-footer-author-on-dark: var(--color-primary-300);
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   
   /* Font Sizes - Modular Scale (1.25 ratio) */

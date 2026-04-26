@@ -249,7 +249,8 @@
     align-items: stretch !important;
   }
   
-  #saveDraftBtn {
+  /* Only legacy page headers — never the main nav (.nav-right) Save Draft */
+  .d-flex.justify-content-between.align-items-start #saveDraftBtn {
     width: 100% !important;
     justify-content: center !important;
     order: -1 !important;
@@ -1365,11 +1366,14 @@
   }
 }
 
-/* ── HR dashboard workflow cards on mobile ── */
+/* ── HR dashboard workflow cards on mobile — one premium row ── */
 @media (max-width: 768px) {
   .hr-workflow-cards .modules-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
     width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
   }
   .hr-hero .hero-left {
     max-width: 100% !important;
@@ -1383,6 +1387,9 @@
 @media (max-width: 768px) {
   .inspection-hero {
     padding: 5.5rem 0 1.5rem !important;
+  }
+  .inspection-hero .hero-right {
+    display: block !important;
   }
   .inspection-modules-section .modules-inner {
     padding: 0 1rem !important;
@@ -2233,9 +2240,9 @@ canvas[id*="signature"] {
    ═══════════════════════════════════════════════ */
 @media (max-width: 600px) {
 
-  /* ── HR dashboard content area ── */
+  /* ── HR dashboard content area (align with hr_dashboard inline 768 rules) ── */
   .hr-dashboard-content {
-    padding-top: 4.25rem !important;
+    padding-top: max(3.95rem, calc(56px + env(safe-area-inset-top, 0px) + 0.75rem)) !important;
   }
 
   /* ── Stat cards: compact values ── */

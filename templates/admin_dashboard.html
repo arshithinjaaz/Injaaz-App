@@ -1047,13 +1047,15 @@
     }
     .admv2-docs-inner-scroll {
       max-height: min(62vh, 640px);
-      overflow-y: auto;
-      overflow-x: hidden;
+      overflow: auto;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: thin;
       scrollbar-color: #cbd5e1 transparent;
     }
-    .admv2-docs-inner-scroll::-webkit-scrollbar { width: 6px; }
+    .admv2-docs-inner-scroll::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
     .admv2-docs-inner-scroll::-webkit-scrollbar-track { background: transparent; }
     .admv2-docs-inner-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
     .admv2-docs-inner-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
@@ -1071,11 +1073,13 @@
     }
     .admv2-docs-bulk { display: flex; align-items: center; gap: 0.75rem; }
 
-    /* Inside docs scroll: the table-scroll-wrapper handles horizontal */
+    /* Single scrollport on .admv2-docs-inner-scroll — wide table scrolls sideways here */
     .admv2-docs-inner-scroll .table-scroll-wrapper {
       border: none;
       border-radius: 0;
       box-shadow: none;
+      overflow-x: visible;
+      min-width: min-content;
     }
     .admv2-docs-inner-scroll .documents-table th {
       position: sticky;
@@ -1120,7 +1124,13 @@
       flex-shrink: 0;
     }
     .admv2-card-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.1rem; }
-    .admv2-card-controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .admv2-card-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: nowrap;
+      min-width: 0;
+    }
     .admv2-card-body { padding: 1.1rem 1.4rem 1.2rem; }
     .admv2-placeholder-text { font-size: 0.83rem; color: var(--text-muted); }
 
@@ -2601,6 +2611,37 @@
     .documents-table tbody tr { transition: background 0.12s; }
     .documents-table tbody tr:hover { background: #f8fbf8; }
 
+    .documents-table .doc-id-btn {
+      display: inline-flex;
+      align-items: center;
+      max-width: 130px;
+      margin: 0;
+      padding: 0.15rem 0.4rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      background: #f1f5f9;
+      color: #475569;
+      font-family: ui-monospace, monospace;
+      font-size: 0.72rem;
+      line-height: 1.2;
+      cursor: pointer;
+      vertical-align: middle;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .documents-table .doc-id-btn:hover {
+      background: #e2e8f0;
+      border-color: rgba(18, 84, 53, 0.35);
+      color: var(--primary);
+    }
+    .documents-table .doc-id-btn:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
     .module-badge {
       display: inline-block;
       padding: 0.2rem 0.5rem;
@@ -3361,6 +3402,23 @@
         font-size: 0.85rem !important;
         width: auto !important;
         margin-bottom: 0 !important;
+      }
+
+      /* Document Workflow card — status filter + Refresh stay on one row (avoid global 100% filter width) */
+      .admv2-card-controls {
+        flex-wrap: nowrap !important;
+        width: auto;
+        max-width: 100%;
+        min-width: 0;
+      }
+      .admv2-card-controls .dashboard-filter {
+        min-width: 6.5rem !important;
+        width: auto !important;
+        max-width: min(11rem, 52vw);
+        flex: 1 1 auto;
+      }
+      .admv2-card-controls .btn-refresh {
+        flex-shrink: 0;
       }
     }
 
@@ -6144,7 +6202,7 @@
         html += `
           <tr>
             <td data-label="Select"><input type="checkbox" class="document-checkbox" value="${doc.submission_id}" onchange="updateDocumentCloseButton()"></td>
-            <td data-label="Document ID"><code style="font-size:0.72rem;color:#475569;background:#f1f5f9;padding:0.15rem 0.4rem;border-radius:4px;max-width:130px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="${doc.submission_id}">${doc.submission_id}</code></td>
+            <td data-label="Document ID"><button type="button" class="doc-id-btn" onclick="editSubmission('${doc.submission_id}', '${doc.module_type}')" title="View form (${doc.submission_id})">${doc.submission_id}</button></td>
             <td data-label="Module"><span class="module-badge ${moduleClass}">${doc.module_display}</span></td>
             <td data-label="Site/Project"><strong>${doc.site_name}</strong></td>
             <td data-label="Visit Date">${visitDate}</td>

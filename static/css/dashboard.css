@@ -1145,14 +1145,14 @@ body.inspection-dashboard {
   border: none;
 }
 
-/* “Built by” name — system UI to match the rest of the app */
+/* “Built by” name — Caveat (see --font-footer-author in design-tokens) */
 .footer-built-by-name {
   display: inline-block;
   vertical-align: middle;
-  font-family: var(--font-sans);
-  font-size: 1.42em; /* scales with .footer-copy */
-  font-weight: 400;
-  color: #1e3a5f;
+  font-family: var(--font-footer-author);
+  font-size: 1.15em; /* scales with .footer-copy — Caveat reads large */
+  font-weight: 600;
+  color: var(--text-footer-author);
   margin-left: 0.35rem;
   letter-spacing: 0.02em;
   line-height: 1.15;
@@ -1542,7 +1542,7 @@ body.inspection-dashboard {
     padding: 0 !important;
     transform: translateX(105%) !important;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease !important;
-    z-index: 1001 !important;
+    z-index: 1200 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
@@ -1629,14 +1629,16 @@ body.inspection-dashboard {
     white-space: nowrap !important;
   }
 
-  /* Hamburger icon (3 lines) */
+  /* Hamburger — equal 2px bars, even spacing (matches nav SVG stroke 2) */
   .mobile-menu-toggle span {
     display: block !important;
     width: 18px !important;
     height: 2px !important;
+    border-radius: 1px !important;
     background: currentColor !important;
     position: relative !important;
     transition: all 0.3s ease !important;
+    transform: translateZ(0) !important;
   }
 
   .mobile-menu-toggle span::before,
@@ -1646,6 +1648,7 @@ body.inspection-dashboard {
     left: 0 !important;
     width: 18px !important;
     height: 2px !important;
+    border-radius: 1px !important;
     background: currentColor !important;
     transition: all 0.3s ease !important;
   }
@@ -1672,7 +1675,7 @@ body.inspection-dashboard {
     transform: rotate(-45deg) !important;
   }
 
-  /* Backdrop overlay when menu is open */
+  /* Backdrop overlay when menu is open (below drawer 1200, above page / steppers) */
   .mobile-overlay {
     display: none;
     position: fixed;
@@ -1681,7 +1684,7 @@ body.inspection-dashboard {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.35);
-    z-index: 998;
+    z-index: 1150;
     opacity: 0;
     transition: opacity 0.3s ease;
     -webkit-backdrop-filter: blur(4px);
@@ -1856,33 +1859,38 @@ body.inspection-dashboard {
   .nav-save-draft-btn span { display: none !important; }
   .nav-save-draft-btn {
     padding: 0 !important;
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
     justify-content: center !important;
     margin-right: 0 !important;
-    border-radius: 7px !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    border: 1px solid rgba(55, 65, 81, 0.18) !important;
+    color: var(--text-dark) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
   }
 
   .notification-btn {
-    width: 32px !important;
-    height: 32px !important;
+    width: 34px !important;
+    height: 34px !important;
     padding: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border-radius: 7px !important;
-    background: var(--bg-light) !important;
-    color: var(--text-mid) !important;
-    border: 1px solid var(--border-color) !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    color: var(--text-dark) !important;
+    border: 1px solid rgba(55, 65, 81, 0.18) !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
   }
 
   .notification-btn svg {
-    width: 17px !important;
-    height: 17px !important;
+    width: 18px !important;
+    height: 18px !important;
   }
 
   .notification-btn:hover {
@@ -1890,13 +1898,15 @@ body.inspection-dashboard {
   }
 
   #pwa-install-btn.pwa-nav-icon {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
     padding: 0 !important;
-    background: var(--bg-light) !important;
-    border: 1px solid var(--border-color) !important;
+    background: #fff !important;
+    border: 1px solid rgba(55, 65, 81, 0.18) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
   }
 
   #pwa-install-btn.pwa-nav-icon:hover {
@@ -1950,13 +1960,14 @@ body.inspection-dashboard {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
-    border: 1px solid var(--border-color) !important;
-    background: var(--bg-light) !important;
-    border-radius: 7px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    border: 1px solid rgba(55, 65, 81, 0.18) !important;
+    background: #fff !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
     cursor: pointer !important;
     padding: 0 !important;
     color: var(--text-dark) !important;
@@ -1976,9 +1987,11 @@ body.inspection-dashboard {
     display: block !important;
     width: 18px !important;
     height: 2px !important;
+    border-radius: 1px !important;
     background: currentColor !important;
     position: relative !important;
     transition: all 0.3s ease !important;
+    transform: translateZ(0) !important;
   }
   
   .mobile-menu-toggle span::before,
@@ -1988,6 +2001,7 @@ body.inspection-dashboard {
     left: 0 !important;
     width: 18px !important;
     height: 2px !important;
+    border-radius: 1px !important;
     background: currentColor !important;
     transition: all 0.3s ease !important;
   }
@@ -2014,7 +2028,7 @@ body.inspection-dashboard {
     transform: rotate(-45deg) !important;
   }
   
-  /* Mobile overlay */
+  /* Mobile overlay — same stack as collapsed-nav overlay (below drawer 1200) */
   .mobile-overlay {
     display: none;
     position: fixed;
@@ -2023,7 +2037,7 @@ body.inspection-dashboard {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.4);
-    z-index: 998;
+    z-index: 1150;
     opacity: 0;
     transition: opacity 0.3s ease;
     -webkit-backdrop-filter: blur(2px);
@@ -2039,20 +2053,24 @@ body.inspection-dashboard {
   .logout-btn {
     font-size: 0.8rem !important;
     padding: 0 !important;
-    min-height: 32px !important;
-    min-width: 32px !important;
-    width: 32px !important;
-    height: 32px !important;
+    min-height: 34px !important;
+    min-width: 34px !important;
+    width: 34px !important;
+    height: 34px !important;
     flex-shrink: 0 !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border-radius: 7px !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    border: 1px solid rgba(55, 65, 81, 0.18) !important;
+    color: var(--text-dark) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
   }
 
   .logout-btn svg {
-    width: 16px !important;
-    height: 16px !important;
+    width: 18px !important;
+    height: 18px !important;
   }
 
   .logout-btn span {

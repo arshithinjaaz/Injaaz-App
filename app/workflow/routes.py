@@ -7,7 +7,7 @@ Stage 4: General Manager (final approval)
 """
 from flask import Blueprint, request, jsonify, current_app, render_template
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import or_, and_, not_
+from sqlalchemy import or_, and_, not_, func
 from sqlalchemy.orm import joinedload, noload
 from sqlalchemy.orm.attributes import flag_modified
 from app.models import db, User, Submission, AuditLog, DocHubDocument, Device, BDProject
@@ -480,6 +480,49 @@ def _completion_rate_pct(global_scope=True, supervisor_id=None):
     return min(100, round(done / total * 100))
 
 
+def _inspection_stats_scope(user):
+    """(global_scope, supervisor_id) for inspection KPI queries — mirrors main dashboard supervisor scoping."""
+    if user.role == 'admin':
+        return True, None
+    des = (user.designation or '').strip().lower()
+    if des == 'supervisor':
+        return False, user.id
+    return True, None
+
+
+def _inspection_unique_submitters(global_scope=True, supervisor_id=None):
+    q = db.session.query(
+        func.count(func.distinct(func.coalesce(Submission.user_id, Submission.supervisor_id)))
+    ).filter(
+        _filter_inspection(),
+        or_(Submission.user_id.isnot(None), Submission.supervisor_id.isnot(None)),
+    )
+    if not global_scope and supervisor_id is not None:
+        q = q.filter(Submission.supervisor_id == supervisor_id)
+    return int(q.scalar() or 0)
+
+
+def _inspection_completion_rate_pct(global_scope=True, supervisor_id=None):
+    q = Submission.query.filter(_filter_inspection())
+    if not global_scope and supervisor_id is not None:
+        q = q.filter(Submission.supervisor_id == supervisor_id)
+    total = q.count()
+    if not total:
+        return 0
+    done = q.filter(Submission.workflow_status == 'completed').count()
+    return min(100, round(done / total * 100))
+
+
+def _inspection_pending_count_for_user(user):
+    if user.role == 'admin':
+        return Submission.query.filter(
+            _filter_inspection(),
+            Submission.workflow_status.notin_(['completed', 'closed_by_admin', 'rejected']),
+        ).count()
+    pending = get_user_pending_submissions(user) or []
+    return sum(1 for s in pending if (s.module_type or '') in INSPECTION_MODULE_TYPES)
+
+
 def _dashboard_persona(user):
     """Which hero metrics set to show on the main dashboard."""
     des = (user.designation or '').strip().lower()
@@ -660,6 +703,36 @@ def get_dashboard_stats():
     except Exception as e:
         current_app.logger.error(f"Error getting dashboard stats: {str(e)}", exc_info=True)
         return error_response('Failed to get dashboard stats', status_code=500, error_code='DATABASE_ERROR')
+
+
+@workflow_bp.route('/inspection-dashboard-stats', methods=['GET'])
+@jwt_required()
+def get_inspection_dashboard_stats():
+    """HVAC/Civil/Cleaning-only metrics for the Inspection module hero widget."""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user:
+            return error_response('User not found', status_code=404, error_code='NOT_FOUND')
+
+        global_scope, sup_id = _inspection_stats_scope(user)
+        forms_submitted = _count_inspection(global_scope, sup_id)
+        pending = _inspection_pending_count_for_user(user)
+        unique_submitters = _inspection_unique_submitters(global_scope, sup_id)
+        rate = _inspection_completion_rate_pct(global_scope, sup_id)
+
+        hero_metrics = [
+            {'label': 'Forms submitted', 'value': str(forms_submitted)},
+            {'label': 'Pending review', 'value': str(pending)},
+            {'label': 'Unique submitters', 'value': str(unique_submitters)},
+            {'label': 'Completion rate', 'value': f'{rate}%'},
+        ]
+        return success_response({'hero_metrics': hero_metrics})
+    except Exception as e:
+        current_app.logger.error(f"Error getting inspection dashboard stats: {str(e)}", exc_info=True)
+        return error_response(
+            'Failed to get inspection dashboard stats', status_code=500, error_code='DATABASE_ERROR'
+        )
 
 
 def _time_ago(dt):

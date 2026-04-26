@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
   
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
+  {% include 'partials/caveat_font.html' %}
 <title>HR Module - Injaaz Application</title>
   <meta name="theme-color" content="#125435">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
@@ -24,6 +25,9 @@
     }
     .hr-hero {
       padding: 2.5rem 0 2rem;
+    }
+    .hr-dashboard-content {
+      padding-top: max(4.75rem, calc(72px + env(safe-area-inset-top, 0px) + 0.5rem));
     }
     /* Tighter space between workflow strip and HR form cards */
     .hr-dashboard .hr-modules-section {
@@ -102,13 +106,176 @@
       .hr-hero .hero-content {
         flex-direction: column;
         align-items: stretch;
-        gap: 2rem;
+        gap: 1.35rem;
       }
       .hr-workflow-cards {
         max-width: 100%;
       }
       .hr-workflow-cards .modules-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+        margin: 0;
+        gap: 0.65rem;
+      }
+    }
+
+    /* Mobile: tighter hero + workflow tiles (override global .module-card grid) */
+    @media (max-width: 768px) {
+      .hr-dashboard-content {
+        padding-top: max(4rem, calc(56px + env(safe-area-inset-top, 0px) + 0.85rem)) !important;
+      }
+      .hr-hero {
+        padding: 1.05rem 0 1.45rem !important;
+      }
+      /* One readable column: same horizontal inset as HR forms list below */
+      .hr-hero .hero-content.hero-split-inner {
+        padding-left: 1.45rem !important;
+        padding-right: 1.45rem !important;
+        box-sizing: border-box !important;
+      }
+      .hr-dashboard .hr-modules-section .modules-inner {
+        padding-left: 1.45rem !important;
+        padding-right: 1.45rem !important;
+      }
+      .hr-hero .hero-content {
+        gap: 1.2rem !important;
+      }
+      .hr-hero .hero-left {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        max-width: 100% !important;
+        padding-left: 0.3rem !important;
+        box-sizing: border-box !important;
+      }
+      .hr-hero .back-btn {
+        margin-top: 0.2rem !important;
+        margin-bottom: 0.55rem !important;
+        align-self: flex-start !important;
+      }
+      .hr-hero .hero-tagline {
+        margin-bottom: 0.5rem !important;
+        align-self: flex-start !important;
+      }
+      .hr-hero .hero-title {
+        align-self: flex-start !important;
+        text-align: left !important;
+      }
+      .hr-workflow-cards {
+        margin-top: 0.15rem !important;
+      }
+      .hr-workflow-cards .modules-grid {
+        gap: 0.45rem !important;
+      }
+      .hr-dashboard .hr-workflow-cards .module-card:not([style*="display: none"]) {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+      }
+      .hr-dashboard .hr-workflow-cards .module-card {
+        min-height: 122px !important;
+        padding: 0 !important;
+        grid-template-columns: unset !important;
+        grid-template-rows: unset !important;
+        gap: 0 !important;
+        border-radius: 14px !important;
+        border: 1px solid rgba(226, 232, 228, 0.98) !important;
+        background: #fff !important;
+        box-shadow: 0 2px 12px rgba(18, 84, 53, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+      }
+      .hr-dashboard .hr-workflow-cards .module-card .card-body {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        justify-content: flex-start !important;
+        text-align: left !important;
+        padding: 0.65rem 0.5rem 0.5rem 0.52rem !important;
+        gap: 0.32rem !important;
+        width: 100% !important;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+      }
+      .hr-dashboard .hr-workflow-cards .module-number {
+        display: none !important;
+      }
+      .hr-dashboard .hr-workflow-cards .module-icon {
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        margin: 0 !important;
+        align-self: flex-start !important;
+        grid-column: unset !important;
+        grid-row: unset !important;
+        border-radius: 10px !important;
+      }
+      .hr-dashboard .hr-workflow-cards .module-icon svg {
+        width: 19px !important;
+        height: 19px !important;
+      }
+      .hr-dashboard .hr-workflow-cards .module-title {
+        font-size: 0.625rem !important;
+        font-weight: 700 !important;
+        line-height: 1.22 !important;
+        letter-spacing: 0.02em !important;
+        margin: 0 !important;
+        grid-column: unset !important;
+        grid-row: unset !important;
+        white-space: normal !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 3 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+        text-align: left !important;
+        align-self: stretch !important;
+        color: #14221a !important;
+      }
+      .hr-dashboard .hr-workflow-cards .module-badge {
+        font-size: 0.55rem !important;
+        padding: 0.1rem 0.3rem !important;
+        min-width: 17px !important;
+        top: -4px !important;
+        right: -4px !important;
+      }
+      /* Minimal CTA: hairline rule + label + chevron (no pill chrome) */
+      .hr-dashboard .hr-workflow-cards .module-arrow {
+        grid-column: unset !important;
+        grid-row: unset !important;
+        align-self: stretch !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        margin-top: auto !important;
+        padding: 0.42rem 0 0 !important;
+        font-size: 0.64rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.02em !important;
+        text-transform: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        border-top: 1px solid rgba(18, 84, 53, 0.1) !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: var(--primary) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 0.2rem !important;
+        line-height: 1.2 !important;
+      }
+      .hr-dashboard .hr-workflow-cards .module-arrow svg {
+        width: 11px !important;
+        height: 11px !important;
+        flex-shrink: 0 !important;
+        opacity: 0.9 !important;
+      }
+      .hr-dashboard .hr-workflow-cards .module-card:active .module-arrow {
+        background: transparent !important;
+        box-shadow: none !important;
+        opacity: 0.72 !important;
       }
     }
     
@@ -237,7 +404,7 @@
   {% set active_page = 'hr' %}
   {% include 'partials/main_navbar.html' with context %}
 
-  <main class="hr-dashboard-content" style="padding-top: 5.5rem;">
+  <main class="hr-dashboard-content">
   <!-- Hero: gradient at top only (no grid) -->
   <header class="hero hero-split hr-hero">
     <div class="hero-content hero-split-inner">
@@ -262,7 +429,7 @@
                   <span class="module-badge" id="pendingBadge" style="display: none;">0</span>
                 </div>
                 <h2 class="module-title">Pending HR Review</h2>
-                <span class="module-arrow">View Pending <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+                <span class="module-arrow hr-workflow-cta">Open <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg></span>
               </div>
             </a>
           </div>
@@ -275,7 +442,7 @@
                   <span class="module-badge" id="gmPendingBadge" style="display: none;">0</span>
                 </div>
                 <h2 class="module-title">GM Final Approval</h2>
-                <span class="module-arrow">View Pending <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+                <span class="module-arrow hr-workflow-cta">Open <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg></span>
               </div>
             </a>
           </div>
@@ -287,7 +454,7 @@
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
                 <h2 class="module-title">Approved Forms</h2>
-                <span class="module-arrow">View Approved <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>
+                <span class="module-arrow hr-workflow-cta">Open <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg></span>
               </div>
             </a>
           </div>

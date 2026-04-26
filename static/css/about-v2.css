@@ -868,10 +868,10 @@
     }
     .about-footer .footer-built-by-name {
       display:inline-block;
-      font-family: var(--font-sans);
-      font-size:1.52em;
-      font-weight:500;
-      color:#c9a84c;
+      font-family: var(--font-footer-author);
+      font-size:1.22em;
+      font-weight:600;
+      color:var(--text-footer-author-on-dark);
       letter-spacing:0.02em;
       line-height:1.15;
       margin-left:0.2rem;
