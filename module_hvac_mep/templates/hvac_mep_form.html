@@ -7,7 +7,9 @@
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
   
-  <!-- PWA Meta Tags -->
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
+<!-- PWA Meta Tags -->
   <meta name="theme-color" content="#125435">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -18,7 +20,6 @@
   <script src="{{ url_for('static', filename='pwa-install.js') }}" defer></script>
   
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='photo_upload_queue.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
@@ -69,7 +70,7 @@
     body {
       background: var(--bg-page);
       color: var(--text-primary);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       padding: 0;
       margin: 0;
       line-height: 1.5;
@@ -642,46 +643,163 @@
       background: #c82333;
     }
     
-    /* Loading Overlay */
+    /* ── Loading Overlay ───────────────────────────────────────── */
     .loading-overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.95);
+      inset: 0;
+      background: rgba(8, 20, 40, 0.55);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       display: none;
       justify-content: center;
       align-items: center;
       z-index: 9998;
+      animation: loOverlayIn 0.25s ease forwards;
+    }
+    @keyframes loOverlayIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .loading-card {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 2.5rem 2.25rem 2rem;
+      width: min(92vw, 380px);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.28), 0 8px 20px rgba(0,0,0,0.12);
+      display: flex;
       flex-direction: column;
+      align-items: center;
+      animation: loCardIn 0.3s cubic-bezier(0.34,1.4,0.64,1) forwards;
     }
-    
-    .loading-spinner {
-      width: 60px;
-      height: 60px;
-      border: 5px solid #e9ecef;
-      border-top: 5px solid var(--primary);
+    @keyframes loCardIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.94); }
+      to   { opacity: 1; transform: translateY(0)    scale(1);    }
+    }
+    /* Dual-ring spinner */
+    .loading-ring-wrap {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      margin-bottom: 1.375rem;
+    }
+    .loading-ring-outer {
+      position: absolute;
+      inset: 0;
       border-radius: 50%;
-      animation: spin 1s linear infinite;
+      border: 4px solid rgba(18,84,53,0.12);
+      border-top-color: #125435;
+      animation: loSpin 0.9s linear infinite;
     }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    .loading-ring-inner {
+      position: absolute;
+      inset: 10px;
+      border-radius: 50%;
+      border: 3px solid rgba(18,84,53,0.08);
+      border-bottom-color: #22c55e;
+      animation: loSpin 1.35s linear infinite reverse;
     }
-    
-    .loading-text {
-      margin-top: 1.5rem;
-      font-size: 1.125rem;
-      color: var(--text-primary);
-      font-weight: 600;
+    .loading-ring-icon {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.375rem;
     }
-    
-    .loading-subtitle {
-      margin-top: 0.5rem;
-      font-size: 0.875rem;
-      color: var(--text-secondary);
+    @keyframes loSpin {
+      to { transform: rotate(360deg); }
+    }
+    /* Title & desc */
+    .loading-title {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 0.3rem;
+      text-align: center;
+    }
+    .loading-desc {
+      font-size: 0.8125rem;
+      color: #64748b;
+      margin: 0 0 1.5rem;
+      text-align: center;
+    }
+    /* Step list */
+    .loading-steps {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+      margin-bottom: 1.5rem;
+    }
+    .loading-step {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.8375rem;
+      color: #94a3b8;
+      transition: color 0.4s;
+    }
+    .loading-step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      flex-shrink: 0;
+      transition: background 0.4s;
+    }
+    /* CSS-only step sequencing via animation */
+    .loading-step:nth-child(1) .loading-step-dot {
+      animation: loStepActivate 18s linear infinite 0s;
+    }
+    .loading-step:nth-child(2) .loading-step-dot {
+      animation: loStepActivate 18s linear infinite 6s;
+    }
+    .loading-step:nth-child(3) .loading-step-dot {
+      animation: loStepActivate 18s linear infinite 12s;
+    }
+    .loading-step:nth-child(1) { animation: loStepColor 18s linear infinite 0s; }
+    .loading-step:nth-child(2) { animation: loStepColor 18s linear infinite 6s; }
+    .loading-step:nth-child(3) { animation: loStepColor 18s linear infinite 12s; }
+    @keyframes loStepActivate {
+      0%   { background: #125435; box-shadow: 0 0 0 3px rgba(18,84,53,0.18); }
+      30%  { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.18); }
+      34%  { background: #e2e8f0; box-shadow: none; }
+      100% { background: #e2e8f0; box-shadow: none; }
+    }
+    @keyframes loStepColor {
+      0%   { color: #125435; font-weight: 600; }
+      30%  { color: #16a34a; font-weight: 500; }
+      34%  { color: #94a3b8; font-weight: 400; }
+      100% { color: #94a3b8; font-weight: 400; }
+    }
+    /* Indeterminate shimmer progress bar */
+    .loading-bar-wrap { width: 100%; margin-bottom: 1.25rem; }
+    .loading-bar-track {
+      height: 12px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(15, 23, 42, 0.07);
+      box-shadow: inset 0 2px 5px rgba(15, 23, 42, 0.08);
+    }
+    .loading-bar-fill {
+      height: 100%;
+      width: 42%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #0f5132, #125435, #22c55e, #125435, #0f5132);
+      background-size: 220% 100%;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      animation: loShimmer 1.5s ease-in-out infinite;
+    }
+    @keyframes loShimmer {
+      0%   { background-position: 100% 0; transform: translateX(-75%); }
+      100% { background-position: -100% 0; transform: translateX(260%); }
+    }
+    .loading-estimate {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      text-align: center;
+      margin: 0;
     }
     
     /* File size warning */
@@ -1035,14 +1153,27 @@
       display: none;
     }
     
-    .progress {
-      height: 4px;
-      border-radius: 2px;
-      background: var(--border-light);
+    .upload-progress .progress {
+      height: 12px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.06);
     }
     
-    .progress-bar {
-      border-radius: 2px;
+    .upload-progress .progress-bar {
+      border-radius: 999px;
+      min-height: 12px;
+      font-size: 0;
+      line-height: 0;
+      color: transparent !important;
+    }
+    .upload-progress-caption {
+      font-size: 0.8125rem;
+      color: #64748b;
+      margin-top: 0.4rem;
+      font-weight: 500;
     }
     
     .photo-count {
@@ -1078,6 +1209,50 @@
     
     .progress-bar-container {
       margin-top: 1rem;
+    }
+    /* Job status progress (report generation) — tall track + % outside the bar */
+    .progress-bar-container.job-progress-panel {
+      padding: 1rem 1.125rem 1.125rem;
+      background: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 100%);
+      border: 1px solid var(--border-light, #e2e8f0);
+      border-radius: 16px;
+      box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
+    }
+    .job-progress-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .job-progress-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary, #0f172a);
+    }
+    .job-progress-pct {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #125435;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .job-progress-panel .job-progress-track.progress {
+      height: 22px !important;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+      border: 1px solid rgba(15, 23, 42, 0.07);
+      box-shadow: inset 0 2px 5px rgba(15, 23, 42, 0.09);
+    }
+    .job-progress-panel .progress-bar {
+      min-height: 22px;
+      font-size: 0;
+      line-height: 0;
+      color: transparent !important;
+      border-radius: 999px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
     }
     
     /* Empty state */
@@ -1448,6 +1623,7 @@
             <div class="progress">
               <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 0%"></div>
             </div>
+            <div id="uploadProgressCaption" class="upload-progress-caption" aria-live="polite"></div>
           </div>
           
           <div id="photoCount" class="photo-count" style="display:none;"></div>
@@ -2170,9 +2346,13 @@
         <!-- Status & Downloads -->
         <div class="col-12">
           <div id="statusBox" class="mt-3"></div>
-          <div id="progressContainer" class="progress-bar-container" style="display:none;">
-            <div class="progress">
-              <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>
+          <div id="progressContainer" class="progress-bar-container job-progress-panel" style="display:none;">
+            <div class="job-progress-head">
+              <span class="job-progress-title">Report generation</span>
+              <span id="progressPct" class="job-progress-pct" aria-live="polite">0%</span>
+            </div>
+            <div class="progress job-progress-track">
+              <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
           </div>
           
@@ -2203,10 +2383,35 @@
 
   <!-- Loading Overlay for Report Generation -->
   <div id="loadingOverlay" class="loading-overlay">
-    <div class="loading-spinner"></div>
-    <div class="loading-text">Generating Reports...</div>
-    <div class="loading-subtitle">This typically takes 2-3 minutes for large submissions</div>
-    <div class="loading-subtitle" style="margin-top: 1.5rem; font-size: 0.8rem;">Creating Excel and PDF reports with all photos</div>
+    <div class="loading-card">
+      <div class="loading-ring-wrap">
+        <div class="loading-ring-outer"></div>
+        <div class="loading-ring-inner"></div>
+        <div class="loading-ring-icon">📋</div>
+      </div>
+      <h2 class="loading-title">Generating Reports</h2>
+      <p class="loading-desc">Please wait while we build your submission</p>
+      <div class="loading-steps">
+        <div class="loading-step">
+          <span class="loading-step-dot"></span>
+          <span>Building Excel report</span>
+        </div>
+        <div class="loading-step">
+          <span class="loading-step-dot"></span>
+          <span>Creating PDF document</span>
+        </div>
+        <div class="loading-step">
+          <span class="loading-step-dot"></span>
+          <span>Uploading to cloud storage</span>
+        </div>
+      </div>
+      <div class="loading-bar-wrap">
+        <div class="loading-bar-track">
+          <div class="loading-bar-fill"></div>
+        </div>
+      </div>
+      <p class="loading-estimate">Typically 2–3 min · Do not close this page</p>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -2703,6 +2908,7 @@
       const statusBox = document.getElementById('statusBox');
       const progressContainer = document.getElementById('progressContainer');
       const progressBar = document.getElementById('progressBar');
+      const progressPct = document.getElementById('progressPct');
       const downloadLinks = document.getElementById('downloadLinks');
       
       const pads = initSignaturePads();
@@ -2965,10 +3171,14 @@
           
           const progress = Math.round(((i + batch.length) / validFiles.length) * 100);
           uploadProgressBar.style.width = progress + '%';
-          uploadProgressBar.textContent = `Compressing ${Math.min(i + batch.length, validFiles.length)}/${validFiles.length}...`;
+          const hvCap = document.getElementById('uploadProgressCaption');
+          if (hvCap) hvCap.textContent = `Compressing ${Math.min(i + batch.length, validFiles.length)}/${validFiles.length}…`;
         }
         
         uploadProgress.style.display = 'none';
+        uploadProgressBar.style.width = '0%';
+        const hvCapDone = document.getElementById('uploadProgressCaption');
+        if (hvCapDone) hvCapDone.textContent = '';
         
         if (failedFiles.length > 0) {
           alert(`⚠️ Failed to process ${failedFiles.length} file(s): ${failedFiles.slice(0, 3).join(', ')}${failedFiles.length > 3 ? '...' : ''}`);
@@ -3434,6 +3644,11 @@
 
       function pollJobStatus(jobId) {
         if (pollingInterval) clearInterval(pollingInterval);
+        progressBar.style.width = '0%';
+        progressBar.setAttribute('aria-valuenow', '0');
+        if (progressPct) progressPct.textContent = '0%';
+        progressBar.classList.remove('bg-success', 'bg-danger');
+        progressBar.classList.add('bg-primary', 'progress-bar-animated');
         progressContainer.style.display = 'block';
         downloadLinks.style.display = 'none';
         pollingInterval = setInterval(async () => {
@@ -3444,7 +3659,8 @@
             const job = await res.json();
             const progress = job.progress || 0;
             progressBar.style.width = progress + '%';
-            progressBar.textContent = progress + '%';
+            progressBar.setAttribute('aria-valuenow', String(progress));
+            if (progressPct) progressPct.textContent = progress + '%';
             
             // Check both legacy 'state' and current 'status'
             const isDone = job.state === 'done' || job.status === 'completed';

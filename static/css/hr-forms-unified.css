@@ -14,7 +14,7 @@
 }
 html{scroll-behavior:smooth}
 body.hr-form-unified{
-  font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,"Segoe UI",sans-serif;
   color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.5;
   background:#fafafa;
 }

@@ -23,8 +23,8 @@
   --radius: 8px;
   --shadow: 0 4px 24px rgba(10, 22, 18, 0.12);
   --td-topbar-brand-h: 52px;
-  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", sans-serif;
 }
 
 /* ── Shell ── */

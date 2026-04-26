@@ -19,7 +19,7 @@ html,body{
   padding:0;
   background:var(--pdf-bg);
   color:var(--pdf-text);
-  font-family:"Inter","Segoe UI",Arial,sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   line-height:1.55;
   -webkit-print-color-adjust:exact;
   print-color-adjust:exact;

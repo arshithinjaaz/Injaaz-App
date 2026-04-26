@@ -3,14 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-  <title>Pending Reviews - Injaaz Application</title>
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
+<title>Pending Reviews - Injaaz Application</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#125435">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
@@ -30,7 +29,7 @@
     }
     
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       background: var(--bg-light);
       color: var(--text-dark);
       line-height: 1.6;
