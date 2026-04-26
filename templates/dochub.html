@@ -26,7 +26,7 @@
           <div class="sb-section-label">Overview</div>
           <div class="dh-sb-bucket dh-sb-bucket--open" data-bucket="all" id="dhSbBucketAll">
             <button type="button" class="dh-sb-bucket-head" id="dhSbHeadAll" data-filter="all" onclick="dhSelectSbBucket('all',this)">
-              <span class="dh-sb-bucket-label">All Document</span>
+              <span class="dh-sb-bucket-label">All documents</span>
               <span class="sb-badge" id="dhSbCountAll">0</span>
               <span class="sb-chevron">▾</span>
             </button>
@@ -175,17 +175,6 @@
 
     <div class="dh-main">
       <div class="dh-topbar">
-        <div class="dh-view-tabs">
-          <div class="dh-view-tab active" onclick="switchTab('library',this)" id="tab-library" data-tab="library">
-            All Document
-          </div>
-          <div class="dh-view-tab" onclick="switchTab('published',this)" id="tab-published" data-tab="published">
-            Published
-          </div>
-          <div class="dh-view-tab" onclick="switchTab('starred',this)" id="tab-starred" data-tab="starred">Starred</div>
-          <div class="dh-view-tab" onclick="switchTab('recent',this)" id="tab-recent" data-tab="recent">Recent</div>
-        </div>
-
         <div class="topbar-tools">
           <div class="dh-search">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10.5 10.5l3 3"/></svg>
@@ -201,22 +190,24 @@
         <div id="dh-doc-shell">
           <div class="dh-body">
             <div class="editor-area" id="dhEditorArea">
+              <div id="dhSearchResults" class="dh-search-results" hidden aria-live="polite"></div>
               <div class="empty-state" id="dhEmptyState">
                 <div class="empty-icon">📂</div>
                 <h3>No document selected</h3>
-                <p>Pick a document from the menu on the left, or create a new one to get started.</p>
+                <p class="dh-empty-hint">Pick a document from the <span class="dh-empty-hint-desktop">menu on the left</span><span class="dh-empty-hint-mobile">menu (☰)</span>, or create a new one to get started.</p>
                 <button type="button" class="btn btn-primary" id="dhEmptyNewBtn" style="margin-top:8px" onclick="openNewModal()">Create Document</button>
                 <button type="button" class="btn btn-ghost" id="dhEmptyUploadBtn" style="margin-top:6px" onclick="openUploadModal()">Upload Document</button>
               </div>
 
               <div id="dhViewerState" style="display:none;flex-direction:column;height:100%">
                 <div class="editor-topbar">
+                  <div id="dhViewDocTitle" class="dh-viewer-title-line"></div>
                   <div class="mode-tabs" id="dhViewerModeTabs">
                     <button type="button" class="mode-tab active" data-mode="view" onclick="setMode('view',this)">View</button>
                     <button type="button" class="mode-tab" data-mode="edit" onclick="setMode('edit',this)">Edit</button>
                   </div>
-                  <div id="dhViewDocTitle" class="dh-viewer-title-line"></div>
-                  <div class="editor-actions">
+                  <div class="editor-actions dh-viewer-actions">
+                    <button type="button" class="btn btn-primary" id="dhViewerPublish" onclick="publishDoc()">↑ Publish</button>
                     <div class="dh-doc-info-wrap" id="dhViewerInfoWrap" hidden>
                       <button type="button" class="btn btn-ghost dh-doc-info-btn" id="dhViewerInfoBtn" aria-expanded="false" aria-controls="dhViewerInfoDropdown" onclick="dhToggleDocInfo(event,'dhViewerInfoDropdown')">Info</button>
                       <div class="dh-doc-info-dropdown" id="dhViewerInfoDropdown" hidden role="region" aria-label="Document info">
@@ -231,7 +222,6 @@
                     <button type="button" class="btn btn-ghost" id="dhViewerStar" onclick="toggleStar()">☆ Star</button>
                     <button type="button" class="btn btn-ghost" id="dhViewerDownload">⬇ Export</button>
                     <button type="button" class="btn btn-ghost" id="dhViewerDelete" style="color:var(--red)" onclick="deleteDoc()">🗑 Delete</button>
-                    <button type="button" class="btn btn-primary" id="dhViewerPublish" onclick="publishDoc()">↑ Publish</button>
                   </div>
                 </div>
                 <div class="dh-viewer-split">
@@ -250,11 +240,11 @@
 
               <div id="dhEditorState" style="display:none;flex-direction:column;height:100%">
                 <div class="editor-topbar">
+                  <input class="doc-title-input" id="dhDocTitleInput" placeholder="Document title…" oninput="markUnsaved()"/>
                   <div class="mode-tabs" id="dhEditorModeTabs">
                     <button type="button" class="mode-tab" data-mode="view" onclick="setMode('view',this)">View</button>
                     <button type="button" class="mode-tab active" data-mode="edit" onclick="setMode('edit',this)">Edit</button>
                   </div>
-                  <input class="doc-title-input" id="dhDocTitleInput" placeholder="Document title…" oninput="markUnsaved()"/>
                   <div id="dhStatusBadge" class="status-badge sb-draft" onclick="cycleStatus()" style="flex-shrink:0">
                     <span class="status-dot sd-draft" id="dhStatusPip"></span>
                     <span id="dhStatusText">Draft</span>

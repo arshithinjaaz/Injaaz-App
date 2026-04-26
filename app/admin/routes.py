@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify, render_template, current_app, sen
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import (
     db, User, AuditLog, Device, BDProject, BDFollowUp, BDContact, BDActivity,
-    DocHubAccess, MmrChargeableConfig, AdminPersonalProject, AdminPersonalProgressStep,
+    DocHubAccess, MmrChargeableConfig, NotificationConfig, AdminPersonalProject, AdminPersonalProgressStep,
 )
 from app.middleware import admin_required
 from common.error_responses import error_response, success_response
@@ -108,6 +108,83 @@ def mmr_chargeable_config():
         db.session.rollback()
         current_app.logger.error(f"MMR chargeable config PUT: {e}", exc_info=True)
         return error_response('Failed to save MMR chargeable settings', status_code=500, error_code='DATABASE_ERROR')
+
+
+@admin_bp.route('/notification-config', methods=['GET', 'PUT'])
+@jwt_required()
+@admin_required
+def notification_config():
+    """
+    Load/save workflow notification recipients used by inspection/hr email triggers.
+    Shape:
+    {
+      "inspection": {"to": [], "cc": [], "include_submitter": true},
+      "hr": {"to": [], "cc": [], "include_submitter": true}
+    }
+    """
+    default_cfg = {
+        'inspection': {'to': [], 'cc': [], 'include_submitter': True},
+        'hr': {'to': [], 'cc': [], 'include_submitter': True},
+    }
+
+    def _clean_emails(raw):
+        if raw is None:
+            return []
+        if isinstance(raw, str):
+            raw = [x.strip() for x in raw.split(',')]
+        if not isinstance(raw, list):
+            return []
+        cleaned = []
+        seen = set()
+        for v in raw:
+            email = (v or '').strip()
+            if not email:
+                continue
+            key = email.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            cleaned.append(email)
+        return cleaned
+
+    def _normalize(payload):
+        payload = payload if isinstance(payload, dict) else {}
+        normalized = {}
+        for module in ('inspection', 'hr'):
+            mod = payload.get(module) if isinstance(payload.get(module), dict) else {}
+            normalized[module] = {
+                'to': _clean_emails(mod.get('to')),
+                'cc': _clean_emails(mod.get('cc')),
+                'include_submitter': bool(mod.get('include_submitter', True)),
+            }
+        return normalized
+
+    if request.method == 'GET':
+        try:
+            row = NotificationConfig.query.first()
+            cfg = _normalize(row.config_json) if row and row.config_json else default_cfg
+            return success_response({'config': cfg})
+        except Exception as e:
+            current_app.logger.error(f"Notification config GET: {e}", exc_info=True)
+            return error_response('Failed to load notification settings', status_code=500, error_code='DATABASE_ERROR')
+
+    try:
+        data = request.get_json(silent=True) or {}
+        incoming = data.get('config') if isinstance(data.get('config'), dict) else data
+        normalized = _normalize(incoming)
+
+        row = NotificationConfig.query.first()
+        if row:
+            row.config_json = normalized
+        else:
+            db.session.add(NotificationConfig(config_json=normalized))
+        db.session.commit()
+
+        return success_response({'config': normalized}, message='Notification settings saved')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Notification config PUT: {e}", exc_info=True)
+        return error_response('Failed to save notification settings', status_code=500, error_code='DATABASE_ERROR')
 
 
 @admin_bp.route('/mmr/location-register/parse', methods=['POST'])

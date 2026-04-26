@@ -1,5 +1,7 @@
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
     :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", sans-serif;
+      --font-serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
       --g0:#04200f;
       --g1:#0a3320;
       --g2:#125435;
@@ -18,7 +20,7 @@
     }
     html { scroll-behavior:smooth; font-size:16px; }
     body {
-      font-family:'Cabinet Grotesk', system-ui, sans-serif;
+      font-family: var(--font-sans);
       background:var(--cream);
       color:var(--ink);
       overflow-x:hidden;
@@ -216,7 +218,7 @@
     }
 
     .hero-title {
-      font-family:'Fraunces', serif;
+      font-family: var(--font-serif);
       font-size:clamp(3.5rem, 8vw, 8.5rem);
       font-weight:700;
       line-height:.95;
@@ -259,7 +261,7 @@
       display:inline-flex; align-items:center; gap:.6rem;
       background:var(--g4);
       color:#fff;
-      font-family:'Cabinet Grotesk',sans-serif;
+      font-family: var(--font-sans);
       font-size:.88rem;
       font-weight:700;
       letter-spacing:.04em;
@@ -287,7 +289,7 @@
       background:rgba(255,255,255,.06);
       backdrop-filter:blur(12px);
       color:rgba(255,255,255,.8);
-      font-family:'Cabinet Grotesk',sans-serif;
+      font-family: var(--font-sans);
       font-size:.88rem;
       font-weight:700;
       letter-spacing:.04em;
@@ -329,7 +331,7 @@
       flex-shrink:0;
     }
     .stat-pill-num {
-      font-family:'Fraunces', serif;
+      font-family: var(--font-serif);
       font-size:2.5rem;
       font-weight:700;
       color:var(--g5);
@@ -392,7 +394,7 @@
       background:var(--g4);
     }
     .section-h2 {
-      font-family:'Fraunces', serif;
+      font-family: var(--font-serif);
       font-size:clamp(2.2rem, 4.5vw, 4rem);
       font-weight:700;
       line-height:1.05;
@@ -492,7 +494,7 @@
       margin-bottom:1.5rem;
     }
     .insight-panel h3 {
-      font-family:'Fraunces', serif;
+      font-family: var(--font-serif);
       font-size:1.6rem;
       font-weight:700;
       color:#fff;
@@ -545,7 +547,7 @@
       flex-wrap:wrap;
     }
     .services-count {
-      font-family:'Fraunces', serif;
+      font-family: var(--font-serif);
       font-size:5rem;
       font-weight:700;
       color:var(--cream2);
@@ -581,7 +583,7 @@
     .svc:hover .svc-fill { height:100%; }
     .svc > * { position:relative; z-index:1; }
     .svc-num {
-      font-family:'Fraunces', serif;
+      font-family: var(--font-serif);
       font-size:.72rem;
       font-weight:700;
       color:var(--g3);
@@ -729,7 +731,7 @@
     .break-metric:nth-child(2), .break-metric:nth-child(4) { border-right:none; }
     .break-metric:nth-child(3), .break-metric:nth-child(4) { border-bottom:none; }
     .bm-num {
-      font-family:'Fraunces', serif;
+      font-family: var(--font-serif);
       font-size:3rem;
       font-weight:700;
       color:var(--g5);
@@ -779,7 +781,7 @@
     .val-num-bg {
       position:absolute;
       top:-10px; right:16px;
-      font-family:'Fraunces', serif;
+      font-family: var(--font-serif);
       font-size:6rem;
       font-weight:900;
       color:rgba(18,84,53,.04);
@@ -837,7 +839,7 @@
       margin:0;
     }
     .footer-brand {
-      font-family:'Fraunces', serif;
+      font-family: var(--font-serif);
       font-size:1.2rem;
       font-weight:700;
       color:#fff;
@@ -862,14 +864,14 @@
       font-weight:500;
       letter-spacing:.02em;
       color:#c9a84c;
-      font-family:'Cabinet Grotesk', system-ui, sans-serif;
+      font-family: var(--font-sans);
     }
     .about-footer .footer-built-by-name {
       display:inline-block;
-      font-family:'Grape Nuts', 'Segoe Print', cursive;
-      font-size:1.52em;
-      font-weight:500;
-      color:#c9a84c;
+      font-family: var(--font-footer-author);
+      font-size:1.22em;
+      font-weight:600;
+      color:var(--text-footer-author-on-dark);
       letter-spacing:0.02em;
       line-height:1.15;
       margin-left:0.2rem;

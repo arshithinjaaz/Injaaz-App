@@ -3,14 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-  <title>Pending Reviews - Injaaz Application</title>
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
+<title>Pending Reviews - Injaaz Application</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#125435">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
@@ -30,7 +29,7 @@
     }
     
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       background: var(--bg-light);
       color: var(--text-dark);
       line-height: 1.6;
@@ -81,6 +80,18 @@
       max-width: 1400px;
       margin: 100px auto 2rem;
       padding: 0 2rem;
+    }
+    @media (max-width: 768px) {
+      .container { margin-top: 72px; padding: 0.75rem 0.875rem; }
+      .page-header { margin-bottom: 1rem; }
+      .page-header h1 { font-size: 1.4rem; }
+      .page-header p { font-size: 0.875rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 0.625rem; margin-bottom: 1rem; }
+      .stat-card { padding: 0.875rem; }
+      .stat-card h3 { font-size: 0.75rem; }
+      .stat-card .stat-value { font-size: 1.6rem; }
+      .submissions-list { border-radius: 10px; }
+      .submission-card { padding: 1rem; }
     }
     
     .page-header {

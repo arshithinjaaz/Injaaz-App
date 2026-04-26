@@ -34,6 +34,8 @@
   --radius-xl: 20px;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* iOS / system UI (SF on Apple devices) */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", "Helvetica Neue", sans-serif;
 }
 
 /* ===========================================
@@ -46,7 +48,7 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg-body);
   color: var(--text-dark);
   overflow-x: hidden;
@@ -507,7 +509,7 @@ body.inspection-dashboard {
 }
 
 .hero-title {
-  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-family: var(--font-sans);
   font-size: clamp(2.4rem, 5vw, 3.25rem);
   font-weight: 800;
   line-height: 1.12;
@@ -689,12 +691,13 @@ body.inspection-dashboard {
 
 .dashboard-stat-label {
   display: block;
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.05em;
+  color: var(--text-light);
+  margin-bottom: 0.3rem;
+  line-height: 1.3;
 }
 
 .dashboard-stat-value {
@@ -787,10 +790,10 @@ body.inspection-dashboard {
     padding: 0.75rem;
   }
   .dashboard-stat-value {
-    font-size: 1.3rem;
+    font-size: 1.4rem;
   }
   .dashboard-stat-label {
-    font-size: 0.58rem;
+    font-size: 0.65rem;
   }
 }
 
@@ -856,7 +859,7 @@ body.inspection-dashboard {
   width: 100%;
   display: block !important;
   opacity: 0;
-  margin-top: -1rem; /* Overlap hero slightly for seamless merge */
+  margin-top: -3rem; /* Overlap hero for seamless gradient merge */
   transform: translateY(12px);
   animation: heroReveal 0.6s var(--ease-out) forwards 0.35s;
   position: relative;
@@ -1098,7 +1101,7 @@ body.inspection-dashboard {
 }
 
 .footer-brand {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--text-dark);
@@ -1117,7 +1120,7 @@ body.inspection-dashboard {
 }
 
 .footer-links a {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   color: var(--text-light);
   text-decoration: none;
   font-size: 0.875rem;
@@ -1131,7 +1134,7 @@ body.inspection-dashboard {
 
 /* Copyright line — clean sans (~14px; reference: small muted gray) */
 .footer-copy {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.8125rem; /* 13px */
   font-weight: 400;
   color: #6b7280;
@@ -1142,14 +1145,14 @@ body.inspection-dashboard {
   border: none;
 }
 
-/* “Built by” name — Grape Nuts (Google Fonts) */
+/* “Built by” name — Caveat (see --font-footer-author in design-tokens) */
 .footer-built-by-name {
   display: inline-block;
   vertical-align: middle;
-  font-family: 'Grape Nuts', 'Segoe Print', 'Comic Sans MS', cursive;
-  font-size: 1.42em; /* scales with .footer-copy */
-  font-weight: 400;
-  color: #1e3a5f;
+  font-family: var(--font-footer-author);
+  font-size: 1.15em; /* scales with .footer-copy — Caveat reads large */
+  font-weight: 600;
+  color: var(--text-footer-author);
   margin-left: 0.35rem;
   letter-spacing: 0.02em;
   line-height: 1.15;
@@ -1528,26 +1531,29 @@ body.inspection-dashboard {
   .mobile-menu-drawer {
     position: fixed !important;
     top: 72px !important;
-    right: -100% !important;
+    right: 0 !important;
     left: auto !important;
     width: min(320px, 88vw) !important;
     max-width: 320px !important;
     height: calc(100vh - 72px) !important;
     height: calc(100dvh - 72px) !important;
     background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%) !important;
-    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.06) !important;
+    box-shadow: none !important;
     padding: 0 !important;
-    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease !important;
-    z-index: 1001 !important;
+    transform: translateX(105%) !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease !important;
+    z-index: 1200 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     border-left: 1px solid var(--border-color) !important;
+    visibility: hidden !important;
   }
 
   .mobile-menu-drawer.active {
-    right: 0 !important;
+    transform: translateX(0) !important;
     box-shadow: -12px 0 40px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.08) !important;
+    visibility: visible !important;
   }
 
   .mobile-menu-drawer-list {
@@ -1623,14 +1629,16 @@ body.inspection-dashboard {
     white-space: nowrap !important;
   }
 
-  /* Hamburger icon (3 lines) */
+  /* Hamburger — equal 2px bars, even spacing (matches nav SVG stroke 2) */
   .mobile-menu-toggle span {
     display: block !important;
     width: 18px !important;
     height: 2px !important;
+    border-radius: 1px !important;
     background: currentColor !important;
     position: relative !important;
     transition: all 0.3s ease !important;
+    transform: translateZ(0) !important;
   }
 
   .mobile-menu-toggle span::before,
@@ -1640,6 +1648,7 @@ body.inspection-dashboard {
     left: 0 !important;
     width: 18px !important;
     height: 2px !important;
+    border-radius: 1px !important;
     background: currentColor !important;
     transition: all 0.3s ease !important;
   }
@@ -1666,7 +1675,7 @@ body.inspection-dashboard {
     transform: rotate(-45deg) !important;
   }
 
-  /* Backdrop overlay when menu is open */
+  /* Backdrop overlay when menu is open (below drawer 1200, above page / steppers) */
   .mobile-overlay {
     display: none;
     position: fixed;
@@ -1675,7 +1684,7 @@ body.inspection-dashboard {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.35);
-    z-index: 998;
+    z-index: 1150;
     opacity: 0;
     transition: opacity 0.3s ease;
     -webkit-backdrop-filter: blur(4px);
@@ -1721,7 +1730,7 @@ body.inspection-dashboard {
    =========================================== */
 @media (max-width: 768px) {
   .hero {
-    padding: 5.5rem 0 1.5rem !important;
+    padding: 7rem 0 4.5rem !important;
   }
 
   .hero-split .hero-content {
@@ -1822,15 +1831,14 @@ body.inspection-dashboard {
   }
   
   .logo img {
-    height: 28px !important;
+    height: 32px !important;
     width: auto !important;
   }
-  
+
   .logo-brand {
     font-size: 0.65rem !important;
   }
-  
-  /* Full welcome text visible at 768px and above (750px+) */
+
   .nav-welcome,
   #welcome-text {
     font-size: 1rem !important;
@@ -1844,36 +1852,61 @@ body.inspection-dashboard {
   
   .nav-right {
     flex: 0 0 auto !important;
-    gap: 0.375rem !important;
+    gap: 0.3rem !important;
   }
-  
+
+  /* Save Draft: icon-only on tablet/mobile to save space */
+  .nav-save-draft-btn span { display: none !important; }
+  .nav-save-draft-btn {
+    padding: 0 !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    justify-content: center !important;
+    margin-right: 0 !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    border: 1px solid rgba(55, 65, 81, 0.18) !important;
+    color: var(--text-dark) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  }
+
   .notification-btn {
-    width: 38px !important;
-    height: 38px !important;
+    width: 34px !important;
+    height: 34px !important;
     padding: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     border-radius: 8px !important;
-    background: var(--bg-light) !important;
-    color: var(--text-mid) !important;
-    border: 1px solid var(--border-color) !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
+    background: #fff !important;
+    color: var(--text-dark) !important;
+    border: 1px solid rgba(55, 65, 81, 0.18) !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
   }
-  
+
+  .notification-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
   .notification-btn:hover {
     background: var(--border-light) !important;
   }
 
   #pwa-install-btn.pwa-nav-icon {
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
     padding: 0 !important;
-    background: var(--bg-light) !important;
-    border: 1px solid var(--border-color) !important;
+    background: #fff !important;
+    border: 1px solid rgba(55, 65, 81, 0.18) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
   }
 
   #pwa-install-btn.pwa-nav-icon:hover {
@@ -1927,13 +1960,14 @@ body.inspection-dashboard {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px !important;
-    min-height: 40px !important;
-    border: 1px solid var(--border-color) !important;
-    background: var(--bg-light) !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    border: 1px solid rgba(55, 65, 81, 0.18) !important;
+    background: #fff !important;
     border-radius: 8px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
     cursor: pointer !important;
     padding: 0 !important;
     color: var(--text-dark) !important;
@@ -1953,9 +1987,11 @@ body.inspection-dashboard {
     display: block !important;
     width: 18px !important;
     height: 2px !important;
+    border-radius: 1px !important;
     background: currentColor !important;
     position: relative !important;
     transition: all 0.3s ease !important;
+    transform: translateZ(0) !important;
   }
   
   .mobile-menu-toggle span::before,
@@ -1965,6 +2001,7 @@ body.inspection-dashboard {
     left: 0 !important;
     width: 18px !important;
     height: 2px !important;
+    border-radius: 1px !important;
     background: currentColor !important;
     transition: all 0.3s ease !important;
   }
@@ -1991,7 +2028,7 @@ body.inspection-dashboard {
     transform: rotate(-45deg) !important;
   }
   
-  /* Mobile overlay */
+  /* Mobile overlay — same stack as collapsed-nav overlay (below drawer 1200) */
   .mobile-overlay {
     display: none;
     position: fixed;
@@ -2000,7 +2037,7 @@ body.inspection-dashboard {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.4);
-    z-index: 998;
+    z-index: 1150;
     opacity: 0;
     transition: opacity 0.3s ease;
     -webkit-backdrop-filter: blur(2px);
@@ -2015,34 +2052,45 @@ body.inspection-dashboard {
   /* Logout - compact on mobile */
   .logout-btn {
     font-size: 0.8rem !important;
-    padding: 0.45rem 0.6rem !important;
-    min-height: 38px !important;
-    min-width: 38px !important;
+    padding: 0 !important;
+    min-height: 34px !important;
+    min-width: 34px !important;
+    width: 34px !important;
+    height: 34px !important;
     flex-shrink: 0 !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     border-radius: 8px !important;
+    background: #fff !important;
+    border: 1px solid rgba(55, 65, 81, 0.18) !important;
+    color: var(--text-dark) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
   }
-  
+
   .logout-btn svg {
     width: 18px !important;
     height: 18px !important;
   }
-  
+
   .logout-btn span {
     display: none !important;
   }
   
   /* Module cards - compact grid on mobile.
-     card-body is display:contents so its children become direct grid items. */
+     card-body is display:contents so its children become direct grid items.
+     Must match specificity of base .module-card:not([style*="display: none"]) rule. */
+  .module-card:not([style*="display: none"]) {
+    display: grid !important;
+  }
+
   .module-card {
     padding: 0.875rem 1rem !important;
     margin-bottom: 0 !important;
-    display: grid !important;
-    grid-template-columns: 42px 1fr auto !important;
+    min-height: 72px !important;
+    grid-template-columns: 46px 1fr 34px !important;
     grid-template-rows: auto auto !important;
-    gap: 0.15rem 0.8rem !important;
+    gap: 0.1rem 0.75rem !important;
     align-items: center !important;
     border-radius: var(--radius-md) !important;
     animation: none !important;
@@ -2060,67 +2108,81 @@ body.inspection-dashboard {
     transition: transform 0.1s ease !important;
     background: rgba(18, 84, 53, 0.02) !important;
   }
-  
+
   .module-card .module-number {
     display: none !important;
   }
-  
+
   .module-card .module-icon {
-    width: 42px !important;
-    height: 42px !important;
-    font-size: 1.1rem !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    font-size: 1.15rem !important;
     margin-bottom: 0 !important;
     grid-column: 1 !important;
     grid-row: 1 / -1 !important;
     align-self: center !important;
-    border-radius: 11px !important;
+    justify-self: center !important;
+    border-radius: 12px !important;
     background: var(--border-light) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
-  
+
   .module-card .module-title {
-    font-size: 0.9rem !important;
+    font-size: 0.88rem !important;
     font-weight: 600 !important;
     margin-bottom: 0 !important;
-    line-height: 1.3 !important;
+    line-height: 1.25 !important;
     grid-column: 2 !important;
     grid-row: 1 !important;
     align-self: end !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     color: var(--text-dark) !important;
   }
-  
+
   .module-card .module-arrow {
     font-size: 0 !important;
     margin-top: 0 !important;
     grid-column: 3 !important;
     grid-row: 1 / -1 !important;
     align-self: center !important;
-    padding: 0.4rem !important;
+    justify-self: center !important;
+    padding: 0 !important;
     color: var(--primary) !important;
     background: var(--border-light) !important;
     border-radius: 8px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 30px !important;
-    height: 30px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    flex-shrink: 0 !important;
   }
 
   .module-card .module-arrow svg {
-    width: 15px !important;
-    height: 15px !important;
+    width: 16px !important;
+    height: 16px !important;
   }
-  
+
   .module-card .module-description {
-    font-size: 0.78rem !important;
-    line-height: 1.45 !important;
+    font-size: 0.76rem !important;
+    line-height: 1.4 !important;
     margin-bottom: 0 !important;
     grid-column: 2 !important;
     grid-row: 2 !important;
     display: -webkit-box !important;
-    -webkit-line-clamp: 2 !important;
+    -webkit-line-clamp: 1 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
     color: var(--text-light) !important;
+    align-self: start !important;
   }
   
   /* Notification dropdown full width on mobile */
@@ -2133,11 +2195,63 @@ body.inspection-dashboard {
 }
 
 /* ===========================================
+   Responsive - Phone (logo-only navbar zone)
+   =========================================== */
+@media (max-width: 600px) {
+  /* Hide welcome text + brand label — logo image alone at phone widths */
+  .nav-welcome,
+  #welcome-text,
+  .logo-brand,
+  .logo-text {
+    display: none !important;
+  }
+
+  .nav-container {
+    height: 64px !important;
+    padding: 0 1rem !important;
+  }
+
+  .logo img {
+    height: 54px !important;
+    width: auto !important;
+    filter: none !important;
+    content: url('/static/icons/icon-192x192.png') !important;
+    border-radius: 10px !important;
+  }
+
+  .mobile-menu-drawer {
+    top: 64px !important;
+    height: calc(100vh - 64px) !important;
+    height: calc(100dvh - 64px) !important;
+  }
+
+  .mobile-overlay {
+    top: 64px !important;
+  }
+
+  /* Logout: icon-only, compact */
+  .logout-btn span { display: none !important; }
+  .logout-btn {
+    padding: 0 !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    justify-content: center !important;
+    border-radius: 7px !important;
+  }
+  .logout-btn svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+}
+
+/* ===========================================
    Responsive - Small Mobile
    =========================================== */
 @media (max-width: 480px) {
   .hero {
-    padding: 5rem 0 1.25rem !important;
+    padding: 6.5rem 0 4rem !important;
   }
 
   .hero-split .hero-content {
@@ -2183,7 +2297,7 @@ body.inspection-dashboard {
   
   .nav-container {
     padding: 0 0.875rem !important;
-    height: 52px !important;
+    height: 64px !important;
   }
   
   .logo {
@@ -2191,70 +2305,82 @@ body.inspection-dashboard {
   }
   
   .logo img {
-    height: 26px !important;
+    height: 42px !important;
     width: auto !important;
   }
   
+  /* Hide welcome text + brand label — logo image alone identifies the app on small phones */
   .nav-welcome,
-  #welcome-text {
-    font-size: 0.9rem !important;
-    max-width: none !important;
-    overflow: visible !important;
-    text-overflow: unset !important;
+  #welcome-text,
+  .logo-brand,
+  .logo-text {
+    display: none !important;
   }
-  
+
+  /* Logout: icon-only to save space */
+  .logout-btn span { display: none !important; }
+  .logout-btn {
+    padding: 0 !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    justify-content: center !important;
+    border-radius: 7px !important;
+  }
+  .logout-btn svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
   .mobile-menu-drawer {
-    top: 52px !important;
-    height: calc(100vh - 52px) !important;
-    height: calc(100dvh - 52px) !important;
+    top: 64px !important;
+    height: calc(100vh - 64px) !important;
+    height: calc(100dvh - 64px) !important;
   }
-  
+
   .mobile-overlay {
-    top: 52px !important;
+    top: 64px !important;
   }
-  
+
   .module-card {
-    padding: 0.75rem 0.875rem !important;
-    border-radius: 10px !important;
-    grid-template-columns: 38px 1fr auto !important;
-    gap: 0.1rem 0.65rem !important;
+    padding: 0.875rem 1rem !important;
+    border-radius: 12px !important;
+    grid-template-columns: 40px 1fr auto !important;
+    gap: 0.15rem 0.75rem !important;
   }
-  
+
   .module-card .module-icon {
-    width: 38px !important;
-    height: 38px !important;
-    font-size: 1rem !important;
-    border-radius: 9px !important;
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 1.1rem !important;
+    border-radius: 10px !important;
   }
-  
+
   .module-card .module-title {
-    font-size: 0.875rem !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
   }
-  
+
+  /* Allow 2 lines of description on small phones — 1 line is too little context */
   .module-card .module-description {
-    font-size: 0.75rem !important;
-    -webkit-line-clamp: 1 !important;
+    font-size: 0.775rem !important;
+    -webkit-line-clamp: 2 !important;
   }
-  
+
   .module-card .module-arrow {
-    width: 28px !important;
-    height: 28px !important;
+    width: 30px !important;
+    height: 30px !important;
   }
 
   .module-card .module-arrow svg {
-    width: 13px !important;
-    height: 13px !important;
+    width: 14px !important;
+    height: 14px !important;
   }
-  
+
   .module-card:active {
     transform: scale(0.975) !important;
     transition: transform 0.1s ease !important;
-  }
-  
-  .logout-btn {
-    padding: 0.4rem !important;
-    min-width: 34px !important;
-    min-height: 34px !important;
   }
 }
 

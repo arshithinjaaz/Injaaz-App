@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-  <title>Report Generation – Injaaz</title>
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
+<title>Report Generation – Injaaz</title>
   <link rel="icon" type="image/png" href="/static/logo.png">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/mobile_responsive.css">
   <link rel="stylesheet" href="/static/animations.css">
   <link rel="stylesheet" href="/static/css/dashboard.css">
@@ -33,7 +34,7 @@
       --mmr-card-radius: 12px;
     }
 
-    body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
     /* Full width under flex body (dashboard.css); avoids narrow column after Chart init in hidden section */
     body.mmr-dashboard { padding-top: 72px; width: 100%; align-items: stretch; }
 

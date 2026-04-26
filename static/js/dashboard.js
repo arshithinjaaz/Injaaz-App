@@ -353,6 +353,13 @@ function updateModuleVisibility(user) {
       modulesGrid.style.gridTemplateColumns = '1fr';
       modulesGrid.style.maxWidth = '100%';
       modulesGrid.style.margin = '0';
+      // Remove inline display/visibility so CSS grid layout takes effect on cards
+      modulesGrid.querySelectorAll('.module-card').forEach(card => {
+        if (card.style.display !== 'none') {
+          card.style.removeProperty('display');
+          card.style.removeProperty('visibility');
+        }
+      });
     } else {
       if (visibleModules.length === 1) {
         modulesGrid.style.gridTemplateColumns = '1fr';
@@ -2244,6 +2251,55 @@ function loadDashboardStats() {
     });
 }
 
+function loadInspectionDashboardStats() {
+  var grid = document.getElementById('inspection-stats-grid');
+  if (!grid) return;
+
+  var token = localStorage.getItem('access_token');
+  if (!token) {
+    for (var j = 0; j < 4; j++) {
+      var ve = document.getElementById('insp-stat-value-' + j);
+      if (ve) ve.textContent = '—';
+    }
+    return;
+  }
+
+  authenticatedFetch('/api/workflow/inspection-dashboard-stats')
+    .then(function (response) {
+      return response.json().then(function (body) {
+        return { ok: response.ok, body: body };
+      }).catch(function () {
+        return { ok: false, body: null };
+      });
+    })
+    .then(function (result) {
+      var metrics = result.body && result.body.hero_metrics;
+      if (!result.ok || !Array.isArray(metrics) || !metrics.length) {
+        for (var i = 0; i < 4; i++) {
+          var vv = document.getElementById('insp-stat-value-' + i);
+          if (vv) vv.textContent = '—';
+        }
+        return;
+      }
+      for (var k = 0; k < 4; k++) {
+        var m = metrics[k];
+        var lbl = document.getElementById('insp-stat-label-' + k);
+        var val = document.getElementById('insp-stat-value-' + k);
+        if (lbl && m && m.label) lbl.textContent = m.label;
+        if (val && m) {
+          var v = m.value;
+          val.textContent = v != null && v !== '' ? String(v) : '0';
+        }
+      }
+    })
+    .catch(function () {
+      for (var e = 0; e < 4; e++) {
+        var el = document.getElementById('insp-stat-value-' + e);
+        if (el) el.textContent = '—';
+      }
+    });
+}
+
 // ===========================================
 // Initialization
 // ===========================================
@@ -2353,6 +2409,9 @@ document.addEventListener('DOMContentLoaded', function() {
   } else if (isReviewHistoryPage || hasMainNav) {
     loadUserWelcome();
     runNavVisibility();
+    if (document.getElementById('inspection-stats-grid')) {
+      loadInspectionDashboardStats();
+    }
   }
 
   // Enhanced scroll effect

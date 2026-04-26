@@ -49,10 +49,10 @@ body.dochub-page-v2 {
   --dh-fs-meta: 13px;
   --radius: 10px;
   --radius-lg: 16px;
-  /* Same stack as dashboard / BD module (base_head loads Inter) */
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-serif: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, 'JetBrains Mono', Consolas, monospace;
+  /* System UI (SF on iOS) */
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", sans-serif;
+  --font-serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
   /* Solid bar like BizFlow sidebar (--g800) */
@@ -626,69 +626,14 @@ body.dochub-page-v2.has-main-nav .nav.scrolled {
   min-width: 0;
 }
 
-.dh-view-tabs {
-  display: flex;
-  align-items: stretch;
-  height: 100%;
-  padding-left: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  flex: 1 1 0%;
-  min-width: 0;
-}
-
-.dh-view-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.dh-view-tab {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 16px;
-  font-size: var(--dh-fs-ui);
-  font-weight: 600;
-  color: var(--ink-3);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color 0.15s, border-color 0.15s;
-  white-space: nowrap;
-  user-select: none;
-}
-
-.dh-view-tab:hover {
-  color: var(--ink-2);
-}
-
-.dh-view-tab.active {
-  color: var(--accent);
-  font-weight: 600;
-  border-bottom-color: var(--accent);
-}
-
-.tab-count {
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--surface-3);
-  color: var(--ink-3);
-  padding: 1px 5px;
-  border-radius: 20px;
-  min-width: 18px;
-  text-align: center;
-}
-
-.dh-view-tab.active .tab-count {
-  background: var(--accent-light);
-  color: var(--accent);
-}
-
 .topbar-tools {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 0;
   padding: 0 12px;
-  flex-shrink: 0;
 }
 
 .dh-search {
@@ -701,6 +646,9 @@ body.dochub-page-v2.has-main-nav .nav.scrolled {
   padding: 0 12px;
   min-height: 38px;
   transition: border-color 0.15s, box-shadow 0.15s;
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: 560px;
 }
 
 .dh-search:focus-within {
@@ -720,7 +668,8 @@ body.dochub-page-v2.has-main-nav .nav.scrolled {
   font-family: var(--font-body);
   font-size: var(--dh-fs-ui);
   color: var(--ink);
-  width: min(200px, 32vw);
+  width: 100%;
+  min-width: 0;
 }
 
 .dh-search input::placeholder {
@@ -1051,24 +1000,117 @@ body.dochub-page-v2.has-main-nav .nav.scrolled {
 .editor-topbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
+  gap: 10px;
+  padding: 14px 18px 16px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   flex-wrap: wrap;
+  background: var(--surface);
+}
+
+/* Viewer: row 1 = title (left) + View/Edit; row 2 = actions full-width (aligned, not staggered). */
+#dhViewerState .editor-topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  gap: 6px 14px;
+  align-items: center;
+  flex-wrap: unset;
+}
+
+#dhViewerState .editor-topbar .dh-viewer-title-line {
+  grid-column: 1;
+  grid-row: 1;
+  margin-left: 0;
+  min-width: 0;
+}
+
+#dhViewerState .editor-topbar .mode-tabs {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+
+#dhViewerState .editor-topbar .editor-actions {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-left: 0;
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 5px 6px;
+  padding-top: 12px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+#dhViewerState .editor-topbar .editor-actions > * {
+  flex-shrink: 0;
+}
+
+#dhViewerState .editor-topbar .dh-viewer-actions .btn {
+  white-space: nowrap;
+}
+
+/* Editor: row 1 = title (left) + tabs + status; row 2 = save actions. */
+#dhEditorState .editor-topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-rows: auto auto;
+  gap: 6px 12px;
+  align-items: center;
+  flex-wrap: unset;
+}
+
+#dhEditorState .editor-topbar .doc-title-input {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+#dhEditorState .editor-topbar .mode-tabs {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+
+#dhEditorState .editor-topbar .status-badge {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+#dhEditorState .editor-topbar .editor-actions {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-left: 0;
+  width: 100%;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  padding-top: 12px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
 }
 
 .dh-viewer-title-line {
-  font-family: var(--font-serif);
-  font-size: 17px;
-  font-style: italic;
+  font-family: var(--font-body);
+  font-size: clamp(1.15rem, 3.6vw, 1.5rem);
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--ink);
-  margin-left: 8px;
+  margin-left: 0;
   flex: 1;
-  min-width: 120px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.3;
 }
 
 /* End-of-page reference files (viewer + editor) */
@@ -1292,22 +1334,25 @@ label.btn.dh-ref-docs-add {
 
 .mode-tabs {
   display: flex;
-  gap: 2px;
+  gap: 3px;
   background: var(--surface-2);
-  border-radius: 8px;
-  padding: 3px;
+  border-radius: 10px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .mode-tab {
-  padding: 4px 14px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
+  padding: 8px 18px;
+  min-height: 42px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--ink-3);
   cursor: pointer;
   border: none;
   background: none;
-  transition: all 0.15s;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
   font-family: var(--font-body);
 }
 
@@ -1321,6 +1366,21 @@ label.btn.dh-ref-docs-add {
 .mode-tab:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* DocHub topbar: compact View / Edit next to the title */
+.editor-topbar .mode-tabs {
+  padding: 3px;
+  gap: 2px;
+  border-radius: 8px;
+}
+
+.editor-topbar .mode-tab {
+  padding: 5px 12px;
+  min-height: 32px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
 }
 
 .doc-title-input {
@@ -1340,11 +1400,11 @@ label.btn.dh-ref-docs-add {
 .status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   user-select: none;
 }
@@ -1378,9 +1438,25 @@ label.btn.dh-ref-docs-add {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
   margin-left: auto;
   min-width: 0;
+}
+
+.editor-topbar .editor-actions .btn {
+  min-height: 34px;
+  padding: 0 11px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.editor-topbar .btn-ghost {
+  border-color: var(--border-2);
+}
+
+.editor-topbar .save-status {
+  font-size: 12px;
+  color: var(--ink-3);
 }
 
 .dh-doc-info-wrap {
@@ -2133,6 +2209,90 @@ label.dh-table-ref-col-check {
   padding-right: 20px;
 }
 
+@media (max-width: 720px) {
+  .dh-viewer-scroll {
+    padding: 10px 0 28px;
+  }
+
+  .dh-viewer-scroll:has(#dhViewerContent.dh-upload-preview-active) {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .dh-viewer-prose {
+    font-size: 18px;
+    line-height: 1.65;
+  }
+
+  #dhViewerContent.dh-upload-preview-active .dh-img-preview-wrap {
+    padding: 4px 0;
+  }
+
+  /* Native HTML docs in viewer (not file preview) — full width, larger type */
+  #dhViewerContent:not(.dh-upload-preview-active) {
+    max-width: none !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    font-size: 18px;
+    line-height: 1.65;
+  }
+
+  #dhViewerContent:not(.dh-upload-preview-active) .editor-content {
+    max-width: none !important;
+    width: 100% !important;
+    font-size: 18px;
+  }
+
+  #dhViewerContent:not(.dh-upload-preview-active) .editor-content h1,
+  #dhViewerContent:not(.dh-upload-preview-active) h1 {
+    font-size: clamp(1.35rem, 5.5vw, 1.75rem);
+  }
+
+  #dhViewerContent:not(.dh-upload-preview-active) .editor-content h2,
+  #dhViewerContent:not(.dh-upload-preview-active) h2 {
+    font-size: clamp(1.15rem, 4.5vw, 1.45rem);
+  }
+
+  #dhViewerContent:not(.dh-upload-preview-active) .editor-content table,
+  #dhViewerContent:not(.dh-upload-preview-active) table {
+    font-size: 15px;
+  }
+
+  .dh-md-preview,
+  .dh-md-preview.dh-md-rendered {
+    max-width: none !important;
+    width: 100%;
+    margin: 0 !important;
+    font-size: 18px;
+  }
+
+  .dh-docx-preview {
+    max-width: none !important;
+    width: 100%;
+    margin: 0 !important;
+    font-size: 18px;
+    padding: 6px 2px 20px;
+  }
+
+  .dh-pptx-preview {
+    max-width: none !important;
+    width: 100%;
+    margin: 0 !important;
+    padding: 6px 2px 18px;
+  }
+
+  .dh-pptx-slide-body {
+    font-size: 17px;
+    line-height: 1.6;
+  }
+
+  .dh-zip-preview {
+    max-width: none !important;
+    width: 100%;
+    margin: 0 !important;
+  }
+}
+
 .dh-viewer-prose {
   font-size: var(--dh-fs-base);
   line-height: 1.75;
@@ -2190,6 +2350,123 @@ label.dh-table-ref-col-check {
   font-size: 14px;
   max-width: 280px;
   line-height: 1.5;
+}
+
+.dh-empty-hint-mobile {
+  display: none;
+}
+
+.dh-empty-hint-desktop {
+  display: inline;
+}
+
+@media (max-width: 900px) {
+  .dh-empty-hint-mobile {
+    display: inline;
+  }
+
+  .dh-empty-hint-desktop {
+    display: none;
+  }
+}
+
+/* Main-pane search results (sidebar is off-canvas on mobile) */
+.dh-search-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 18px 24px;
+  text-align: left;
+}
+
+.dh-search-results[hidden] {
+  display: none !important;
+}
+
+.dh-search-results-inner {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.dh-search-results-head {
+  margin-bottom: 14px;
+}
+
+.dh-search-results-title {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.dh-search-results-meta {
+  margin: 0;
+  font-size: var(--dh-fs-small);
+  color: var(--ink-3);
+}
+
+.dh-search-results-hint {
+  font-size: var(--dh-fs-small);
+  color: var(--ink-3);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.dh-search-results-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dh-search-result-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dh-search-result-row:hover {
+  border-color: var(--border-2);
+  background: var(--surface-2);
+}
+
+.dh-sr-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.dh-sr-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dh-sr-name {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: var(--dh-fs-ui);
+}
+
+.dh-sr-meta {
+  font-size: var(--dh-fs-meta);
+  color: var(--ink-3);
 }
 
 .info-panel {
@@ -2845,7 +3122,7 @@ label.dh-table-ref-col-check {
   #dhViewerContent.dh-upload-preview-active .dh-pdfjs-pages.dh-pdfjs-pages--spread {
     grid-template-columns: 1fr;
     width: 100%;
-    justify-items: center;
+    justify-items: stretch;
   }
 }
 
@@ -3050,6 +3327,68 @@ label.dh-table-ref-col-check {
     transform: translateX(0);
   }
 
+  /* Topbar: full-width search + actions (no duplicate tab row) */
+  body.dochub-page-v2 .dh-topbar {
+    flex-wrap: wrap;
+    align-items: stretch;
+    align-content: flex-start;
+    height: auto !important;
+    min-height: var(--topbar-h);
+    row-gap: 10px;
+    padding: 10px 12px 12px;
+    position: relative;
+    z-index: 4;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  body.dochub-page-v2 .topbar-tools {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  body.dochub-page-v2 .topbar-tools .dh-search {
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  body.dochub-page-v2 .topbar-tools .dh-search input {
+    width: 100% !important;
+    min-width: 0;
+  }
+
+  body.dochub-page-v2 .topbar-tools > .btn {
+    flex: 1 1 calc(33.333% - 8px);
+    min-width: 0;
+    justify-content: center;
+  }
+
+  body.dochub-page-v2 .dh-main {
+    min-height: 0;
+  }
+
+  body.dochub-page-v2 .dh-content {
+    position: relative;
+    z-index: 1;
+    min-height: 0;
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  body.dochub-page-v2 .editor-area {
+    max-height: none !important;
+    min-height: min(52vh, 420px);
+  }
+
   .dh-body {
     grid-template-columns: 1fr;
   }
@@ -3059,23 +3398,48 @@ label.dh-table-ref-col-check {
   }
 
   .editor-area {
-    max-height: none;
     min-height: 360px;
   }
+}
 
-  .topbar-tools .dh-search input {
-    width: 100px;
+/* Phones: minimal horizontal padding so the document uses the full width (overrides 900px shell). */
+@media (max-width: 720px) {
+  body.dochub-page-v2 .dh-content {
+    padding-top: 10px;
+    padding-bottom: 16px;
+    padding-left: max(4px, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(4px, env(safe-area-inset-right, 0px)) !important;
+  }
+
+  #dhViewerState .editor-topbar .dh-viewer-actions .btn {
+    min-height: 30px;
+    padding: 0 8px;
+    font-size: 12px;
   }
 }
 
 @media (max-width: 520px) {
-  .dh-view-tab {
-    padding: 0 10px;
-    font-size: 12.5px;
-  }
-
   .btn {
     padding: 0 8px;
     font-size: 12px;
+  }
+}
+
+/* Mobile fixes — touch-friendly search (900px block handles topbar layout) */
+@media (max-width: 768px) {
+  body.dochub-page-v2 .topbar-tools .dh-search input {
+    font-size: 16px !important; /* iOS: avoid zoom-on-focus */
+  }
+
+  body.dochub-page-v2 .dh-body {
+    grid-template-columns: 1fr;
+  }
+
+  body.dochub-page-v2 .doc-panel {
+    max-height: 260px;
+  }
+
+  body.dochub-page-v2 .empty-state {
+    padding: 28px 20px;
   }
 }

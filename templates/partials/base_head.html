@@ -12,10 +12,8 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
 
-{# Fonts #}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{# System UI stack from design-tokens (SF on iOS) — no global webfont except footer author #}
+{% include 'partials/caveat_font.html' %}
 
 {# Core Stylesheets #}
 <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">

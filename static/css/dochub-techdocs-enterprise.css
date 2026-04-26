@@ -57,10 +57,10 @@ body.dochub-page.dochub-techdocs {
   --td-cyan: var(--bf-g300);
   --td-cyan-glow: var(--bf-g500);
 
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-  --dh-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --dh-font-display: 'Fraunces', Georgia, serif;
-  --dh-font-brand: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", sans-serif !important;
+  --dh-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", sans-serif;
+  --dh-font-display: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --dh-font-brand: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", sans-serif;
   --dh-navy: var(--td-navy);
   --dh-navy-mid: var(--td-navy-mid);
   --dh-mint: var(--bf-g300);
@@ -602,7 +602,7 @@ body.dochub-techdocs .dh-hero-badge .dh-dot {
 }
 
 .td-hero-title {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
   font-weight: 800;
   font-size: clamp(1.65rem, 4vw, 2.25rem);
   line-height: 1.15;
@@ -708,7 +708,7 @@ body.dochub-techdocs .dh-doc-card {
 }
 
 .td-section-heading {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
   font-weight: 700;
   font-size: 26px;
   color: var(--td-navy);

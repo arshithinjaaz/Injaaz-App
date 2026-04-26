@@ -11,6 +11,7 @@ from app.middleware import token_required
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from app.services.cloudinary_service import upload_local_file
 from common.error_responses import error_response, success_response
+from common.workflow_notifications import send_inspection_submitted
 
 # Rate limiting helper
 def get_limiter():
@@ -504,6 +505,13 @@ def submit():
     )
     sub_id = submission.submission_id
 
+    # Trigger real-time inspection submission email.
+    try:
+        submitter_user = User.query.get(user_id) if user_id else None
+        send_inspection_submitted(submission, submitter_user)
+    except Exception as notify_err:
+        logger.warning(f"Submission email notification failed for {sub_id}: {notify_err}")
+
     # Create job in database
     job = create_job_db(submission)
     job_id = job.job_id
@@ -936,6 +944,13 @@ def submit_with_urls():
             user_id=user_id
         )
         sub_id = submission.submission_id
+
+        # Trigger real-time inspection submission email.
+        try:
+            submitter_user = User.query.get(user_id) if user_id else None
+            send_inspection_submitted(submission, submitter_user)
+        except Exception as notify_err:
+            logger.warning(f"Submission email notification failed for {sub_id}: {notify_err}")
         
         logger.info(f"✅ Civil submission {sub_id} saved with {len(processed_items)} work items")
         

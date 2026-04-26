@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
   <title>BizFlow — Business Development | Injaaz Admin</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
@@ -30,7 +30,7 @@
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden;font-size:15px}
+body{font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden;font-size:15px}
 body.has-main-nav{padding-top:5.5rem}
 
 .bf-shell{display:flex;min-height:calc(100vh - 5.5rem)}
@@ -43,7 +43,7 @@ body.has-main-nav{padding-top:5.5rem}
 .bf-main{flex:1;display:flex;flex-direction:column;min-height:calc(100vh - 5.5rem);min-width:0}
 
 .bf-topbar{background:var(--white);border-bottom:1.5px solid var(--line);height:64px;padding:0 32px;display:flex;align-items:center;gap:14px;position:sticky;top:5.5rem;z-index:50;box-shadow:var(--sh-xs)}
-.bf-topbar-title{font-family:'Inter',-apple-system,sans-serif;font-size:20px;font-weight:700;color:var(--ink);letter-spacing:-.3px}
+.bf-topbar-title{font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;font-size:20px;font-weight:700;color:var(--ink);letter-spacing:-.3px}
 .bf-topbar-title span{color:var(--subtle);font-style:italic;font-size:16px;margin-right:6px}
 .bf-topbar-space{flex:1}
 .bf-tb-search{position:relative;display:flex;align-items:center}
@@ -233,6 +233,31 @@ body.has-main-nav{padding-top:5.5rem}
 .bf-kpi-card:nth-child(5){animation-delay:.2s}
 
 @media(max-width:900px){.bf-sidebar{display:none}.bf-main{margin-left:0}}
+@media(max-width:768px){
+  .bf-topbar{padding:0 1rem;height:auto;min-height:52px;top:4rem;flex-wrap:wrap;gap:8px;padding-top:8px;padding-bottom:8px}
+  .bf-topbar-space{display:none}
+  .bf-view-tabs{padding:0 0.75rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:0;justify-content:flex-start}
+  .bf-view-tabs::-webkit-scrollbar{display:none}
+  .bf-view-tabs-inner{flex-wrap:nowrap;gap:0}
+  .bf-view-tab{padding:10px 12px;font-size:13px;white-space:nowrap;flex-shrink:0}
+  .bf-view-tabs-actions{flex-shrink:0}
+  .bf-view-tabs-actions .bf-tb-cta{padding:7px 12px;font-size:12px}
+  .bf-content{padding:0.875rem}
+  .bf-card{padding:0.875rem}
+  .bf-kpi-card{padding:0.875rem}
+  .bf-proj-table th,.bf-proj-table td{padding:0.6rem 0.75rem;font-size:0.78rem}
+  /* Form fields — prevent collapsed look on mobile */
+  .bf-field-grid{grid-template-columns:1fr;gap:10px;margin-bottom:10px}
+  .bf-field-grid.trio{grid-template-columns:1fr}
+  .bf-fld input,.bf-fld select,.bf-fld textarea{
+    font-size:16px;padding:0.65rem 0.875rem;min-height:44px;
+    border:1.5px solid rgba(18,84,53,0.2);border-radius:10px
+  }
+  .bf-fld label{font-size:12px;margin-bottom:4px}
+  .bf-modal-body{padding:1rem}
+  .bf-modal-footer{padding:0.875rem 1rem;gap:0.5rem}
+  .bf-modal-footer .bf-btn{width:100%}
+}
   </style>
 </head>
 <body class="has-main-nav">
@@ -331,7 +356,7 @@ body.has-main-nav{padding-top:5.5rem}
               </div>
               <div class="bf-card" style="animation-delay:.30s">
                 <div class="bf-card-hd"><div class="bf-card-hd-info"><div class="bf-card-hd-title">Revenue Trend</div><div class="bf-card-hd-sub">Won deals · Last 6 months</div></div></div>
-                <div class="bf-chart-wrap"><svg viewBox="0 0 280 110" style="height:110px;width:100%"><defs><linearGradient id="bfAreaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#125435" stop-opacity=".18"/><stop offset="100%" stop-color="#125435" stop-opacity="0"/></linearGradient></defs><path d="M0,72 L46,58 L92,45 L138,55 L184,28 L230,18 L280,22 L280,110 L0,110 Z" fill="url(#bfAreaGrad)"/><polyline points="0,72 46,58 92,45 138,55 184,28 230,18 280,22" fill="none" stroke="#125435" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="184" cy="28" r="4" fill="#fff" stroke="#125435" stroke-width="2.5"/><text x="184" y="106" font-family="Inter,sans-serif" font-size="8.5" fill="#125435" font-weight="700" text-anchor="middle">Jan</text></svg><div style="display:flex;gap:18px;margin-top:10px"><div><div style="font-size:11px;color:var(--subtle)">Best Month</div><div style="font-size:14px;font-weight:700;color:var(--g800);font-family:ui-monospace,monospace">$680K</div></div><div><div style="font-size:11px;color:var(--subtle)">Avg/Month</div><div style="font-size:14px;font-weight:700;color:var(--ink);font-family:ui-monospace,monospace">$467K</div></div><div><div style="font-size:11px;color:var(--subtle)">YTD Total</div><div style="font-size:14px;font-weight:700;color:var(--ink);font-family:ui-monospace,monospace">$2.8M</div></div></div></div>
+                <div class="bf-chart-wrap"><svg viewBox="0 0 280 110" style="height:110px;width:100%"><defs><linearGradient id="bfAreaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#125435" stop-opacity=".18"/><stop offset="100%" stop-color="#125435" stop-opacity="0"/></linearGradient></defs><path d="M0,72 L46,58 L92,45 L138,55 L184,28 L230,18 L280,22 L280,110 L0,110 Z" fill="url(#bfAreaGrad)"/><polyline points="0,72 46,58 92,45 138,55 184,28 230,18 280,22" fill="none" stroke="#125435" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="184" cy="28" r="4" fill="#fff" stroke="#125435" stroke-width="2.5"/><text x="184" y="106" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="8.5" fill="#125435" font-weight="700" text-anchor="middle">Jan</text></svg><div style="display:flex;gap:18px;margin-top:10px"><div><div style="font-size:11px;color:var(--subtle)">Best Month</div><div style="font-size:14px;font-weight:700;color:var(--g800);font-family:ui-monospace,monospace">$680K</div></div><div><div style="font-size:11px;color:var(--subtle)">Avg/Month</div><div style="font-size:14px;font-weight:700;color:var(--ink);font-family:ui-monospace,monospace">$467K</div></div><div><div style="font-size:11px;color:var(--subtle)">YTD Total</div><div style="font-size:14px;font-weight:700;color:var(--ink);font-family:ui-monospace,monospace">$2.8M</div></div></div></div>
               </div>
             </div>
           </div>

@@ -135,8 +135,8 @@ class NetworkMonitor {
   }
   
   checkConnectivity() {
-    // Simple fetch to check connectivity
-    fetch('/api/health', { method: 'HEAD', cache: 'no-cache' })
+    // Simple fetch to check connectivity (app exposes /health)
+    fetch('/health', { method: 'HEAD', cache: 'no-cache' })
       .then(() => {
         if (!this.isOnline) {
           this.isOnline = true;

@@ -145,7 +145,7 @@
   };
 
   const LABELS = {
-    all: 'All Document',
+    all: 'All documents',
     published: 'Published',
     starred: 'Starred',
     recent: 'Recent',
@@ -252,12 +252,20 @@
         requestAnimationFrame(resolve);
       });
       const rect = vc.getBoundingClientRect();
+      const vv = typeof window !== 'undefined' && window.visualViewport;
+      const innerW =
+        vv && vv.width
+          ? Math.round(vv.width)
+          : typeof window !== 'undefined'
+            ? window.innerWidth
+            : 800;
+      const narrow = innerW <= 720;
       const hostW = Math.max(
-        400,
+        280,
         rect.width ||
           vc.clientWidth ||
           (vc.parentElement && vc.parentElement.clientWidth) ||
-          window.innerWidth - 160
+          (narrow ? innerW : innerW - 32)
       );
       vc.innerHTML = '';
       const scroll = document.createElement('div');
@@ -270,9 +278,9 @@
         pagesWrap.classList.add('dh-pdfjs-pages--single');
       }
       const spreadGapPx = 6;
-      const layoutPadPx = 12;
-      /** Allow zoom past 1.35 so spreads can use the full viewer width on large monitors. */
-      const PDF_MAX_RENDER_SCALE = 2.85;
+      const layoutPadPx = narrow ? 0 : 12;
+      /** Desktop spread cap; phone uses higher cap so pages can fill the width and stay sharp. */
+      const PDF_MAX_RENDER_SCALE = narrow ? 6.25 : 2.85;
       const p1 = await pdf.getPage(1);
       const baseVp = p1.getViewport({ scale: 1 });
       let maxPageW = baseVp.width;
@@ -282,16 +290,22 @@
         maxPageW = Math.max(maxPageW, p2cache.getViewport({ scale: 1 }).width);
       }
       let renderScale = 1.35;
-      if (pdf.numPages >= 2) {
+      if (pdf.numPages >= 2 && !narrow) {
         const avail = Math.max(320, hostW - spreadGapPx - layoutPadPx);
         const targetScale = avail / (2 * maxPageW);
         renderScale = Math.min(PDF_MAX_RENDER_SCALE, Math.max(0.28, targetScale));
+      } else if (pdf.numPages >= 2 && narrow) {
+        /* Stacked pages: use full visual viewport width per page. */
+        const avail = Math.max(300, hostW - layoutPadPx);
+        const targetScale = avail / maxPageW;
+        renderScale = Math.min(PDF_MAX_RENDER_SCALE, Math.max(0.48, targetScale * 1.04));
       } else {
-        const singleMaxW = 900;
-        const fitViewport = (Math.max(280, hostW - 32)) / maxPageW;
+        const singleMaxW = narrow ? 3200 : 900;
+        const fitViewport = Math.max(300, hostW - layoutPadPx) / maxPageW;
         const fitReading = singleMaxW / maxPageW;
         const targetScale = Math.min(fitViewport, fitReading);
-        renderScale = Math.min(2.2, Math.max(0.35, targetScale));
+        const singleCap = narrow ? PDF_MAX_RENDER_SCALE : 2.2;
+        renderScale = Math.min(singleCap, Math.max(0.35, narrow ? targetScale * 1.04 : targetScale));
       }
       for (let p = 1; p <= pdf.numPages; p++) {
         if (currentDocId !== docId) return;
@@ -557,6 +571,33 @@
     const d = document.createElement('div');
     d.innerHTML = html || '';
     return (d.textContent || '').trim();
+  }
+
+  function categoryLabelForSearch(tag) {
+    const t = tag || '';
+    if (CAT_META[t]) return CAT_META[t].label || '';
+    const hit = Object.keys(CAT_META).find(k => k.toLowerCase() === t.toLowerCase());
+    return hit ? CAT_META[hit].label || '' : '';
+  }
+
+  /** Lowercase haystack for client-side search (title, category + label, author, file name, body for content docs). */
+  function docSearchText(d) {
+    const tag = d.tag || '';
+    const parts = [d.name || '', tag, categoryLabelForSearch(tag), d.author || '', d.filename || ''];
+    if (d.doc_type === 'content' && d.content) {
+      const plain = stripHtml(d.content).replace(/\s+/g, ' ').trim();
+      if (plain) parts.push(plain.slice(0, 12000));
+    }
+    return parts.join('\n').toLowerCase();
+  }
+
+  /** Every whitespace-separated term must appear somewhere (matches "user manual" vs "User Manuals"). */
+  function docMatchesSearch(d) {
+    const raw = String(searchQ || '').trim();
+    if (!raw) return true;
+    const hay = docSearchText(d);
+    const tokens = raw.toLowerCase().split(/\s+/).filter(Boolean);
+    return tokens.every(t => hay.includes(t));
   }
 
   function docRefs(doc) {
@@ -959,17 +1000,7 @@
       ) {
         if ((d.tag || '').toLowerCase() !== fb) return false;
       }
-      if (searchQ) {
-        const q = searchQ.toLowerCase();
-        const blob = (
-          (d.name || '') +
-          ' ' +
-          (d.tag || '') +
-          ' ' +
-          (d.author || '')
-        ).toLowerCase();
-        if (!blob.includes(q)) return false;
-      }
+      if (searchQ && !docMatchesSearch(d)) return false;
       return true;
     });
   }
@@ -1011,18 +1042,71 @@
       if (catBuckets.includes(bucket) && (d.tag || '').toLowerCase() !== bucket) {
         return false;
       }
-      if (searchQ) {
-        const q = searchQ.toLowerCase();
-        const blob = (
-          (d.name || '') +
-          ' ' +
-          (d.tag || '') +
-          ' ' +
-          (d.author || '')
-        ).toLowerCase();
-        if (!blob.includes(q)) return false;
-      }
+      if (searchQ && !docMatchesSearch(d)) return false;
       return true;
+    });
+  }
+
+  function syncMainSearchPanel() {
+    const wrap = document.getElementById('dhSearchResults');
+    const empty = document.getElementById('dhEmptyState');
+    if (!wrap || !empty) return;
+
+    const q = String(searchQ || '').trim();
+    const viewerOn = document.getElementById('dhViewerState');
+    const editorOn = document.getElementById('dhEditorState');
+    const chromeOpen =
+      (viewerOn && viewerOn.style.display === 'flex') ||
+      (editorOn && editorOn.style.display === 'flex');
+
+    if (currentDocId != null || chromeOpen) {
+      wrap.hidden = true;
+      wrap.innerHTML = '';
+      return;
+    }
+
+    if (!q) {
+      wrap.hidden = true;
+      wrap.innerHTML = '';
+      empty.style.display = 'flex';
+      return;
+    }
+
+    const list = visibleDocs();
+    empty.style.display = 'none';
+    wrap.hidden = false;
+
+    const n = list.length;
+    let html = '<div class="dh-search-results-inner">';
+    html += '<div class="dh-search-results-head">';
+    html += '<h2 class="dh-search-results-title">Search results</h2>';
+    html += `<p class="dh-search-results-meta">${n === 0 ? 'No matching documents' : n + ' document' + (n === 1 ? '' : 's')}</p>`;
+    html += '</div>';
+
+    if (n === 0) {
+      html +=
+        '<p class="dh-search-results-hint">Try other keywords, open the <strong>menu (☰)</strong> to browse by folder, or clear the search.</p>';
+    } else {
+      html += '<ul class="dh-search-results-list" role="list">';
+      html += list
+        .map(doc => {
+          const icon = catIcon(doc.tag);
+          const meta = [catLabel(doc.tag), statusLabel(doc.status), doc.date].filter(Boolean).join(' · ');
+          return `<li><button type="button" class="dh-search-result-row" data-doc-id="${doc.id}">
+<span class="dh-sr-icon" aria-hidden="true">${icon}</span>
+<span class="dh-sr-main">
+  <span class="dh-sr-name">${esc(doc.name)}</span>
+  <span class="dh-sr-meta">${esc(meta)}</span>
+</span>
+</button></li>`;
+        })
+        .join('');
+      html += '</ul>';
+    }
+    html += '</div>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll('.dh-search-result-row').forEach(btn => {
+      btn.onclick = () => selectDoc(Number(btn.dataset.docId));
     });
   }
 
@@ -1099,6 +1183,7 @@
     if (osl) osl.textContent = panelTitle();
 
     syncSbBucketOpenState();
+    syncMainSearchPanel();
   }
 
   function syncTabStyles() {

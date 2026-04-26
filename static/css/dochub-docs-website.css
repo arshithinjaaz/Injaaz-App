@@ -53,7 +53,7 @@ body.dochub-page .dh-app.dh-docs-shell {
   background: linear-gradient(180deg, var(--shell, #0f1412) 0%, var(--shell-mid, #142a1f) 100%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow: 0 4px 24px rgba(18, 84, 53, 0.15);
-  font-family: var(--font-ui, 'Inter', sans-serif);
+  font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, system-ui, sans-serif);
 }
 
 .dh-docs-topbar-brand {
@@ -71,7 +71,7 @@ body.dochub-page .dh-app.dh-docs-shell {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-family: var(--font-display, -apple-system, BlinkMacSystemFont, system-ui, sans-serif);
   font-size: 11px;
   font-weight: 800;
   color: #fff;
@@ -79,7 +79,7 @@ body.dochub-page .dh-app.dh-docs-shell {
 }
 
 .dh-docs-name {
-  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-family: var(--font-display, -apple-system, BlinkMacSystemFont, system-ui, sans-serif);
   font-weight: 800;
   font-size: 18px;
   color: #fff;
@@ -305,7 +305,7 @@ body.dochub-techdocs #dhStatusBar.dh-status-bar {
 /* Prose helpers */
 .dh-editor-content .section-heading,
 .dh-viewer-content .section-heading {
-  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-family: var(--font-display, -apple-system, BlinkMacSystemFont, system-ui, sans-serif);
   font-weight: 700;
   font-size: 26px;
   color: var(--inj-primary-dark, #0d3d24);

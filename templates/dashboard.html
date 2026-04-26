@@ -18,12 +18,8 @@
   <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
   <script src="{{ url_for('static', filename='pwa-install.js') }}" defer></script>
   
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Grape+Nuts&family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- External Stylesheets -->
+  <!-- System UI (SF on iOS) — no webfont -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
@@ -35,7 +31,7 @@
   <header class="hero hero-split">
     <div class="hero-content hero-split-inner">
       <div class="hero-left">
-        <p class="hero-tagline">Injaaz Platform</p>
+        <p class="hero-tagline">Injaaz Application</p>
         <h1 class="hero-title">All Operations.<br><span class="hero-title-accent">One Platform.</span></h1>
         <p class="hero-subtitle">Inspections, HR forms, and store keeping — streamlined in one place for your office.</p>
         <div class="hero-cta-row">

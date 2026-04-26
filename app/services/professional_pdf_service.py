@@ -91,7 +91,7 @@ class NumberedCanvas(canvas.Canvas):
         self.setFont('Helvetica-Bold', 8)
         self.setFillColor(PRIMARY_COLOR)
         self.drawString(1.4*cm + LOGO_SZ + 0.15*cm,
-                        HDR_Y + 0.5*cm, "INJAAZ PLATFORM")
+                        HDR_Y + 0.5*cm, "Injaaz Application")
 
         # Report title (right-aligned)
         self.setFont('Helvetica', 7.5)
@@ -567,7 +567,7 @@ def create_professional_pdf(pdf_path, story, report_title="Injaaz Report"):
             topMargin=1.7*cm,
             bottomMargin=1.8*cm,
             title=report_title,
-            author="Injaaz Platform"
+            author="Injaaz Application"
         )
         
         # Build with custom canvas for headers/footers
@@ -710,7 +710,7 @@ def create_cover_page(story, report_info):
             logger.warning(f"Could not load logo for cover page: {e}")
     
     # Company name
-    story.append(Paragraph("INJAAZ PLATFORM", ParagraphStyle(
+    story.append(Paragraph("Injaaz Application", ParagraphStyle(
         'CompanyName',
         fontSize=14,
         textColor=SECONDARY_COLOR,

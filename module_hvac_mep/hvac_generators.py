@@ -332,11 +332,12 @@ def create_excel_report(data, output_dir):
         if materials:
             _write_materials_sheet(ws_mat, materials)
         else:
+            from openpyxl.styles import Font, Alignment, PatternFill
             ws_mat.merge_cells('A1:H1')
             ws_mat['A1'] = "MATERIALS & COST BREAKDOWN"
-            ws_mat['A1'].font = ws_summary['A1'].font
-            ws_mat['A1'].fill = ws_summary['A1'].fill
-            ws_mat['A1'].alignment = ws_summary['A1'].alignment
+            ws_mat['A1'].font = Font(name='Calibri', bold=True, color='125435', size=13)
+            ws_mat['A1'].fill = PatternFill('solid', fgColor='E8F5E9')
+            ws_mat['A1'].alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
             ws_mat.merge_cells('A3:H3')
             ws_mat['A3'] = "No materials were selected for this inspection."
         finalize_workbook(ws_mat)

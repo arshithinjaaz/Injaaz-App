@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-  <title>Device Management — Injaaz Admin</title>
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
+<title>Device Management — Injaaz Admin</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
   <style>
@@ -32,7 +33,7 @@
       --shadow-lg: 0 12px 40px rgba(18,84,53,0.14), 0 4px 12px rgba(18,84,53,0.08);
     }
     body.has-main-nav { padding-top: 5.5rem; }
-    body { font-family: 'DM Sans', -apple-system, sans-serif; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; }
 
     .dm-root {
       background: #f7fbf9;
@@ -216,7 +217,7 @@
       padding: 8px 14px 8px 36px;
       border: 1.5px solid var(--gray-100);
       border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       font-size: 13px;
       color: var(--gray-900);
       background: var(--gray-50);
@@ -238,7 +239,7 @@
       color: white;
       border: none;
       border-radius: 9px;
-      font-family: 'DM Sans', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
@@ -350,7 +351,7 @@
     .dm-filter-tab.active { background: white; color: var(--green); box-shadow: var(--shadow-sm); }
     .dm-filter-tab:hover:not(.active) { color: var(--gray-600); }
 
-    .dm-device-table { width: 100%; border-collapse: collapse; }
+    .dm-device-table { width: 100%; min-width: 600px; border-collapse: collapse; }
     .dm-device-table th {
       padding: 10px 18px;
       font-size: 11px;
@@ -619,7 +620,7 @@
       width: 100%; padding: 9px 12px;
       border: 1.5px solid var(--gray-100);
       border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       font-size: 13px;
       color: var(--gray-900);
       background: var(--gray-50);
@@ -636,7 +637,7 @@
       padding: 9px 20px;
       border: 1.5px solid var(--gray-100);
       border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
@@ -651,7 +652,7 @@
       color: white;
       border: none;
       border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
@@ -679,6 +680,37 @@
     .dm-table-scroll { overflow-x: auto; }
     .dm-table-scroll::-webkit-scrollbar { height: 6px; }
     .dm-table-scroll::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 10px; }
+
+    @media (max-width: 768px) {
+      .dm-topbar {
+        padding: 0 1rem;
+        height: auto;
+        min-height: 52px;
+        flex-wrap: wrap;
+        gap: 8px;
+        top: 4rem;
+        padding-top: 8px;
+        padding-bottom: 8px;
+      }
+      .dm-page-title { font-size: 13px; flex: 1 1 100%; }
+      .dm-topbar-spacer { display: none; }
+      .dm-search-wrap { flex: 1 1 auto; }
+      .dm-search-wrap input { width: 100%; }
+      .dm-search-wrap input:focus { width: 100%; }
+      .dm-add-btn { flex-shrink: 0; padding: 7px 11px; font-size: 12px; }
+      .dm-content { padding: 0.875rem; }
+      .dm-device-table th, .dm-device-table td { padding: 0.5rem 0.625rem; font-size: 0.75rem; }
+      .dm-stat-card { padding: 12px 14px; }
+      /* Modal form fields — prevent collapsed look */
+      .dm-form-row { grid-template-columns: 1fr; gap: 10px; margin-bottom: 10px; }
+      .dm-form-field input, .dm-form-field select {
+        font-size: 16px; padding: 0.65rem 0.875rem;
+        min-height: 44px; border-radius: 10px;
+      }
+      .dm-modal-body { padding: 14px 16px; }
+      .dm-modal-footer { padding: 10px 16px 16px; flex-direction: column; }
+      .dm-modal-footer button { width: 100%; padding: 12px; }
+    }
   </style>
 </head>
 <body class="has-main-nav">
@@ -866,8 +898,8 @@
             <div class="dm-donut-wrap">
               <svg class="dm-donut-svg" viewBox="0 0 120 120" id="donutSvg">
                 <circle cx="60" cy="60" r="46" fill="none" stroke="#f0f0f0" stroke-width="14"/>
-                <text x="60" y="56" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="18" font-weight="700" fill="#0d2218" id="donutTotal">0</text>
-                <text x="60" y="70" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="9" fill="#8fa99e">Devices</text>
+                <text x="60" y="56" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="18" font-weight="700" fill="#0d2218" id="donutTotal">0</text>
+                <text x="60" y="70" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="9" fill="#8fa99e">Devices</text>
               </svg>
               <div class="dm-donut-legend" id="donutLegend"></div>
             </div>

@@ -134,7 +134,14 @@ executor = ThreadPoolExecutor(max_workers=1)
 
 
 def create_app():
-    app = Flask(__name__, static_folder='static', template_folder='templates')
+    # Pin root_path to the repo directory. If import_name is "__main__", Flask can fall back to
+    # os.getcwd() when resolving "templates/", which loads a stale or wrong admin_dashboard.html.
+    app = Flask(
+        __name__,
+        root_path=BASE_DIR,
+        static_folder='static',
+        template_folder='templates',
+    )
 
     # Some container images lack /etc/mime.types; browsers enforce nosniff on CSS/JS.
     mimetypes.add_type("text/css", ".css")
@@ -866,10 +873,20 @@ def create_app():
         """Submitted forms page - supervisors can view their submissions"""
         return render_template('submitted_forms.html')
     
+    @app.route('/admin')
+    def admin_root():
+        """Convenience: many users type /admin — send them to the dashboard."""
+        return redirect('/admin/dashboard')
+
     @app.route('/admin/dashboard')
     def admin_dashboard():
         """Admin dashboard - requires admin authentication"""
         return render_template('admin_dashboard.html', active_page='admin')
+
+    @app.route('/admin/email-notifications')
+    def admin_email_notifications():
+        """Deep-link to the workflow email settings card (query param survives redirects reliably)."""
+        return redirect('/admin/dashboard?focus=email-notifications')
 
     @app.route('/admin/mmr-chargeable')
     def mmr_chargeable_settings_page():

@@ -26,6 +26,7 @@ from app.models import db, User
 from app.middleware import token_required
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from app.services.cloudinary_service import upload_local_file
+from common.workflow_notifications import send_inspection_submitted
 
 # Rate limiting helper
 def get_limiter():
@@ -681,6 +682,13 @@ def submit():
             user_id=user_id
         )
         submission_id = submission.submission_id
+
+        # Trigger real-time inspection submission email.
+        try:
+            submitter_user = User.query.get(user_id) if user_id else None
+            send_inspection_submitted(submission, submitter_user)
+        except Exception as notify_err:
+            logger.warning(f"Submission email notification failed for {submission_id}: {notify_err}")
         
         # Add IDs to data for background task
         data['submission_id'] = submission_id
@@ -903,6 +911,13 @@ def submit_with_urls():
             user_id=user_id
         )
         submission_id = submission_db.submission_id
+
+        # Trigger real-time inspection submission email.
+        try:
+            submitter_user = User.query.get(user_id) if user_id else None
+            send_inspection_submitted(submission_db, submitter_user)
+        except Exception as notify_err:
+            logger.warning(f"Submission email notification failed for {submission_id}: {notify_err}")
         
         logger.info(f"✅ Cleaning submission {submission_id} saved to database with {len(saved_photos)} photos")
         

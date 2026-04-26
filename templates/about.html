@@ -8,9 +8,8 @@
   <meta name="theme-color" content="#125435">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   <link rel="manifest" href="/manifest.json">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,700&family=Cabinet+Grotesk:wght@400;500;700;800&family=Grape+Nuts&display=swap" rel="stylesheet">
+  {% include 'partials/caveat_font.html' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/about-v2.css') }}">
@@ -34,7 +33,7 @@
         <defs>
           <path id="circle-path" d="M65,65 m-48,0 a48,48 0 1,1 96,0 a48,48 0 1,1 -96,0"/>
         </defs>
-        <text font-family="Cabinet Grotesk,sans-serif" font-size="11" font-weight="700" letter-spacing="3.5" fill="rgba(255,255,255,.4)">
+        <text font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="11" font-weight="700" letter-spacing="3.5" fill="rgba(255,255,255,.4)">
           <textPath href="#circle-path">INJAAZ · FACILITIES MANAGEMENT · UAE · EXCELLENCE · </textPath>
         </text>
       </svg>
