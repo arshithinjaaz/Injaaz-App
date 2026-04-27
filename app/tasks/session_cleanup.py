@@ -2,8 +2,9 @@
 Session cleanup task - removes expired sessions
 """
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from app.models import db, Session
+from common.datetime_utils import utc_now_naive
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ def cleanup_expired_sessions():
     """
     try:
         # Delete sessions that expired more than 7 days ago
-        cutoff_date = datetime.utcnow() - timedelta(days=7)
+        cutoff_date = utc_now_naive() - timedelta(days=7)
         
         expired_sessions = Session.query.filter(
             Session.expires_at < cutoff_date
@@ -44,7 +45,7 @@ def cleanup_revoked_sessions():
     Remove revoked sessions older than 30 days
     """
     try:
-        cutoff_date = datetime.utcnow() - timedelta(days=30)
+        cutoff_date = utc_now_naive() - timedelta(days=30)
         
         revoked_sessions = Session.query.filter(
             Session.is_revoked == True,

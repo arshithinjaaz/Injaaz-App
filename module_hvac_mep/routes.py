@@ -23,6 +23,7 @@ from common.utils import (
     is_path_safe_for_directory,
 )
 from common.error_responses import error_response, success_response
+from common.datetime_utils import utc_now_naive
 from common.db_utils import (
     create_submission_db,
     create_job_db,
@@ -139,7 +140,7 @@ def index():
         if not user_id:
             return redirect(url_for('login_page'))
         
-        user = User.query.get(user_id)
+        user = db.session.get(User, int(user_id)) if user_id is not None else None
         
         if not user or not user.is_active:
             return render_template('access_denied.html', 
@@ -578,7 +579,7 @@ def submit():
                 from datetime import timedelta
                 parsed_date = datetime.strptime(visit_date, '%Y-%m-%d').date()
                 # Use UTC date and add 1 day buffer to account for timezone differences
-                today_utc = datetime.utcnow().date()
+                today_utc = utc_now_naive().date()
                 max_allowed_date = today_utc + timedelta(days=1)
                 logger.info(f"Date validation (HVAC): parsed_date={parsed_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
                 if parsed_date > max_allowed_date:
@@ -719,7 +720,7 @@ def submit():
             "opman_signature": opman_sig_file,
             "items": items,
             "base_url": request.host_url.rstrip('/'),
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": utc_now_naive().isoformat(),
         }
 
         # Get user_id from JWT token if available
@@ -751,7 +752,7 @@ def submit():
 
         # Trigger inspection email notification for real-time supervisor submission.
         try:
-            submitter_user = User.query.get(user_id) if user_id else None
+            submitter_user = db.session.get(User, int(user_id)) if user_id else None
             send_inspection_submitted(submission, submitter_user)
         except Exception as notify_err:
             logger.warning(f"Submission email notification failed for {sub_id}: {notify_err}")
@@ -1294,7 +1295,7 @@ def submit_with_urls():
 
             # Trigger inspection email notification on real HVAC submission.
             try:
-                submitter_user = User.query.get(user_id) if user_id else None
+                submitter_user = db.session.get(User, int(user_id)) if user_id else None
                 send_inspection_submitted(submission_db, submitter_user)
             except Exception as notify_err:
                 logger.warning(f"Submission email notification failed for {sub_id}: {notify_err}")

@@ -3,13 +3,18 @@ Database Models for Injaaz App
 SQLAlchemy ORM models for PostgreSQL/SQLite
 """
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from sqlalchemy import JSON
 
 db = SQLAlchemy()
 bcrypt = Bcrypt()
+
+
+def _utcnow():
+    """Naive UTC datetime for SQLAlchemy column defaults (timezone-unaware columns)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class User(db.Model):
@@ -33,7 +38,7 @@ class User(db.Model):
     access_cleaning = db.Column(db.Boolean, default=False)  # Cleaning form access
     access_hr = db.Column(db.Boolean, default=False)  # HR module access
     access_procurement_module = db.Column(db.Boolean, default=False)  # Procurement module access
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=_utcnow)
     last_login = db.Column(db.DateTime)
     
     # Relationships
@@ -145,9 +150,9 @@ class Submission(db.Model):
     rejected_at = db.Column(db.DateTime, nullable=True)
     rejected_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     form_data = db.Column(JSON, nullable=False)  # All form fields as JSON
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+    created_at = db.Column(db.DateTime, default=_utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
+
     # Relationships
     jobs = db.relationship('Job', backref='submission', lazy='dynamic', cascade='all, delete-orphan')
     files = db.relationship('File', backref='submission', lazy='dynamic', cascade='all, delete-orphan')
@@ -222,7 +227,7 @@ class Job(db.Model):
     error_message = db.Column(db.Text)
     started_at = db.Column(db.DateTime)
     completed_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=_utcnow)
     
     def to_dict(self):
         """Convert to dictionary"""
@@ -257,7 +262,7 @@ class File(db.Model):
     is_cloud = db.Column(db.Boolean, default=True)
     file_size = db.Column(db.Integer)  # In bytes
     mime_type = db.Column(db.String(100))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=_utcnow)
     
     def to_dict(self):
         """Convert to dictionary"""
@@ -291,7 +296,7 @@ class AuditLog(db.Model):
     ip_address = db.Column(db.String(45))
     user_agent = db.Column(db.Text)
     details = db.Column(JSON)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=_utcnow, index=True)
     
     def to_dict(self):
         """Convert to dictionary"""
@@ -320,7 +325,7 @@ class Session(db.Model):
     token_jti = db.Column(db.String(100), unique=True, nullable=False, index=True)  # JWT ID
     expires_at = db.Column(db.DateTime, nullable=False, index=True)
     is_revoked = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=_utcnow)
     
     def to_dict(self):
         """Convert to dictionary"""
@@ -351,15 +356,15 @@ class Device(db.Model):
     assigned_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     serial_or_asset_tag = db.Column(db.String(100), nullable=True)
     last_active_at = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=_utcnow)
+    updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
 
     assigned_user = db.relationship('User', backref='devices', foreign_keys=[assigned_user_id])
 
     def to_dict(self):
         last = 'Never'
         if self.last_active_at:
-            delta = datetime.utcnow() - self.last_active_at
+            delta = datetime.now(timezone.utc).replace(tzinfo=None) - self.last_active_at
             if delta.days > 0:
                 last = f'{delta.days}d ago'
             elif delta.seconds >= 3600:
@@ -407,8 +412,8 @@ class BDProject(db.Model):
     primary_contact_name = db.Column(db.String(120), nullable=True)
     primary_contact_email = db.Column(db.String(255), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=_utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
 
     def to_dict(self):
         value_amount = float(self.value_amount or 0)
@@ -453,8 +458,8 @@ class BDFollowUp(db.Model):
     details = db.Column(db.Text, nullable=True)
     project_id = db.Column(db.Integer, db.ForeignKey('bd_projects.id'), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=_utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
 
     project = db.relationship('BDProject', backref=db.backref('followups', lazy='dynamic'))
 
@@ -490,8 +495,8 @@ class BDContact(db.Model):
     phone = db.Column(db.String(50), nullable=True)
     tags = db.Column(JSON, default=list)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=_utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
 
     def to_dict(self):
         safe_name = (self.name or '').strip()
@@ -524,9 +529,9 @@ class BDActivity(db.Model):
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=True)
     badge = db.Column(db.String(120), nullable=True)
-    event_time = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    event_time = db.Column(db.DateTime, default=_utcnow, index=True)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=_utcnow, index=True)
 
     def to_dict(self):
         return {
@@ -562,8 +567,8 @@ class AdminPersonalProject(db.Model):
     notes = db.Column(db.Text, nullable=True)
     is_current_focus = db.Column(db.Boolean, default=False, index=True)
     sort_order = db.Column(db.Integer, default=0, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=_utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow)
 
     user = db.relationship('User', backref=db.backref('admin_personal_projects', lazy='dynamic'))
     steps = db.relationship(
@@ -657,8 +662,8 @@ class DocHubDocument(db.Model):
     # True when this row mirrors an inline-stored file (editor reference); deleting the row does not delete the file.
     inline_asset = db.Column(db.Boolean, default=False)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=_utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow, index=True)
 
     author = db.relationship('User', backref=db.backref('dochub_documents', lazy='dynamic'))
 
@@ -723,7 +728,7 @@ class DocHubAccess(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False, index=True)
     can_access = db.Column(db.Boolean, default=True)
     updated_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow, index=True)
 
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('dochub_access_entry', uselist=False))
 
@@ -773,7 +778,7 @@ class Notification(db.Model):
     notification_type = db.Column(db.String(50), default='info')  # 'info', 'success', 'warning', 'error', 'hr_approved', 'hr_rejected'
     submission_id = db.Column(db.String(50), nullable=True)  # Reference to related submission
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=_utcnow, index=True)
     
     # Relationship
     user = db.relationship('User', backref=db.backref('notifications', lazy='dynamic', cascade='all, delete-orphan'))

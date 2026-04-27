@@ -3,10 +3,10 @@ Authentication Routes - JWT-based authentication
 """
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import (
-    create_access_token, create_refresh_token, 
-    jwt_required, get_jwt_identity, get_jwt
+    create_access_token, create_refresh_token,
+    jwt_required, get_jwt_identity, get_jwt, get_jti
 )
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.models import db, User, Session, AuditLog
 from sqlalchemy.exc import IntegrityError
 from common.error_responses import error_response, success_response
@@ -176,17 +176,18 @@ def login():
         password_change_required = not user.password_changed if hasattr(user, 'password_changed') else False
         
         # Update last login
-        user.last_login = datetime.utcnow()
+        user.last_login = datetime.now(timezone.utc)
         db.session.commit()
-        
+
         # Create tokens
         access_token = create_access_token(identity=str(user.id))
         refresh_token = create_refresh_token(identity=str(user.id))
-        
-        # Store session for token revocation
-        from flask_jwt_extended import decode_token
-        access_jti = decode_token(access_token)['jti']
-        access_exp = datetime.fromtimestamp(decode_token(access_token)['exp'])
+
+        # Store session for token revocation — use get_jti instead of decode_token
+        # because decode_token key names vary across flask-jwt-extended versions.
+        access_jti = get_jti(access_token)
+        jwt_expires = current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES') or timedelta(hours=1)
+        access_exp = datetime.now(timezone.utc) + jwt_expires
         
         session = Session(
             user_id=user.id,
@@ -236,18 +237,18 @@ def refresh():
     """Refresh access token using refresh token"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         
         if not user or not user.is_active:
             return error_response('User not found or inactive', 404, 'USER_NOT_FOUND')
         
         # Create new access token
         access_token = create_access_token(identity=user_id)
-        
+
         # Store new session
-        from flask_jwt_extended import decode_token
-        access_jti = decode_token(access_token)['jti']
-        access_exp = datetime.fromtimestamp(decode_token(access_token)['exp'])
+        access_jti = get_jti(access_token)
+        jwt_expires = current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES') or timedelta(hours=1)
+        access_exp = datetime.now(timezone.utc) + jwt_expires
         
         session = Session(
             user_id=int(user_id),
@@ -304,7 +305,7 @@ def get_current_user():
     """Get current user profile"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         
         if not user:
             return error_response('User not found', 404, 'USER_NOT_FOUND')
@@ -324,7 +325,7 @@ def update_signature_default():
     """Update user's default signature and comment"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         if not user:
             return error_response('User not found', 404, 'USER_NOT_FOUND')
 
@@ -377,7 +378,7 @@ def change_password():
         if not data.get('current_password') or not data.get('new_password'):
             return error_response('Current and new passwords are required', 400, 'VALIDATION_ERROR')
         
-        user = User.query.get(int(user_id))
+        user = db.session.get(User, int(user_id))
         if not user:
             return error_response('User not found', 404, 'USER_NOT_FOUND')
         

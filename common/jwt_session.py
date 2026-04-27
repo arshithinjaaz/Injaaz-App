@@ -3,11 +3,12 @@ Ensure `sessions` rows exist for valid access JWTs (JTI).
 Used by JWT blocklist + token_required so behavior stays consistent.
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.exc import IntegrityError
 
 from app.models import Session, User, db
+from common.datetime_utils import utc_now_naive
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +30,15 @@ def sync_access_session_row(jti, jwt_payload):
         return None
     if uid is None:
         return None
-    user = User.query.get(uid)
+    user = db.session.get(User, uid)
     if not user or not user.is_active:
         return None
     exp = jwt_payload.get('exp')
-    exp_dt = datetime.utcfromtimestamp(exp) if exp else datetime.utcnow()
+    exp_dt = (
+        datetime.fromtimestamp(int(exp), tz=timezone.utc).replace(tzinfo=None)
+        if exp
+        else utc_now_naive()
+    )
     try:
         row = Session(user_id=user.id, token_jti=jti, expires_at=exp_dt)
         db.session.add(row)

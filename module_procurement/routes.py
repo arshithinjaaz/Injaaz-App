@@ -9,6 +9,8 @@ from io import BytesIO
 from flask import Blueprint, render_template, request, jsonify, current_app, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import db, User, Submission
+from common.form_data_utils import shallow_copy_form_data
+from common.datetime_utils import utc_now_naive
 
 procurement_bp = Blueprint('procurement_module', __name__, template_folder='templates')
 
@@ -16,7 +18,9 @@ procurement_bp = Blueprint('procurement_module', __name__, template_folder='temp
 def get_current_user():
     """Get the current authenticated user"""
     user_id = get_jwt_identity()
-    return User.query.get(user_id)
+    if user_id is None:
+        return None
+    return db.session.get(User, int(user_id))
 
 
 @procurement_bp.route('/')
@@ -624,8 +628,8 @@ def assign_material_to_property():
     if not submission:
         return jsonify({'error': 'Material not found'}), 404
     
-    # Update the property field
-    form_data = submission.form_data or {}
+    # Update the property field (shallow copy so JSON column is marked dirty in SQLAlchemy)
+    form_data = shallow_copy_form_data(submission)
     form_data['property'] = property_name
     submission.form_data = form_data
     
@@ -830,7 +834,7 @@ def update_catalog_material(material_id):
         {
             Submission.form_data: fd,
             Submission.site_name: new_site_name,
-            Submission.updated_at: datetime.utcnow(),
+            Submission.updated_at: utc_now_naive(),
         },
         synchronize_session=False
     )

@@ -1,7 +1,7 @@
 // Service Worker for Injaaz PWA
 // Version 1.0.0
 
-const CACHE_NAME = 'injaaz-v1.0.1';
+const CACHE_NAME = 'injaaz-v1.0.2';
 const OFFLINE_URL = '/offline';
 
 // Assets to cache immediately on install
@@ -97,8 +97,12 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        // Cache successful responses for speed
-        if (response.status === 200) {
+        // Do not put HTML document responses in Cache Storage: avoids stale
+        // navigations and odd first-load / mobile bfcache behavior with SW.
+        const ct = (response.headers.get('content-type') || '');
+        const isHtmlDoc =
+          request.mode === 'navigate' || ct.indexOf('text/html') !== -1;
+        if (response.status === 200 && !isHtmlDoc) {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, responseToCache);

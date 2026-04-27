@@ -10,7 +10,7 @@ so they can be finalised without touching code.
 from __future__ import annotations
 from datetime import datetime
 from flask import current_app
-from app.models import User
+from app.models import User, db
 from common.email_service import send_email
 
 
@@ -70,7 +70,7 @@ def _submitter_email(submission) -> str | None:
     try:
         uid = getattr(submission, 'user_id', None)
         if uid:
-            u = User.query.get(uid)
+            u = db.session.get(User, uid)
             return u.email if u and u.email else None
     except Exception:
         pass

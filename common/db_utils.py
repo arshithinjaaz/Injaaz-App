@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 from app.models import db, Submission, Job, File, User
 from common.utils import random_id
+from common.datetime_utils import utc_now_naive
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ def _notify_supervisor(submission, session):
         if supervisor and hasattr(submission, 'supervisor_id'):
             submission.supervisor_id = supervisor.id
             submission.workflow_status = 'supervisor_notified'
-            submission.supervisor_notified_at = datetime.utcnow()
+            submission.supervisor_notified_at = utc_now_naive()
             session.commit()
             logger.info(f"✅ Notified supervisor {supervisor.username} about submission {submission.submission_id}")
     except Exception as e:
@@ -35,7 +36,7 @@ def _notify_manager(submission, session):
         if manager and hasattr(submission, 'manager_id'):
             submission.manager_id = manager.id
             submission.workflow_status = 'manager_notified'
-            submission.manager_notified_at = datetime.utcnow()
+            submission.manager_notified_at = utc_now_naive()
             session.commit()
             logger.info(f"✅ Notified manager {manager.username} about submission {submission.submission_id}")
     except Exception as e:
@@ -78,7 +79,7 @@ def create_submission_db(module_type, form_data, site_name=None, visit_date=None
         if user_id:
             try:
                 from app.models import User
-                user = User.query.get(user_id)
+                user = db.session.get(User, user_id)
                 if user and user.designation == 'supervisor':
                     is_supervisor_submission = True
                     workflow_status = 'operations_manager_review'  # Supervisor submissions go directly to Operations Manager
@@ -100,7 +101,7 @@ def create_submission_db(module_type, form_data, site_name=None, visit_date=None
         if user_id:
             try:
                 from app.models import User
-                user = User.query.get(user_id)
+                user = db.session.get(User, user_id)
                 if user and user.designation == 'supervisor':
                     submission.supervisor_id = user.id
                     logger.info(f"✅ Set supervisor_id to {user.id} for submission {submission_id}")
@@ -118,7 +119,7 @@ def create_submission_db(module_type, form_data, site_name=None, visit_date=None
             except ImportError:
                 pass
             else:
-                user = User.query.get(user_id)
+                user = db.session.get(User, user_id)
                 if user and user.designation == 'technician':
                     # Find supervisor and notify
                     _notify_supervisor(submission, db.session)
@@ -164,7 +165,7 @@ def create_job_db(submission_id_or_obj, job_id=None):
             submission_id=submission_db_id,
             status='pending',
             progress=0,
-            started_at=datetime.utcnow()
+            started_at=utc_now_naive()
         )
         
         db.session.add(job)
@@ -201,7 +202,7 @@ def update_job_progress_db(job_id, progress, status=None, error_message=None):
             job.status = status
         
         if progress > 0 and not job.started_at:
-            job.started_at = datetime.utcnow()
+            job.started_at = utc_now_naive()
         
         if error_message:
             job.error_message = error_message
@@ -231,7 +232,7 @@ def complete_job_db(job_id, result_urls):
         
         job.status = 'completed'
         job.progress = 100
-        job.completed_at = datetime.utcnow()
+        job.completed_at = utc_now_naive()
         job.result_data = result_urls
         
         db.session.commit()
@@ -258,7 +259,7 @@ def fail_job_db(job_id, error_message):
         
         job.status = 'failed'
         job.progress = 0
-        job.completed_at = datetime.utcnow()
+        job.completed_at = utc_now_naive()
         job.error_message = error_message
         
         db.session.commit()
@@ -397,7 +398,7 @@ def update_submission_db(submission_id, form_data=None, site_name=None, visit_da
             merged_form_data.update(form_data)
             submission.form_data = merged_form_data
         
-        submission.updated_at = datetime.utcnow()
+        submission.updated_at = utc_now_naive()
         
         db.session.commit()
         logger.info(f"✅ Updated submission {submission_id}")

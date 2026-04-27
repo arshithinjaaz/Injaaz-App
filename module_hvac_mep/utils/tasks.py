@@ -2,7 +2,8 @@ import os
 import json
 import time
 import logging
-from datetime import datetime
+
+from common.datetime_utils import utc_now_naive
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ def generate_and_send_report(report_id, visit_info, final_items, generated_dir):
             "status": "done",
             "excel_url": excel_url,
             "pdf_url": pdf_url,
-            "completed_at": datetime.utcnow().isoformat()
+            "completed_at": utc_now_naive().isoformat()
         }
         save_report_state(report_id, {"visit_info": visit_info, "report_items": final_items, "final_status": final_status})
         # 5) Send email (dummy)

@@ -22,6 +22,7 @@ from common.db_utils import (
     get_submission_db
 )
 from common.error_responses import error_response, success_response
+from common.datetime_utils import utc_now_naive
 from app.models import db, User
 from app.middleware import token_required
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -233,7 +234,7 @@ def form():
     
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, int(user_id)) if user_id is not None else None
         
         if not user or not user.is_active:
             return render_template('access_denied.html',
@@ -558,7 +559,7 @@ def submit():
                 from datetime import timedelta
                 visit_date = datetime.strptime(date_str, '%Y-%m-%d').date()
                 # Use UTC date and add 1 day buffer to account for timezone differences
-                today_utc = datetime.utcnow().date()
+                today_utc = utc_now_naive().date()
                 max_allowed_date = today_utc + timedelta(days=1)
                 logger.info(f"Date validation (Cleaning): parsed_date={visit_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
                 if visit_date > max_allowed_date:
@@ -657,7 +658,7 @@ def submit():
         
         # Save base URL for report generation
         data['base_url'] = request.host_url.rstrip('/')
-        data['created_at'] = datetime.utcnow().isoformat()
+        data['created_at'] = utc_now_naive().isoformat()
         
         # Get user_id from JWT token if available
         user_id = None
@@ -685,7 +686,7 @@ def submit():
 
         # Trigger real-time inspection submission email.
         try:
-            submitter_user = User.query.get(user_id) if user_id else None
+            submitter_user = db.session.get(User, int(user_id)) if user_id else None
             send_inspection_submitted(submission, submitter_user)
         except Exception as notify_err:
             logger.warning(f"Submission email notification failed for {submission_id}: {notify_err}")
@@ -817,7 +818,7 @@ def submit_with_urls():
                 from datetime import timedelta
                 visit_date = datetime.strptime(date_str, '%Y-%m-%d').date()
                 # Use UTC date and add 1 day buffer to account for timezone differences
-                today_utc = datetime.utcnow().date()
+                today_utc = utc_now_naive().date()
                 max_allowed_date = today_utc + timedelta(days=1)
                 logger.info(f"Date validation (submit-with-urls): parsed_date={visit_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
                 if visit_date > max_allowed_date:
@@ -891,7 +892,7 @@ def submit_with_urls():
         
         # Add base_url and timestamp directly to data
         data['base_url'] = request.host_url.rstrip('/')
-        data['created_at'] = datetime.utcnow().isoformat()
+        data['created_at'] = utc_now_naive().isoformat()
         
         # Get user_id from JWT token
         user_id = None
@@ -907,14 +908,14 @@ def submit_with_urls():
             module_type='cleaning',
             form_data=data,
             site_name=data.get('project_name', 'Cleaning Assessment'),
-            visit_date=data.get('date_of_visit', datetime.utcnow().strftime('%Y-%m-%d')),
+            visit_date=data.get('date_of_visit', utc_now_naive().strftime('%Y-%m-%d')),
             user_id=user_id
         )
         submission_id = submission_db.submission_id
 
         # Trigger real-time inspection submission email.
         try:
-            submitter_user = User.query.get(user_id) if user_id else None
+            submitter_user = db.session.get(User, int(user_id)) if user_id else None
             send_inspection_submitted(submission_db, submitter_user)
         except Exception as notify_err:
             logger.warning(f"Submission email notification failed for {submission_id}: {notify_err}")

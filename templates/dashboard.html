@@ -18,7 +18,7 @@
   <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
   <script src="{{ url_for('static', filename='pwa-install.js') }}" defer></script>
   
-  <!-- System UI (SF on iOS) — no webfont -->
+  {% include 'partials/caveat_font.html' %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
@@ -222,7 +222,7 @@
   <footer class="footer">
     <div class="footer-inner">
       <div class="footer-brand">Injaaz</div>
-      <p class="footer-copy">© 2026 Injaaz Application / built by <span class="footer-built-by-name">Arshith Swaminath P</span></p>
+      <p class="footer-copy">© {{ now().year }} Injaaz Application / built by <span class="footer-built-by-name">Arshith Swaminath P</span></p>
     </div>
   </footer>
 

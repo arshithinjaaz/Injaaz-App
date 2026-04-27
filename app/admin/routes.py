@@ -9,6 +9,8 @@ from app.models import (
 )
 from app.middleware import admin_required
 from common.error_responses import error_response, success_response
+from common.form_data_utils import shallow_copy_form_data
+from common.datetime_utils import utc_now_naive
 from datetime import datetime, timedelta
 from io import BytesIO, StringIO
 import json
@@ -925,7 +927,7 @@ def update_submission(submission_id):
             except ValueError:
                 return error_response('Invalid date format. Use YYYY-MM-DD', status_code=400, error_code='VALIDATION_ERROR')
         
-        submission.updated_at = datetime.utcnow()
+        submission.updated_at = utc_now_naive()
         db.session.commit()
         
         # Delete old jobs and their associated files to force regeneration
@@ -1069,16 +1071,18 @@ def close_submission(submission_id):
         submission.workflow_status = 'closed_by_admin'
         submission.status = 'closed'
 
-        # Store close metadata in form_data (no schema change required)
-        form_data = submission.form_data or {}
-        if isinstance(form_data, str):
+        # Store close metadata in form_data (no schema change required).
+        raw_fd = submission.form_data
+        if isinstance(raw_fd, str):
             try:
-                form_data = json.loads(form_data)
+                form_data = dict(json.loads(raw_fd))
             except Exception:
                 form_data = {}
+        else:
+            form_data = shallow_copy_form_data(submission)
 
         form_data['_admin_closed'] = {
-            'closed_at': datetime.utcnow().isoformat() + 'Z',
+            'closed_at': utc_now_naive().isoformat() + 'Z',
             'closed_by': admin_id,
             'reason': reason or 'Closed by admin'
         }
@@ -1281,7 +1285,7 @@ def dashboard_overview():
         bd_pipeline_value = float(db.session.query(func.coalesce(func.sum(BDProject.value_amount), 0)).scalar() or 0)
         bd_active = BDProject.query.filter(BDProject.status.in_(['active', 'proposal', 'prospect'])).count()
         bd_contacts = BDContact.query.count()
-        now = datetime.utcnow()
+        now = utc_now_naive()
         bd_overdue_fu = BDFollowUp.query.filter(
             BDFollowUp.status != 'done',
             BDFollowUp.due_at.isnot(None),
@@ -1314,7 +1318,7 @@ def dashboard_overview():
             })
 
         return success_response({
-            'generated_at': datetime.utcnow().isoformat() + 'Z',
+            'generated_at': utc_now_naive().isoformat() + 'Z',
             'users': {
                 'total': user_total,
                 'active': user_active,
@@ -1537,7 +1541,7 @@ def create_device():
             health=random.randint(80, 100),
             assigned_user_id=assigned_user_id,
             serial_or_asset_tag=serial or None,
-            last_active_at=datetime.utcnow()
+            last_active_at=utc_now_naive()
         )
         db.session.add(device)
         db.session.commit()
@@ -1766,7 +1770,7 @@ def import_devices_excel():
                     health=health,
                     assigned_user_id=assigned_user_id,
                     serial_or_asset_tag=serial or None,
-                    last_active_at=datetime.utcnow()
+                    last_active_at=utc_now_naive()
                 )
                 db.session.add(device)
                 existing_keys.add(dup_key)
@@ -1815,7 +1819,7 @@ def download_devices_sample_excel():
             df.to_excel(writer, index=False, sheet_name='Devices')
         output.seek(0)
 
-        filename = f"device_import_sample_{datetime.utcnow().strftime('%Y%m%d')}.xlsx"
+        filename = f"device_import_sample_{utc_now_naive().strftime('%Y%m%d')}.xlsx"
         return send_file(
             output,
             as_attachment=True,
@@ -1852,7 +1856,7 @@ def _bd_activity(icon, title, description='', badge='', bg='#e8f5ee', event_time
         title=title,
         description=description,
         badge=badge,
-        event_time=event_time or datetime.utcnow(),
+        event_time=event_time or utc_now_naive(),
         created_by=user_id
     )
     db.session.add(activity)
@@ -1917,7 +1921,7 @@ def _seed_bd_data_if_empty(user_id):
             'progress': 72,
             'owner': 'Rachel H.',
             'next_action': 'Contract review',
-            'expected_close_date': datetime.utcnow().date() + timedelta(days=3)
+            'expected_close_date': utc_now_naive().date() + timedelta(days=3)
         },
         {
             'name': 'Vertex Partners — SaaS Migration',
@@ -1929,7 +1933,7 @@ def _seed_bd_data_if_empty(user_id):
             'progress': 45,
             'owner': 'James P.',
             'next_action': 'Proposal sent',
-            'expected_close_date': datetime.utcnow().date() + timedelta(days=8)
+            'expected_close_date': utc_now_naive().date() + timedelta(days=8)
         },
         {
             'name': 'Archway Technologies',
@@ -1941,7 +1945,7 @@ def _seed_bd_data_if_empty(user_id):
             'progress': 15,
             'owner': 'Tom R.',
             'next_action': 'Intro meeting',
-            'expected_close_date': datetime.utcnow().date() + timedelta(days=14)
+            'expected_close_date': utc_now_naive().date() + timedelta(days=14)
         }
     ]
 
@@ -1960,7 +1964,7 @@ def _seed_bd_data_if_empty(user_id):
         title='Call with Marcus – Q4 proposal review',
         company='Nexus Corp',
         followup_type='call',
-        due_at=datetime.utcnow() + timedelta(hours=6),
+        due_at=utc_now_naive() + timedelta(hours=6),
         status='open',
         created_by=user_id
     ))
@@ -1990,7 +1994,7 @@ def bd_dashboard_data():
         avg_deal_size = int(round(total_value / len(projects))) if projects else 0
         overdue_followups = len([
             f for f in followups
-            if f.status != 'done' and f.due_at and f.due_at < datetime.utcnow()
+            if f.status != 'done' and f.due_at and f.due_at < utc_now_naive()
         ])
 
         stage_order = ['prospecting', 'qualifying', 'proposal', 'negotiation', 'closing']
@@ -2514,7 +2518,7 @@ def _pp_apply_step_status(step, status):
     step.status = st
     if st == 'done':
         if not step.completed_at:
-            step.completed_at = datetime.utcnow()
+            step.completed_at = utc_now_naive()
     else:
         step.completed_at = None
 
@@ -2719,7 +2723,7 @@ def personal_progress_update_project(project_id):
         if 'steps' in data:
             _pp_sync_steps(project, data.get('steps'))
 
-        project.updated_at = datetime.utcnow()
+        project.updated_at = utc_now_naive()
         db.session.commit()
         project = AdminPersonalProject.query.get(project_id)
         return success_response({'project': project.to_dict(include_steps=True)}, message='Saved')

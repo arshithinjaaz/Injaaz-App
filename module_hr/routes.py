@@ -8,6 +8,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, jsonify, current_app, redirect, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import db, User, Submission, Notification
+from common.form_data_utils import shallow_copy_form_data as _mutable_form_data
 
 from .print_utils import render_form_for_print
 from .docx_service import generate_hr_docx, get_supported_docx_forms
@@ -19,7 +20,9 @@ hr_bp = Blueprint('hr', __name__, template_folder='templates')
 def get_current_user():
     """Get the current authenticated user"""
     user_id = get_jwt_identity()
-    return User.query.get(user_id)
+    if user_id is None:
+        return None
+    return db.session.get(User, int(user_id))
 
 
 def _hr_form_context(user):
@@ -503,7 +506,7 @@ def get_pending_hr_review():
     result = []
     for s in submissions:
         data = s.to_dict()
-        submitter = User.query.get(s.user_id)
+        submitter = db.session.get(User, s.user_id)
         if submitter:
             data['submitter_name'] = submitter.full_name or submitter.username
             data['submitter_email'] = submitter.email
@@ -537,7 +540,7 @@ def get_pending_gm_approval():
     result = []
     for s in submissions:
         data = s.to_dict()
-        submitter = User.query.get(s.user_id)
+        submitter = db.session.get(User, s.user_id)
         if submitter:
             data['submitter_name'] = submitter.full_name or submitter.username
         result.append(data)
@@ -570,7 +573,7 @@ def get_approved_hr_submissions():
     result = []
     for s in submissions:
         data = s.to_dict()
-        submitter = User.query.get(s.user_id)
+        submitter = db.session.get(User, s.user_id)
         if submitter:
             data['submitter_name'] = submitter.full_name or submitter.username
         result.append(data)
@@ -604,7 +607,7 @@ def hr_approve(submission_id):
     data = request.get_json() or {}
     
     # Update submission
-    form_data = submission.form_data or {}
+    form_data = _mutable_form_data(submission)
     form_data['hr_reviewed_by_id'] = user.id
     form_data['hr_reviewed_by_name'] = user.full_name or user.username
     form_data['hr_reviewed_at'] = datetime.now().isoformat()
@@ -668,7 +671,7 @@ def hr_reject(submission_id):
     data = request.get_json() or {}
     
     # Update submission
-    form_data = submission.form_data or {}
+    form_data = _mutable_form_data(submission)
     form_data['hr_rejected_by_id'] = user.id
     form_data['hr_rejected_by_name'] = user.full_name or user.username
     form_data['hr_rejected_at'] = datetime.now().isoformat()
@@ -724,7 +727,7 @@ def gm_approve(submission_id):
     data = request.get_json() or {}
     
     # Update submission
-    form_data = submission.form_data or {}
+    form_data = _mutable_form_data(submission)
     form_data['gm_approved_by_id'] = user.id
     form_data['gm_approved_by_name'] = user.full_name or user.username
     form_data['gm_approved_at'] = datetime.now().isoformat()
@@ -789,7 +792,7 @@ def gm_reject(submission_id):
     data = request.get_json() or {}
     
     # Update submission
-    form_data = submission.form_data or {}
+    form_data = _mutable_form_data(submission)
     form_data['gm_rejected_by_id'] = user.id
     form_data['gm_rejected_by_name'] = user.full_name or user.username
     form_data['gm_rejected_at'] = datetime.now().isoformat()
