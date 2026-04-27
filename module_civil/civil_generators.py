@@ -6,12 +6,14 @@ import logging
 import sys
 from datetime import datetime, timedelta
 
+from common.datetime_utils import utc_now_naive
+
 # Dubai timezone offset (Gulf Standard Time, UTC+4)
 DUBAI_OFFSET = timedelta(hours=4)
 
 def get_dubai_time():
     """Get current time in Dubai timezone (GST - Gulf Standard Time, UTC+4)"""
-    utc_now = datetime.utcnow()
+    utc_now = utc_now_naive()
     return utc_now + DUBAI_OFFSET
 
 def format_dubai_datetime(dt=None, format_str='%Y-%m-%d %H:%M:%S'):

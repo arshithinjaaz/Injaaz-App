@@ -61,6 +61,13 @@ def validate_config(app):
     # Warning validations (inform but don't fail)
     if not app.config.get('REDIS_URL') and flask_env == 'production':
         warnings.append("REDIS_URL not configured - rate limiting and background jobs may not work optimally")
+
+    base_url = (app.config.get('APP_BASE_URL') or os.environ.get('APP_BASE_URL') or '').strip()
+    if flask_env == 'production':
+        if not base_url:
+            warnings.append("APP_BASE_URL not set - email links and absolute file URLs may be wrong")
+        elif 'localhost' in base_url or '127.0.0.1' in base_url:
+            warnings.append("APP_BASE_URL still points to localhost - set to your public HTTPS URL for production")
     
     # Log warnings
     for warning in warnings:

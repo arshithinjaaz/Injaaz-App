@@ -9,6 +9,7 @@
   
   
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
+  <script src="{{ url_for('static', filename='js/console-guard.js') }}"></script>
 <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#125435">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1413,12 +1414,6 @@
         <!-- TAB 2: Work Items -->
         <div class="tab-pane fade" id="tab-2" role="tabpanel">
           
-          {% if is_edit_mode and submission_data %}
-          <!-- Debug: Submission data loaded -->
-          <script>
-            console.log('🔍 DEBUG: Submission data from Jinja:', {{ submission_data|tojson|safe }});
-          </script>
-          {% endif %}
 
           <div class="row g-3">
           <!-- ============================================= -->

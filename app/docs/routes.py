@@ -21,6 +21,7 @@ from werkzeug.utils import secure_filename
 from app.middleware import token_required
 from app.models import DocHubAccess, DocHubDocument, User, db
 from common.error_responses import error_response, success_response
+from common.datetime_utils import utc_now_naive
 
 docs_bp = Blueprint('docs_bp', __name__, url_prefix='/api/docs')
 
@@ -676,7 +677,7 @@ def update_document(doc_id):
             doc.reference_attachments = json.dumps(norm)
             flag_modified(doc, 'reference_attachments')
 
-    doc.updated_at = datetime.utcnow()
+    doc.updated_at = utc_now_naive()
     db.session.commit()
     return success_response({'document': doc.to_dict()}, message='Document updated')
 

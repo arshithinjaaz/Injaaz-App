@@ -30,9 +30,10 @@ desktop.ini
 *.tmp
 logs/
 
-# Environment
+# Environment — never commit secrets
 .env
-.env.local
+.env.*
+!.env.example
 
 # Generated files
 generated/
@@ -46,10 +47,10 @@ jobs/
 # node_modules/
 # package-lock.json
 
-# Test files
-test_*.py
-*_test.py
+# Pytest cache
 tests/__pycache__/
 
-# Temporary scripts
-temp_*.py
+# Scratch scripts at repo root only — do NOT use `test_*.py` here: it would untrack `tests/test_*.py`
+/test_*.py
+/*_test.py
+/temp_*.py

@@ -9,6 +9,7 @@
   
   
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
+  <script src="{{ url_for('static', filename='js/console-guard.js') }}"></script>
 <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#125435">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2280,7 +2281,6 @@
   </script>
 
   <script>
-    console.log('🔄🔄🔄 CIVIL FORM JAVASCRIPT LOADED - VERSION 2026-01-24 11:58 🔄🔄🔄');
     const modulePrefix = "{{ url_for('civil_bp.index') }}".replace('/form','');
     const MAX_PHOTOS = 100;
     const MAX_IMAGE_DIMENSION = 1280;
@@ -6587,7 +6587,6 @@
           }
           {% else %}
           // Edit mode for reviewers (operations_manager, business_development, procurement, general_manager) or admin
-          console.log('🚀🚀🚀 NEW CODE LOADED - VERSION 2026-01-24 11:58 🚀🚀🚀');
           console.log('  - User designation from template: {{ user_designation }}');
           console.log('  - Is edit mode: {{ is_edit_mode }}');
           const submissionId = window.editSubmissionId;

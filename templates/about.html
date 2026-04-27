@@ -275,31 +275,67 @@
       <p class="footer-built">built by <span class="footer-built-by-name">Arshith Swaminath P</span></p>
     </div>
     <div class="footer-col footer-col-right">
-      <p class="footer-copy">© 2026 Injaaz Facilities Management. All rights reserved.</p>
+      <p class="footer-copy">© {{ now().year }} Injaaz Facilities Management. All rights reserved.</p>
     </div>
   </footer>
 
   <script>
-    const cursor = document.getElementById('cursor');
-    document.addEventListener('mousemove', e => {
-      cursor.style.left = e.clientX + 'px';
-      cursor.style.top  = e.clientY + 'px';
-    });
-    document.querySelectorAll('a, button, .svc, .val-card, .module-tile, .feat-row, .sector-card').forEach(el => {
-      el.addEventListener('mouseenter', () => cursor.classList.add('big'));
-      el.addEventListener('mouseleave', () => cursor.classList.remove('big'));
-    });
+    (function () {
+      const cursor = document.getElementById('cursor');
+      if (cursor) {
+        document.addEventListener('mousemove', function (e) {
+          cursor.style.left = e.clientX + 'px';
+          cursor.style.top = e.clientY + 'px';
+        });
+        document.querySelectorAll('a, button, .svc, .val-card, .module-tile, .feat-row, .sector-card').forEach(function (el) {
+          el.addEventListener('mouseenter', function () { cursor.classList.add('big'); });
+          el.addEventListener('mouseleave', function () { cursor.classList.remove('big'); });
+        });
+      }
 
-    const reveals = document.querySelectorAll('.reveal, .reveal-l, .reveal-r');
-    const ro = new IntersectionObserver(entries => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.classList.add('in');
-          ro.unobserve(e.target);
+      const revealSelector = '.reveal, .reveal-l, .reveal-r';
+      function ensureRevealsVisible() {
+        document.querySelectorAll(revealSelector).forEach(function (el) {
+          if (el.classList.contains('in')) return;
+          var r = el.getBoundingClientRect();
+          var vh = window.innerHeight || document.documentElement.clientHeight;
+          if (r.top < vh + 80 && r.bottom > -80) {
+            el.classList.add('in');
+          }
+        });
+      }
+
+      const reveals = document.querySelectorAll(revealSelector);
+      const ro = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) {
+            e.target.classList.add('in');
+            ro.unobserve(e.target);
+          }
+        });
+      }, { threshold: [0, 0.05, 0.1], rootMargin: '120px 0px 160px 0px' });
+      reveals.forEach(function (el) { ro.observe(el); });
+
+      requestAnimationFrame(function () { ensureRevealsVisible(); });
+      setTimeout(ensureRevealsVisible, 400);
+      setTimeout(ensureRevealsVisible, 2000);
+
+      var scrollScheduled = false;
+      window.addEventListener('scroll', function () {
+        if (scrollScheduled) return;
+        scrollScheduled = true;
+        requestAnimationFrame(function () {
+          scrollScheduled = false;
+          ensureRevealsVisible();
+        });
+      }, { passive: true });
+
+      window.addEventListener('pageshow', function (ev) {
+        if (ev.persisted) {
+          document.querySelectorAll(revealSelector).forEach(function (el) { el.classList.add('in'); });
         }
       });
-    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-    reveals.forEach(el => ro.observe(el));
+    })();
 
     document.querySelectorAll('a[href^="#"]').forEach(a => {
       a.addEventListener('click', e => {

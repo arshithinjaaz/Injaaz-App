@@ -12,6 +12,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from io import BytesIO
 import base64
 from common.utils import get_image_for_pdf
+from common.datetime_utils import utc_now_naive
 
 # Try importing PIL for better image handling
 try:
@@ -28,7 +29,7 @@ DUBAI_OFFSET = timedelta(hours=4)
 def get_dubai_time():
     """Get current time in Dubai timezone (GST - Gulf Standard Time, UTC+4)"""
     # Get UTC time and add 4 hours for Dubai time
-    utc_now = datetime.utcnow()
+    utc_now = utc_now_naive()
     dubai_time = utc_now + DUBAI_OFFSET
     return dubai_time
 

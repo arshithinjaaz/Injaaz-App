@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 import mimetypes
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Flask, send_from_directory, abort, render_template, jsonify, request, redirect
 from concurrent.futures import ThreadPoolExecutor
 from werkzeug.exceptions import HTTPException
@@ -147,6 +147,10 @@ def create_app():
     mimetypes.add_type("text/css", ".css")
     mimetypes.add_type("application/javascript", ".js")
     mimetypes.add_type("application/json", ".json")
+
+    # Inject `now` into every Jinja template so {{ now().year }} works everywhere,
+    # including standalone templates that don't extend base.html.
+    app.jinja_env.globals['now'] = lambda: datetime.now(timezone.utc)
     
     # Enable template auto-reload for development
     app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -964,7 +968,7 @@ def create_app():
         health_status = {
             'status': 'healthy' if db_status == 'healthy' else 'degraded',
             'database': db_status,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         status_code = 200 if health_status['status'] == 'healthy' else 503

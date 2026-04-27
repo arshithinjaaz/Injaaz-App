@@ -375,6 +375,22 @@
     .delay-5 { transition-delay:.5s; }
     .delay-6 { transition-delay:.6s; }
 
+    @media (prefers-reduced-motion: reduce) {
+      .hero-eyebrow,
+      .hero-title,
+      .hero-body-row {
+        opacity: 1 !important;
+        transform: none !important;
+        animation: none !important;
+      }
+      .reveal,
+      .reveal-l,
+      .reveal-r {
+        opacity: 1 !important;
+        transform: none !important;
+      }
+    }
+
     .section { padding:8rem 3.5rem; }
     .inner { max-width:1300px; margin:0 auto; }
     .eyebrow {

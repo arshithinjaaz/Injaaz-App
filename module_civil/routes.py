@@ -11,6 +11,7 @@ from app.middleware import token_required
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from app.services.cloudinary_service import upload_local_file
 from common.error_responses import error_response, success_response
+from common.datetime_utils import utc_now_naive
 from common.workflow_notifications import send_inspection_submitted
 
 # Rate limiting helper
@@ -68,7 +69,7 @@ def index():
     
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, int(user_id)) if user_id is not None else None
         
         if not user or not user.is_active:
             return render_template('access_denied.html',
@@ -443,7 +444,7 @@ def submit():
         visit_date = datetime.strptime(fields.get('date'), '%Y-%m-%d').date()
         # Only reject dates that are clearly in the future (more than 1 day ahead)
         # This accounts for timezone differences while still catching obvious errors
-        today_utc = datetime.utcnow().date()
+        today_utc = utc_now_naive().date()
         # Allow today and tomorrow to account for timezone differences (GST is UTC+4)
         max_allowed_date = today_utc + timedelta(days=1)
         logger.info(f"Date validation (/submit): visit_date={visit_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
@@ -507,7 +508,7 @@ def submit():
 
     # Trigger real-time inspection submission email.
     try:
-        submitter_user = User.query.get(user_id) if user_id else None
+        submitter_user = db.session.get(User, int(user_id)) if user_id else None
         send_inspection_submitted(submission, submitter_user)
     except Exception as notify_err:
         logger.warning(f"Submission email notification failed for {sub_id}: {notify_err}")
@@ -829,7 +830,7 @@ def submit_with_urls():
                 # Only reject dates that are clearly in the future (more than 1 day ahead)
                 # This accounts for timezone differences while still catching obvious errors
                 from datetime import timedelta
-                today_utc = datetime.utcnow().date()
+                today_utc = utc_now_naive().date()
                 # Allow today and tomorrow to account for timezone differences (GST is UTC+4)
                 max_allowed_date = today_utc + timedelta(days=1)
                 logger.info(f"Date validation: parsed_date={parsed_date}, today_utc={today_utc}, max_allowed={max_allowed_date}")
@@ -918,7 +919,7 @@ def submit_with_urls():
             "area_other": payload.get("area_other", ""),
             "work_items": processed_items,
             "base_url": request.host_url.rstrip('/'),
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": utc_now_naive().isoformat()
         }
         
         # Get user_id from JWT token if available
@@ -947,7 +948,7 @@ def submit_with_urls():
 
         # Trigger real-time inspection submission email.
         try:
-            submitter_user = User.query.get(user_id) if user_id else None
+            submitter_user = db.session.get(User, int(user_id)) if user_id else None
             send_inspection_submitted(submission, submitter_user)
         except Exception as notify_err:
             logger.warning(f"Submission email notification failed for {sub_id}: {notify_err}")

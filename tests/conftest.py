@@ -4,7 +4,7 @@ Pytest fixtures for Injaaz application testing
 import pytest
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -54,8 +54,8 @@ def db_session(app):
 
 
 @pytest.fixture(scope='function')
-def test_user(app):
-    """Create a test user"""
+def standard_user(app):
+    """Create a test user (not named test_* so pytest does not collect it as a test)."""
     from app.models import db, User
     
     with app.app_context():
@@ -133,7 +133,7 @@ def supervisor_user(app):
 
 
 @pytest.fixture(scope='function')
-def auth_headers(client, test_user, app):
+def auth_headers(client, standard_user, app):
     """Get authentication headers for test user"""
     with app.app_context():
         response = client.post('/api/auth/login', json={
@@ -172,8 +172,8 @@ def supervisor_auth_headers(client, supervisor_user, app):
 
 
 @pytest.fixture(scope='function')
-def test_submission(app, supervisor_user):
-    """Create a test submission"""
+def sample_submission(app, supervisor_user):
+    """Create a test submission (fixture name avoids pytest test_* collection)."""
     from app.models import db, Submission
     from common.utils import random_id
     
@@ -182,7 +182,7 @@ def test_submission(app, supervisor_user):
             submission_id=random_id('sub'),
             module_type='civil',
             site_name='Test Site',
-            visit_date=datetime.utcnow().date(),
+            visit_date=datetime.now(timezone.utc).date(),
             form_data={'test': 'data'},
             workflow_status='submitted',
             user_id=supervisor_user.id,

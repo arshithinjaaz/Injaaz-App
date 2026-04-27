@@ -13,6 +13,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from app.models import db, User, Submission, AuditLog, DocHubDocument, Device, BDProject
 from common.error_responses import error_response, success_response
 from common.workflow_notifications import send_team_notification
+from common.datetime_utils import utc_now_naive
 from datetime import datetime
 import copy
 
@@ -324,7 +325,7 @@ def workflow_dashboard():
     """Workflow dashboard page for all roles"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         
         if not user:
             return render_template('access_denied.html', 
@@ -354,7 +355,7 @@ def history_page():
     """Render the Review History page"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         
         if not user:
             return render_template('access_denied.html', module='Workflow', message='User not found.'), 404
@@ -381,7 +382,7 @@ def get_pending_submissions():
     """Get pending submissions for current user based on their designation"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
@@ -401,7 +402,7 @@ def get_pending_submissions():
         result = []
         for submission in submissions:
             # Use eager-loaded user if available, otherwise query
-            sub_user = getattr(submission, 'user', None) or (User.query.get(submission.user_id) if submission.user_id else None)
+            sub_user = getattr(submission, 'user', None) or (db.session.get(User, submission.user_id) if submission.user_id else None)
             sub_dict = submission.to_dict()
             sub_dict['user'] = sub_user.to_dict() if sub_user else None
             sub_dict['can_edit'] = can_edit_submission(user, submission)
@@ -636,7 +637,7 @@ def get_dashboard_stats():
     """Role-aware stats and recent activity for the dashboard hero widget."""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
 
@@ -711,7 +712,7 @@ def get_inspection_dashboard_stats():
     """HVAC/Civil/Cleaning-only metrics for the Inspection module hero widget."""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
 
@@ -841,7 +842,7 @@ def get_history_submissions():
     """Get all relevant submissions for user (reviewed and pending). Optimized: no form_data blob, no N+1 jobs."""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
 
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
@@ -896,7 +897,7 @@ def get_history_submissions():
 
         result = []
         for submission in submissions:
-            sub_user = getattr(submission, 'user', None) or (User.query.get(submission.user_id) if submission.user_id else None)
+            sub_user = getattr(submission, 'user', None) or (db.session.get(User, submission.user_id) if submission.user_id else None)
             # List view: omit form_data (often MB of base64) and skip Job queries
             sub_dict = submission.to_dict(include_form_data=False, include_latest_job=False)
             sub_dict['user'] = sub_user.to_dict() if sub_user else None
@@ -921,7 +922,7 @@ def get_my_submissions():
     """Get all submissions created by the current supervisor"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
@@ -1128,17 +1129,19 @@ def get_submission_detail(submission_id):
     """Get detailed submission information"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
         
-        # Use eager loading to fetch all related users in one query
+        # Use eager loading to fetch all related users in one query.
+        # Note: the procurement relationship backref on Submission is 'procurement_user'
+        # (not 'procurement') — see User.procurement_submissions backref in models.py.
         submission = Submission.query.options(
             joinedload(Submission.user),
             joinedload(Submission.operations_manager),
             joinedload(Submission.business_dev),
-            joinedload(Submission.procurement),
+            joinedload(Submission.procurement_user),
             joinedload(Submission.general_manager)
         ).filter_by(submission_id=submission_id).first()
         
@@ -1162,7 +1165,7 @@ def get_submission_detail(submission_id):
         sub_dict['user'] = submission.user.to_dict() if submission.user else None
         sub_dict['operations_manager'] = submission.operations_manager.to_dict() if submission.operations_manager else None
         sub_dict['business_dev'] = submission.business_dev.to_dict() if submission.business_dev else None
-        sub_dict['procurement'] = submission.procurement.to_dict() if submission.procurement else None
+        sub_dict['procurement'] = submission.procurement_user.to_dict() if submission.procurement_user else None
         sub_dict['general_manager'] = submission.general_manager.to_dict() if submission.general_manager else None
         
         return success_response(sub_dict)
@@ -1180,7 +1183,7 @@ def save_draft():
         from datetime import datetime
         
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
@@ -1221,7 +1224,7 @@ def save_draft():
             existing_submission.form_data = form_data
             existing_submission.site_name = site_name
             existing_submission.visit_date = visit_date
-            existing_submission.updated_at = datetime.utcnow()
+            existing_submission.updated_at = utc_now_naive()
             
             db.session.commit()
             
@@ -1246,8 +1249,8 @@ def save_draft():
                 status='draft',
                 workflow_status='draft',
                 form_data=form_data,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=utc_now_naive(),
+                updated_at=utc_now_naive()
             )
             
             db.session.add(new_submission)
@@ -1273,7 +1276,7 @@ def delete_draft(submission_id):
     """Delete a draft submission"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
@@ -1310,7 +1313,7 @@ def approve_supervisor_resubmission(submission_id):
     """Supervisor resubmits/approves their own submission (allows editing and regeneration)"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         data = request.get_json() or {}
         
         if not user:
@@ -1452,7 +1455,7 @@ def approve_supervisor_resubmission(submission_id):
             # Reset to submitted for fresh review
             submission.workflow_status = 'submitted'
         
-        submission.updated_at = datetime.utcnow()
+        submission.updated_at = utc_now_naive()
         flag_modified(submission, 'form_data')
         db.session.commit()
         
@@ -1515,7 +1518,7 @@ def approve_operations_manager(submission_id):
     """Operations Manager approves submission"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         data = request.get_json() or {}
         
         if not user:
@@ -1575,13 +1578,13 @@ def approve_operations_manager(submission_id):
         # Update submission model fields
         submission.operations_manager_id = user.id
         submission.operations_manager_comments = comments
-        submission.operations_manager_approved_at = datetime.utcnow()
+        submission.operations_manager_approved_at = utc_now_naive()
         
         # Log what we're saving to model fields
         current_app.logger.info(f"💾 Saving OM data to model fields:")
         current_app.logger.info(f"  - operations_manager_id: {user.id}")
         current_app.logger.info(f"  - operations_manager_comments: {comments[:80] if comments else 'None'}")
-        current_app.logger.info(f"  - operations_manager_approved_at: {datetime.utcnow()}")
+        current_app.logger.info(f"  - operations_manager_approved_at: {utc_now_naive()}")
         
         submission.workflow_status = 'operations_manager_approved'
         
@@ -1722,7 +1725,7 @@ def approve_operations_manager(submission_id):
         
         # Move to BD/Procurement review
         submission.workflow_status = 'bd_procurement_review'
-        submission.updated_at = datetime.utcnow()
+        submission.updated_at = utc_now_naive()
         
         # Log final state before commit
         current_app.logger.info(f"💾 About to commit to database:")
@@ -1801,7 +1804,7 @@ def approve_business_development(submission_id):
     """Business Development approves submission"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         data = request.get_json() or {}
         
         if not user:
@@ -1856,7 +1859,7 @@ def approve_business_development(submission_id):
         # Update submission
         submission.business_dev_id = user.id
         submission.business_dev_comments = comments
-        submission.business_dev_approved_at = datetime.utcnow()
+        submission.business_dev_approved_at = utc_now_naive()
         
         _raw = submission.form_data if submission.form_data else {}
         if isinstance(_raw, str):
@@ -1939,7 +1942,7 @@ def approve_business_development(submission_id):
         else:
             message = 'Approved successfully. Waiting for Procurement approval.'
         
-        submission.updated_at = datetime.utcnow()
+        submission.updated_at = utc_now_naive()
         db.session.commit()
         
         # Regenerate documents for all modules (to include BD comments/signature)
@@ -1997,7 +2000,7 @@ def approve_procurement(submission_id):
     """Procurement approves submission"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         data = request.get_json() or {}
         
         if not user:
@@ -2035,7 +2038,7 @@ def approve_procurement(submission_id):
         # Update submission
         submission.procurement_id = user.id
         submission.procurement_comments = comments
-        submission.procurement_approved_at = datetime.utcnow()
+        submission.procurement_approved_at = utc_now_naive()
         
         _raw = submission.form_data if submission.form_data else {}
         if isinstance(_raw, str):
@@ -2121,7 +2124,7 @@ def approve_procurement(submission_id):
         else:
             message = 'Approved successfully. Waiting for Business Development approval.'
         
-        submission.updated_at = datetime.utcnow()
+        submission.updated_at = utc_now_naive()
         db.session.commit()
         
         # Regenerate documents for all modules (to include Procurement comments/signature)
@@ -2179,7 +2182,7 @@ def approve_general_manager(submission_id):
     """General Manager gives final approval"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         data = request.get_json() or {}
         
         if not user:
@@ -2210,7 +2213,7 @@ def approve_general_manager(submission_id):
         # Update submission
         submission.general_manager_id = user.id
         submission.general_manager_comments = comments
-        submission.general_manager_approved_at = datetime.utcnow()
+        submission.general_manager_approved_at = utc_now_naive()
         submission.workflow_status = 'completed'
         submission.status = 'completed'
         
@@ -2305,7 +2308,7 @@ def approve_general_manager(submission_id):
         
         submission.form_data = form_data
         flag_modified(submission, 'form_data')
-        submission.updated_at = datetime.utcnow()
+        submission.updated_at = utc_now_naive()
         db.session.commit()
         
         # Regenerate documents for all modules (to include General Manager comments/signature and all previous reviewers)
@@ -2365,7 +2368,7 @@ def reject_submission(submission_id):
     """Reject submission at any stage and send back to supervisor"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         data = request.get_json() or {}
         reason = data.get('reason', '')
         
@@ -2387,9 +2390,9 @@ def reject_submission(submission_id):
         submission.workflow_status = 'rejected'
         submission.rejection_stage = submission.workflow_status  # Store previous stage
         submission.rejection_reason = reason
-        submission.rejected_at = datetime.utcnow()
+        submission.rejected_at = utc_now_naive()
         submission.rejected_by_id = user.id
-        submission.updated_at = datetime.utcnow()
+        submission.updated_at = utc_now_naive()
         
         db.session.commit()
         
@@ -2415,7 +2418,7 @@ def update_submission(submission_id):
     """Update submission form data (for edits during review)"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         data = request.get_json() or {}
         
         if not user:
@@ -2669,7 +2672,7 @@ def update_submission(submission_id):
             submission.workflow_status = 'operations_manager_review'
             current_app.logger.info(f"✅ Submission {submission_id} workflow_status changed to 'operations_manager_review'")
         
-        submission.updated_at = datetime.utcnow()
+        submission.updated_at = utc_now_naive()
         db.session.commit()
         
         # Regenerate documents if this is a supervisor updating their own submission,
@@ -2728,7 +2731,7 @@ def resubmit_submission(submission_id):
     """Resubmit a rejected submission (supervisor only)"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         data = request.get_json() or {}
         
         if not user:
@@ -2763,7 +2766,7 @@ def resubmit_submission(submission_id):
         submission.rejection_reason = None
         submission.rejected_at = None
         submission.rejected_by_id = None
-        submission.updated_at = datetime.utcnow()
+        submission.updated_at = utc_now_naive()
         
         db.session.commit()
         
@@ -2786,7 +2789,7 @@ def legacy_approve_submission(submission_id):
     """Legacy approval endpoint - routes to appropriate new endpoint"""
     try:
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         
         if not user:
             return error_response('User not found', status_code=404, error_code='NOT_FOUND')
