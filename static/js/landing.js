@@ -130,4 +130,17 @@
       }
     });
   }
+
+  /* Warm the login brand panel in idle time so Sign in is instant. */
+  var warmLoginArt = function () {
+    var img = new Image();
+    img.src = '/static/images/auth/auth-brand-panel.webp?v=1';
+  };
+  if (window.requestIdleCallback) {
+    window.requestIdleCallback(warmLoginArt, { timeout: 2500 });
+  } else {
+    window.addEventListener('load', function () {
+      window.setTimeout(warmLoginArt, 400);
+    });
+  }
 })();

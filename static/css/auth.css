@@ -4,6 +4,13 @@
  * Scoped to `.auth-shell` so it never leaks into the rest of the app.
  */
 
+:root {
+  --auth-brand-panel-image: image-set(
+    url('../images/auth/auth-brand-panel.webp') type('image/webp'),
+    url('../images/auth/auth-brand-panel.png') type('image/jpeg')
+  );
+}
+
 .auth-shell {
   --auth-accent: #ff8e68;
   --auth-accent-hover: #f97e54;
@@ -120,7 +127,7 @@
   isolation: isolate;
   background-color: #ff8e68;
   /* Grainy photo first — tint overlays below keep texture visible */
-  background-image: url('../images/auth/auth-brand-panel.png');
+  background-image: var(--auth-brand-panel-image);
   background-size: cover;
   background-position: center;
 }
@@ -425,7 +432,7 @@
 @media (max-width: 1023px) {
   html:is(.auth-html-login, .auth-html-register) {
     background-color: #ff8e68;
-    background-image: url('../images/auth/auth-brand-panel.png');
+    background-image: var(--auth-brand-panel-image);
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -440,7 +447,7 @@
     min-height: 100dvh;
     width: 100%;
     overflow: hidden;
-    background: #ff8e68 url('../images/auth/auth-brand-panel.png') center / 100% 100% no-repeat !important;
+    background: #ff8e68 var(--auth-brand-panel-image) center / 100% 100% no-repeat !important;
   }
 
   :is(.auth-page-login, .auth-page-register) .auth-shell--split {
@@ -451,7 +458,7 @@
     min-height: 100vh;
     min-height: 100dvh;
     overflow: hidden;
-    background: #ff8e68 url('../images/auth/auth-brand-panel.png') center / 100% 100% no-repeat;
+    background: #ff8e68 var(--auth-brand-panel-image) center / 100% 100% no-repeat;
     padding: 0 !important;
   }
 
@@ -487,7 +494,7 @@
     flex: none;
     z-index: 0;
     background-color: #ff8e68;
-    background-image: url('../images/auth/auth-brand-panel.png');
+    background-image: var(--auth-brand-panel-image);
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
