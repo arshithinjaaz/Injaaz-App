@@ -32,7 +32,7 @@ from app.models import (
     User,
     db,
     leave_company_db_values,
-    normalize_leave_company,
+    parse_employee_company,
     leave_sick_alert_level,
     leave_months_through,
     migrate_monthly_usage_to_logs,
@@ -45,7 +45,9 @@ from common.error_responses import error_response, success_response
 from module_hr.leave_excel import (
     build_leave_log_template_bytes,
     build_leave_workbook,
+    build_staff_workbook,
     import_leave_workbook,
+    import_staff_workbook,
     seed_employees_from_staff_list,
     split_plan_days_by_month,
 )
@@ -728,6 +730,72 @@ def register_leave_tracker_routes(hr_bp):
             hiring_active='leave_tracker',
         )
 
+    @hr_bp.route('/employee-list')
+    @jwt_required()
+    def employee_list_dashboard():
+        user = _get_current_user()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        if not user_can_manage_leave_tracker(user):
+            return jsonify({'error': 'Access denied'}), 403
+        _ensure_migrated()
+        return render_template(
+            'hr_employee_list.html',
+            user=user,
+            hiring_active='employee_list',
+        )
+
+    @hr_bp.route('/api/employee-list/template', methods=['GET'])
+    @jwt_required()
+    def api_employee_list_template():
+        user, err = _require_leave_user()
+        if err:
+            return err
+        buf = build_staff_workbook(template_only=True)
+        return send_file(
+            buf,
+            as_attachment=True,
+            download_name='employee_list_template.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+    @hr_bp.route('/api/employee-list/export', methods=['GET'])
+    @jwt_required()
+    def api_employee_list_export():
+        user, err = _require_leave_user()
+        if err:
+            return err
+        _ensure_migrated()
+        employees = (
+            LeaveEmployee.query.filter_by(active=True)
+            .order_by(LeaveEmployee.company.asc(), LeaveEmployee.full_name.asc())
+            .all()
+        )
+        buf = build_staff_workbook(employees, template_only=False)
+        return send_file(
+            buf,
+            as_attachment=True,
+            download_name='employee_list.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+    @hr_bp.route('/api/employee-list/import', methods=['POST'])
+    @jwt_required()
+    def api_employee_list_import():
+        user, err = _require_leave_user()
+        if err:
+            return err
+        _ensure_migrated()
+        f = request.files.get('file')
+        if not f or not f.filename:
+            return error_response('file is required', status_code=400)
+        try:
+            result = import_staff_workbook(f)
+        except Exception as e:
+            logger.exception('Employee list import failed')
+            return error_response(f'Import failed: {e}', status_code=400)
+        return success_response(result)
+
     @hr_bp.route('/api/leave-tracker/employees', methods=['GET'])
     @jwt_required()
     def api_leave_list_employees():
@@ -857,7 +925,7 @@ def register_leave_tracker_routes(hr_bp):
             'year': year,
         })
 
-    @hr_bp.route('/api/leave-tracker/employees/<int:emp_pk>', methods=['PATCH'])
+    @hr_bp.route('/api/leave-tracker/employees/<int:emp_pk>', methods=['PATCH', 'DELETE'])
     @jwt_required()
     def api_leave_patch_employee(emp_pk):
         user, err = _require_leave_user()
@@ -867,7 +935,22 @@ def register_leave_tracker_routes(hr_bp):
         if not emp:
             return error_response('Employee not found', status_code=404, error_code='NOT_FOUND')
 
+        if request.method == 'DELETE':
+            emp.active = False
+            emp.updated_at = utc_now_naive()
+            db.session.commit()
+            return success_response({'deleted': True, 'employee': emp.to_dict()})
+
         data = request.get_json(silent=True) or {}
+        if 'emp_id' in data and data['emp_id']:
+            new_id = str(data['emp_id']).strip()
+            clash = LeaveEmployee.query.filter(
+                db.func.lower(LeaveEmployee.emp_id) == new_id.lower(),
+                LeaveEmployee.id != emp.id,
+            ).first()
+            if clash:
+                return error_response('Emp ID already exists', status_code=409, error_code='CONFLICT')
+            emp.emp_id = new_id
         if 'annual_entitlement' in data:
             raw = data.get('annual_entitlement')
             if raw is None or raw == '':
@@ -882,8 +965,8 @@ def register_leave_tracker_routes(hr_bp):
         if 'designation' in data:
             emp.designation = str(data.get('designation') or '').strip()
         if 'company' in data:
-            co = normalize_leave_company(data.get('company'), default=None)
-            if data.get('company') and not co:
+            co = parse_employee_company(data.get('company'), default=None)
+            if data.get('company') and str(data.get('company')).strip() and not co:
                 return error_response('Invalid company', status_code=400)
             if co:
                 emp.company = co
@@ -1216,11 +1299,7 @@ def register_leave_tracker_routes(hr_bp):
         full_name = str(data.get('full_name') or '').strip()
         if not emp_id or not full_name:
             return error_response('emp_id and full_name are required', status_code=400)
-        if LeaveEmployee.query.filter(
-            db.func.lower(LeaveEmployee.emp_id) == emp_id.lower()
-        ).first():
-            return error_response('Emp ID already exists', status_code=409, error_code='CONFLICT')
-        company = normalize_leave_company(data.get('company'))
+        company = parse_employee_company(data.get('company'))
         if not company:
             return error_response('Invalid company', status_code=400)
         ent = data.get('annual_entitlement')
@@ -1230,10 +1309,31 @@ def register_leave_tracker_routes(hr_bp):
                 entitlement = int(ent)
             except (TypeError, ValueError):
                 return error_response('Invalid annual_entitlement', status_code=400)
+        designation = str(data.get('designation') or '').strip()
+        existing = LeaveEmployee.query.filter(
+            db.func.lower(LeaveEmployee.emp_id) == emp_id.lower()
+        ).first()
+        if existing and existing.active:
+            return error_response(
+                'Emp ID already exists — use a different Emp ID to add someone new',
+                status_code=409,
+                error_code='CONFLICT',
+            )
+        if existing:
+            existing.emp_id = emp_id
+            existing.full_name = full_name
+            existing.designation = designation
+            existing.company = company
+            existing.annual_entitlement = entitlement
+            existing.active = True
+            existing.updated_at = utc_now_naive()
+            db.session.commit()
+            return success_response({'employee': existing.to_dict(), 'restored': True})
+
         emp = LeaveEmployee(
             emp_id=emp_id,
             full_name=full_name,
-            designation=str(data.get('designation') or '').strip(),
+            designation=designation,
             company=company,
             annual_entitlement=entitlement,
             active=True,

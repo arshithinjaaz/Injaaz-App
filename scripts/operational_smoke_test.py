@@ -302,6 +302,7 @@ def main() -> int:
         '/hr/leave-application-form',
         '/hr/hiring',
         '/hr/leave-tracker',
+        '/hr/employee-list',
     ):
         page_ok(base, token, path)
 

@@ -522,6 +522,8 @@ def mmr_chargeable_config():
         }
         if 'location_register_state' in data:
             raw_update['location_register_state'] = data.get('location_register_state')
+        if 'location_register_enabled' in data:
+            raw_update['location_register_enabled'] = bool(data.get('location_register_enabled'))
         merged = _merge_mmr_chargeable_config(raw_update)
 
         if row:
@@ -536,6 +538,7 @@ def mmr_chargeable_config():
             'non_apartment_baseunit_non_chargeable': flag,
             'override_count': len(cleaned),
             'builtin_rules': br_merged,
+            'location_register_enabled': merged.get('location_register_enabled', True),
         })
 
         return success_response({'config': merged}, message='MMR chargeable settings saved')
@@ -773,6 +776,8 @@ def mmr_chargeable_preview():
                     continue
                 cleaned.append({'pattern': pat, 'chargeable': bool(item.get('chargeable'))})
             raw['baseunit_overrides'] = cleaned
+        if 'location_register_enabled' in data:
+            raw['location_register_enabled'] = bool(data.get('location_register_enabled'))
 
         merged = _merge_mmr_chargeable_config(raw if raw else None)
         strings: list[str] = []

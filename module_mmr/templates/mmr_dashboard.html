@@ -483,41 +483,80 @@
       border-color: rgba(18, 84, 53, 0.28);
     }
     /*
-      Report settings: centered modal; fully transparent ::backdrop (dashboard stays visible).
-      White panel uses shadow/border so the box stays readable without a dim layer.
+      Report settings: full-viewport overlay. The dialog itself is the clickable
+      dimmed area; the white .mmr-rs-panel is the box. Clicks on the overlay close it.
     */
     #reportSettingsModal.mmr-rs-native {
       position: fixed;
-      inset: auto;
-      top: 50%;
-      left: 50%;
-      margin: 0;
-      padding: 0;
-      border: none;
-      width: min(99.5vw, 1760px);
-      height: min(97vh, 1200px);
+      inset: 0;
+      width: 100%;
+      height: 100%;
       max-width: none;
       max-height: none;
+      margin: 0;
+      padding: clamp(0.75rem, 2.5vw, 1.75rem);
+      border: none;
       background: transparent;
       color: inherit;
-      overflow: visible;
-      transform: translate(-50%, -50%);
+      overflow: hidden;
+      box-sizing: border-box;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    #reportSettingsModal.mmr-rs-native::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+    #reportSettingsModal.mmr-rs-native[open] {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
     }
     #reportSettingsModal.mmr-rs-native::backdrop {
-      background: transparent;
+      background: rgba(15, 23, 42, 0.48);
     }
     #reportSettingsModal.mmr-rs-native .mmr-rs-panel {
+      position: relative;
       background: #ffffff;
       border: 1px solid rgba(226, 232, 240, 0.95);
       border-radius: 16px;
-      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.06);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.06);
       display: flex;
       flex-direction: column;
-      width: 100%;
-      height: 100%;
+      width: min(94vw, 1520px);
+      height: min(88vh, 980px);
+      max-width: 100%;
+      max-height: 100%;
       min-height: 0;
-      max-height: none;
       overflow: hidden;
+      flex: 0 1 auto;
+    }
+    #reportSettingsModal.mmr-rs-native .mmr-rs-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 2;
+      width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.28);
+      color: #ffffff;
+      font-size: 1.65rem;
+      font-weight: 300;
+      line-height: 1;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #reportSettingsModal.mmr-rs-native .mmr-rs-close:hover {
+      background: rgba(15, 23, 42, 0.45);
+    }
+    #reportSettingsModal.mmr-rs-native .mmr-rs-close:focus-visible {
+      outline: 2px solid #ffffff;
+      outline-offset: 2px;
     }
     #reportSettingsModal.mmr-rs-native #reportSettingsFrame {
       flex: 1;
@@ -525,11 +564,22 @@
       min-height: 0;
       border: none;
       background: #ffffff;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    #reportSettingsModal.mmr-rs-native #reportSettingsFrame::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
     }
     @media (max-width: 640px) {
       #reportSettingsModal.mmr-rs-native {
-        width: min(100vw, 1760px);
-        height: min(98vh, 1200px);
+        padding: 0.5rem;
+      }
+      #reportSettingsModal.mmr-rs-native .mmr-rs-panel {
+        width: 100%;
+        height: min(95vh, 1200px);
+        border-radius: 12px;
       }
     }
     .upload-zone {
@@ -1845,6 +1895,20 @@
         if (typeof mmrSyncBodyScrollLock === 'function') mmrSyncBodyScrollLock();
         rsDlg.classList.remove('active');
       });
+      var backdropPointer = false;
+      rsDlg.addEventListener('pointerdown', function (e) {
+        backdropPointer = (e.target === rsDlg);
+      });
+      rsDlg.addEventListener('click', function (e) {
+        if (backdropPointer && e.target === rsDlg) closeModal();
+        backdropPointer = false;
+      });
+      var rsClose = document.getElementById('reportSettingsCloseBtn');
+      if (rsClose) rsClose.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeModal();
+      });
     });
   })();
   </script>
@@ -2264,9 +2328,10 @@
   </div>
 </div>
 
-<!-- Report settings (admin): full-screen dialog; iframe loads chargeable page with ?embed=1 (transparent, no nav) -->
+<!-- Report settings (admin): overlay dialog; iframe loads chargeable page with ?embed=1 (no nav / no Back) -->
 <dialog id="reportSettingsModal" class="mmr-rs-native" aria-label="Report settings — chargeable rules and location register" aria-hidden="true">
   <div class="mmr-rs-panel">
+    <button type="button" class="mmr-rs-close" id="reportSettingsCloseBtn" title="Close" aria-label="Close report settings">&times;</button>
     <iframe id="reportSettingsFrame" src="about:blank" title="Report settings — chargeable rules and location register"></iframe>
   </div>
 </dialog>

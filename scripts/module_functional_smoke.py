@@ -277,6 +277,7 @@ def section_hr():
         "/hr/approved-forms",
         "/hr/hiring",
         "/hr/leave-tracker",
+        "/hr/employee-list",
         "/hr/manpower-tracker",
         "/hr/leave-application-form",
         "/hr/commencement-form",

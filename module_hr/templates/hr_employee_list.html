@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="theme-color" content="#ff8e68">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Employee List · Kynvera</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/kynvera/kynvera-mark-32.png') }}?v=3">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=22">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hr-hiring.css') }}?v=140">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hr-employee-list.css') }}?v=16">
+  {% set active_page = 'hr' %}
+</head>
+<body class="hh-page el-page">
+  {% include 'partials/hr_embed_optional_navbar.html' %}
+
+  <div class="hh-shell" id="elRoot">
+    {% include 'partials/hr_hiring_sidebar.html' %}
+
+    <main class="hh-main">
+      <div class="hh-topbar">
+        <div>
+          {% set module_back_url = module_back_url|default(url_for('hr.hr_dashboard')) %}
+          {% include 'partials/module_back_link.html' %}
+          <h1 class="hh-title">Employee List</h1>
+          <p class="hh-subtitle">All staff — search by Emp ID or name</p>
+        </div>
+      </div>
+
+      <div class="el-summary" id="elSummary" aria-live="polite">
+        <div class="el-stat">
+          <span class="el-stat-val" id="elStatTotal">—</span>
+          <span class="el-stat-label">Staff</span>
+        </div>
+        <div class="el-stat">
+          <span class="el-stat-val" id="elStatShown">—</span>
+          <span class="el-stat-label">Showing</span>
+        </div>
+        <div class="el-stat">
+          <span class="el-stat-val" id="elStatCompanies">—</span>
+          <span class="el-stat-label">Companies</span>
+        </div>
+      </div>
+
+      <div class="hh-toolbar el-toolbar">
+        <label class="el-search-label" for="elSearch">Find staff by Emp ID or name</label>
+        <div class="el-ac-wrap">
+          <div class="hh-search el-search">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+            </svg>
+            <input type="search" id="elSearch" placeholder="Type Emp ID or name…" autocomplete="off" inputmode="search"
+              aria-label="Search employee by ID or name">
+            <button type="button" class="el-search-clear" id="elSearchClear" hidden aria-label="Clear search">×</button>
+          </div>
+        </div>
+        <label class="el-search-label" for="elCompany">Company</label>
+        <select id="elCompany" class="hh-select" aria-label="Company filter">
+          <option value="all">All companies</option>
+          <option value="Kynvera">Kynvera</option>
+          <option value="Tourism">Tourism</option>
+          <option value="L&P">L&amp;P</option>
+        </select>
+        <button type="button" class="hh-btn hh-btn-primary hh-btn-sm" id="elAddEmpBtn" title="Add a person to the staff list">
+          Add employee
+        </button>
+        <div class="hh-excel-actions">
+          <button type="button" class="hh-btn hh-btn-secondary hh-btn-sm" id="elTemplateBtn" title="Download blank staff Excel template">
+            Template
+          </button>
+          <button type="button" class="hh-btn hh-btn-secondary hh-btn-sm" id="elExportBtn" title="Export staff to Excel">
+            Export
+          </button>
+          <button type="button" class="hh-btn hh-btn-secondary hh-btn-sm" id="elImportBtn" title="Import staff from Excel">
+            Import
+          </button>
+          <input type="file" id="elImportFile" accept=".xlsx,.xls" hidden>
+        </div>
+      </div>
+
+      <p class="el-status" id="elStatus">Loading staff…</p>
+      <div class="el-grid" id="elGrid" hidden></div>
+    </main>
+  </div>
+
+  <div class="el-modal" id="elModal" hidden>
+    <div class="el-modal-backdrop" data-close-el-modal></div>
+    <div class="el-modal-card" role="dialog" aria-modal="true" aria-labelledby="elModalName">
+      <button type="button" class="el-modal-close" data-close-el-modal title="Close" aria-label="Close">&times;</button>
+
+      <div id="elViewPane">
+        <button type="button" class="el-modal-edit" id="elEditBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L8.582 18.07a4.5 4.5 0 01-1.897 1.13L6 19.5l.3-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487z"/>
+          </svg>
+          Edit
+        </button>
+        <div class="el-modal-avatar" id="elModalAvatar" aria-hidden="true">—</div>
+        <h2 id="elModalName">—</h2>
+        <p class="el-modal-id" id="elModalEmpId">—</p>
+        <dl class="el-modal-meta">
+          <div><dt>Designation</dt><dd id="elModalDesig">—</dd></div>
+          <div><dt>Company</dt><dd id="elModalCompany">—</dd></div>
+        </dl>
+        <div class="el-modal-actions">
+          <a class="hh-btn hh-btn-secondary" id="elModalLeaveLink" href="/hr/leave-tracker">Open in Leave Tracker</a>
+          <button type="button" class="hh-btn hh-btn-primary" data-close-el-modal>Close</button>
+        </div>
+        <button type="button" class="el-modal-remove" id="elDeleteBtn">Remove from list</button>
+      </div>
+
+      <form id="elEditForm" class="el-form-card el-inline-form" hidden>
+        <h2 id="elEditTitle">Edit employee</h2>
+        <p class="el-form-hint">Updates this person on Employee List and Leave Tracker.</p>
+        <div class="el-field-row">
+          <label class="el-field">
+            <span>Emp ID</span>
+            <input type="text" id="elEditEmpId" required maxlength="40" autocomplete="off">
+          </label>
+          <label class="el-field">
+            <span>Company</span>
+            <input type="text" id="elEditCompany" required maxlength="40"
+              placeholder="Company" autocomplete="off">
+          </label>
+        </div>
+        <label class="el-field">
+          <span>Full name</span>
+          <input type="text" id="elEditName" required maxlength="200" autocomplete="name">
+        </label>
+        <div class="el-field-row">
+          <label class="el-field">
+            <span>Designation</span>
+            <input type="text" id="elEditDesig" maxlength="160">
+          </label>
+          <label class="el-field">
+            <span>Annual entitlement</span>
+            <input type="number" id="elEditEntitlement" min="0" step="1" placeholder="e.g. 30">
+          </label>
+        </div>
+        <div class="el-modal-actions el-form-actions">
+          <button type="button" class="hh-btn hh-btn-secondary" id="elEditCancel">Cancel</button>
+          <button type="submit" class="hh-btn hh-btn-primary">Save changes</button>
+        </div>
+      </form>
+
+      <div id="elDeletePane" class="el-delete-pane" hidden>
+        <div class="el-modal-avatar el-delete-avatar" id="elDeleteAvatar" aria-hidden="true">—</div>
+        <h2>Remove this person?</h2>
+        <p class="el-form-hint" id="elDeleteCopy">They will leave Employee List. Leave records stay in Leave Tracker.</p>
+        <div class="el-modal-actions el-form-actions">
+          <button type="button" class="hh-btn hh-btn-secondary" id="elDeleteCancel">Cancel</button>
+          <button type="button" class="hh-btn hh-btn-danger" id="elDeleteConfirm">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="el-modal" id="elAddModal" hidden>
+    <div class="el-modal-backdrop" data-close-el-add></div>
+    <div class="el-modal-card el-form-card" role="dialog" aria-modal="true" aria-labelledby="elAddTitle">
+      <button type="button" class="el-modal-close" data-close-el-add title="Close" aria-label="Close">&times;</button>
+      <h2 id="elAddTitle">Add employee</h2>
+      <p class="el-form-hint">Adds this person to the staff list used by Employee List and Leave Tracker.</p>
+      <form id="elAddForm">
+        <div class="el-field-row">
+          <label class="el-field">
+            <span>Emp ID</span>
+            <input type="text" id="elAddEmpId" required maxlength="40" placeholder="INJ-0042" autocomplete="off">
+          </label>
+          <label class="el-field">
+            <span>Company</span>
+            <input type="text" id="elAddCompany" required maxlength="40"
+              placeholder="Company" autocomplete="off">
+          </label>
+        </div>
+        <label class="el-field">
+          <span>Full name</span>
+          <input type="text" id="elAddName" required maxlength="200" placeholder="Full name" autocomplete="name">
+        </label>
+        <div class="el-field-row">
+          <label class="el-field">
+            <span>Designation</span>
+            <input type="text" id="elAddDesig" maxlength="160" placeholder="Optional">
+          </label>
+          <label class="el-field">
+            <span>Annual entitlement</span>
+            <input type="number" id="elAddEntitlement" min="0" step="1" placeholder="e.g. 30">
+          </label>
+        </div>
+        <div class="el-modal-actions el-form-actions">
+          <button type="button" class="hh-btn hh-btn-secondary" data-close-el-add>Cancel</button>
+          <button type="submit" class="hh-btn hh-btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="elToast" class="el-toast" hidden role="status" aria-live="polite">
+    <button type="button" class="el-toast-close" id="elToastClose" aria-label="Dismiss">&times;</button>
+    <p class="el-toast-msg" id="elToastMsg"></p>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/injaaz-uae-datetime.js') }}"></script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  <script>window.FILES_SAVE_MODULE = 'leave'; window.FILES_SAVE_MODULE_LABEL = 'Employee List';</script>
+  <script src="{{ url_for('static', filename='js/files-save.js') }}?v=17"></script>
+  <script src="{{ url_for('static', filename='js/hr-employee-list.js') }}?v=12"></script>
+</body>
+</html>

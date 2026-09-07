@@ -47,6 +47,8 @@ DEFAULT_MMR_CHARGEABLE_CONFIG = {
     'builtin_rules': dict(DEFAULT_BUILTIN_RULES),
     # Last saved Location Register (Excel/HTML): rows with chargeable flags for UI + overrides merge
     'location_register_state': None,
+    # When False, stored Excel/location overrides are ignored; built-in rules still apply.
+    'location_register_enabled': True,
 }
 
 _mmr_chargeable_config_cache: dict | None = None
@@ -682,6 +684,7 @@ def _merge_mmr_chargeable_config(raw: dict | None) -> dict:
         'baseunit_overrides': [],
         'builtin_rules': dict(DEFAULT_BUILTIN_RULES),
         'location_register_state': None,
+        'location_register_enabled': True,
     }
     if isinstance(raw, dict):
         if 'non_apartment_baseunit_non_chargeable' in raw:
@@ -695,6 +698,8 @@ def _merge_mmr_chargeable_config(raw: dict | None) -> dict:
             out['location_register_state'] = _sanitize_location_register_state(
                 raw.get('location_register_state')
             )
+        if 'location_register_enabled' in raw:
+            out['location_register_enabled'] = bool(raw.get('location_register_enabled'))
     return out
 
 
@@ -1504,6 +1509,8 @@ def _apply_mmr_chargeable_overrides(
     complaint_val: str = '',
 ) -> str:
     """Admin-defined BaseUnit substring overrides. Longest pattern wins."""
+    if not config.get('location_register_enabled', True):
+        return resolved
     overrides = config.get('baseunit_overrides') or []
     if not overrides or not (base_unit_val or '').strip():
         return resolved

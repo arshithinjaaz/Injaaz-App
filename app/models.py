@@ -3507,6 +3507,17 @@ def normalize_leave_company(value, default='Kynvera'):
     return None
 
 
+def parse_employee_company(value, default='Kynvera'):
+    """Canonicalize known companies; keep any other typed label (fits LeaveEmployee.company)."""
+    known = normalize_leave_company(value, default=None)
+    if known:
+        return known
+    raw = (value or '').strip()
+    if not raw:
+        return default
+    return raw[:40]
+
+
 def leave_company_db_values(company):
     """DB values that count as this UI company, including legacy INJAAZ rows."""
     norm = normalize_leave_company(company, default=None)

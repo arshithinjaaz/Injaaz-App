@@ -26,6 +26,7 @@ from app.models import (
     LEAVE_WINDOW_END,
     LEAVE_WINDOW_START,
     normalize_leave_company,
+    parse_employee_company,
     LEAVE_TYPES,
     LeaveEmployee,
     LeaveLog,
@@ -589,6 +590,196 @@ def build_leave_log_template_bytes() -> BytesIO:
     return buf
 
 
+STAFF_SHEET_NAMES = ('Staff', 'Employee List', 'Employees')
+STAFF_EXAMPLE_IDS = frozenset({'INJ-0000', 'EXAMPLE', 'SAMPLE'})
+
+
+def _is_staff_example_row(emp_id: str, name: str) -> bool:
+    key = (emp_id or '').strip().upper()
+    label = (name or '').strip().lower()
+    if key in STAFF_EXAMPLE_IDS:
+        return True
+    return label.startswith('example') or label.startswith('[sample]')
+
+
+def _staff_sheet(wb):
+    for name in STAFF_SHEET_NAMES:
+        if name in wb.sheetnames:
+            return wb[name]
+    return None
+
+
+def build_staff_workbook(employees: Optional[list] = None, *, template_only: bool = False) -> BytesIO:
+    """Employee List template (example row) or export of the current staff roster."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Staff'
+    ws.append(list(STAFF_HEADERS))
+    _style_header(ws, len(STAFF_HEADERS))
+
+    rows: list[list[Any]] = []
+    if template_only:
+        rows.append(['INJ-0000', 'Example Name', 'Facility Supervisor', 'Kynvera', 30, 'Y'])
+    else:
+        for emp in employees or []:
+            rows.append([
+                emp.emp_id,
+                emp.full_name,
+                emp.designation or '',
+                emp.company or '',
+                emp.annual_entitlement if emp.annual_entitlement is not None else None,
+                'Y' if emp.active else 'N',
+            ])
+
+    for i, values in enumerate(rows, start=2):
+        for col, val in enumerate(values, start=1):
+            cell = ws.cell(i, col, val)
+            cell.border = THIN
+            if template_only:
+                cell.fill = INPUT_FILL
+
+    last_row = max(200, 2 + len(rows))
+    active_dv = DataValidation(
+        type='list',
+        formula1='"Y,N"',
+        allow_blank=True,
+        showDropDown=False,
+    )
+    active_dv.add(f'F2:F{last_row}')
+    ws.add_data_validation(active_dv)
+
+    ws.column_dimensions['A'].width = 14
+    ws.column_dimensions['B'].width = 32
+    ws.column_dimensions['C'].width = 24
+    ws.column_dimensions['D'].width = 14
+    ws.column_dimensions['E'].width = 20
+    ws.column_dimensions['F'].width = 10
+    ws.freeze_panes = 'A2'
+
+    write_instructions_sheet(wb, InstructionSpec(
+        title='Employee List template',
+        module_label='HR / Employee List',
+        about=(
+            'Staff roster used by Employee List and Leave Tracker.',
+            'One row per person. Emp ID must be unique.',
+        ),
+        how_to=(
+            'Open the Staff sheet. Keep the coral header on row 1.',
+            'Fill Emp ID, Name, Designation, Company, and optional Annual Entitlement.',
+            'Active is Y or N. Leave blank for Y.',
+            'Replace the example row before importing.',
+            'Save as .xlsx and click Import on Employee List.',
+        ),
+        columns=(
+            ('Emp ID', 'Required. Unique staff number, e.g. INJ-0042.'),
+            ('Name', 'Required. Full name.'),
+            ('Designation', 'Optional job title.'),
+            ('Company', 'Kynvera, Tourism, or L&P (dropdown).'),
+            ('Annual Entitlement', 'Optional annual leave days, e.g. 30.'),
+            ('Active', 'Y (default) or N to deactivate.'),
+        ),
+        example_headers=STAFF_HEADERS,
+        example_rows=(('INJ-0000', 'Example Name', 'Facility Supervisor', 'Kynvera', 30, 'Y'),),
+        import_rules=(
+            'Existing Emp IDs are updated; new IDs are added.',
+            'The example row (INJ-0000 / Example Name) is skipped.',
+            'The full Leave Tracker workbook also works if it has a Staff sheet.',
+        ),
+    ))
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf
+
+
+def import_staff_workbook(file_storage) -> dict[str, Any]:
+    """Import / update staff from a Staff (or Employee List) sheet."""
+    wb = load_workbook(file_storage, data_only=False)
+    ws = _staff_sheet(wb)
+    if ws is None:
+        sheet_hint = ', '.join(wb.sheetnames[:8]) or '(empty workbook)'
+        raise ValueError(
+            f'No "Staff" sheet found (sheets: {sheet_hint}). '
+            'Download Template from Employee List, or upload a Leave Tracker workbook that includes Staff.'
+        )
+
+    created = 0
+    updated = 0
+    skipped = 0
+    errors: list[str] = []
+    by_emp = {e.emp_id.strip().upper(): e for e in LeaveEmployee.query.all()}
+
+    headers = [str(c.value or '').strip() for c in next(ws.iter_rows(min_row=1, max_row=1))]
+    col = {h: i for i, h in enumerate(headers)}
+    emp_i = col.get('Emp ID')
+    if emp_i is None:
+        raise ValueError('Staff sheet is missing an Emp ID column.')
+
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or emp_i >= len(row) or not row[emp_i]:
+            continue
+        emp_id = _normalize_emp_id(row[emp_i])
+        if not emp_id:
+            continue
+        name = str(row[col['Name']]).strip() if 'Name' in col and row[col['Name']] else ''
+        if not name and 'Employee Name' in col and row[col['Employee Name']]:
+            name = str(row[col['Employee Name']]).strip()
+        if _is_staff_example_row(emp_id, name):
+            skipped += 1
+            continue
+        desig = ''
+        if 'Designation' in col and row[col['Designation']]:
+            desig = str(row[col['Designation']]).strip()
+        company = 'Kynvera'
+        if 'Company' in col and row[col['Company']]:
+            company = parse_employee_company(row[col['Company']])
+        ent = None
+        if 'Annual Entitlement' in col:
+            ent = _parse_int(row[col['Annual Entitlement']])
+        active = True
+        if 'Active' in col and row[col['Active']] is not None:
+            active = str(row[col['Active']]).strip().upper() not in ('N', 'NO', '0', 'FALSE')
+
+        key = emp_id.upper()
+        emp = by_emp.get(key)
+        if not emp:
+            if not name:
+                errors.append(f'Staff: skip {emp_id} — missing name')
+                continue
+            emp = LeaveEmployee(
+                emp_id=emp_id,
+                full_name=name,
+                designation=desig,
+                company=company,
+                annual_entitlement=ent,
+                active=active,
+            )
+            db.session.add(emp)
+            by_emp[key] = emp
+            created += 1
+        else:
+            if name:
+                emp.full_name = name
+            if desig:
+                emp.designation = desig
+            if company:
+                emp.company = company
+            if ent is not None:
+                emp.annual_entitlement = ent
+            emp.active = active
+            emp.updated_at = utc_now_naive()
+            updated += 1
+
+    db.session.commit()
+    return {
+        'created': created,
+        'updated': updated,
+        'skipped': skipped,
+        'errors': errors[:20],
+    }
+
+
 def import_leave_workbook(file_storage) -> dict[str, Any]:
     """
     Import Staff + Leave Log (preferred) and/or monthly Sick/Annual sheets.
@@ -631,7 +822,7 @@ def import_leave_workbook(file_storage) -> dict[str, Any]:
                     desig = str(row[col['Designation']]).strip()
                 company = 'Kynvera'
                 if 'Company' in col and row[col['Company']]:
-                    company = normalize_leave_company(row[col['Company']]) or 'Kynvera'
+                    company = parse_employee_company(row[col['Company']])
                 ent = None
                 if 'Annual Entitlement' in col:
                     ent = _parse_int(row[col['Annual Entitlement']])

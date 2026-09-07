@@ -245,6 +245,7 @@ def section_hr():
     expect_page("HR gm-approval", "/hr/gm-approval")
     expect_page("HR hiring", "/hr/hiring")
     expect_page("HR leave-tracker", "/hr/leave-tracker")
+    expect_page("HR employee-list", "/hr/employee-list")
     expect_page("HR manpower-tracker", "/hr/manpower-tracker")
 
     expect_json("HR my-submissions API", "GET", "/hr/api/my-submissions")

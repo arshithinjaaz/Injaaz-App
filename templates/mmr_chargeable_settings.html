@@ -140,6 +140,137 @@
       margin: 0 auto;
       max-width: min(48rem, 100%);
     }
+    .rs-actionbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem 1rem;
+      margin: 0 0 1.15rem;
+      padding: 0.7rem 0.9rem;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .rs-flow {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: #64748b;
+      line-height: 1.45;
+      min-width: 0;
+      flex: 1 1 16rem;
+    }
+    .rs-flow strong { color: #0f172a; font-weight: 650; }
+    .rs-actionbar-btns {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .rs-actionbar-btns .btn-mmr {
+      width: auto;
+      min-height: 40px;
+      padding: 0.4rem 0.95rem;
+      font-size: 0.875rem;
+    }
+    .rs-pipeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    .rs-pipeline > h2 {
+      margin: 0;
+      padding: 1rem 1.15rem 0.85rem;
+    }
+    .rs-pipeline-intro {
+      margin: 0 1.15rem 0.85rem;
+    }
+    .rs-step {
+      padding: 0.95rem 1.15rem 1.05rem;
+      border-top: 1px solid #f1f5f9;
+    }
+    .rs-step-kicker {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 0.35rem;
+    }
+    .rs-step-head {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.75rem 1rem;
+      align-items: start;
+    }
+    .rs-step--excel {
+      background: #fff7f3;
+    }
+    .rs-step--excel .rs-step-kicker { color: #e05f36; }
+    .rs-locreg-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.65rem 1rem;
+      margin-bottom: 0.65rem;
+    }
+    .rs-locreg-head h2 {
+      margin: 0;
+      padding: 0;
+      border: none;
+    }
+    .rs-locreg-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0.15rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .rs-locreg-badge.is-off {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+    .rs-locreg-empty {
+      margin-top: 0.75rem;
+      padding: 1.15rem 1rem;
+      border: 1px dashed #e2e8f0;
+      border-radius: 12px;
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      text-align: center;
+    }
+    .rs-locreg-banner {
+      display: none;
+      margin: 0 0 0.75rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: 10px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+      font-size: 0.8125rem;
+      line-height: 1.45;
+    }
+    .rs-main-col.rs-locreg-off .rs-locreg-banner { display: block; }
+    .rs-main-col.rs-locreg-off .rs-card--locreg > .rs-reg-toolbar,
+    .rs-main-col.rs-locreg-off .rs-card--locreg > .rs-hint,
+    .rs-main-col.rs-locreg-off #locRegResultsInner,
+    .rs-main-col.rs-locreg-off .rs-locreg-empty {
+      opacity: 0.48;
+    }
+    .rs-pipeline .rs-builtin-list { gap: 0.35rem; }
+    .rs-pipeline .rs-builtin-row { padding: 0.4rem 0; }
     .rs-card {
       background: #fff;
       border: 1px solid #e2e8f0;
@@ -156,6 +287,18 @@
       color: #ff8e68;
       padding-bottom: 0.65rem;
       border-bottom: 1px solid #f1f5f9;
+    }
+    .rs-card.rs-pipeline {
+      padding: 0;
+    }
+    .rs-card.rs-pipeline > h2 {
+      margin: 0;
+      padding: 1rem 1.25rem 0.85rem;
+    }
+    .rs-card.rs-card--locreg .rs-locreg-head h2 {
+      margin: 0;
+      padding: 0;
+      border: none;
     }
     .rs-toggle-grid {
       display: grid;
@@ -389,7 +532,7 @@
       flex: 1 1 auto;
       display: flex;
       flex-direction: column;
-      min-height: min(68vh, calc(100vh - 14rem));
+      min-height: 0;
     }
     .rs-card--register-results > .rs-hint { flex-shrink: 0; }
     .rs-reg-table {
@@ -674,27 +817,48 @@
       color: #475569;
       font-size: 0.8125rem;
     }
-    /* Embedded in MMR dialog: solid white shell so cards are not separated by dimmed dashboard */
+    /* Embedded in MMR dialog: no page Back link — parent overlay closes the modal */
+    html.rs-embed-root,
+    html.rs-embed-root *,
+    html.rs-embed-root body.rs-embed,
+    body.rs-embed .rs-page {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    html.rs-embed-root::-webkit-scrollbar,
+    html.rs-embed-root *::-webkit-scrollbar,
+    html.rs-embed-root body.rs-embed::-webkit-scrollbar,
+    body.rs-embed .rs-page::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
     html.rs-embed-root {
       height: 100%;
       background: #ffffff !important;
+      overflow: auto;
     }
     body.rs-embed {
       min-height: 100%;
       background: #ffffff !important;
       padding-top: 0 !important;
+      overflow: auto;
+    }
+    body.rs-embed .module-back-link,
+    body.rs-embed .module-back-bar {
+      display: none !important;
     }
     body.rs-embed .rs-page {
-      padding: 0.75rem clamp(0.75rem, 2vw, 1.35rem) 1.1rem;
+      padding: 0 0 1.1rem;
       min-height: 100%;
       max-width: none;
       background: #ffffff;
     }
     body.rs-embed .rs-header {
-      margin: -0.75rem calc(-1 * clamp(0.75rem, 2vw, 1.35rem)) 1.15rem calc(-1 * clamp(0.75rem, 2vw, 1.35rem));
-      padding: 1rem clamp(0.75rem, 2vw, 1.35rem) 1.1rem;
+      margin: 0 0 1.15rem;
+      padding: 1rem 3.75rem 1.1rem;
       border-bottom: none;
-      border-radius: 12px 12px 0 0;
+      border-radius: 0;
       background: #ff8e68;
       text-align: center;
     }
@@ -707,10 +871,16 @@
     body.rs-embed .rs-sub strong {
       color: #ffffff;
     }
+    body.rs-embed .rs-shell {
+      padding: 0 clamp(0.75rem, 2vw, 1.35rem);
+    }
+    body.rs-embed .rs-actionbar {
+      margin: 0 clamp(0.75rem, 2vw, 1.35rem) 1rem;
+    }
     @media (min-width: 960px) {
       /* MMR dialog: slightly wider rules column; register still flexes */
       body.rs-embed .rs-shell {
-        grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+        grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
         gap: 1rem 1.1rem;
       }
     }
@@ -723,81 +893,124 @@
   {% endif %}
 
   <main class="rs-page">
+    {% if request.args.get('embed') != '1' %}
     {% set module_back_url = '/admin/dashboard' %}
     {% include 'partials/module_back_link.html' %}
+    {% endif %}
     <header class="rs-header">
       <h1 class="rs-title">Report setting</h1>
       <p class="rs-sub">
-        Configure how <strong>BaseUnit</strong> (unit / area from CAFM) maps to Chargeable vs Non-Chargeable in
-        <strong>MMR dashboards, Excel reports, and scheduled email</strong>. Changes apply as soon as you save.
+        Set how <strong>BaseUnit</strong> maps to Chargeable vs Non-Chargeable in MMR.
+        Rules run in order — built-in first, then your Excel location list if that layer is on.
       </p>
     </header>
 
+    <div class="rs-actionbar">
+      <p class="rs-flow">
+        <strong>1</strong> Built-in rules
+        → <strong>2</strong> Default for other locations
+        → <strong>3</strong> Location register (Excel)
+      </p>
+      <div class="rs-actionbar-btns">
+        <button type="button" class="btn-mmr" id="btnSave">Save settings</button>
+        <button type="button" class="btn-mmr btn-mmr-outline" id="btnSaveLocationRegister">Save location register</button>
+        {% if request.args.get('embed') == '1' %}
+        <button type="button" class="btn-mmr btn-mmr-outline" id="btnCloseReportSettingsEmbed">Close</button>
+        {% else %}
+        <a href="/admin/dashboard" class="btn-mmr btn-mmr-outline">Back to admin</a>
+        {% endif %}
+      </div>
+    </div>
+
     <div class="rs-shell">
     <aside class="rs-sidebar">
-      <section class="rs-card rs-card--builtin" aria-labelledby="sec-builtin">
-        <h2 id="sec-builtin">Built-in rules (automatic)</h2>
-        <p class="rs-hint" style="margin: 0 0 1rem;">
-          These are the same logic paths defined in code. Turn a rule <strong>off</strong> to stop applying it (the row will fall through to the next rule or your location-register toggles).
+      <section class="rs-card rs-pipeline" aria-labelledby="sec-rules">
+        <h2 id="sec-rules">Chargeable rules</h2>
+        <p class="rs-hint rs-pipeline-intro">
+          Turn a rule off to skip it. Later steps only apply if an earlier rule did not already lock the result.
         </p>
-        <div class="rs-builtin-list" id="builtinRulesContainer"></div>
-      </section>
 
-      <section class="rs-card rs-card--default" aria-labelledby="sec-default">
-        <h2 id="sec-default">Default for non-apartment locations</h2>
-        <div class="rs-toggle-grid">
-          <div>
-            <span class="rs-label">Only apartments bill as Chargeable</span>
-            <p class="rs-hint">
-              When on, BaseUnit values such as CCTV room, parking, or lobby resolve to <span class="pill pill-nc">Non-Chargeable</span>
-              unless you add an override. When off, legacy behaviour treats those common areas as
-              <span class="pill pill-c">Chargeable</span> (except reception / floor / exit rules).
-            </p>
+        <div class="rs-step">
+          <span class="rs-step-kicker">Step 1</span>
+          <h3 class="rs-label" id="sec-builtin" style="margin-bottom:0.65rem;">Built-in rules (automatic)</h3>
+          <div class="rs-builtin-list" id="builtinRulesContainer"></div>
+        </div>
+
+        <div class="rs-step" aria-labelledby="sec-default">
+          <span class="rs-step-kicker">Step 2</span>
+          <div class="rs-toggle-grid">
+            <div>
+              <span class="rs-label" id="sec-default">Only apartments bill as Chargeable</span>
+              <p class="rs-hint">
+                When on, BaseUnit values such as CCTV room, parking, or lobby resolve to <span class="pill pill-nc">Non-Chargeable</span>
+                unless the location register overrides them. When off, those common areas stay
+                <span class="pill pill-c">Chargeable</span> (except reception / floor / exit rules).
+              </p>
+            </div>
+            <div class="switch-wrap">
+              <label class="switch" title="Only apartments → Chargeable">
+                <input type="checkbox" id="toggleNonAptNonChg" checked>
+                <span></span>
+              </label>
+            </div>
           </div>
-          <div class="switch-wrap">
-            <label class="switch" title="Only apartments → Chargeable">
-              <input type="checkbox" id="toggleNonAptNonChg" checked>
-              <span></span>
-            </label>
+        </div>
+
+        <div class="rs-step rs-step--excel" aria-labelledby="sec-locreg-toggle">
+          <span class="rs-step-kicker">Step 3</span>
+          <div class="rs-step-head">
+            <div>
+              <span class="rs-label" id="sec-locreg-toggle">Location register (Excel)</span>
+              <p class="rs-hint">
+                When on, per-location Chargeable flags from your Excel list apply after steps 1–2
+                (except locked cases such as facade, elevator, roof, and apartment numbers).
+                When off, MMR ignores the list — the file stays saved so you can turn it back on.
+              </p>
+            </div>
+            <div class="switch-wrap">
+              <label class="switch" title="Use location register Excel list">
+                <input type="checkbox" id="toggleLocRegEnabled" checked>
+                <span></span>
+              </label>
+            </div>
           </div>
         </div>
       </section>
     </aside>
 
-    <div class="rs-main-col">
-      <div class="rs-toolbar-row">
-        <section class="rs-card rs-card--locreg-upload rs-card--compact" aria-labelledby="sec-locreg">
-          <h2 id="sec-locreg">Location register (Excel)</h2>
-          <p class="rs-hint">
-            <code>.xlsx</code> / <code>.xls</code> — grouped by <strong>property</strong> and <strong>zone</strong> below. Toggle chargeable per row; use <strong>Save location register</strong> to store the list, or <strong>Save settings</strong> for rules and list together.
-          </p>
-          <div class="rs-reg-toolbar">
-            <label class="rs-upload-label">
-              <span class="btn-mmr btn-mmr-outline" style="cursor:pointer;display:inline-flex;">Choose file</span>
-              <input type="file" id="locRegInput" accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="position:absolute;width:0;height:0;opacity:0;">
-            </label>
-            <button type="button" class="btn-mmr" id="btnParseLocReg">Parse &amp; load list</button>
+    <div class="rs-main-col" id="locRegMain">
+      <section class="rs-card rs-card--locreg" aria-labelledby="sec-locreg">
+        <div class="rs-locreg-head">
+          <div>
+            <h2 id="sec-locreg">Location register</h2>
+            <p class="rs-hint" style="margin-top:0.35rem;">
+              Upload <code>.xlsx</code> / <code>.xls</code>. Rows group by property and zone. Toggle Chargeable per base unit, then save.
+            </p>
           </div>
-          <p class="rs-hint" id="locRegMsg" style="display:none;"></p>
-        </section>
-
-        <div class="rs-card rs-card--actions rs-card--compact" aria-label="actions">
-          <button type="button" class="btn-mmr" id="btnSave">Save settings</button>
-          {% if request.args.get('embed') == '1' %}
-          <button type="button" class="btn-mmr btn-mmr-outline" id="btnCloseReportSettingsEmbed">Close</button>
-          {% else %}
-          <a href="/admin/dashboard" class="btn-mmr btn-mmr-outline">Back to admin</a>
-          {% endif %}
-          <button type="button" class="btn-mmr btn-mmr-outline" id="btnSaveLocationRegister">Save location register</button>
+          <span class="rs-locreg-badge" id="locRegBadge">On</span>
         </div>
-      </div>
+        <div class="rs-locreg-banner" id="locRegOffBanner" role="status">
+          Location register is off. Built-in rules decide Chargeable until you turn this layer on in the rules list.
+        </div>
+        <div class="rs-reg-toolbar">
+          <label class="rs-upload-label">
+            <span class="btn-mmr btn-mmr-outline" style="cursor:pointer;display:inline-flex;">Choose file</span>
+            <input type="file" id="locRegInput" accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="position:absolute;width:0;height:0;opacity:0;">
+          </label>
+          <button type="button" class="btn-mmr" id="btnParseLocReg">Parse &amp; load list</button>
+        </div>
+        <p class="rs-hint" id="locRegMsg" style="display:none;"></p>
+        <div class="rs-locreg-empty" id="locRegEmpty">
+          No location list loaded yet. Choose an Excel file and parse it to set Chargeable per location.
+        </div>
 
       <div id="saveToast" class="rs-save-toast" style="display: none;" role="status" aria-live="polite" aria-atomic="true"></div>
 
-      <section class="rs-card rs-card--register-results" id="locRegResultsCard" style="display:none;" aria-labelledby="sec-loc-preview">
-        <h2 id="sec-loc-preview">Location register — preview</h2>
+      <div id="locRegResultsInner">
+      <section class="rs-card--register-results" id="locRegResultsCard" style="display:none;" aria-labelledby="sec-loc-preview">
+        <h2 id="sec-loc-preview" class="rs-label" style="margin:1rem 0 0.45rem;">Preview</h2>
         <p class="rs-hint" style="margin: 0 0 0.75rem;">
-          By <strong>property</strong> and <strong>zone</strong>. <strong>Resolved (MMR)</strong> uses sidebar rules and your toggles (saved to the server). Apartments rolled up per property.
+          <strong>Resolved (MMR)</strong> uses the rule order above. Apartments are rolled up per property.
         </p>
         <div id="locRegLoading" class="rs-loc-loading" style="display:none;" role="status" aria-live="polite" aria-busy="false">
           <div class="rs-loc-loading-inner">
@@ -819,6 +1032,8 @@
         <div class="rs-table-wrap rs-reg-table" id="locRegTableWrap" style="display:none;">
           <div id="locRegGrouped"></div>
         </div>
+      </section>
+      </div>
       </section>
 
     </div>
@@ -862,6 +1077,27 @@
         o[m.key] = el ? !!el.checked : true;
       });
       return o;
+    }
+
+    function isLocRegEnabled() {
+      var el = document.getElementById('toggleLocRegEnabled');
+      return el ? !!el.checked : true;
+    }
+
+    function syncLocRegEnabledUI() {
+      var on = isLocRegEnabled();
+      var main = document.getElementById('locRegMain');
+      var badge = document.getElementById('locRegBadge');
+      if (main) main.classList.toggle('rs-locreg-off', !on);
+      if (badge) {
+        badge.textContent = on ? 'On' : 'Off';
+        badge.classList.toggle('is-off', !on);
+      }
+    }
+
+    function setLocRegEmptyVisible(show) {
+      var empty = document.getElementById('locRegEmpty');
+      if (empty) empty.style.display = show ? 'block' : 'none';
     }
 
     async function authenticatedFetch(url, options = {}) {
@@ -1105,10 +1341,12 @@
     }
 
     function getPreviewRulesPayload() {
+      var enabled = isLocRegEnabled();
       return {
         non_apartment_baseunit_non_chargeable: document.getElementById('toggleNonAptNonChg').checked,
         builtin_rules: collectBuiltinRules(),
-        baseunit_overrides: getMergedOverridesForPreview()
+        location_register_enabled: enabled,
+        baseunit_overrides: enabled ? getMergedOverridesForPreview() : []
       };
     }
 
@@ -1493,6 +1731,13 @@
     function wireChargeablePreviewListeners() {
       var deb = debounceResolved(function () { refreshResolvedPreview(); }, 180);
       document.getElementById('toggleNonAptNonChg').addEventListener('change', deb);
+      var locToggle = document.getElementById('toggleLocRegEnabled');
+      if (locToggle) {
+        locToggle.addEventListener('change', function () {
+          syncLocRegEnabledUI();
+          deb();
+        });
+      }
       document.getElementById('builtinRulesContainer').addEventListener('change', function (e) {
         syncAptRollupBuiltinToggles();
         deb();
@@ -1529,6 +1774,9 @@
       const data = await resp.json();
       const cfg = data.config || {};
       document.getElementById('toggleNonAptNonChg').checked = cfg.non_apartment_baseunit_non_chargeable !== false;
+      var locOn = document.getElementById('toggleLocRegEnabled');
+      if (locOn) locOn.checked = cfg.location_register_enabled !== false;
+      syncLocRegEnabledUI();
       renderBuiltinRules(cfg.builtin_rules || {});
       setTimeout(function () { syncAptRollupBuiltinToggles(); }, 0);
       var lrs = cfg.location_register_state;
@@ -1555,6 +1803,7 @@
         var tbar = document.getElementById('locRegToolbar');
         if (tbar) tbar.style.display = 'flex';
         wrap.style.display = 'block';
+        setLocRegEmptyVisible(false);
         scheduleRegisterRender(byProp, function () { scheduleResolvedRefresh(); });
       } else {
         document.getElementById('locRegGrouped').innerHTML = '';
@@ -1563,6 +1812,7 @@
         var tbar0 = document.getElementById('locRegToolbar');
         if (tbar0) tbar0.style.display = 'none';
         if (resultsCard) resultsCard.style.display = 'none';
+        setLocRegEmptyVisible(true);
         _locMeta = { source_filename: '', columns_detected: {} };
         _locFullRows = [];
       }
@@ -1596,6 +1846,7 @@
       }
       var hadSavedPreview = (_locFullRows && _locFullRows.length > 0);
       if (resultsCard) resultsCard.style.display = 'block';
+      setLocRegEmptyVisible(false);
       if (sum) sum.style.display = 'none';
       if (wrap) wrap.style.display = 'none';
       setLocRegLoading(true);
@@ -1617,6 +1868,7 @@
             if (wrap) wrap.style.display = 'block';
           } else if (resultsCard) {
             resultsCard.style.display = 'none';
+            setLocRegEmptyVisible(true);
           }
           return;
         }
@@ -1629,6 +1881,7 @@
             if (wrap) wrap.style.display = 'block';
           } else if (resultsCard) {
             resultsCard.style.display = 'none';
+            setLocRegEmptyVisible(true);
           }
           msgEl.className = 'rs-hint';
           msgEl.style.display = 'block';
@@ -1662,6 +1915,7 @@
         if (tbar) tbar.style.display = 'flex';
         if (resultsCard) resultsCard.style.display = 'block';
         document.getElementById('locRegTableWrap').style.display = 'block';
+        setLocRegEmptyVisible(false);
         scheduleRegisterRender(byProp, function () { scheduleResolvedRefresh(); });
         msgEl.className = 'rs-hint';
         msgEl.style.display = 'block';
@@ -1674,6 +1928,7 @@
           if (wrap) wrap.style.display = 'block';
         } else if (resultsCard) {
           resultsCard.style.display = 'none';
+          setLocRegEmptyVisible(true);
         }
         alert('Parse failed. Check your connection and try again.');
       }
@@ -1738,6 +1993,7 @@
       var overrides = collectLocRegisterOverrides();
       var payload = {
         non_apartment_baseunit_non_chargeable: document.getElementById('toggleNonAptNonChg').checked,
+        location_register_enabled: isLocRegEnabled(),
         baseunit_overrides: overrides,
         builtin_rules: collectBuiltinRules()
       };
@@ -1769,13 +2025,18 @@
         } else {
           showSaveToast(
             'Settings saved',
-            'Chargeable rules and location register (if any) are stored. MMR uses them immediately.',
+            'Chargeable rules, Excel layer, and location register (if any) are stored. MMR uses them immediately.',
             false
           );
         }
         if (j.config) {
           renderBuiltinRules((j.config.builtin_rules) || {});
           setTimeout(function () { syncAptRollupBuiltinToggles(); }, 0);
+          var locOn = document.getElementById('toggleLocRegEnabled');
+          if (locOn && 'location_register_enabled' in j.config) {
+            locOn.checked = j.config.location_register_enabled !== false;
+            syncLocRegEnabledUI();
+          }
           var savedLrs = j.config.location_register_state;
           if (savedLrs && savedLrs.rows && savedLrs.rows.length) {
             _locMeta.source_filename = savedLrs.source_filename || _locMeta.source_filename;
@@ -1783,6 +2044,7 @@
             _locFullRows = savedLrs.rows.slice();
           } else if (savedLrs === null) {
             _locFullRows = [];
+            setLocRegEmptyVisible(true);
           }
         }
         if (document.getElementById('locRegGrouped').querySelector('tr[data-loc]')) {
