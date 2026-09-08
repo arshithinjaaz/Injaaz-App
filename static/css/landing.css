@@ -603,7 +603,6 @@
   max-width: 36rem;
   padding-block: clamp(0.75rem, 2vw, 1.75rem);
   text-align: left;
-  animation: lp-rise 0.7s var(--lp-ease) both;
 }
 
 .landing .lp-hero-title {
@@ -663,7 +662,6 @@
   contain: none;
 }
 
-.lp-hero-photo-lqip,
 .lp-hero-photo-img {
   display: block;
   width: 100%;
@@ -676,38 +674,17 @@
   transform-origin: 42% 18%;
   clip-path: none;
   -webkit-clip-path: none;
-}
-
-.lp-hero-photo-lqip {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain !important;
-  pointer-events: none;
-  filter: blur(22px) saturate(1.12);
-  transform: scale(1.5) translateY(-16%);
-  transform-origin: 42% 18%;
-}
-
-.lp-hero-photo-img {
   position: relative;
   z-index: 1;
 }
 
-.lp-hero-photo-img.is-pending {
+html.lp-js .lp-hero-photo-img:not(.is-ready) {
   opacity: 0;
 }
 
-.lp-hero-photo-img.is-loaded {
+.lp-hero-photo-img.is-ready {
   opacity: 1;
-  transition: opacity 0.45s ease;
-}
-
-.lp-hero-photo.is-loaded .lp-hero-photo-lqip {
-  opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.55s ease;
 }
 
 .lp-hero-photo-img.is-missing {
@@ -2513,11 +2490,6 @@
     max-height: none;
   }
 
-  .lp-hero-photo-lqip {
-    transform: scale(1.28) translateY(-4%);
-    transform-origin: center 22%;
-  }
-
   .lp-hero-copy {
     max-width: 40rem;
     text-align: center;
@@ -3041,5 +3013,11 @@
   .landing .lp-reveal {
     opacity: 1;
     transform: none;
+  }
+
+  html.lp-js .lp-hero-photo-img:not(.is-ready),
+  .lp-hero-photo-img.is-ready {
+    opacity: 1;
+    transition: none;
   }
 }
