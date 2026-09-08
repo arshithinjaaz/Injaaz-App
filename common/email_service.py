@@ -267,15 +267,13 @@ def _send_email_brevo_http(app, recipient, subject, body, html_body, cc, attachm
     for item in _iter_attachment_items(attachments):
         if item.get('inline') and item.get('cid'):
             # Brevo transactional API drops Content-ID, so CID images never render.
-            # The PNG is referenced by HTTPS instead (see _logo_html).
             continue
         encoded = base64.b64encode(item['data']).decode('ascii')
         att_out.append({'name': item['filename'], 'content': encoded})
     if 'cid:' in html:
-        hosted = _hosted_wordmark_url()
         html = re.sub(
             r'<img\b[^>]*src=["\']cid:[^"\']+["\'][^>]*>',
-            _img_wordmark(hosted) if hosted else _html_wordmark(),
+            _html_wordmark(),
             html,
             flags=re.I,
         )
@@ -714,20 +712,10 @@ def _login_url():
     return f'{base}/login' if base else '/login'
 
 
-_WORDMARK_CID = 'kynvera-wordmark'
-_WORDMARK_STATIC = '/static/images/kynvera/kynvera-wordmark.png'
 # Kept so tests can assert we never point inboxes at the Render origin.
 _DEFAULT_PUBLIC_WORDMARK_URL = (
     'https://operations.kynvera.net/static/images/kynvera/kynvera-wordmark.png'
 )
-_cloudinary_wordmark_url_cache = None
-_cloudinary_wordmark_upload_started = False
-
-
-def _wordmark_path():
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    path = os.path.join(root, 'static', 'images', 'kynvera', 'kynvera-wordmark.png')
-    return path if os.path.isfile(path) else ''
 
 
 def _is_public_asset_base(url):
@@ -745,132 +733,15 @@ def _is_public_asset_base(url):
 
 
 def _html_wordmark():
+    # Canva wordmark: Montserrat Bold, letter-spacing -29 (= -0.029em), coral.
     return (
-        '<span style="font-family:Arial,Helvetica,sans-serif;font-size:18px;'
-        'font-weight:800;color:#ff8e68;letter-spacing:-0.4px;line-height:1;">Kynvera</span>'
+        '<span style="font-family:Montserrat,Arial,Helvetica,sans-serif;font-size:28px;'
+        'font-weight:700;color:#ff8e68;letter-spacing:-0.029em;line-height:1.4;">Kynvera</span>'
     )
-
-
-def _img_wordmark(src):
-    return (
-        f'<img src="{_esc(src)}" alt="Kynvera" width="160" height="39" border="0" '
-        'style="display:block;border:0;outline:none;text-decoration:none;'
-        'width:160px;height:39px;">'
-    )
-
-
-def _cloudinary_cloud_name():
-    try:
-        name = current_app.config.get('CLOUDINARY_CLOUD_NAME') or ''
-    except Exception:
-        name = ''
-    return str(name or os.environ.get('CLOUDINARY_CLOUD_NAME') or '').strip()
-
-
-def _constructed_cloudinary_wordmark_url():
-    """CDN URL for the named asset. No upload, so sending is not blocked."""
-    name = _cloudinary_cloud_name()
-    if not name:
-        return ''
-    return (
-        f'https://res.cloudinary.com/{name}/image/upload/'
-        f'f_png,w_240,c_limit,q_auto/kynvera/email-wordmark'
-    )
-
-
-def _upload_cloudinary_wordmark():
-    """Best-effort publish so the constructed CDN URL exists."""
-    path = _wordmark_path()
-    if not path:
-        return
-    try:
-        from app.services.cloudinary_service import init_cloudinary
-        import cloudinary.uploader
-        if not init_cloudinary():
-            return
-        cloudinary.uploader.upload(
-            path,
-            folder='kynvera',
-            public_id='email-wordmark',
-            overwrite=True,
-            resource_type='image',
-            unique_filename=False,
-            use_filename=False,
-            transformation=[{'width': 240, 'crop': 'scale', 'format': 'png'}],
-        )
-        logger.info('Published email wordmark to Cloudinary')
-    except Exception:
-        logger.warning('Could not publish email wordmark on Cloudinary', exc_info=True)
-
-
-def _ensure_cloudinary_wordmark_async():
-    global _cloudinary_wordmark_upload_started
-    if _cloudinary_wordmark_upload_started or not _wordmark_path():
-        return
-    _cloudinary_wordmark_upload_started = True
-    threading.Thread(
-        target=_upload_cloudinary_wordmark,
-        daemon=True,
-        name='kynvera-email-wordmark',
-    ).start()
-
-
-def _cloudinary_wordmark_url():
-    """Fast Cloudinary URL. Never uploads on the send path."""
-    global _cloudinary_wordmark_url_cache
-    if _cloudinary_wordmark_url_cache is not None:
-        return _cloudinary_wordmark_url_cache
-    try:
-        if current_app.config.get('TESTING'):
-            _cloudinary_wordmark_url_cache = ''
-            return ''
-    except Exception:
-        pass
-    url = _constructed_cloudinary_wordmark_url()
-    _cloudinary_wordmark_url_cache = url
-    if url:
-        _ensure_cloudinary_wordmark_async()
-    return url
-
-
-def _hosted_wordmark_url():
-    """HTTPS wordmark for clients that cannot use CID (Brevo / Gmail proxy).
-
-    Never use the app origin — Render cold-starts make Gmail wait on the image.
-    """
-    try:
-        explicit = (current_app.config.get('EMAIL_WORDMARK_URL') or '').strip()
-    except Exception:
-        explicit = ''
-    if _is_public_asset_base(explicit):
-        return explicit.rstrip('/')
-    return _cloudinary_wordmark_url() or ''
-
-
-def _wordmark_inline_attachment():
-    path = _wordmark_path()
-    if not path:
-        return None
-    with open(path, 'rb') as fh:
-        data = fh.read()
-    if not data:
-        return None
-    return {
-        'filename': 'kynvera-wordmark.png',
-        'content': data,
-        'mime_type': 'image/png',
-        'cid': _WORDMARK_CID,
-        'inline': True,
-    }
 
 
 def _send_auth_email(user_email, subject, body, html_body):
-    attachments = []
-    if html_body and f'cid:{_WORDMARK_CID}' in html_body:
-        wm = _wordmark_inline_attachment()
-        if wm:
-            attachments.append(wm)
-    return send_email(user_email, subject, body, html_body, source='auth', attachments=attachments)
+    return send_email(user_email, subject, body, html_body, source='auth')
 
 
 def _esc(value):
@@ -879,25 +750,7 @@ def _esc(value):
 
 
 def _logo_html():
-    """Official coral PNG wordmark from static/images/kynvera/kynvera-wordmark.png.
-
-    Live mail embeds the PNG as CID so the mark is in the message. Brevo drops
-    CID and rewrites to a Cloudinary CDN URL (no upload on send). Tests use
-    HTML text unless EMAIL_WORDMARK_URL is set.
-    """
-    try:
-        if current_app.config.get('TESTING'):
-            hosted = _hosted_wordmark_url()
-            if hosted:
-                return _img_wordmark(hosted)
-            return _html_wordmark()
-    except Exception:
-        pass
-    if _wordmark_path():
-        return _img_wordmark(f'cid:{_WORDMARK_CID}')
-    hosted = _hosted_wordmark_url()
-    if hosted:
-        return _img_wordmark(hosted)
+    """Canva wordmark as HTML so inboxes never wait on an image."""
     return _html_wordmark()
 
 
@@ -942,6 +795,10 @@ def _branded_auth_html(*, title, greeting, paragraphs, extra_html='', cta_url=''
 
     return f'''<!DOCTYPE html>
 <html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+</head>
 <body style="margin:0;padding:0;background-color:#f4f1ee;">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f1ee" style="background-color:#f4f1ee;">
   <tr>

@@ -42,8 +42,9 @@ injaaz.db-*
 kynvera_marketing.db
 kynvera_marketing.db-*
 
-# Database backups (admin download copies + manual dumps)
-backups/
+# Database backups (keep the folder, never commit dumps)
+backups/*
+!backups/.gitkeep
 *.sql.gz
 *.dump
 

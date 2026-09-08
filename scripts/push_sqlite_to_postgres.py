@@ -46,6 +46,7 @@ SKIP_ALWAYS = {
     "alembic_version",
 }
 AUTH_TABLES = {"users", "sessions", "admin_edit_otp"}
+SESSION_TABLES = {"sessions"}
 NOISY_TABLES = {
     "audit_logs",
     "email_logs",
@@ -187,6 +188,7 @@ def resolve_tables(
     extra: list[str],
     include_auth: bool,
     include_noisy: bool,
+    include_sessions: bool = False,
 ) -> list[str]:
     available = sqlite_tables(conn)
     available_set = set(available)
@@ -215,8 +217,11 @@ def resolve_tables(
     for t in chosen:
         if t in SKIP_ALWAYS:
             continue
+        if t in SESSION_TABLES and not include_sessions:
+            print(f"skip {t} (laptop sessions are not copied to live)")
+            continue
         if t in AUTH_TABLES and not include_auth:
-            print(f"skip {t} (pass --include-auth to copy users/sessions)")
+            print(f"skip {t} (pass --include-auth to copy users)")
             continue
         if t in NOISY_TABLES and not include_noisy and group == "all":
             print(f"skip {t} (pass --include-noisy to copy logs/backups)")
@@ -311,6 +316,8 @@ def _pg_type_name(col_type) -> str:
 
 
 def coerce_value(val, col_type):
+    from psycopg2.extras import Json
+
     name = _pg_type_name(col_type)
     raw = str(col_type).lower()
     if "bool" in name or "bool" in raw:
@@ -320,7 +327,12 @@ def coerce_value(val, col_type):
     if name == "date" or raw == "date":
         return _parse_date(val)
     if "json" in name or "json" in raw:
-        return _parse_json(val)
+        parsed = _parse_json(val)
+        if isinstance(parsed, (dict, list)):
+            return Json(parsed)
+        return parsed
+    if isinstance(val, (dict, list)):
+        return Json(val)
     return val
 
 
@@ -340,6 +352,30 @@ def _target_url(cli_url: str | None) -> str:
     return url
 
 
+def _ensure_varchar_capacity(conn, table: str, col_types: dict, rows: list[dict], col_names: list[str]) -> None:
+    from sqlalchemy import text
+
+    for name in col_names:
+        col_type = col_types[name]
+        length = getattr(col_type, "length", None)
+        if not length:
+            continue
+        max_len = 0
+        for raw in rows:
+            val = raw.get(name)
+            if isinstance(val, str):
+                max_len = max(max_len, len(val))
+        if max_len > int(length):
+            new_len = max(max_len, int(length) * 2)
+            conn.execute(
+                text(
+                    f"ALTER TABLE {_quote_ident(table)} "
+                    f"ALTER COLUMN {_quote_ident(name)} TYPE VARCHAR({new_len})"
+                )
+            )
+            print(f"widened {table}.{name} VARCHAR({length}) -> VARCHAR({new_len})")
+
+
 def _quote_ident(name: str) -> str:
     return '"' + name.replace('"', '""') + '"'
 
@@ -356,10 +392,10 @@ def plan_or_push(payload: dict, database_url: str, *, replace: bool, write: bool
     existing = set(insp.get_table_names())
     missing = [t for t in table_order if t not in existing]
     if missing:
-        raise SystemExit(
-            "Target DB is missing tables (deploy the latest app first): "
-            + ", ".join(missing)
-        )
+        print("skip tables missing on live (deploy first if you need them): " + ", ".join(missing))
+        table_order = [t for t in table_order if t in existing]
+        payload = dict(payload)
+        payload["tables"] = {t: payload.get("tables", {}).get(t) or [] for t in table_order}
 
     print("Postgres connection OK")
     with engine.connect() as conn:
@@ -374,6 +410,11 @@ def plan_or_push(payload: dict, database_url: str, *, replace: bool, write: bool
 
     with engine.begin() as conn:
         if replace:
+            # Live sessions (and similar) still point at users even when we skip copying them.
+            for extra in ("sessions", "email_otps", "push_device_tokens"):
+                if extra in existing and extra not in table_order:
+                    n = conn.execute(text(f"DELETE FROM {_quote_ident(extra)}")).rowcount
+                    print(f"cleared {extra}: {n}")
             for table in reversed(table_order):
                 n = conn.execute(text(f"DELETE FROM {_quote_ident(table)}")).rowcount
                 print(f"cleared {table}: {n}")
@@ -399,6 +440,7 @@ def plan_or_push(payload: dict, database_url: str, *, replace: bool, write: bool
             if not rows:
                 print(f"push {table}: 0 (skip)")
                 continue
+            _ensure_varchar_capacity(conn, table, col_types, rows, col_names)
             upserted = 0
             skipped = 0
             cleared_fk = 0
@@ -475,8 +517,6 @@ def plan_or_push(payload: dict, database_url: str, *, replace: bool, write: bool
             print(f"push {table}: {upserted}{suffix}")
 
     print("Done.")
-    # Silence unused import warning if URL parsing is needed later
-    _ = URL
 
 
 def _connect_sqlite(path: Path) -> sqlite3.Connection:
@@ -500,7 +540,8 @@ def main() -> None:
         help="Preset table set. hr = leave/hiring/manpower (usual first copy).",
     )
     parser.add_argument("--table", action="append", default=[], help="Extra table name (repeatable)")
-    parser.add_argument("--include-auth", action="store_true", help="Also copy users/sessions")
+    parser.add_argument("--include-auth", action="store_true", help="Also copy users so FKs match")
+    parser.add_argument("--include-sessions", action="store_true", help="Also copy sessions (usually skip)")
     parser.add_argument("--include-noisy", action="store_true", help="With --group all, also copy logs")
     parser.add_argument("--database-url", help="Postgres URL (else LIVE_DATABASE_URL)")
     parser.add_argument(
@@ -522,6 +563,7 @@ def main() -> None:
         extra=args.table,
         include_auth=args.include_auth,
         include_noisy=args.include_noisy,
+        include_sessions=args.include_sessions,
     )
     conn.close()
     print("tables:", ", ".join(tables))

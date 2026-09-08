@@ -73,7 +73,6 @@ def test_account_created_email_includes_username_and_wordmark(app, monkeypatch):
 
     monkeypatch.setattr(es, '_deliver_email', _capture)
     monkeypatch.setitem(app.config, 'APP_BASE_URL', 'https://app.kynvera.example')
-    monkeypatch.setitem(app.config, 'EMAIL_WORDMARK_URL', 'https://cdn.kynvera.example/kynvera-wordmark.png')
 
     with app.app_context():
         ok = es.send_account_created_email(
@@ -82,12 +81,13 @@ def test_account_created_email_includes_username_and_wordmark(app, monkeypatch):
         assert ok is True
         assert 'arshith' in captured['body']
         assert 'TempPass99' in captured['body']
-        assert 'kynvera-wordmark.png' in captured['html']
-        assert '<img ' in captured['html']
-        assert 'alt="Kynvera"' in captured['html']
+        assert 'Montserrat' in captured['html']
+        assert 'letter-spacing:-0.029em' in captured['html']
+        assert 'Kynvera</span>' in captured['html']
+        assert '<img ' not in captured['html']
         assert 'cid:kynvera-wordmark' not in captured['html']
         assert 'data:image' not in captured['html']
-        assert 'Kynvera</span>' not in captured['html']
+        assert 'kynvera-wordmark.png' not in captured['html']
         assert 'height:8px' not in captured['html']
         assert 'Username' in captured['html']
         assert captured['attachments'] == []
@@ -105,50 +105,51 @@ def test_wordmark_src_skips_localhost(app):
 
     with app.app_context():
         app.config['APP_BASE_URL'] = 'http://localhost:5002'
-        app.config['EMAIL_WORDMARK_URL'] = ''
-        es._cloudinary_wordmark_url_cache = ''
         html = es._branded_auth_html(title='Login details', greeting='Hello', paragraphs=['Hi'])
         assert 'localhost' not in html
         assert 'cid:kynvera-wordmark' not in html
         assert 'kynvera-wordmark.png' not in html
         assert '<img ' not in html
+        assert 'Montserrat' in html
+        assert 'letter-spacing:-0.029em' in html
         assert 'Kynvera</span>' in html
         assert '#ff8e68' in html
 
 
-def test_live_local_send_embeds_wordmark_png(app, monkeypatch):
+def test_live_send_uses_html_wordmark(app, monkeypatch):
     from common import email_service as es
 
     monkeypatch.setitem(app.config, 'TESTING', False)
     monkeypatch.setitem(app.config, 'APP_BASE_URL', 'http://localhost:5002')
     monkeypatch.setitem(app.config, 'EMAIL_WORDMARK_URL', '')
     with app.app_context():
-        es._cloudinary_wordmark_url_cache = ''
         html = es._branded_auth_html(title='Login details', greeting='Hello', paragraphs=['Hi'])
         assert 'localhost' not in html
         assert es._DEFAULT_PUBLIC_WORDMARK_URL not in html
-        assert 'cid:kynvera-wordmark' in html
-        assert '<img ' in html
-        assert 'alt="Kynvera"' in html
-        assert 'Kynvera</span>' not in html
+        assert 'cid:kynvera-wordmark' not in html
+        assert '<img ' not in html
+        assert 'Montserrat' in html
+        assert 'font-weight:700' in html
+        assert 'letter-spacing:-0.029em' in html
+        assert 'Kynvera</span>' in html
+        assert 'fonts.googleapis.com' in html
 
 
-def test_wordmark_uses_official_png_when_hosted(app, monkeypatch):
+def test_wordmark_stays_html_when_hosted_url_set(app, monkeypatch):
     from common import email_service as es
 
     monkeypatch.setitem(app.config, 'EMAIL_WORDMARK_URL', 'https://cdn.kynvera.example/kynvera-wordmark.png')
     with app.app_context():
-        es._cloudinary_wordmark_url_cache = ''
         html = es._branded_auth_html(title='Login details', greeting='Hello', paragraphs=['Hi'])
-        assert 'https://cdn.kynvera.example/kynvera-wordmark.png' in html
-        assert '<img ' in html
-        assert 'alt="Kynvera"' in html
-        assert 'Kynvera</span>' not in html
+        assert 'https://cdn.kynvera.example/kynvera-wordmark.png' not in html
+        assert '<img ' not in html
+        assert 'Kynvera</span>' in html
+        assert 'Montserrat' in html
         assert 'cid:kynvera-wordmark' not in html
         assert 'data:image' not in html
 
 
-def test_brevo_replaces_cid_image_with_hosted_wordmark(app, monkeypatch):
+def test_brevo_replaces_cid_image_with_html_wordmark(app, monkeypatch):
     from common import email_service as es
 
     captured = {}
@@ -172,7 +173,6 @@ def test_brevo_replaces_cid_image_with_hosted_wordmark(app, monkeypatch):
     with app.app_context():
         monkeypatch.setitem(app.config, 'MAIL_DEFAULT_SENDER', 'noreply@injaaz.ae')
         monkeypatch.setitem(app.config, 'EMAIL_WORDMARK_URL', 'https://cdn.kynvera.example/kynvera-wordmark.png')
-        es._cloudinary_wordmark_url_cache = ''
         ok = es._send_email_brevo_http(
             app, 'user@example.com', 'Subject', 'Body', html, None,
             [{'filename': 'kynvera-wordmark.png', 'content': b'x', 'mime_type': 'image/png',
@@ -182,7 +182,9 @@ def test_brevo_replaces_cid_image_with_hosted_wordmark(app, monkeypatch):
     assert ok is True
     assert 'cid:' not in captured['html']
     assert 'data:image' not in captured['html']
-    assert 'https://cdn.kynvera.example/kynvera-wordmark.png' in captured['html']
+    assert 'https://cdn.kynvera.example/kynvera-wordmark.png' not in captured['html']
+    assert 'Kynvera</span>' in captured['html']
+    assert 'Montserrat' in captured['html']
     assert not captured['attachment']
 
 
@@ -211,7 +213,6 @@ def test_brevo_replaces_cid_image_with_html_wordmark_without_host(app, monkeypat
         monkeypatch.setitem(app.config, 'MAIL_DEFAULT_SENDER', 'noreply@injaaz.ae')
         monkeypatch.setitem(app.config, 'EMAIL_WORDMARK_URL', '')
         monkeypatch.setitem(app.config, 'APP_BASE_URL', 'http://localhost:5002')
-        es._cloudinary_wordmark_url_cache = ''
         ok = es._send_email_brevo_http(
             app, 'user@example.com', 'Subject', 'Body', html, None,
             [{'filename': 'kynvera-wordmark.png', 'content': b'x', 'mime_type': 'image/png',
@@ -222,6 +223,7 @@ def test_brevo_replaces_cid_image_with_html_wordmark_without_host(app, monkeypat
     assert 'cid:' not in captured['html']
     assert 'data:image' not in captured['html']
     assert 'Kynvera</span>' in captured['html']
+    assert 'Montserrat' in captured['html']
     assert not captured['attachment']
 
 
@@ -309,6 +311,8 @@ def test_mfa_emails_log_preview_and_inline_wordmark(app, monkeypatch):
         assert captured['subject'] == 'Your Kynvera authenticator is on'
         assert 'is now required' in captured['body']
         assert 'Kynvera</span>' in captured['html']
+        assert 'Montserrat' in captured['html']
+        assert 'letter-spacing:-0.029em' in captured['html']
         assert '<img ' not in captured['html']
         row = EmailLog.query.filter_by(source='auth').order_by(EmailLog.id.desc()).first()
         assert row.body_preview == 'Authenticator enabled notification'

@@ -1350,6 +1350,12 @@ def create_app():
                 init_automations_scheduler(app)
         except Exception as sched_err:
             logger.warning("⚠️  Automations scheduler not started: %s", sched_err)
+        try:
+            if not app.config.get('KYNVERA_MARKETING_ONLY'):
+                from app.db_backup_scheduler import init_scheduler as init_db_backup_scheduler
+                init_db_backup_scheduler(app)
+        except Exception as sched_err:
+            logger.warning("⚠️  DB snapshot scheduler not started: %s", sched_err)
     else:
         logger.warning("⚠️  Automations blueprint not available - check imports")
     
