@@ -622,7 +622,11 @@ function updateModuleVisibility(user) {
 
   updateModuleGridLayout();
 
-  if (document.body.classList.contains('page-dashboard') && document.getElementById('modulesGrid')) {
+  if (
+    document.body.classList.contains('page-dashboard') &&
+    document.getElementById('modulesGrid') &&
+    !document.body.classList.contains('profile-modal-open')
+  ) {
     scheduleDashboardModuleEntrance();
   }
 
@@ -857,12 +861,23 @@ function bindProfileModalScrollTrap() {
   }, { passive: false });
 }
 
+let _paintedProfileSnapshot = null;
+
+function profileUserSnapshot(user) {
+  try {
+    return JSON.stringify(user || null);
+  } catch (e) {
+    return '';
+  }
+}
+
 window.openProfileModal = function() {
   const modal = document.getElementById('profileModal');
   if (modal) {
     bindProfileModalScrollTrap();
     modal.classList.add('active');
     lockProfileModalPageScroll();
+    _paintedProfileSnapshot = null;
     loadProfileData();
   }
 };
@@ -891,8 +906,6 @@ function loadProfileData() {
 
   if (cachedParsed) {
     displayProfileData(cachedParsed);
-    checkAndShowAdminMenu(cachedParsed);
-    updateModuleVisibility(cachedParsed);
   }
 
   if (!token) {
@@ -918,8 +931,6 @@ function loadProfileData() {
           const user = JSON.parse(cachedUser);
           console.log('Using cached user data due to 401');
           displayProfileData(user);
-          checkAndShowAdminMenu(user);
-          updateModuleVisibility(user);
           return null;
         } catch (e) {
           console.warn('Failed to parse cached user data');
@@ -934,11 +945,6 @@ function loadProfileData() {
     if (data && data.user) {
       localStorage.setItem('user', JSON.stringify(data.user));
       displayProfileData(data.user);
-      checkAndShowAdminMenu(data.user);
-      updateModuleVisibility(data.user);
-      if (typeof loadPendingCount === 'function') {
-        loadPendingCount(data.user);
-      }
     } else {
       throw new Error('No user data received');
     }
@@ -950,8 +956,6 @@ function loadProfileData() {
         const user = JSON.parse(cachedUser);
         console.log('Using cached user data as fallback');
         displayProfileData(user);
-        checkAndShowAdminMenu(user);
-        updateModuleVisibility(user);
         return;
       } catch (e) {
         console.warn('Failed to parse cached user data');
@@ -966,6 +970,16 @@ function displayProfileData(user) {
     return;
   }
   const profileContent = document.getElementById('profileContent');
+  const nextSnap = profileUserSnapshot(user);
+  if (
+    nextSnap &&
+    nextSnap === _paintedProfileSnapshot &&
+    profileContent &&
+    profileContent.querySelector('.pro-shell')
+  ) {
+    return;
+  }
+  _paintedProfileSnapshot = nextSnap;
   
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Never';
