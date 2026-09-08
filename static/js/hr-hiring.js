@@ -517,7 +517,7 @@
     });
   }
 
-  function toast(msg, isError) {
+  function toast(msg, isError, html) {
     let el = document.getElementById('hhToast');
     if (!el) {
       el = document.createElement('div');
@@ -525,13 +525,19 @@
       el.className = 'hh-toast';
       document.body.appendChild(el);
     }
-    el.textContent = msg;
+    if (html) {
+      el.innerHTML = html;
+      el.classList.add('has-action');
+    } else {
+      el.textContent = msg;
+      el.classList.remove('has-action');
+    }
     el.classList.toggle('error', !!isError);
     el.classList.add('show');
     clearTimeout(el._t);
     el._t = setTimeout(function () {
       el.classList.remove('show');
-    }, 2800);
+    }, html ? 8000 : 2800);
   }
 
   async function api(url, opts) {
@@ -2120,12 +2126,18 @@
           method: 'PATCH',
           json: { pipeline_status: value },
         });
+        const cand = data.candidate || candidateState || {};
         const toastMsg = value === 'on_hold'
           ? 'Process put on hold'
           : (value === 'not_hired'
             ? 'Marked as not hired'
             : (value === 'candidate_employee' ? 'File closed' : 'Status updated'));
-        toast(toastMsg);
+        if (value === 'candidate_employee' && !cand.on_employee_list) {
+          toast(toastMsg, false,
+            'File closed. <a href="/hr/employee-from-hiring">Add to Employee List</a>');
+        } else {
+          toast(toastMsg);
+        }
         render(applyCandidate(data.candidate || candidateState, {
           pipeline_status: value,
           pipeline_label: PIPELINE_LABELS[value],

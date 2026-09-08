@@ -134,7 +134,10 @@
   /* Warm the login brand panel in idle time so Sign in is instant. */
   var warmLoginArt = function () {
     var img = new Image();
-    img.src = '/static/images/auth/auth-brand-panel.webp?v=1';
+    img.src = '/static/images/auth/auth-brand-panel.webp?v=4';
+    try {
+      fetch('/static/images/auth/auth-brand-panel.mp4?v=4', { credentials: 'same-origin' });
+    } catch (err) { /* ignore */ }
   };
   if (window.requestIdleCallback) {
     window.requestIdleCallback(warmLoginArt, { timeout: 2500 });

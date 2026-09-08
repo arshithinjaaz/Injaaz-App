@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="theme-color" content="#ff8e68">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Employee from hiring · Kynvera</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/kynvera/kynvera-mark-32.png') }}?v=3">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=22">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hr-hiring.css') }}?v=142">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hr-employee-list.css') }}?v=26">
+  {% set active_page = 'hr' %}
+</head>
+<body class="hh-page el-page">
+  {% include 'partials/hr_embed_optional_navbar.html' %}
+
+  <div class="hh-shell" id="efhRoot">
+    {% include 'partials/hr_hiring_sidebar.html' %}
+
+    <main class="hh-main">
+      <div class="hh-topbar">
+        <div>
+          {% set module_back_url = module_back_url|default(url_for('hr.hr_dashboard')) %}
+          {% include 'partials/module_back_link.html' %}
+          <h1 class="hh-title">Employee from hiring</h1>
+          <p class="hh-subtitle">All pending hires — search by Emp ID or name</p>
+        </div>
+      </div>
+
+      <div class="el-summary" id="efhSummary" aria-live="polite">
+        <div class="el-stat">
+          <span class="el-stat-val" id="efhStatTotal">—</span>
+          <span class="el-stat-label">Waiting</span>
+        </div>
+        <div class="el-stat">
+          <span class="el-stat-val" id="efhStatShown">—</span>
+          <span class="el-stat-label">Showing</span>
+        </div>
+        <div class="el-stat">
+          <span class="el-stat-val el-stat-val--alert" id="efhStatIncomplete">—</span>
+          <span class="el-stat-label">Incomplete</span>
+        </div>
+      </div>
+
+      <a class="el-hiring-banner" id="efhHiringBanner" href="/hr/employee-list" hidden>
+        <span id="efhHiringBannerText">Confirm Emp ID and name to add these people to the staff list</span>
+        <span class="el-hiring-banner-go">Open Employee List</span>
+      </a>
+
+      <div class="hh-toolbar el-toolbar">
+        <label class="el-search-label" for="efhSearch">Find staff by Emp ID or name</label>
+        <div class="el-ac-wrap">
+          <div class="hh-search el-search">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+            </svg>
+            <input type="search" id="efhSearch" placeholder="Type Emp ID or name…" autocomplete="off" inputmode="search"
+              aria-label="Search by Emp ID or name">
+            <button type="button" class="el-search-clear" id="efhSearchClear" hidden aria-label="Clear search">×</button>
+          </div>
+        </div>
+        <label class="el-search-label" for="efhCompany">Company</label>
+        <select id="efhCompany" class="hh-select" aria-label="Company filter">
+          <option value="all">All companies</option>
+          <option value="Kynvera">Kynvera</option>
+          <option value="Tourism">Tourism</option>
+          <option value="L&P">L&amp;P</option>
+        </select>
+        <label class="el-toggle" for="efhIncompleteOnly">
+          <input type="checkbox" id="efhIncompleteOnly">
+          <span>Incomplete only</span>
+        </label>
+      </div>
+
+      <p class="el-status" id="efhStatus">Loading people from hiring…</p>
+      <div class="el-grid" id="efhGrid" hidden></div>
+    </main>
+  </div>
+
+  {% include 'partials/employee_from_hiring_promote_modal.html' %}
+
+  <div id="elToast" class="el-toast" hidden role="status" aria-live="polite">
+    <button type="button" class="el-toast-close" id="elToastClose" aria-label="Dismiss">&times;</button>
+    <p class="el-toast-msg" id="elToastMsg"></p>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/injaaz-uae-datetime.js') }}"></script>
+  <script src="{{ url_for('static', filename='api-client.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  <script>window.FILES_SAVE_MODULE = 'leave'; window.FILES_SAVE_MODULE_LABEL = 'Employee from hiring';</script>
+  <script src="{{ url_for('static', filename='js/files-save.js') }}?v=17"></script>
+  <script src="{{ url_for('static', filename='js/hr-employee-from-hiring.js') }}?v=11"></script>
+</body>
+</html>

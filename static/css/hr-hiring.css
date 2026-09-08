@@ -151,20 +151,95 @@ body.hh-page .nav .logo {
   font-weight: 650;
 }
 
+.hh-nav-badge {
+  margin-left: auto;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--hh-brand);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 750;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.hh-nav-item.active .hh-nav-badge {
+  background: var(--hh-brand-dark, #e05f36);
+}
+
 .hh-nav-group {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
 }
 
+.hh-nav-group.is-open > .hh-nav-item > .hh-nav-badge {
+  display: none;
+}
+
 .hh-nav-sub {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  margin: 0.1rem 0 0.2rem;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  visibility: hidden;
+  margin: 0 0 0 1.15rem;
   padding-left: 0.85rem;
-  border-left: 2px solid rgba(255, 142, 104, 0.28);
-  margin-left: 1.15rem;
+  border-left: 2px solid transparent;
+  pointer-events: none;
+  transition:
+    max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s ease,
+    margin 0.28s ease,
+    border-color 0.28s ease,
+    visibility 0s linear 0.3s;
+}
+
+.hh-nav-group.is-open .hh-nav-sub {
+  max-height: 14rem;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  margin: 0.1rem 0 0.2rem 1.15rem;
+  border-left-color: rgba(255, 142, 104, 0.28);
+  transition:
+    max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s ease,
+    margin 0.28s ease,
+    border-color 0.28s ease,
+    visibility 0s linear 0s;
+}
+
+.hh-sidebar.hh-nav-will-animate .hh-nav-group.is-open .hh-nav-sub {
+  max-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  margin: 0 0 0 1.15rem;
+  border-left-color: transparent;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hh-nav-sub,
+  .hh-nav-group.is-open .hh-nav-sub {
+    transition: none;
+  }
+
+  .hh-sidebar.hh-nav-will-animate .hh-nav-group.is-open .hh-nav-sub {
+    max-height: 14rem;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    margin: 0.1rem 0 0.2rem 1.15rem;
+    border-left-color: rgba(255, 142, 104, 0.28);
+  }
 }
 
 .hh-nav button.hh-nav-item {
@@ -3768,6 +3843,16 @@ body.hh-page .nav .logo {
 .hh-toast.show {
   opacity: 1;
   transform: translateY(0);
+}
+
+.hh-toast.has-action {
+  pointer-events: auto;
+}
+
+.hh-toast a {
+  color: #fff;
+  text-decoration: underline;
+  font-weight: 750;
 }
 
 .hh-toast.error {

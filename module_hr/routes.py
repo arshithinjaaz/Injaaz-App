@@ -69,6 +69,7 @@ from .pdf_service import generate_hr_pdf, get_supported_pdf_forms
 from .hiring_documents import register_hiring_document_routes
 from .hiring_offer_letters import register_hiring_offer_letter_routes
 from .leave_tracker import register_leave_tracker_routes
+from .employee_from_hiring import register_employee_from_hiring_routes
 from .manpower_tracker import register_manpower_tracker_routes
 from .staffing_link import register_staffing_link_routes
 
@@ -80,6 +81,8 @@ register_hiring_document_routes(hr_bp)
 register_hiring_offer_letter_routes(hr_bp)
 # Leave Tracker — Sick + Annual (from Jan 2026) under /hr/leave-tracker
 register_leave_tracker_routes(hr_bp)
+# Employee from hiring — promote Candidate employed onto the staff roster
+register_employee_from_hiring_routes(hr_bp)
 # Manpower Tracker — project vacancy fill board under /hr/manpower-tracker
 register_manpower_tracker_routes(hr_bp)
 # Staffing Assignments — Hiring ↔ Manpower vacancy link
@@ -91,6 +94,20 @@ def _hr_embed_mode():
     """?embed=1 — hide main navbar in HR form pages shown inside modals."""
     v = (request.args.get('embed') or '').strip().lower()
     return {'hr_embed': v in ('1', 'true', 'yes', 'fullscreen', 'full')}
+
+
+@hr_bp.context_processor
+def _employee_from_hiring_badge():
+    """Sidebar badge: people waiting to move from hiring onto the staff list."""
+    count = 0
+    try:
+        from module_hr.employee_from_hiring import pending_from_hiring_count
+        user = get_current_user()
+        if user and user.has_hiring_submodule():
+            count = pending_from_hiring_count()
+    except Exception:
+        count = 0
+    return {'employee_from_hiring_count': count}
 
 
 def get_current_user():

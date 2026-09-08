@@ -12,7 +12,9 @@
 <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/kynvera/kynvera-mark-180.png') }}?v=4">
 {# Start the brand panel immediately — do not wait for CSS/fonts to discover it. #}
 <link rel="preload" as="image" type="image/webp" fetchpriority="high"
-      href="{{ url_for('static', filename='images/auth/auth-brand-panel.webp') }}?v=1">
+      href="{{ url_for('static', filename='images/auth/auth-brand-panel.webp') }}?v=4">
+<link rel="preload" as="video" type="video/mp4"
+      href="{{ url_for('static', filename='images/auth/auth-brand-panel.mp4') }}?v=4">
 <style>
   html.auth-html-login,
   html.auth-html-register,
@@ -24,4 +26,4 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v=46">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v=51">

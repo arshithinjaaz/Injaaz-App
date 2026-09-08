@@ -73,6 +73,7 @@ def test_account_created_email_includes_username_and_wordmark(app, monkeypatch):
 
     monkeypatch.setattr(es, '_deliver_email', _capture)
     monkeypatch.setitem(app.config, 'APP_BASE_URL', 'https://app.kynvera.example')
+    monkeypatch.setitem(app.config, 'EMAIL_WORDMARK_URL', 'https://cdn.kynvera.example/kynvera-wordmark.png')
 
     with app.app_context():
         ok = es.send_account_created_email(
@@ -115,7 +116,7 @@ def test_wordmark_src_skips_localhost(app):
         assert '#ff8e68' in html
 
 
-def test_live_local_send_uses_public_wordmark_png(app, monkeypatch):
+def test_live_local_send_embeds_wordmark_png(app, monkeypatch):
     from common import email_service as es
 
     monkeypatch.setitem(app.config, 'TESTING', False)
@@ -125,8 +126,8 @@ def test_live_local_send_uses_public_wordmark_png(app, monkeypatch):
         es._cloudinary_wordmark_url_cache = ''
         html = es._branded_auth_html(title='Login details', greeting='Hello', paragraphs=['Hi'])
         assert 'localhost' not in html
-        assert 'cid:kynvera-wordmark' not in html
-        assert es._DEFAULT_PUBLIC_WORDMARK_URL in html
+        assert es._DEFAULT_PUBLIC_WORDMARK_URL not in html
+        assert 'cid:kynvera-wordmark' in html
         assert '<img ' in html
         assert 'alt="Kynvera"' in html
         assert 'Kynvera</span>' not in html

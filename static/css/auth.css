@@ -6,8 +6,8 @@
 
 :root {
   --auth-brand-panel-image: image-set(
-    url('../images/auth/auth-brand-panel.webp') type('image/webp'),
-    url('../images/auth/auth-brand-panel.png') type('image/jpeg')
+    url('../images/auth/auth-brand-panel.webp?v=4') type('image/webp'),
+    url('../images/auth/auth-brand-panel.png?v=4') type('image/png')
   );
 }
 
@@ -126,10 +126,34 @@
   overflow: hidden;
   isolation: isolate;
   background-color: #ff8e68;
-  /* Grainy photo first — tint overlays below keep texture visible */
   background-image: var(--auth-brand-panel-image);
   background-size: cover;
   background-position: center;
+}
+
+.auth-brand-video {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  opacity: 0;
+  /* Hide instantly — never fade out, or a seek on that layer reads as a cut. */
+  transition: none;
+}
+
+.auth-brand-video.is-on {
+  z-index: 1;
+  opacity: 1;
+  transition: opacity 0.7s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-brand-video {
+    display: none;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -147,7 +171,7 @@
   pointer-events: none;
   background: #ff8e68;
   mix-blend-mode: soft-light;
-  opacity: 0.75;
+  opacity: 0.22;
 }
 
 .auth-brand-side-overlay,
@@ -936,8 +960,7 @@
 @media (min-width: 1024px) {
   :is(.auth-page-login, .auth-page-register) .auth-form-alt {
     margin-top: 1.1rem;
-    padding-top: 1.2rem;
-    border-top: 1px solid rgba(28, 25, 23, 0.08);
+    padding-top: 0;
   }
 
   :is(.auth-page-login, .auth-page-register) .auth-submit-btn {

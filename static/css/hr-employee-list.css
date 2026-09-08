@@ -30,7 +30,7 @@ body.el-page .hh-topbar {
 
 .el-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
   gap: 0.75rem;
   margin: 0 0 1rem;
 }
@@ -60,6 +60,10 @@ body.el-page .hh-topbar {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--hh-muted, #5c616e);
+}
+
+.el-stat-val--alert {
+  color: var(--hh-brand-dark, #e05f36);
 }
 
 /* Horizontal toolbar — never column, or flex-basis becomes height. */
@@ -195,6 +199,17 @@ body.el-page .hh-topbar {
   box-shadow: 0 10px 28px rgba(224, 95, 54, 0.12);
 }
 
+.el-card.is-alert {
+  border-color: #f3d19a;
+  border-left: 3px solid #e05f36;
+  background: #fffdf8;
+}
+
+.el-card.is-alert:hover,
+.el-card.is-alert.is-active {
+  border-color: #e05f36;
+}
+
 .el-avatar {
   flex-shrink: 0;
   width: 44px;
@@ -282,6 +297,116 @@ body.el-page .hh-topbar {
   font-size: 0.68rem;
   font-weight: 650;
   line-height: 1.3;
+}
+
+.el-card.is-listed {
+  flex-direction: column;
+  align-items: stretch;
+  border-color: rgba(255, 142, 104, 0.45);
+}
+
+.el-card-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  width: 100%;
+}
+
+.el-listed-hint {
+  display: block;
+  width: 100%;
+  margin-top: 0.55rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--hh-brand-dark, #e05f36);
+}
+
+.el-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+
+.el-reason {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: var(--hh-progress-bg, #fef3c7);
+  color: var(--hh-progress-fg, #b45309);
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.el-hiring-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 0.85rem;
+  padding: 0.75rem 1rem;
+  min-height: 44px;
+  border-radius: 12px;
+  background: var(--hh-brand-soft, #fff4ef);
+  border: 1px solid rgba(255, 142, 104, 0.35);
+  color: var(--hh-brand-dark, #e05f36);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.el-hiring-banner[hidden] {
+  display: none !important;
+}
+
+.el-hiring-banner:hover {
+  border-color: var(--hh-brand, #ff8e68);
+}
+
+.el-hiring-banner-go {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.el-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--hh-border, #e9eaee);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--hh-text, #191b23);
+  cursor: pointer;
+  user-select: none;
+}
+
+.el-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--hh-brand, #ff8e68);
+}
+
+.el-toggle:has(input:checked) {
+  background: var(--hh-brand-soft, #fff4ef);
+  border-color: rgba(255, 142, 104, 0.45);
+  color: var(--hh-brand-dark, #e05f36);
+}
+
+.el-required {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hh-progress-fg, #b45309);
 }
 
 .el-modal {
@@ -383,6 +508,22 @@ body.el-page .hh-topbar {
   font-weight: 650;
   color: #6b7280;
   font-variant-numeric: tabular-nums;
+}
+
+.el-modal-origin {
+  margin: -0.55rem 0 1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--hh-brand-dark, #e05f36);
+}
+
+.el-modal-origin[hidden],
+.el-modal-card .el-listed-hint[hidden] {
+  display: none !important;
+}
+
+.el-modal-card .el-listed-hint {
+  margin: -0.35rem 0 1rem;
 }
 
 .el-modal-meta {
@@ -550,9 +691,15 @@ body.el-page .hh-topbar {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .el-summary {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .el-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -568,7 +715,8 @@ body.el-page .hh-topbar {
   }
 
   .el-ac-wrap,
-  .el-toolbar .hh-select {
+  .el-toolbar .hh-select,
+  .el-toggle {
     width: 100%;
     min-width: 0;
     flex: none;

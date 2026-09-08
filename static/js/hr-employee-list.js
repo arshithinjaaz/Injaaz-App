@@ -5,6 +5,7 @@
   'use strict';
 
   var employees = [];
+  var pendingHiring = [];
   var filtered = [];
   var selectedId = null;
   var currentEmp = null;
@@ -93,11 +94,47 @@
     return (($('elCompany') && $('elCompany').value) || 'all').trim();
   }
 
+  function incompleteOnly() {
+    return !!( $('elIncompleteOnly') && $('elIncompleteOnly').checked );
+  }
+
+  function requiredReasonsFor(emp) {
+    if (window.Efh) {
+      return window.Efh.requiredReasons(emp, emp && emp.source === 'hiring');
+    }
+    var reasons = [];
+    var id = String((emp && emp.emp_id) || '').trim();
+    var name = String((emp && emp.full_name) || '').trim();
+    if (!id || id === '—') reasons.push('emp_id');
+    if (!name || name === '—') reasons.push('full_name');
+    return reasons;
+  }
+
+  function withReasons(emp, source) {
+    var row = Object.assign({}, emp, { source: source || emp.source || 'roster' });
+    row.required_reasons = row.required_reasons && row.required_reasons.length
+      ? row.required_reasons
+      : requiredReasonsFor(row);
+    return row;
+  }
+
+  function allCards() {
+    var roster = employees.map(function (emp) {
+      return withReasons(emp, 'roster');
+    });
+    var hiring = pendingHiring.filter(function (row) {
+      return !row.already_on_list;
+    }).map(function (row) {
+      return withReasons(row, 'hiring');
+    });
+    return roster.concat(hiring);
+  }
+
   function matchesQuery(emp, q) {
     if (!q) return true;
     var id = String(emp.emp_id || '').toLowerCase();
     var name = String(emp.full_name || '').toLowerCase();
-    var desig = String(emp.designation || '').toLowerCase();
+    var desig = String(emp.designation || emp.role || '').toLowerCase();
     var label = id + ' — ' + name;
     return id.indexOf(q) !== -1 || name.indexOf(q) !== -1 || desig.indexOf(q) !== -1 || label.indexOf(q) !== -1;
   }
@@ -105,19 +142,19 @@
   function currentRows() {
     var q = queryNorm();
     var company = companyFilter();
-    return employees.filter(function (emp) {
-      if (company && company !== 'all' && String(emp.company || '') !== company) return false;
+    var incomplete = incompleteOnly();
+    return allCards().filter(function (emp) {
+      if (company && company !== 'all') {
+        var empCompany = String(emp.company || '');
+        if (emp.source === 'hiring') {
+          if (empCompany && empCompany !== company) return false;
+        } else if (empCompany !== company) {
+          return false;
+        }
+      }
+      if (incomplete && !(emp.required_reasons && emp.required_reasons.length)) return false;
       return matchesQuery(emp, q);
     });
-  }
-
-  function uniqueCompanies(list) {
-    var seen = {};
-    (list || []).forEach(function (e) {
-      var c = (e.company || '').trim();
-      if (c) seen[c] = true;
-    });
-    return Object.keys(seen).length;
   }
 
   function uniqueCompanyNames(list) {
@@ -148,20 +185,44 @@
     }
   }
 
+  function updateHiringBanner() {
+    var banner = $('elHiringBanner');
+    var text = $('elHiringBannerText');
+    var n = pendingHiring.length;
+    if (!banner) return;
+    if (!n) {
+      banner.hidden = true;
+      return;
+    }
+    banner.hidden = false;
+    if (text) {
+      text.textContent =
+        n === 1
+          ? '1 person from hiring is waiting to be added'
+          : n + ' people from hiring are waiting to be added';
+    }
+  }
+
   function renderGrid() {
     var grid = $('elGrid');
     var status = $('elStatus');
     var clearBtn = $('elSearchClear');
+    var cards = allCards();
+    var incompleteCount = cards.filter(function (e) {
+      return e.required_reasons && e.required_reasons.length;
+    }).length;
     filtered = currentRows();
     if (clearBtn) clearBtn.hidden = !queryNorm();
     if ($('elStatTotal')) $('elStatTotal').textContent = String(employees.length);
     if ($('elStatShown')) $('elStatShown').textContent = String(filtered.length);
-    if ($('elStatCompanies')) $('elStatCompanies').textContent = String(uniqueCompanies(employees));
+    if ($('elStatIncomplete')) $('elStatIncomplete').textContent = String(incompleteCount);
+    if ($('elStatPending')) $('elStatPending').textContent = String(pendingHiring.length);
+    updateHiringBanner();
 
-    if (!employees.length) {
+    if (!cards.length) {
       if (status) {
         status.hidden = false;
-        status.textContent = 'No staff yet. Add employees from Leave Tracker.';
+        status.textContent = 'No staff yet. Add employees or move people from hiring.';
       }
       if (grid) {
         grid.hidden = true;
@@ -172,7 +233,9 @@
     if (!filtered.length) {
       if (status) {
         status.hidden = false;
-        status.textContent = 'No staff match that Emp ID or name.';
+        status.textContent = incompleteOnly()
+          ? 'No incomplete records.'
+          : 'No staff match that Emp ID or name.';
       }
       if (grid) {
         grid.hidden = true;
@@ -187,6 +250,12 @@
     if (!grid) return;
     grid.hidden = false;
     grid.innerHTML = filtered.map(function (e) {
+      if (window.Efh && window.Efh.cardHtml) {
+        var extra = selectedId != null && e.source !== 'hiring' && String(e.id) === String(selectedId)
+          ? 'is-active'
+          : '';
+        return window.Efh.cardHtml(e, extra);
+      }
       var active = selectedId != null && String(e.id) === String(selectedId) ? ' is-active' : '';
       return (
         '<button type="button" class="el-card' + active + '" data-emp-open="' + e.id + '">' +
@@ -208,6 +277,24 @@
       if (String(employees[i].id) === key) return employees[i];
     }
     return null;
+  }
+
+  function findPending(id) {
+    var key = String(id);
+    for (var i = 0; i < pendingHiring.length; i++) {
+      if (String(pendingHiring[i].hiring_candidate_id) === key) return pendingHiring[i];
+    }
+    return null;
+  }
+
+  function openPromoteFromList(id) {
+    if (!window.Efh) return;
+    var row = findPending(id);
+    if (window.Efh.openHiringCard) {
+      window.Efh.openHiringCard(row);
+      return;
+    }
+    if (window.Efh.openPromoteModal) window.Efh.openPromoteModal(row);
   }
 
   function showModalPane(pane) {
@@ -239,6 +326,28 @@
     $('elModalAvatar').textContent = initials(emp.full_name);
     $('elModalName').textContent = emp.full_name || '—';
     $('elModalEmpId').textContent = emp.emp_id || '—';
+    var origin = $('elModalOrigin');
+    if (origin) origin.hidden = !emp.from_hiring;
+    var pending = emp.pending_hire;
+    var mergeHint = $('elModalMergeHint');
+    var mergeBtn = $('elModalMergeBtn');
+    var closeBtn = $('elModalCloseBtn');
+    if (mergeHint) {
+      if (pending) {
+        mergeHint.hidden = false;
+        mergeHint.textContent = pending.full_name && pending.full_name !== emp.full_name
+          ? 'Hiring has this person as ' + pending.full_name + '. Merge into one record?'
+          : 'This person also has a hiring card waiting. Merge into one record?';
+      } else {
+        mergeHint.hidden = true;
+        mergeHint.textContent = '';
+      }
+    }
+    if (mergeBtn) mergeBtn.hidden = !pending;
+    if (closeBtn) {
+      closeBtn.classList.toggle('hh-btn-primary', !pending);
+      closeBtn.classList.toggle('hh-btn-secondary', !!pending);
+    }
     $('elModalDesig').textContent = emp.designation || '—';
     $('elModalCompany').textContent = emp.company || '—';
     if ($('elDeleteAvatar')) $('elDeleteAvatar').textContent = initials(emp.full_name);
@@ -262,7 +371,9 @@
     if (modal) modal.hidden = true;
     showModalPane('view');
     if (!$('elAddModal') || $('elAddModal').hidden) {
-      document.body.style.overflow = '';
+      if (!$('efhPromoteModal') || $('efhPromoteModal').hidden) {
+        document.body.style.overflow = '';
+      }
     }
   }
 
@@ -328,7 +439,7 @@
       status.hidden = false;
       status.textContent = 'Loading staff…';
     }
-    return fetch('/hr/api/leave-tracker/employees', {
+    var roster = fetch('/hr/api/leave-tracker/employees', {
       credentials: 'same-origin',
       headers: authHeaders(),
     }).then(function (r) {
@@ -338,8 +449,23 @@
         }
         return unwrap(body);
       });
-    }).then(function (data) {
-      employees = data.employees || [];
+    });
+    var hiring = window.Efh && window.Efh.loadPending
+      ? window.Efh.loadPending().catch(function () { return []; })
+      : Promise.resolve([]);
+    return Promise.all([roster, hiring]).then(function (parts) {
+      var data = parts[0];
+      pendingHiring = parts[1] || [];
+      var pendingByMatch = {};
+      pendingHiring.forEach(function (row) {
+        var matchId = row.matched_employee && row.matched_employee.id;
+        if (matchId != null) pendingByMatch[String(matchId)] = row;
+      });
+      employees = (data.employees || []).map(function (emp) {
+        var next = Object.assign({}, emp);
+        if (pendingByMatch[String(emp.id)]) next.pending_hire = pendingByMatch[String(emp.id)];
+        return next;
+      });
       refreshCompanyChoices();
       renderGrid();
     }).catch(function (err) {
@@ -413,7 +539,9 @@
     var modal = $('elAddModal');
     if (modal) modal.hidden = true;
     if (!$('elModal') || $('elModal').hidden) {
-      document.body.style.overflow = '';
+      if (!$('efhPromoteModal') || $('efhPromoteModal').hidden) {
+        document.body.style.overflow = '';
+      }
     }
   }
 
@@ -510,8 +638,15 @@
       });
     }
     if (company) company.addEventListener('change', renderGrid);
+    var incomplete = $('elIncompleteOnly');
+    if (incomplete) incomplete.addEventListener('change', renderGrid);
     if (grid) {
       grid.addEventListener('click', function (e) {
+        var hiringBtn = e.target.closest && e.target.closest('[data-efh-open]');
+        if (hiringBtn && window.Efh) {
+          openPromoteFromList(hiringBtn.getAttribute('data-efh-open'));
+          return;
+        }
         var btn = e.target.closest && e.target.closest('[data-emp-open]');
         if (!btn) return;
         openModal(findEmp(btn.getAttribute('data-emp-open')));
@@ -536,6 +671,13 @@
         setTimeout(function () {
           $('elEditName') && $('elEditName').focus();
         }, 50);
+      });
+    $('elModalMergeBtn') &&
+      $('elModalMergeBtn').addEventListener('click', function () {
+        if (!currentEmp || !currentEmp.pending_hire || !window.Efh || !window.Efh.openDismissModal) return;
+        var pending = currentEmp.pending_hire;
+        closeModal();
+        window.Efh.openDismissModal(pending);
       });
     $('elEditCancel') &&
       $('elEditCancel').addEventListener('click', function () {
@@ -601,6 +743,9 @@
       });
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
+      if ($('efhPromoteModal') && !$('efhPromoteModal').hidden) {
+        return;
+      }
       if (addModal && !addModal.hidden) {
         closeAddModal();
         return;
@@ -611,6 +756,11 @@
       }
       closeModal();
     });
+    if (window.Efh && window.Efh.bindPromoteModal) {
+      window.Efh.bindPromoteModal(function () {
+        return loadEmployees();
+      });
+    }
   }
 
   document.addEventListener('DOMContentLoaded', function () {

@@ -649,26 +649,38 @@ def change_password():
         return error_response('Password change failed', 500, 'INTERNAL_ERROR')
 
 
+def _find_user_for_password_reset(identifier):
+    """Match an account by profile email or username. Do not use the typed string as To:."""
+    raw = (identifier or '').strip()
+    if not raw:
+        return None
+    lowered = raw.lower()
+    user = None
+    if '@' in raw:
+        user = User.query.filter(db.func.lower(User.email) == lowered).first()
+    if user is None:
+        user = User.query.filter(db.func.lower(User.username) == lowered).first()
+    return user
+
+
 @auth_bp.route('/forgot-password', methods=['POST'])
 @rate_limit_if_available('5 per minute')
 def forgot_password():
-    """Email a time-limited reset link. Always 200 for valid emails so we do not leak accounts."""
+    """Email a reset link only to the address saved on that user. Always 200 so we do not leak accounts."""
     data = request.get_json(force=True, silent=True) or {}
-    email = (data.get('email') or '').strip().lower()
-    sent_message = 'If that email is on an account, we have sent a reset link.'
+    identifier = (data.get('email') or data.get('username') or '').strip()
+    sent_message = 'If that matches an account, we have sent a reset link to the email on file.'
 
-    if not email or not validate_email(email):
-        return error_response('A valid email is required', 400, 'VALIDATION_ERROR')
+    if not identifier:
+        return error_response('Enter the username or email on your account', 400, 'VALIDATION_ERROR')
 
-    user = User.query.filter(db.func.lower(User.email) == email).first()
+    user = _find_user_for_password_reset(identifier)
     if user and user.is_active:
         try:
-            token = make_password_reset_token(user.id)
             from common.email_service import send_forgot_password_email
-            send_forgot_password_email(
-                user.email, user.username, token, full_name=user.full_name
-            )
-            log_audit(user.id, 'forgot_password', 'user', str(user.id))
+            sent = send_forgot_password_email(user, make_password_reset_token(user.id))
+            if sent:
+                log_audit(user.id, 'forgot_password', 'user', str(user.id))
         except Exception as exc:
             current_app.logger.warning('Forgot-password email failed: %s', exc)
     return jsonify({'message': sent_message, 'success': True}), 200

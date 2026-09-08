@@ -24,6 +24,17 @@
 
       {% if form_variant != 'status' %}
       <div class="auth-brand-side">
+        <video
+          class="auth-brand-video is-on"
+          autoplay
+          muted
+          playsinline
+          preload="auto"
+          poster="{{ url_for('static', filename='images/auth/auth-brand-panel.webp') }}?v=4"
+          aria-hidden="true"
+        >
+          <source src="{{ url_for('static', filename='images/auth/auth-brand-panel.mp4') }}?v=4" type="video/mp4">
+        </video>
         <div class="auth-brand-side-overlay" aria-hidden="true"></div>
         <div class="auth-brand-panel">
           <div class="auth-brand-glow" aria-hidden="true"></div>
@@ -97,4 +108,75 @@
     </div>
   </div>
 </div>
+<script>
+(function () {
+  var side = document.querySelector('.auth-brand-side');
+  var a = side && side.querySelector('.auth-brand-video');
+  if (!a) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    a.removeAttribute('autoplay');
+    a.pause();
+    return;
+  }
+
+  /* Two copies: incoming fades in on top; outgoing is hidden only after it is covered. */
+  var b = a.cloneNode(true);
+  b.classList.remove('is-on');
+  b.removeAttribute('autoplay');
+  b.muted = true;
+  b.playsInline = true;
+  a.after(b);
+
+  var FADE_MS = 700;
+  var active = a;
+  var standby = b;
+  var swapping = false;
+
+  var playEl = function (el) { return el.play().catch(function () {}); };
+
+  var hideCovered = function (el) {
+    el.classList.remove('is-on');
+    el.pause();
+    /* Seek only while opacity is 0 so the jump is never painted. */
+    window.setTimeout(function () {
+      try { el.currentTime = 0; } catch (err) {}
+    }, 50);
+  };
+
+  var swap = function () {
+    if (swapping) return;
+    swapping = true;
+    var incoming = standby;
+    var outgoing = active;
+    var reveal = function () {
+      try { incoming.currentTime = 0; } catch (err) {}
+      playEl(incoming);
+      incoming.offsetHeight;
+      incoming.classList.add('is-on');
+      window.setTimeout(function () {
+        hideCovered(outgoing);
+        active = incoming;
+        standby = outgoing;
+        swapping = false;
+      }, FADE_MS);
+    };
+    if (incoming.readyState >= 2) reveal();
+    else incoming.addEventListener('canplay', reveal, { once: true });
+    playEl(incoming);
+  };
+
+  var onTime = function () {
+    if (swapping || !active.duration) return;
+    if (active.currentTime >= Math.max(0.35, active.duration - FADE_MS / 1000)) swap();
+  };
+
+  a.addEventListener('timeupdate', onTime);
+  b.addEventListener('timeupdate', onTime);
+  a.addEventListener('ended', function () { if (active === a) swap(); });
+  b.addEventListener('ended', function () { if (active === b) swap(); });
+
+  if (a.readyState >= 2) playEl(a);
+  else a.addEventListener('canplay', function () { playEl(a); }, { once: true });
+})();
+</script>
 {% endmacro %}

@@ -2978,6 +2978,14 @@ class HiringCandidate(db.Model):
         default=HIRING_PIPELINE_DEFAULT,
         index=True,
     )
+    leave_employee_id = db.Column(
+        db.Integer,
+        db.ForeignKey('leave_employees.id', ondelete='SET NULL'),
+        unique=True,
+        nullable=True,
+        index=True,
+    )
+    employee_list_dismissed_at = db.Column(db.DateTime, nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=_utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow, index=True)
@@ -2993,6 +3001,12 @@ class HiringCandidate(db.Model):
     assigned_vacancy = db.relationship(
         'ManpowerVacancy',
         back_populates='hiring_candidate',
+        uselist=False,
+        lazy='select',
+    )
+    leave_employee = db.relationship(
+        'LeaveEmployee',
+        foreign_keys=[leave_employee_id],
         uselist=False,
         lazy='select',
     )
@@ -3138,6 +3152,12 @@ class HiringCandidate(db.Model):
             'is_on_hold': pipeline == 'on_hold',
             'is_not_hired': pipeline == 'not_hired',
             'file_closed': pipeline == 'candidate_employee',
+            'leave_employee_id': self.leave_employee_id,
+            'on_employee_list': bool(
+                self.leave_employee_id
+                and self.leave_employee
+                and getattr(self.leave_employee, 'active', False)
+            ),
             'visa_docs_unlocked': visa_unlocked,
             'phase1_completed': p1_done,
             'phase1_total': p1_total,

@@ -714,6 +714,8 @@ def create_app():
                         ('replacement_employee_id', 'VARCHAR(80)'),
                         ('comments', 'TEXT'),
                         ('hr_ref', 'VARCHAR(80)'),
+                        ('leave_employee_id', 'INTEGER'),
+                        ('employee_list_dismissed_at', 'DATETIME'),
                     ):
                         if col_name not in hc_cols:
                             try:
@@ -737,6 +739,15 @@ def create_app():
                             ))
                     except Exception as idx_err:
                         logger.debug('hr_ref index note: %s', idx_err)
+                    try:
+                        with db.engine.begin() as conn:
+                            conn.execute(text(
+                                "CREATE UNIQUE INDEX IF NOT EXISTS "
+                                "ix_hiring_candidates_leave_employee_id "
+                                "ON hiring_candidates (leave_employee_id)"
+                            ))
+                    except Exception as idx_err:
+                        logger.debug('leave_employee_id index note: %s', idx_err)
                 if 'hiring_offer_letters' not in inspector.get_table_names():
                     try:
                         db.create_all()

@@ -224,14 +224,102 @@ class TestForgotPassword:
         assert response.status_code == 200
         assert b'Forgot password' in response.data
 
-    def test_forgot_password_rejects_bad_email(self, client):
-        response = client.post('/api/auth/forgot-password', json={'email': 'not-an-email'})
+    def test_forgot_password_rejects_empty(self, client):
+        response = client.post('/api/auth/forgot-password', json={'email': ''})
         assert response.status_code == 400
 
     def test_forgot_password_does_not_leak_unknown_email(self, client):
         response = client.post('/api/auth/forgot-password', json={'email': 'nobody@example.com'})
         assert response.status_code == 200
         assert 'reset link' in response.get_json().get('message', '').lower()
+
+    def test_forgot_password_unknown_username_still_ok(self, client):
+        response = client.post('/api/auth/forgot-password', json={'email': 'not-an-email'})
+        assert response.status_code == 200
+
+    def test_forgot_password_emails_profile_address_not_typed_value(
+        self, client, standard_user, app, monkeypatch
+    ):
+        from app.models import User, db
+        from app.auth.routes import make_password_reset_token
+        from common.email_service import send_forgot_password_email
+
+        captured = {}
+
+        def _fake_send(*args, **kwargs):
+            captured['to'] = args[0] if args else kwargs.get('recipient')
+            captured['subject'] = args[1] if len(args) > 1 else kwargs.get('subject')
+            return True
+
+        monkeypatch.setattr('common.email_service._deliver_email', _fake_send)
+
+        with app.app_context():
+            user = db.session.get(User, standard_user.id)
+            user.email = 'staff.member@kynvera.store'
+            db.session.commit()
+
+            ok = send_forgot_password_email(user, make_password_reset_token(user.id))
+            assert ok is True
+            assert captured.get('to') == 'staff.member@kynvera.store'
+            assert 'Reset your Kynvera password' in (captured.get('subject') or '')
+
+            captured.clear()
+            by_username = client.post('/api/auth/forgot-password', json={'email': 'testuser'})
+            assert by_username.status_code == 200
+            assert captured.get('to') == 'staff.member@kynvera.store'
+
+            captured.clear()
+            by_email = client.post(
+                '/api/auth/forgot-password',
+                json={'email': 'STAFF.MEMBER@kynvera.store'},
+            )
+            assert by_email.status_code == 200
+            assert captured.get('to') == 'staff.member@kynvera.store'
+
+    def test_forgot_password_reset_link_uses_local_request_host(
+        self, client, standard_user, app, monkeypatch
+    ):
+        from app.models import User, db
+
+        captured = {}
+
+        def _fake_send(*args, **kwargs):
+            captured['body'] = args[2] if len(args) > 2 else ''
+            return True
+
+        monkeypatch.setattr('common.email_service._deliver_email', _fake_send)
+        monkeypatch.setitem(app.config, 'APP_BASE_URL', 'http://localhost:5001')
+
+        with app.app_context():
+            user = db.session.get(User, standard_user.id)
+            user.email = 'staff.member@kynvera.store'
+            db.session.commit()
+            response = client.post(
+                '/api/auth/forgot-password',
+                json={'email': 'testuser'},
+                base_url='http://localhost:5002',
+            )
+            assert response.status_code == 200
+            assert 'http://localhost:5002/reset-password?token=' in captured.get('body', '')
+            assert 'localhost:5001' not in captured.get('body', '')
+
+    def test_forgot_password_skips_example_dot_com(self, client, standard_user, app, monkeypatch):
+        sent = []
+        monkeypatch.setattr(
+            'common.email_service._deliver_email',
+            lambda *a, **k: sent.append(a) or True,
+        )
+        response = client.post('/api/auth/forgot-password', json={'email': 'testuser'})
+        assert response.status_code == 200
+        assert sent == []
+
+    def test_reset_password_page_has_show_hide_toggles(self, client):
+        response = client.get('/reset-password?token=preview')
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert 'id="password-toggle"' in html
+        assert 'id="password-confirm-toggle"' in html
+        assert 'aria-label="Show password"' in html
 
     def test_reset_password_with_valid_token(self, client, standard_user, app):
         with app.app_context():

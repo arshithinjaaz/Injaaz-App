@@ -133,6 +133,62 @@ def _window_range_message() -> str:
     return f'{LEAVE_WINDOW_START.isoformat()} and {LEAVE_WINDOW_END.isoformat()}'
 
 
+EMP_ID_CONFLICT_MSG = 'Emp ID already exists — use a different Emp ID to add someone new'
+
+
+def upsert_leave_employee(
+    *,
+    emp_id,
+    full_name,
+    designation='',
+    company=None,
+    annual_entitlement=None,
+):
+    """Create or restore a LeaveEmployee. Does not commit.
+
+    Returns ``(result, err)`` where *err* is a Flask error response or None.
+    *result* is ``{'employee', 'restored', 'status_code'}``.
+    """
+    emp_id = str(emp_id or '').strip()
+    full_name = str(full_name or '').strip()
+    if not emp_id or not full_name:
+        return None, error_response('emp_id and full_name are required', status_code=400)
+    company = parse_employee_company(company)
+    if not company:
+        return None, error_response('Invalid company', status_code=400)
+    designation = str(designation or '').strip()
+    existing = LeaveEmployee.query.filter(
+        db.func.lower(LeaveEmployee.emp_id) == emp_id.lower()
+    ).first()
+    if existing and existing.active:
+        return None, error_response(
+            EMP_ID_CONFLICT_MSG,
+            status_code=409,
+            error_code='CONFLICT',
+        )
+    now = utc_now_naive()
+    if existing:
+        existing.emp_id = emp_id
+        existing.full_name = full_name
+        existing.designation = designation
+        existing.company = company
+        existing.annual_entitlement = annual_entitlement
+        existing.active = True
+        existing.updated_at = now
+        return {'employee': existing, 'restored': True, 'status_code': 200}, None
+    emp = LeaveEmployee(
+        emp_id=emp_id,
+        full_name=full_name,
+        designation=designation,
+        company=company,
+        annual_entitlement=annual_entitlement,
+        active=True,
+    )
+    db.session.add(emp)
+    db.session.flush()
+    return {'employee': emp, 'restored': False, 'status_code': 201}, None
+
+
 def _default_periods() -> dict[str, list[int]]:
     return {str(LEAVE_TRACKER_YEAR): list(LEAVE_TRACKER_MONTHS)}
 
@@ -739,6 +795,8 @@ def register_leave_tracker_routes(hr_bp):
         if not user_can_manage_leave_tracker(user):
             return jsonify({'error': 'Access denied'}), 403
         _ensure_migrated()
+        from module_hr.employee_from_hiring import ensure_employee_from_hiring_schema
+        ensure_employee_from_hiring_schema()
         return render_template(
             'hr_employee_list.html',
             user=user,
@@ -874,8 +932,15 @@ def register_leave_tracker_routes(hr_bp):
                 if leave_sick_alert_level(e.used_total('sick'))
             ]
 
+        from module_hr.employee_from_hiring import hiring_linked_employee_ids
+        from_hiring_ids = hiring_linked_employee_ids([e.id for e in employees])
+        payloads = []
+        for emp in employees:
+            row = emp.to_dict(year=year)
+            row['from_hiring'] = emp.id in from_hiring_ids
+            payloads.append(row)
         return success_response({
-            'employees': [e.to_dict(year=year) for e in employees],
+            'employees': payloads,
             'summary': _summary_for(summary_emps, focus_month=month, year=year),
         })
 
@@ -1297,11 +1362,6 @@ def register_leave_tracker_routes(hr_bp):
         data = request.get_json(silent=True) or {}
         emp_id = str(data.get('emp_id') or '').strip()
         full_name = str(data.get('full_name') or '').strip()
-        if not emp_id or not full_name:
-            return error_response('emp_id and full_name are required', status_code=400)
-        company = parse_employee_company(data.get('company'))
-        if not company:
-            return error_response('Invalid company', status_code=400)
         ent = data.get('annual_entitlement')
         entitlement = None
         if ent is not None and ent != '':
@@ -1309,38 +1369,21 @@ def register_leave_tracker_routes(hr_bp):
                 entitlement = int(ent)
             except (TypeError, ValueError):
                 return error_response('Invalid annual_entitlement', status_code=400)
-        designation = str(data.get('designation') or '').strip()
-        existing = LeaveEmployee.query.filter(
-            db.func.lower(LeaveEmployee.emp_id) == emp_id.lower()
-        ).first()
-        if existing and existing.active:
-            return error_response(
-                'Emp ID already exists — use a different Emp ID to add someone new',
-                status_code=409,
-                error_code='CONFLICT',
-            )
-        if existing:
-            existing.emp_id = emp_id
-            existing.full_name = full_name
-            existing.designation = designation
-            existing.company = company
-            existing.annual_entitlement = entitlement
-            existing.active = True
-            existing.updated_at = utc_now_naive()
-            db.session.commit()
-            return success_response({'employee': existing.to_dict(), 'restored': True})
-
-        emp = LeaveEmployee(
+        result, err = upsert_leave_employee(
             emp_id=emp_id,
             full_name=full_name,
-            designation=designation,
-            company=company,
+            designation=str(data.get('designation') or '').strip(),
+            company=data.get('company'),
             annual_entitlement=entitlement,
-            active=True,
         )
-        db.session.add(emp)
+        if err:
+            return err
         db.session.commit()
-        return success_response({'employee': emp.to_dict()}, status_code=201)
+        payload = {
+            'employee': result['employee'].to_dict(),
+            'restored': result['restored'],
+        }
+        return success_response(payload, status_code=result['status_code'])
 
     @hr_bp.route('/api/leave-tracker/plans', methods=['GET'])
     @jwt_required()

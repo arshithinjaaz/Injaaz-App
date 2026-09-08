@@ -17,6 +17,7 @@ TRACKER_PAGES = (
     '/hr/leave-tracker',
     '/hr/manpower-tracker',
     '/hr/employee-list',
+    '/hr/employee-from-hiring',
 )
 
 
@@ -52,6 +53,7 @@ def test_hr_dashboard_omits_hiring_cards_without_flag(client, app):
     assert 'Letters of Intent' not in html
     assert 'Manpower Tracker' not in html
     assert 'Employee List' not in html
+    assert 'Employee from hiring' not in html
     assert 'Leave Application' in html
 
 
@@ -67,6 +69,7 @@ def test_hr_dashboard_shows_hiring_cards_with_flag(client, app):
     assert 'Letters of Intent' in html
     assert 'Leave Tracker' in html
     assert 'Employee List' in html
+    assert 'Employee from hiring' in html
     assert 'Manpower Tracker' in html
     assert 'Leave Application' in html
 
@@ -90,6 +93,7 @@ def test_employee_list_excel_template_and_export(client, app):
     assert 'id="elDeleteBtn"' in html
     assert 'Remove from list' in html
     assert 'id="elAddCompany"' in html
+    assert 'id="elIncompleteOnly"' in html
     assert 'list="elCompanySuggestions"' not in html
 
 

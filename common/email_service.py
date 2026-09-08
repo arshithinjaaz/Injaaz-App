@@ -685,10 +685,28 @@ def _deliver_email(recipient, subject, body, html_body=None, cc=None, attachment
 
 
 def _app_base_url():
+    """Public origin for links in mail.
+
+    Local requests use the host the user actually hit (so a stale PORT in
+    .env cannot send reset links to a dead 5001). Production keeps APP_BASE_URL.
+    """
+    configured = ''
     try:
-        return (current_app.config.get('APP_BASE_URL') or '').rstrip('/')
+        configured = (current_app.config.get('APP_BASE_URL') or '').rstrip('/')
     except Exception:
-        return ''
+        pass
+    try:
+        from flask import has_request_context, request
+        if has_request_context():
+            root = (request.url_root or '').rstrip('/')
+            host = (urlparse(root).hostname or '').lower() if root else ''
+            if host in ('localhost', '127.0.0.1', '::1'):
+                return root
+            if root and not configured:
+                return root
+    except Exception:
+        pass
+    return configured
 
 
 def _login_url():
@@ -698,11 +716,12 @@ def _login_url():
 
 _WORDMARK_CID = 'kynvera-wordmark'
 _WORDMARK_STATIC = '/static/images/kynvera/kynvera-wordmark.png'
-# Inbox clients cannot fetch localhost. Live PNG on the product host.
+# Kept so tests can assert we never point inboxes at the Render origin.
 _DEFAULT_PUBLIC_WORDMARK_URL = (
     'https://operations.kynvera.net/static/images/kynvera/kynvera-wordmark.png'
 )
 _cloudinary_wordmark_url_cache = None
+_cloudinary_wordmark_upload_started = False
 
 
 def _wordmark_path():
@@ -734,34 +753,42 @@ def _html_wordmark():
 
 def _img_wordmark(src):
     return (
-        f'<img src="{_esc(src)}" alt="Kynvera" width="120" height="29" border="0" '
+        f'<img src="{_esc(src)}" alt="Kynvera" width="160" height="39" border="0" '
         'style="display:block;border:0;outline:none;text-decoration:none;'
-        'width:120px;height:29px;">'
+        'width:160px;height:39px;">'
     )
 
 
-def _cloudinary_wordmark_url():
-    """Upload the PNG once and reuse a Cloudinary CDN URL (Gmail's proxy is fast against this)."""
-    global _cloudinary_wordmark_url_cache
-    if _cloudinary_wordmark_url_cache is not None:
-        return _cloudinary_wordmark_url_cache
+def _cloudinary_cloud_name():
+    try:
+        name = current_app.config.get('CLOUDINARY_CLOUD_NAME') or ''
+    except Exception:
+        name = ''
+    return str(name or os.environ.get('CLOUDINARY_CLOUD_NAME') or '').strip()
+
+
+def _constructed_cloudinary_wordmark_url():
+    """CDN URL for the named asset. No upload, so sending is not blocked."""
+    name = _cloudinary_cloud_name()
+    if not name:
+        return ''
+    return (
+        f'https://res.cloudinary.com/{name}/image/upload/'
+        f'f_png,w_240,c_limit,q_auto/kynvera/email-wordmark'
+    )
+
+
+def _upload_cloudinary_wordmark():
+    """Best-effort publish so the constructed CDN URL exists."""
     path = _wordmark_path()
     if not path:
-        _cloudinary_wordmark_url_cache = ''
-        return ''
-    try:
-        if current_app.config.get('TESTING'):
-            _cloudinary_wordmark_url_cache = ''
-            return ''
-    except Exception:
-        pass
+        return
     try:
         from app.services.cloudinary_service import init_cloudinary
         import cloudinary.uploader
         if not init_cloudinary():
-            _cloudinary_wordmark_url_cache = ''
-            return ''
-        res = cloudinary.uploader.upload(
+            return
+        cloudinary.uploader.upload(
             path,
             folder='kynvera',
             public_id='email-wordmark',
@@ -771,39 +798,53 @@ def _cloudinary_wordmark_url():
             use_filename=False,
             transformation=[{'width': 240, 'crop': 'scale', 'format': 'png'}],
         )
-        url = str((res or {}).get('secure_url') or '')
-        if url and '/image/upload/' in url and '/w_240' not in url:
-            url = url.replace('/image/upload/', '/image/upload/w_240,c_scale,f_png/')
-        _cloudinary_wordmark_url_cache = url
-        if url:
-            logger.info('Hosted email wordmark at %s', url)
-        return url
+        logger.info('Published email wordmark to Cloudinary')
     except Exception:
-        logger.warning('Could not host email wordmark on Cloudinary', exc_info=True)
-        _cloudinary_wordmark_url_cache = ''
-        return ''
+        logger.warning('Could not publish email wordmark on Cloudinary', exc_info=True)
+
+
+def _ensure_cloudinary_wordmark_async():
+    global _cloudinary_wordmark_upload_started
+    if _cloudinary_wordmark_upload_started or not _wordmark_path():
+        return
+    _cloudinary_wordmark_upload_started = True
+    threading.Thread(
+        target=_upload_cloudinary_wordmark,
+        daemon=True,
+        name='kynvera-email-wordmark',
+    ).start()
+
+
+def _cloudinary_wordmark_url():
+    """Fast Cloudinary URL. Never uploads on the send path."""
+    global _cloudinary_wordmark_url_cache
+    if _cloudinary_wordmark_url_cache is not None:
+        return _cloudinary_wordmark_url_cache
+    try:
+        if current_app.config.get('TESTING'):
+            _cloudinary_wordmark_url_cache = ''
+            return ''
+    except Exception:
+        pass
+    url = _constructed_cloudinary_wordmark_url()
+    _cloudinary_wordmark_url_cache = url
+    if url:
+        _ensure_cloudinary_wordmark_async()
+    return url
 
 
 def _hosted_wordmark_url():
+    """HTTPS wordmark for clients that cannot use CID (Brevo / Gmail proxy).
+
+    Never use the app origin — Render cold-starts make Gmail wait on the image.
+    """
     try:
         explicit = (current_app.config.get('EMAIL_WORDMARK_URL') or '').strip()
     except Exception:
         explicit = ''
     if _is_public_asset_base(explicit):
         return explicit.rstrip('/')
-    # Prefer Cloudinary over APP_BASE_URL: Gmail's image proxy is slow against Render.
-    cdn = _cloudinary_wordmark_url()
-    if cdn:
-        return cdn
-    base = _app_base_url()
-    if _is_public_asset_base(base):
-        return f'{base}{_WORDMARK_STATIC}'
-    try:
-        if current_app.config.get('TESTING'):
-            return ''
-    except Exception:
-        pass
-    return _DEFAULT_PUBLIC_WORDMARK_URL
+    return _cloudinary_wordmark_url() or ''
 
 
 def _wordmark_inline_attachment():
@@ -840,21 +881,23 @@ def _esc(value):
 def _logo_html():
     """Official coral PNG wordmark from static/images/kynvera/kynvera-wordmark.png.
 
-    Brevo cannot keep CID images, and Gmail strips data: URIs, so the PNG is
-    hosted on Cloudinary (or EMAIL_WORDMARK_URL). Local sends use the live
-    operations.kynvera.net PNG because localhost is not fetchable by inboxes.
-    HTML text is last-resort only (tests).
+    Live mail embeds the PNG as CID so the mark is in the message. Brevo drops
+    CID and rewrites to a Cloudinary CDN URL (no upload on send). Tests use
+    HTML text unless EMAIL_WORDMARK_URL is set.
     """
+    try:
+        if current_app.config.get('TESTING'):
+            hosted = _hosted_wordmark_url()
+            if hosted:
+                return _img_wordmark(hosted)
+            return _html_wordmark()
+    except Exception:
+        pass
+    if _wordmark_path():
+        return _img_wordmark(f'cid:{_WORDMARK_CID}')
     hosted = _hosted_wordmark_url()
     if hosted:
         return _img_wordmark(hosted)
-    try:
-        if current_app.config.get('TESTING'):
-            return _html_wordmark()
-        if not brevo_api_key(current_app._get_current_object()) and _wordmark_path():
-            return _img_wordmark(f'cid:{_WORDMARK_CID}')
-    except Exception:
-        pass
     return _html_wordmark()
 
 
@@ -1083,9 +1126,46 @@ Kynvera
     return _send_auth_email(user_email, subject, body, html_body)
 
 
-def send_forgot_password_email(user_email, username, token, full_name=None):
-    """Self-service password reset link (expires in one hour)."""
-    display = (full_name or '').strip() or username
+def _deliverable_profile_email(user):
+    """Address saved on the user row, or None if missing / not deliverable.
+
+    Reloads by id so a stale in-memory value or a typed form address cannot be used.
+    """
+    from app.models import User, db
+
+    uid = getattr(user, 'id', None)
+    target = None
+    if uid is not None:
+        try:
+            target = db.session.get(User, int(uid))
+        except Exception:
+            target = None
+    if target is None:
+        target = user
+
+    email = (getattr(target, 'email', None) or '').strip()
+    domain = email.rsplit('@', 1)[-1].lower() if '@' in email else ''
+    if not email or domain in _NON_DELIVERABLE_EMAIL_DOMAINS:
+        return None, target
+    return email, target
+
+
+def send_forgot_password_email(user, token):
+    """Self-service reset link to the user's profile email only (expires in one hour)."""
+    profile_email, target = _deliverable_profile_email(user)
+    if not profile_email:
+        logger.warning(
+            'Forgot-password skipped: user_id=%s has no deliverable profile email',
+            getattr(target, 'id', None),
+        )
+        return False
+    username = (getattr(target, 'username', None) or '').strip()
+    display = (getattr(target, 'full_name', None) or '').strip() or username
+    logger.info(
+        'Forgot-password email to profile address %s (user_id=%s)',
+        profile_email,
+        getattr(target, 'id', None),
+    )
     base = _app_base_url()
     reset_path = f'/reset-password?token={token}'
     reset_url = f'{base}{reset_path}' if base else reset_path
@@ -1111,7 +1191,7 @@ Kynvera
         cta_url=reset_url,
         cta_label='Choose a new password',
     )
-    return _send_auth_email(user_email, subject, body, html_body)
+    return _send_auth_email(profile_email, subject, body, html_body)
 
 
 def send_login_details_email(user_email, username, password, full_name=None):

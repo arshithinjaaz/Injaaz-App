@@ -10,8 +10,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/design-tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=22">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/hr-hiring.css') }}?v=140">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/hr-employee-list.css') }}?v=16">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hr-hiring.css') }}?v=142">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hr-employee-list.css') }}?v=26">
   {% set active_page = 'hr' %}
 </head>
 <body class="hh-page el-page">
@@ -40,10 +40,19 @@
           <span class="el-stat-label">Showing</span>
         </div>
         <div class="el-stat">
-          <span class="el-stat-val" id="elStatCompanies">—</span>
-          <span class="el-stat-label">Companies</span>
+          <span class="el-stat-val el-stat-val--alert" id="elStatIncomplete">—</span>
+          <span class="el-stat-label">Incomplete</span>
+        </div>
+        <div class="el-stat">
+          <span class="el-stat-val el-stat-val--alert" id="elStatPending">—</span>
+          <span class="el-stat-label">Pending</span>
         </div>
       </div>
+
+      <a class="el-hiring-banner" id="elHiringBanner" href="/hr/employee-from-hiring" hidden>
+        <span id="elHiringBannerText">People from hiring are waiting to be added</span>
+        <span class="el-hiring-banner-go">Open queue</span>
+      </a>
 
       <div class="hh-toolbar el-toolbar">
         <label class="el-search-label" for="elSearch">Find staff by Emp ID or name</label>
@@ -64,6 +73,10 @@
           <option value="Tourism">Tourism</option>
           <option value="L&P">L&amp;P</option>
         </select>
+        <label class="el-toggle" for="elIncompleteOnly">
+          <input type="checkbox" id="elIncompleteOnly">
+          <span>Incomplete only</span>
+        </label>
         <button type="button" class="hh-btn hh-btn-primary hh-btn-sm" id="elAddEmpBtn" title="Add a person to the staff list">
           Add employee
         </button>
@@ -101,13 +114,16 @@
         <div class="el-modal-avatar" id="elModalAvatar" aria-hidden="true">—</div>
         <h2 id="elModalName">—</h2>
         <p class="el-modal-id" id="elModalEmpId">—</p>
+        <p class="el-modal-origin" id="elModalOrigin" hidden>Added through the hiring module</p>
+        <p class="el-listed-hint" id="elModalMergeHint" hidden></p>
         <dl class="el-modal-meta">
           <div><dt>Designation</dt><dd id="elModalDesig">—</dd></div>
           <div><dt>Company</dt><dd id="elModalCompany">—</dd></div>
         </dl>
         <div class="el-modal-actions">
           <a class="hh-btn hh-btn-secondary" id="elModalLeaveLink" href="/hr/leave-tracker">Open in Leave Tracker</a>
-          <button type="button" class="hh-btn hh-btn-primary" data-close-el-modal>Close</button>
+          <button type="button" class="hh-btn hh-btn-primary" id="elModalMergeBtn" hidden>Merge</button>
+          <button type="button" class="hh-btn hh-btn-primary" data-close-el-modal id="elModalCloseBtn">Close</button>
         </div>
         <button type="button" class="el-modal-remove" id="elDeleteBtn">Remove from list</button>
       </div>
@@ -198,6 +214,8 @@
     </div>
   </div>
 
+  {% include 'partials/employee_from_hiring_promote_modal.html' %}
+
   <div id="elToast" class="el-toast" hidden role="status" aria-live="polite">
     <button type="button" class="el-toast-close" id="elToastClose" aria-label="Dismiss">&times;</button>
     <p class="el-toast-msg" id="elToastMsg"></p>
@@ -208,6 +226,7 @@
   <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
   <script>window.FILES_SAVE_MODULE = 'leave'; window.FILES_SAVE_MODULE_LABEL = 'Employee List';</script>
   <script src="{{ url_for('static', filename='js/files-save.js') }}?v=17"></script>
-  <script src="{{ url_for('static', filename='js/hr-employee-list.js') }}?v=12"></script>
+  <script src="{{ url_for('static', filename='js/hr-employee-from-hiring.js') }}?v=11"></script>
+  <script src="{{ url_for('static', filename='js/hr-employee-list.js') }}?v=19"></script>
 </body>
 </html>
