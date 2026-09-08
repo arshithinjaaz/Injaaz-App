@@ -129,8 +129,10 @@ def test_live_send_uses_html_wordmark(app, monkeypatch):
         assert 'cid:kynvera-wordmark' not in html
         assert '<img ' not in html
         assert 'Montserrat' in html
-        assert 'font-weight:700' in html
+        assert 'font-weight:800' in html
+        assert 'Arial Black' in html
         assert 'letter-spacing:-0.029em' in html
+        assert 'wght@800' in html
         assert 'Kynvera</span>' in html
         assert 'fonts.googleapis.com' in html
 
@@ -313,6 +315,7 @@ def test_mfa_emails_log_preview_and_inline_wordmark(app, monkeypatch):
         assert 'Kynvera</span>' in captured['html']
         assert 'Montserrat' in captured['html']
         assert 'letter-spacing:-0.029em' in captured['html']
+        assert 'font-weight:800' in captured['html']
         assert '<img ' not in captured['html']
         row = EmailLog.query.filter_by(source='auth').order_by(EmailLog.id.desc()).first()
         assert row.body_preview == 'Authenticator enabled notification'

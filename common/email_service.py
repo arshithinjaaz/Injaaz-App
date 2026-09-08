@@ -733,10 +733,19 @@ def _is_public_asset_base(url):
 
 
 def _html_wordmark():
-    # Canva wordmark: Montserrat Bold, letter-spacing -29 (= -0.029em), coral.
+    # Official mark is Montserrat ExtraBold, tracking -0.029em, coral #ff8e68.
+    web = (
+        "font-family:Montserrat,'Arial Black','Helvetica Neue',Arial,sans-serif;"
+        "font-size:32px;font-weight:800;color:#ff8e68;"
+        "letter-spacing:-0.029em;line-height:1;"
+    )
+    outlook = (
+        "font-family:Arial Black,Arial,sans-serif;font-size:32px;font-weight:800;"
+        "color:#ff8e68;letter-spacing:-1px;line-height:32px;"
+    )
     return (
-        '<span style="font-family:Montserrat,Arial,Helvetica,sans-serif;font-size:28px;'
-        'font-weight:700;color:#ff8e68;letter-spacing:-0.029em;line-height:1.4;">Kynvera</span>'
+        f'<!--[if mso]><span style="{outlook}">Kynvera</span><![endif]-->'
+        f'<!--[if !mso]><!--><span style="{web}">Kynvera</span><!--<![endif]-->'
     )
 
 
@@ -797,7 +806,7 @@ def _branded_auth_html(*, title, greeting, paragraphs, extra_html='', cta_url=''
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0;padding:0;background-color:#f4f1ee;">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f1ee" style="background-color:#f4f1ee;">
