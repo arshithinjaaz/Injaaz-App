@@ -734,14 +734,15 @@ def _is_public_asset_base(url):
 
 def _html_wordmark():
     # Official mark is Montserrat ExtraBold, tracking -0.029em, coral #ff8e68.
+    # Keep it smaller than the 22px greeting so the message leads.
     web = (
         "font-family:Montserrat,'Arial Black','Helvetica Neue',Arial,sans-serif;"
-        "font-size:32px;font-weight:800;color:#ff8e68;"
+        "font-size:20px;font-weight:800;color:#ff8e68;"
         "letter-spacing:-0.029em;line-height:1;"
     )
     outlook = (
-        "font-family:Arial Black,Arial,sans-serif;font-size:32px;font-weight:800;"
-        "color:#ff8e68;letter-spacing:-1px;line-height:32px;"
+        "font-family:Arial Black,Arial,sans-serif;font-size:20px;font-weight:800;"
+        "color:#ff8e68;letter-spacing:-1px;line-height:20px;"
     )
     return (
         f'<!--[if mso]><span style="{outlook}">Kynvera</span><![endif]-->'
