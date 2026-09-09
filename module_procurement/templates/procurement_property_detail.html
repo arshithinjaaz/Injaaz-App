@@ -122,6 +122,21 @@
       outline: none; transition: border-color .15s; background: #f8fafc;
     }
     .search-input:focus { border-color: var(--prop-from); background: #fff; box-shadow: 0 0 0 3px color-mix(in srgb, var(--prop-from) 18%, transparent); }
+    @media (max-width: 768px) {
+      .search-wrap { flex: none; width: 100%; min-width: 0; max-width: none; }
+      .toolbar-count { margin-left: 0; }
+      .mat-table { min-width: 0 !important; width: 100%; }
+      .mat-table thead { display: none; }
+      .mat-table, .mat-table tbody { display: block; width: 100%; }
+      .mat-table tbody tr {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
+        padding: 12px 14px; margin-bottom: 10px;
+        border: 1.5px solid var(--border, #e9eaee); border-radius: 14px; background: #fff;
+      }
+      .mat-table tbody td { border: none; padding: 0; width: auto; white-space: normal; }
+      .mat-table tbody td:first-child { flex: 1 1 100%; font-weight: 600; }
+      .mat-table tbody td:last-child { flex: 1 1 100%; }
+    }
     .toolbar-count { margin-left: auto; font-size: .78rem; font-weight: 600; color: var(--muted); background: #f1f5f9; border-radius: 20px; padding: .28rem .85rem; white-space: nowrap; }
 
     /* ── Table ── */

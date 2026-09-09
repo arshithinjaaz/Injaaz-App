@@ -662,6 +662,10 @@ body.inspection-form hr{border-color:var(--if-border-l);opacity:1}
   body.inspection-form .form-control,
   body.inspection-form .form-select,
   body.inspection-form textarea.form-control{font-size:16px}
+  body.inspection-form .work-items-table-wrap{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
   body.inspection-form .col-md-6,
   body.inspection-form .col-md-4,
   body.inspection-form .col-md-3,

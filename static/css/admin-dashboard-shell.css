@@ -3852,6 +3852,22 @@
       outline: none;
       box-shadow: none !important;
     }
+    .admin-profile-password-actions {
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .admin-profile-password-actions .admin-profile-email-creds {
+      flex: 1 1 0;
+      width: auto;
+      margin-top: 0;
+    }
+    @media (max-width: 480px) {
+      .admin-profile-password-actions {
+        flex-direction: column;
+      }
+    }
     .admin-profile-form .admin-profile-email-creds {
       display: inline-flex;
       align-items: center;
@@ -3872,6 +3888,10 @@
     .admin-profile-form .admin-profile-email-creds:hover {
       background: #f97e54;
       color: #fff;
+    }
+    .admin-profile-form .admin-profile-email-creds:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
     .admin-profile-module-note {
       font-size: 0.78rem;
@@ -5344,26 +5364,44 @@
       .documents-table {
         font-size: 0.8rem !important;
         min-width: 0 !important;
+        width: 100% !important;
       }
       #section-documents .documents-table {
-        min-width: 720px !important;
-        width: max-content !important;
+        min-width: 0 !important;
+        width: 100% !important;
         table-layout: auto !important;
       }
       #section-documents .table-scroll-wrapper {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
+        overflow: visible !important;
       }
+      .documents-table thead { display: none !important; }
+      .documents-table,
+      .documents-table tbody { display: block !important; width: 100% !important; }
+      .documents-table tbody tr {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 6px 8px !important;
+        padding: 12px 14px !important;
+        margin-bottom: 10px !important;
+        border: 1px solid var(--border, #e2ede8) !important;
+        border-radius: 14px !important;
+        background: #fff !important;
+      }
+      .documents-table tbody td {
+        display: block !important;
+        border: none !important;
+        padding: 0 !important;
+        width: auto !important;
+        white-space: normal !important;
+      }
+      .documents-table tbody td::before { display: none !important; }
+      .documents-table tbody td:first-child { flex: 1 1 100% !important; font-weight: 700 !important; }
+      .documents-table tbody td:last-child { flex: 1 1 100% !important; }
       #section-documents .documents-table th:first-child,
       #section-documents .documents-table td:first-child {
-        position: sticky !important;
-        left: 0 !important;
-        z-index: 2 !important;
-        background: #fff !important;
-        box-shadow: 4px 0 8px -4px rgba(0, 0, 0, 0.1) !important;
-      }
-      #section-documents .documents-table thead th:first-child {
-        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+        position: static !important;
+        box-shadow: none !important;
       }
       
       .documents-header {

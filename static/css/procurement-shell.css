@@ -1337,29 +1337,33 @@ body.procurement-shell.proc-refill-page .proc-refill-bar {
     font-size: 16px;
   }
   .proc-table td { font-size: 0.8rem; }
+  .proc-table-wrap { overflow: visible; }
+  .proc-table { min-width: 0 !important; width: 100%; }
   .proc-table thead { display: none; }
+  .proc-table,
+  .proc-table tbody { display: block; width: 100%; }
   .proc-table tr {
-    display: block;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
     border: 1px solid var(--proc-border);
-    border-radius: 12px;
-    margin: 0 0.75rem 0.75rem;
-    padding: 0.5rem 0;
+    border-radius: 14px;
+    margin: 0 0 10px;
+    padding: 12px 14px;
     background: #fff;
   }
   .proc-table td {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.75rem;
+    display: block;
     border-bottom: none;
-    padding: 0.4rem 0.9rem;
+    padding: 0 !important;
+    width: auto;
+    white-space: normal;
   }
-  .proc-table td::before {
-    content: attr(data-label);
-    font-size: 0.68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--proc-muted);
-  }
+  .proc-table td::before { display: none; content: none; }
+  .proc-table td:first-child { flex: 1 1 auto; font-weight: 700; min-width: 0; }
+  .proc-table td:last-child { flex: 1 1 100%; }
+  .proc-seg { flex-wrap: wrap; max-width: 100%; }
   .hide-sm { display: none !important; }
   .proc-pr-facts { grid-template-columns: 1fr 1fr; }
   .proc-pr-item {

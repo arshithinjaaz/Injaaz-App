@@ -700,13 +700,13 @@
       var synced = item.sync_status === 'synced';
       return (
         '<tr data-item-id="' + item.id + '">' +
-        '<td class="files-col-check"><input type="checkbox" class="files-row-check" data-id="' + item.id + '"' + checked + ' aria-label="Select"></td>' +
-        '<td><div class="files-name-cell"><strong>' + escapeHtml(item.name) + '</strong><span class="files-filename">' + escapeHtml(item.filename) + '</span></div></td>' +
-        '<td><span class="files-source-pill">' + escapeHtml(sourceLabel(item)) + '</span></td>' +
-        '<td>' + escapeHtml(item.size_label || '—') + '</td>' +
-        '<td>' + syncBadge(item.sync_status) + '</td>' +
-        '<td class="files-updated">' + escapeHtml(formatDate(item.updated_at)) + '</td>' +
-        '<td class="files-actions-cell"><div class="files-row-actions" role="group" aria-label="File actions">' +
+        '<td class="files-col-check" data-label=""><input type="checkbox" class="files-row-check" data-id="' + item.id + '"' + checked + ' aria-label="Select"></td>' +
+        '<td data-label="Name"><div class="files-name-cell"><strong>' + escapeHtml(item.name) + '</strong><span class="files-filename">' + escapeHtml(item.filename) + '</span></div></td>' +
+        '<td data-label="Source"><span class="files-source-pill">' + escapeHtml(sourceLabel(item)) + '</span></td>' +
+        '<td data-label="Size">' + escapeHtml(item.size_label || '—') + '</td>' +
+        '<td data-label="Sync">' + syncBadge(item.sync_status) + '</td>' +
+        '<td class="files-updated" data-label="Updated">' + escapeHtml(formatDate(item.updated_at)) + '</td>' +
+        '<td class="files-actions-cell" data-label=""><div class="files-row-actions" role="group" aria-label="File actions">' +
         '<button type="button" class="files-icon-btn" data-act="download" data-id="' + item.id + '" data-tooltip="Download" aria-label="Download">' + actionIcon('download') + '</button>' +
         '<button type="button" class="files-icon-btn" data-act="rename" data-id="' + item.id + '" data-tooltip="Rename" aria-label="Rename">' + actionIcon('rename') + '</button>' +
         '<button type="button" class="files-icon-btn' + (synced ? ' is-synced' : '') + '" data-act="sync" data-id="' + item.id + '" data-tooltip="' + (synced ? 'Re-sync to Drive' : 'Sync to Drive') + '" aria-label="' + (synced ? 'Re-sync to Drive' : 'Sync to Drive') + '">' + actionIcon('sync') + '</button>' +

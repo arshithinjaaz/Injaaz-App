@@ -509,6 +509,22 @@
       outline: none;
       box-shadow: none !important;
     }
+    .admin-profile-password-actions {
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .admin-profile-password-actions .admin-profile-email-creds {
+      flex: 1 1 0;
+      width: auto;
+      margin-top: 0;
+    }
+    @media (max-width: 480px) {
+      .admin-profile-password-actions {
+        flex-direction: column;
+      }
+    }
     .admin-profile-form .admin-profile-email-creds {
       display: inline-flex;
       align-items: center;
@@ -529,6 +545,10 @@
     .admin-profile-form .admin-profile-email-creds:hover {
       background: #f97e54;
       color: #fff;
+    }
+    .admin-profile-form .admin-profile-email-creds:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
     .admin-profile-module-note {
       font-size: 0.78rem;
@@ -664,6 +684,10 @@
     .admin-otp-password-fallback--modal {
       margin: 12px 1.2rem 0;
       padding-top: 12px;
+    }
+    .admin-otp-password-fallback--modal .form-control {
+      width: 100%;
+      min-height: 44px;
     }
     .admin-otp-banner[hidden] { display: none !important; }
     .admin-otp-banner-sr {

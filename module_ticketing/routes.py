@@ -25,6 +25,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import joinedload
 
 from app.models import (
@@ -765,6 +766,31 @@ def _ticket_images_dir() -> str:
     return d
 
 
+def _load_ticket_materials(ticket: Ticket):
+    """Load materials without taking the ticket page down if the live schema is behind.
+
+    Production Postgres was missing ticket_materials.created_at (DATETIME ALTER is
+    invalid there), which 500'd GET /tickets/<id> on every open.
+    """
+    try:
+        rows = list(ticket.materials.all())
+    except (ProgrammingError, OperationalError):
+        logger.exception(
+            'ticket_materials query failed for %s — returning empty list',
+            getattr(ticket, 'ticket_id', None),
+        )
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return []
+    return sorted(
+        rows,
+        key=lambda m: (getattr(m, 'created_at', None) or datetime.min, m.id),
+        reverse=True,
+    )
+
+
 def _recalc_total_cost(ticket: Ticket):
     """Re-compute ticket.total_cost, actual_price, and selling_price from manpower + materials.
 
@@ -773,7 +799,7 @@ def _recalc_total_cost(ticket: Ticket):
     supervisor-selected markup (0/5/10/15/20/25%) directly on top of it.
     """
     mp_total  = sum((e.total_cost  or 0) for e in ticket.manpower.all())
-    mat_total = sum((m.total_price or 0) for m in ticket.materials.all())
+    mat_total = sum((m.total_price or 0) for m in _load_ticket_materials(ticket))
     base_cost = round(mp_total + mat_total, 2)
     ticket.total_cost = base_cost
     ticket.actual_price = base_cost
@@ -2285,11 +2311,7 @@ def ticket_detail(ticket_id):
 
     notes = ticket.notes.order_by(TicketNote.created_at.asc()).all()
     images = ticket.images.all()
-    materials = sorted(
-        ticket.materials.all(),
-        key=lambda m: (m.created_at or datetime.min, m.id),
-        reverse=True,
-    )
+    materials = _load_ticket_materials(ticket)
     manpower_entries = ticket.manpower.all()
     sees_all = _ticketing_sees_all_tickets(user)
     supervisor_assignees = _supervisor_assignees_for_dropdown(ticket.assigned_to) if sees_all else []

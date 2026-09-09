@@ -22,7 +22,7 @@ _MISSING_PLACEHOLDERS = frozenset({'', '—', '-', '–', 'n/a', 'na', 'none'})
 
 
 def ensure_employee_from_hiring_schema() -> None:
-    """Add hiring_candidates.leave_employee_id if missing (idempotent)."""
+    """Add hiring_candidates columns used by Hiring Docs + Employee from hiring."""
     global _schema_ensured
     if _schema_ensured:
         return
@@ -33,6 +33,13 @@ def ensure_employee_from_hiring_schema() -> None:
             _schema_ensured = True
             return
         cols = {c['name'] for c in inspector.get_columns('hiring_candidates')}
+        if 'hr_ref' not in cols:
+            with db.engine.begin() as conn:
+                conn.execute(text(
+                    'ALTER TABLE hiring_candidates ADD COLUMN hr_ref VARCHAR(80)'
+                ))
+            logger.info('Added hr_ref to hiring_candidates')
+            cols.add('hr_ref')
         if 'leave_employee_id' not in cols:
             with db.engine.begin() as conn:
                 conn.execute(text(
@@ -59,10 +66,14 @@ def ensure_employee_from_hiring_schema() -> None:
             logger.info('Added leave_employee_id to hiring_candidates')
             cols.add('leave_employee_id')
         if 'employee_list_dismissed_at' not in cols:
+            # DATETIME is invalid on Postgres (live) and left this column missing,
+            # which 500s Hiring Docs list + Excel import preview.
+            dialect = db.engine.dialect.name
+            ts_sql = 'TIMESTAMP' if dialect == 'postgresql' else 'DATETIME'
             with db.engine.begin() as conn:
                 conn.execute(text(
-                    'ALTER TABLE hiring_candidates '
-                    'ADD COLUMN employee_list_dismissed_at DATETIME'
+                    f'ALTER TABLE hiring_candidates '
+                    f'ADD COLUMN employee_list_dismissed_at {ts_sql}'
                 ))
             logger.info('Added employee_list_dismissed_at to hiring_candidates')
         _schema_ensured = True

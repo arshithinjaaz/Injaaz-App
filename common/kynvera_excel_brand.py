@@ -6,6 +6,7 @@ Calibri is used because Excel cannot embed the in-app SF Pro stack.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from io import BytesIO, StringIO
 from typing import Any, Iterable, Optional, Sequence
@@ -25,6 +26,8 @@ from common.kynvera_brand import (
     WHITE,
     hex_rgb,
 )
+
+logger = logging.getLogger(__name__)
 
 FONT_NAME = "Calibri"
 
@@ -390,17 +393,31 @@ def read_import_dataframe(file_storage, preferred_sheets: Sequence[str] = ()):
         name = resolve_import_sheet_name(list(xl.sheet_names), preferred_sheets)
         return pd.read_excel(xl, sheet_name=name)
 
+    last_err: Optional[Exception] = None
+
     if filename.endswith(".xlsx") or not filename.endswith(".xls"):
         try:
             return _from_excel("openpyxl")
-        except Exception:
-            pass
+        except ImportError:
+            raise
+        except Exception as e:
+            last_err = e
+            logger.warning("openpyxl could not read workbook: %s", e)
+            if filename.endswith(".xlsx"):
+                raise ValueError(f"Could not read Excel: {e}") from e
 
     try:
         return _from_excel("xlrd")
-    except Exception:
+    except Exception as e:
+        last_err = last_err or e
+
+    try:
         html_text = data.decode("utf-8", errors="ignore")
         tables = pd.read_html(StringIO(html_text))
         if not tables:
             raise ValueError("Could not read any table from the file")
         return max(tables, key=lambda t: t.shape[0])
+    except Exception as e:
+        if last_err:
+            raise ValueError(f"Could not read Excel: {last_err}") from last_err
+        raise ValueError(f"Could not read Excel: {e}") from e

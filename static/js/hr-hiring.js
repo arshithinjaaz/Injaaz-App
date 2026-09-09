@@ -1723,7 +1723,7 @@
           });
           const data = await res.json().catch(function () { return null; });
           if (!res.ok || (data && data.success === false)) {
-            throw new Error((data && (data.error || data.message)) || 'Could not read Excel');
+            throw new Error((data && (data.error || data.message)) || ('Could not read Excel (' + res.status + ')'));
           }
           const preview = {
             will_create: data.will_create || 0,

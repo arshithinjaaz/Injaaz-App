@@ -92,7 +92,6 @@
   function setResendUi() {
     const sendBtn = document.getElementById('profileAdminOtpSendBtn');
     const resendBtn = document.getElementById('profileAdminOtpResendBtn');
-    const resendMeta = document.getElementById('profileAdminOtpResendMeta');
     const hintMeta = document.getElementById('profileAdminOtpHintResendMeta');
     const wait = remainingFromIso(resendAvailableAt);
     const cooling = !wait.done && wait.seconds > 0;
@@ -104,12 +103,9 @@
       resendBtn.disabled = cooling;
       resendBtn.textContent = cooling ? ('Resend in ' + wait.text) : 'Resend code';
     }
-    if (resendMeta) {
-      resendMeta.textContent = cooling ? ('You can resend in ' + wait.text) : '';
-    }
     if (hintMeta) {
-      hintMeta.hidden = !cooling;
-      hintMeta.textContent = cooling ? ('You can resend in ' + wait.text) : '';
+      hintMeta.hidden = true;
+      hintMeta.textContent = '';
     }
   }
 
@@ -162,10 +158,10 @@
     if (pwdWrap) pwdWrap.hidden = false;
     if (pwdLead) {
       pwdLead.textContent = noEmail
-        ? 'This account has no email. Unlock with your admin login password.'
+        ? 'This account has no email. Verify with your admin login password.'
         : (opts.sendFailed
-          ? 'The verification email could not be sent. Unlock with your admin login password.'
-          : 'If a code cannot be sent, unlock with your admin login password.');
+          ? 'The verification email could not be sent. Verify with your admin login password.'
+          : 'If a code cannot be sent, verify with your admin login password.');
     }
     if (noEmail) {
       if (prefix) prefix.textContent = 'This account needs an email before a code can be sent.';
@@ -261,7 +257,6 @@
       profileAdminOtpVerifyBtn: true,
       profileAdminOtpResendBtn: true,
       profileAdminOtpPassword: true,
-      profileAdminOtpPasswordUnlockBtn: true,
       profileAdminOtpHintPassword: true,
       profileAdminOtpHintPasswordUnlockBtn: true,
     };
@@ -272,8 +267,18 @@
     });
     const emailCreds = document.getElementById('profileEmailCredentialsBtn');
     if (emailCreds) emailCreds.disabled = isLocked;
+    const pwSave = document.getElementById('profilePasswordSave');
+    if (pwSave) pwSave.disabled = isLocked;
+    const pwToggle = document.getElementById('profilePasswordToggle');
+    if (pwToggle) pwToggle.disabled = isLocked;
+    const pwCopy = document.getElementById('profilePasswordCopy');
+    if (pwCopy) pwCopy.disabled = isLocked;
     const sigClear = document.getElementById('profileSignatureClear');
     if (sigClear) sigClear.disabled = isLocked;
+    const sigSave = document.getElementById('profileSignatureSave');
+    if (sigSave) sigSave.disabled = isLocked;
+    const padWrap = document.getElementById('adminProfileSignaturePadWrap');
+    if (padWrap) padWrap.style.pointerEvents = isLocked ? 'none' : '';
     const resetBtn = form.querySelector('.admin-quick-action.btn-reset');
     if (resetBtn) resetBtn.disabled = isLocked;
     const toggleBtn = document.getElementById('profileQuickToggleBtn');
@@ -440,28 +445,33 @@
     if (!uid) return;
     const input = document.getElementById('profileAdminOtpCode');
     const code = input ? String(input.value || '').replace(/\D/g, '') : '';
-    if (code.length !== 6) {
-      notify('Enter the 6-digit code from the email.', 'error');
+    const pwdInput = document.getElementById('profileAdminOtpPassword');
+    const password = pwdInput ? String(pwdInput.value || '') : '';
+    if (code.length === 6) {
+      try {
+        const response = await apiFetch('/api/admin/users/' + uid + '/edit-otp/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: code }),
+        });
+        const data = await response.json().catch(function () { return {}; });
+        if (!response.ok) {
+          notify(data.error || 'That code did not match. Check the email and try again.', 'error');
+          return;
+        }
+        w.closeAdminProfileOtpModal();
+        notify(data.message || 'Editing unlocked.', 'success');
+        showUnlocked(data.grant_expires_at);
+      } catch (err) {
+        console.error(err);
+        notify('Could not verify that code.', 'error');
+      }
       return;
     }
-    try {
-      const response = await apiFetch('/api/admin/users/' + uid + '/edit-otp/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code }),
-      });
-      const data = await response.json().catch(function () { return {}; });
-      if (!response.ok) {
-        notify(data.error || 'That code did not match. Check the email and try again.', 'error');
-        return;
-      }
-      w.closeAdminProfileOtpModal();
-      notify(data.message || 'Editing unlocked.', 'success');
-      showUnlocked(data.grant_expires_at);
-    } catch (err) {
-      console.error(err);
-      notify('Could not verify that code.', 'error');
+    if (password.trim()) {
+      return w.unlockAdminProfileWithPassword('modal');
     }
+    notify('Enter the 6-digit code from the email, or your admin password if you did not get it.', 'error');
   };
 
   w.unlockAdminProfileWithPassword = async function unlockAdminProfileWithPassword(source) {
@@ -552,7 +562,8 @@
         el.addEventListener('keydown', function (e) {
           if (e.key === 'Enter') {
             e.preventDefault();
-            w.unlockAdminProfileWithPassword(id === 'profileAdminOtpPassword' ? 'modal' : 'hint');
+            if (id === 'profileAdminOtpPassword') w.submitAdminProfileOtp();
+            else w.unlockAdminProfileWithPassword('hint');
           }
         });
       });

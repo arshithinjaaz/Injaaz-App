@@ -765,6 +765,16 @@ body.mp-page .mp-settings-view {
   .mp-filters-inner {
     grid-template-columns: 1fr;
   }
+  .mp-search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mp-filter-search {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    max-height: 48px;
+  }
   .mp-bento-title {
     min-height: 0;
   }
@@ -1571,27 +1581,217 @@ body.mp-page .mp-settings-view {
   }
 }
 
-.mp-import-hint {
-  padding: 0 1.25rem;
-  margin: 0 0 0.75rem;
-  color: var(--hh-muted, #5c616e);
-  font-size: 0.9rem;
-}
-
-.mp-check {
+.mp-page .hh-modal-panel.mp-import-panel {
+  max-width: 560px;
   display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  padding: 0 1.25rem 1rem;
-  font-size: 0.9rem;
-  cursor: pointer;
+  flex-direction: column;
 }
 
-.mp-check input {
-  margin-top: 0.2rem;
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
+.mp-page .hh-modal-panel.mp-import-panel .hh-modal-head {
+  align-items: flex-start;
+}
+
+.mp-import-head-copy {
+  min-width: 0;
+  padding-right: 0.5rem;
+}
+
+.mp-import-lead {
+  margin: 0.3rem 0 0;
+  color: var(--hh-muted, #5c616e);
+  font-size: 0.88rem;
+  font-weight: 450;
+  line-height: 1.45;
+}
+
+.mp-import-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 1.25rem 1.1rem;
+}
+
+.mp-import-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 8.5rem;
+  margin: 0;
+  padding: 1.15rem 1rem;
+  border: 1.5px dashed rgba(255, 142, 104, 0.45);
+  border-radius: 14px;
+  background: #fff8f5;
+  color: var(--hh-text, #191b23);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.mp-import-drop:hover,
+.mp-import-drop:focus-within {
+  border-color: var(--hh-brand, #ff8e68);
+  background: #fff3ed;
+  box-shadow: 0 0 0 3px rgba(255, 142, 104, 0.12);
+}
+
+.mp-import-drop.is-drag {
+  border-color: var(--hh-brand, #ff8e68);
+  background: #ffece4;
+}
+
+.mp-import-drop.has-file {
+  border-style: solid;
+  border-color: rgba(21, 128, 61, 0.4);
+  background: #f7fdf8;
+}
+
+.mp-import-drop.has-file:hover,
+.mp-import-drop.has-file:focus-within {
+  border-color: rgba(21, 128, 61, 0.55);
+  background: #ecfdf3;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.1);
+}
+
+.mp-import-drop-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  margin-bottom: 0.35rem;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--hh-brand, #ff8e68);
+  box-shadow: 0 1px 2px rgba(25, 27, 35, 0.06);
+}
+
+.mp-import-drop.has-file .mp-import-drop-icon {
+  color: #15803d;
+}
+
+.mp-import-drop-title {
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+.mp-import-drop-hint {
+  color: var(--hh-muted, #5c616e);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.mp-import-modes {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.mp-import-modes-label {
+  grid-column: 1 / -1;
+  margin: 0 0 0.1rem;
+  padding: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hh-muted, #5c616e);
+}
+
+.mp-import-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-height: 100%;
+  margin: 0;
+  padding: 0.85rem 0.9rem 0.95rem;
+  border: 1px solid #e6e7ec;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.mp-import-mode input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mp-import-mode:hover {
+  border-color: rgba(255, 142, 104, 0.45);
+}
+
+.mp-import-mode:has(input:checked) {
+  border-color: var(--hh-brand, #ff8e68);
+  background: #fff8f5;
+  box-shadow: 0 0 0 3px rgba(255, 142, 104, 0.12);
+}
+
+.mp-import-mode-replace:has(input:checked) {
+  border-color: #ea580c;
+  background: #fff7ed;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+}
+
+.mp-import-mode-kicker {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hh-muted, #5c616e);
+}
+
+.mp-import-mode:has(input:checked) .mp-import-mode-kicker {
+  color: #c2410c;
+}
+
+.mp-import-mode strong {
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--hh-text, #191b23);
+}
+
+.mp-import-mode-copy {
+  color: var(--hh-muted, #5c616e);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.mp-import-template {
+  margin: 0;
+  color: var(--hh-muted, #5c616e);
+  font-size: 0.82rem;
+}
+
+.mp-import-template-btn {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 650;
+  color: var(--hh-brand, #ff8e68);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.mp-import-template-btn:hover {
+  color: #e56a42;
+}
+
+.mp-import-panel > .mp-form-actions {
+  margin-top: 0;
+  padding: 0.9rem 1.25rem 1.2rem;
+  border-top: 1px solid #ececf1;
 }
 
 /* Modal: full-viewport overlay (override hiring.css panel-style .hh-modal) */
@@ -2180,11 +2380,14 @@ body.mp-page .mp-settings-view {
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 18l-6-6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
   }
 
-  .mp-page .mp-import-hint,
-  .mp-page .mp-check,
+  .mp-page .mp-import-body,
   .mp-page .mp-confirm-message {
     padding-left: 1.1rem;
     padding-right: 1.1rem;
+  }
+
+  .mp-import-modes {
+    grid-template-columns: 1fr;
   }
 
   .mp-page .hh-modal-panel > .mp-form {

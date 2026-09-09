@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}?v=3">
   <link rel="stylesheet" href="{{ url_for('static', filename='mobile_responsive.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v=22">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-manage-profile-modal.css') }}?v=24">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-manage-profile-modal.css') }}?v=26">
   <style>
   /* ── Design tokens ─────────────────────────────────────────────────────── */
   :root {
@@ -87,9 +87,12 @@
   }
   .tm-main { flex: 1; min-width: 0; padding: 1.1rem 1.75rem 3rem; }
   @media (max-width: 768px) {
-    .tm-app-root { flex-direction: column; min-height: auto; }
+    .tm-app-root { flex-direction: column; min-height: auto; min-width: 0; max-width: 100%; overflow-x: hidden; }
+    html, body { overflow-x: hidden !important; max-width: 100%; }
     .tm-sidebar {
       width: 100%;
+      max-width: 100%;
+      min-width: 0;
       height: auto;
       position: static;
       flex-direction: row;
@@ -108,13 +111,14 @@
       gap: 0.25rem;
       padding: 0.5rem 0.65rem;
       flex: 1;
-      min-width: min-content;
+      min-width: 0;
     }
     .sb-section-label,
     .sb-divider,
     .sb-footer { display: none; }
     .sb-nav-item {
       flex-shrink: 0;
+      width: auto;
       min-height: 44px;
       padding: 0.55rem 0.85rem;
       white-space: nowrap;
@@ -783,7 +787,7 @@
   /* ── Responsive table scroll ─────────────────────────────────────────────── */
   .tm-table-scroll { overflow-x: auto; }
   </style>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/injz-profile-mgmt-theme.css') }}?v=32">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/injz-profile-mgmt-theme.css') }}?v=36">
 </head>
 <body class="has-main-nav">
   {% include 'partials/main_navbar.html' with context %}
@@ -1211,8 +1215,9 @@
   <script src="{{ url_for('static', filename='js/dashboard.js') }}?v=41"></script>
   <script>window.FILES_SAVE_MODULE = 'technicians'; window.FILES_SAVE_MODULE_LABEL = 'Team Management — Staff';</script>
   <script src="{{ url_for('static', filename='js/files-save.js') }}?v=17"></script>
-  <script src="{{ url_for('static', filename='js/admin-edit-otp.js') }}?v=10"></script>
-  <script src="{{ url_for('static', filename='js/admin-manage-profile-modal.js') }}?v=16"></script>
+  <script src="{{ url_for('static', filename='signature_pad.umd.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/admin-edit-otp.js') }}?v=14"></script>
+  <script src="{{ url_for('static', filename='js/admin-manage-profile-modal.js') }}?v=19"></script>
 
   <script>
   /* ═══════════════════════════════════════════════════════════════════════

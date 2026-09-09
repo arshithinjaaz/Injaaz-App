@@ -496,8 +496,7 @@
   form input[type="number"],
   form input[type="tel"],
   form input[type="date"],
-  form input[type="search"],
-  form select,
+  form select:not(.tkt-filter-select):not(.fm-filter-status):not(.fm-input),
   .form-group input[type="text"],
   .form-group input[type="email"],
   .form-group input[type="password"],
@@ -544,6 +543,35 @@
     min-height: 18px !important;
     width: 18px !important;
     margin-top: 0.25em !important;
+  }
+
+  /* Compact module search/filter bars — do not inherit stacked flex-basis height */
+  .tkt-filter-search,
+  .fm-filter-search {
+    flex: 0 0 auto !important;
+    flex-basis: auto !important;
+    min-height: 44px !important;
+    max-height: 48px !important;
+    height: auto !important;
+    align-items: center !important;
+  }
+  .tkt-filter-search input[type="search"],
+  .fm-filter-search input[type="search"] {
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 8px 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    font-size: 16px !important;
+  }
+  .tkt-filter-select,
+  .fm-filter-status {
+    min-height: 44px !important;
+    max-height: 48px !important;
+    height: 44px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
   }
 
   /* ============================================================
@@ -887,13 +915,21 @@
   /* Dense grids opt into horizontal scroll; do not force all tables wide */
   .table-scroll > table,
   .table-responsive > table,
-  .table-scroll table.data-table,
+  .table-scroll table.data-table {
+    font-size: 0.85rem !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* True matrices (leave / manpower / opted-in boards) keep a wide scroll grid */
   .lt-table-wrap > table,
-  .mp-board-wrap > table {
+  .mp-board-wrap > table,
+  .table-matrix > table,
+  .table-scroll.table-matrix > table,
+  .table-responsive.table-matrix > table {
     font-size: 0.85rem !important;
     width: max-content !important;
-    /* Keep board column widths; 100% min-width collapses fixed columns */
-    min-width: max(100%, 150rem) !important;
+    min-width: max(100%, 60rem) !important;
   }
 
   table {
@@ -904,6 +940,19 @@
   
   table th, table td {
     padding: 0.625rem 0.5rem !important;
+  }
+
+  /* Compact wrap-cards: generic table padding must not inflate each cell */
+  .proc-table td,
+  .cat-table td,
+  .files-table td,
+  .history-table td,
+  .documents-table td,
+  .pd-table td,
+  .tkt-table td,
+  .tkt-mat-table td,
+  .fm-table td {
+    padding: 0 !important;
   }
 
   .table-scroll th,

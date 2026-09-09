@@ -69,7 +69,8 @@ def test_hr_dashboard_shows_hiring_cards_with_flag(client, app):
     assert 'Letters of Intent' in html
     assert 'Leave Tracker' in html
     assert 'Employee List' in html
-    assert 'Employee from hiring' in html
+    assert 'From hiring' in html
+    assert 'Staff — From hiring' not in html
     assert 'Manpower Tracker' in html
     assert 'Leave Application' in html
 

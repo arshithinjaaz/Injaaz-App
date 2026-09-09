@@ -30,6 +30,7 @@ from app.models import (
 )
 from common.datetime_utils import utc_now_naive
 from common.error_responses import error_response, success_response
+from module_hr.employee_from_hiring import ensure_employee_from_hiring_schema
 from module_hr.staffing_link import ensure_staffing_link_schema
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,7 @@ def _require_manpower_user():
     if not user_can_manage_manpower(user):
         return None, error_response('Access denied', status_code=403, error_code='ACCESS_DENIED')
     ensure_staffing_link_schema()
+    ensure_employee_from_hiring_schema()
     return user, None
 
 
@@ -143,7 +145,23 @@ def _annotate_person_labels(vacancies: list[ManpowerVacancy]) -> list[dict]:
     out = []
     for v in vacancies:
         of, total = index_map.get(v.id, (1, 1))
-        out.append(v.to_dict(person_of=of, person_total=total))
+        try:
+            out.append(v.to_dict(person_of=of, person_total=total))
+        except Exception:
+            logger.exception('Could not serialize manpower vacancy %s', getattr(v, 'id', None))
+            d = {
+                'id': v.id,
+                'trade_id': v.trade_id,
+                'project_id': v.project_id,
+                'candidate_name': v.candidate_name or '',
+                'status': v.normalized_status(),
+                'hiring_candidate': None,
+                'linked': bool(getattr(v, 'hiring_candidate_id', None)),
+                'person_of': of,
+                'person_total': total,
+                'person_label': f'{of} of {total}',
+            }
+            out.append(d)
     return out
 
 
@@ -368,6 +386,7 @@ def register_manpower_tracker_routes(hr_bp):
         if not user_can_manage_manpower(user):
             return error_response('Access denied', status_code=403, error_code='ACCESS_DENIED')
         ensure_staffing_link_schema()
+        ensure_employee_from_hiring_schema()
         return render_template(
             'hr_manpower_tracker.html',
             user=user,
@@ -539,47 +558,56 @@ def register_manpower_tracker_routes(hr_bp):
         project_id = request.args.get('project_id')
         status = (request.args.get('status') or 'all').strip().lower()
         req_type = (request.args.get('requirement_type') or 'all').strip().lower()
+        linked = (request.args.get('linked') or 'all').strip().lower()
 
-        query = (
-            ManpowerVacancy.query
-            .options(
+        def _query(with_hiring: bool):
+            opts = [
                 joinedload(ManpowerVacancy.trade),
                 joinedload(ManpowerVacancy.project),
-                joinedload(ManpowerVacancy.hiring_candidate),
-            )
-        )
-        if trade_id and str(trade_id).isdigit():
-            query = query.filter(ManpowerVacancy.trade_id == int(trade_id))
-        if project_id and str(project_id).isdigit():
-            query = query.filter(ManpowerVacancy.project_id == int(project_id))
-        if status and status != 'all':
-            norm = _normalize_status(status)
-            if norm and norm is not False:
-                query = query.filter(ManpowerVacancy.status == norm)
-        if req_type and req_type != 'all':
-            rnorm = _normalize_req_type(req_type)
-            if rnorm and rnorm is not False:
-                query = query.filter(ManpowerVacancy.requirement_type == rnorm)
-        linked = (request.args.get('linked') or 'all').strip().lower()
-        if linked == 'linked':
-            query = query.filter(ManpowerVacancy.hiring_candidate_id.isnot(None))
-        elif linked in ('unlinked', 'open'):
-            query = query.filter(ManpowerVacancy.hiring_candidate_id.is_(None))
-        if q:
-            like = f'%{q}%'
-            query = query.filter(or_(
-                ManpowerVacancy.candidate_name.ilike(like),
-                ManpowerVacancy.replacement_name.ilike(like),
-                ManpowerVacancy.replacement_employee_id.ilike(like),
-                ManpowerVacancy.contact_number.ilike(like),
-                ManpowerVacancy.remarks.ilike(like),
-            ))
+            ]
+            if with_hiring:
+                opts.append(joinedload(ManpowerVacancy.hiring_candidate))
+            query = ManpowerVacancy.query.options(*opts)
+            if trade_id and str(trade_id).isdigit():
+                query = query.filter(ManpowerVacancy.trade_id == int(trade_id))
+            if project_id and str(project_id).isdigit():
+                query = query.filter(ManpowerVacancy.project_id == int(project_id))
+            if status and status != 'all':
+                norm = _normalize_status(status)
+                if norm and norm is not False:
+                    query = query.filter(ManpowerVacancy.status == norm)
+            if req_type and req_type != 'all':
+                rnorm = _normalize_req_type(req_type)
+                if rnorm and rnorm is not False:
+                    query = query.filter(ManpowerVacancy.requirement_type == rnorm)
+            if linked == 'linked':
+                query = query.filter(ManpowerVacancy.hiring_candidate_id.isnot(None))
+            elif linked in ('unlinked', 'open'):
+                query = query.filter(ManpowerVacancy.hiring_candidate_id.is_(None))
+            if q:
+                like = f'%{q}%'
+                query = query.filter(or_(
+                    ManpowerVacancy.candidate_name.ilike(like),
+                    ManpowerVacancy.replacement_name.ilike(like),
+                    ManpowerVacancy.replacement_employee_id.ilike(like),
+                    ManpowerVacancy.contact_number.ilike(like),
+                    ManpowerVacancy.remarks.ilike(like),
+                ))
+            return query
 
-        vacancies = query.all()
-        # Sort for board grouping
+        try:
+            vacancies = _query(True).all()
+        except Exception:
+            logger.exception(
+                'Manpower vacancies query with hiring join failed; retrying without'
+            )
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            ensure_employee_from_hiring_schema()
+            vacancies = _query(False).all()
         vacancies.sort(key=_vacancy_sort_key)
-        # Person N of M must consider full trade×project set (not filtered subset for totals)
-        # Recompute within the filtered list so labels match visible rows
         items = _annotate_person_labels(vacancies)
         return success_response({'vacancies': items, 'count': len(items)})
 

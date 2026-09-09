@@ -3170,7 +3170,11 @@ class HiringCandidate(db.Model):
             'vacancy_id': None,
             'vacancy': None,
         }
-        vac = self.assigned_vacancy
+        vac = None
+        try:
+            vac = self.assigned_vacancy
+        except Exception:
+            vac = None
         if vac is not None:
             trade = vac.trade
             project = vac.project
@@ -4122,25 +4126,38 @@ class ManpowerVacancy(db.Model):
             'created_at': naive_utc_isoformat_z(self.created_at) if self.created_at else None,
             'updated_at': naive_utc_isoformat_z(self.updated_at) if self.updated_at else None,
         }
-        cand = self.hiring_candidate
+        cand = None
+        try:
+            cand = self.hiring_candidate
+        except Exception:
+            cand = None
         if cand is not None:
-            completed, total, progress_status = cand.progress()
-            pipeline = cand.normalized_pipeline_status()
-            d['hiring_candidate'] = {
-                'id': cand.id,
-                'full_name': cand.full_name,
-                'role': cand.role or '',
-                'phone': cand.phone or '',
-                'pipeline_status': pipeline,
-                'pipeline_label': HIRING_PIPELINE_LABELS.get(pipeline, pipeline),
-                'progress_label': f'{completed}/{total}',
-                'progress_status': progress_status,
-                'url': f'/hr/hiring/candidates/{cand.id}',
-            }
-            # Prefer live hiring profile for display when linked
-            d['candidate_name'] = cand.full_name or d['candidate_name']
-            if cand.phone:
-                d['contact_number'] = cand.phone
+            try:
+                completed, total, progress_status = cand.progress()
+                pipeline = cand.normalized_pipeline_status()
+                d['hiring_candidate'] = {
+                    'id': cand.id,
+                    'full_name': cand.full_name,
+                    'role': cand.role or '',
+                    'phone': cand.phone or '',
+                    'pipeline_status': pipeline,
+                    'pipeline_label': HIRING_PIPELINE_LABELS.get(pipeline, pipeline),
+                    'progress_label': f'{completed}/{total}',
+                    'progress_status': progress_status,
+                    'url': f'/hr/hiring/candidates/{cand.id}',
+                }
+                d['candidate_name'] = cand.full_name or d['candidate_name']
+                if cand.phone:
+                    d['contact_number'] = cand.phone
+            except Exception:
+                d['hiring_candidate'] = {
+                    'id': cand.id,
+                    'full_name': cand.full_name,
+                    'role': cand.role or '',
+                    'phone': cand.phone or '',
+                    'url': f'/hr/hiring/candidates/{cand.id}',
+                }
+                d['candidate_name'] = cand.full_name or d['candidate_name']
         else:
             d['hiring_candidate'] = None
         if person_of is not None:

@@ -48,13 +48,13 @@
     if (toggle) toggle.textContent = 'Show';
     if (hint) {
       if (stored) {
-        hint.textContent = 'Stored for admin reference. Edit and save to change.';
+        hint.textContent = 'Stored for admin reference. Edit, then Save password to change.';
       } else if (user && user.password_changed) {
         hint.textContent =
-          'This account already has a login password, but it was never saved for admin view (e.g. set before this feature or by the user). Use Reset password in Quick actions, or enter a new password here and save — you cannot recover the old one from the database.';
+          'This account already has a login password, but it was never saved for admin view (e.g. set before this feature or by the user). Use Reset password in Quick actions, or enter a new password here and Save password — you cannot recover the old one from the database.';
       } else {
         hint.textContent =
-          'No password stored for admin view yet. Enter one and save, or use Reset password in Quick actions.';
+          'No password stored for admin view yet. Enter one and Save password, or use Reset password in Quick actions.';
       }
     }
   }
@@ -107,6 +107,65 @@
       document.execCommand('copy');
       el.type = 'password';
       notify('Password copied', 'success');
+    }
+  };
+
+  function markProfilePasswordSaved(password) {
+    const el = document.getElementById('profilePassword');
+    const hint = document.getElementById('profilePasswordHint');
+    const saved = String(password || '');
+    if (el) {
+      el.value = saved;
+      el.dataset.storedPassword = saved;
+      el.placeholder = saved ? '' : 'No password on file for admin view';
+    }
+    if (hint) hint.textContent = 'Stored for admin reference. Edit, then Save password to change.';
+  }
+
+  w.saveProfilePassword = async function saveProfilePassword() {
+    if (w.AdminEditOtp && w.AdminEditOtp.isLocked()) {
+      notify('This administrator account is locked to prevent unconfirmed profile, password, or access changes. Verify the one-time code first.', 'error');
+      return;
+    }
+    const userId = document.getElementById('profileUserId') && document.getElementById('profileUserId').value;
+    if (!userId) return;
+    const el = document.getElementById('profilePassword');
+    const typed = el && el.value ? el.value.trim() : '';
+    if (!typed) {
+      notify('Enter a password to save.', 'error');
+      return;
+    }
+    const payload = profilePasswordPayload();
+    if (!payload.password) {
+      notify('This password is already saved.', 'success');
+      return;
+    }
+    const btn = document.getElementById('profilePasswordSave');
+    if (btn) btn.disabled = true;
+    try {
+      const response = await profileAuthenticatedFetch('/api/admin/users/' + userId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(function () { return {}; });
+      if (handleOtpRequired(data)) return;
+      if (handleUnauthorized(response)) return;
+      if (response.ok && data.success) {
+        const saved = (data.user && data.user.admin_visible_password != null)
+          ? data.user.admin_visible_password
+          : payload.password;
+        patchDirectoryUserPassword(userId, saved);
+        markProfilePasswordSaved(saved);
+        notify(data.message || 'Password saved', 'success');
+      } else {
+        notify((data && (data.error || data.message)) || 'Failed to save password', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      notify('Error saving password', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
     }
   };
 
@@ -267,6 +326,51 @@
     name.classList.toggle('is-empty', !f);
   }
 
+  let profileSigPad = null;
+
+  function captureProfileSignaturePad() {
+    if (profileSigPad && !profileSigPad.isEmpty()) {
+      profileSignatureDataUrl = profileSigPad.toDataURL('image/png');
+    }
+    return profileSignatureDataUrl;
+  }
+
+  function resizeProfileSignaturePad() {
+    const canvas = document.getElementById('adminProfileSignaturePad');
+    const wrap = document.getElementById('adminProfileSignaturePadWrap');
+    if (!canvas || !wrap || !profileSigPad) return;
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const w = Math.max(wrap.clientWidth || 280, 160);
+    const h = 132;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.width = Math.floor(w * ratio);
+    canvas.height = Math.floor(h * ratio);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    if (profileSignatureDataUrl) {
+      profileSigPad.fromDataURL(profileSignatureDataUrl);
+    }
+  }
+
+  function ensureProfileSignaturePad() {
+    const canvas = document.getElementById('adminProfileSignaturePad');
+    if (!canvas || typeof SignaturePad === 'undefined') return null;
+    if (!profileSigPad) {
+      profileSigPad = new SignaturePad(canvas, {
+        backgroundColor: 'rgb(255,255,255)',
+        penColor: 'rgb(28,25,23)',
+        minWidth: 0.8,
+        maxWidth: 2.2,
+        throttle: 16,
+      });
+    }
+    resizeProfileSignaturePad();
+    return profileSigPad;
+  }
+
   w.clearProfileSignaturePreview = function clearProfileSignaturePreview() {
     profileSignatureDataUrl = '';
     const f = document.getElementById('profileSignatureFile');
@@ -276,20 +380,72 @@
       img.src = '';
       img.hidden = true;
     }
+    if (profileSigPad) {
+      profileSigPad.clear();
+      resizeProfileSignaturePad();
+    }
     syncProfileSignatureFileName();
   };
 
   function updateProfileSignaturePreview() {
     const img = document.getElementById('profileSignaturePreview');
-    if (!img) return;
-    if (profileSignatureDataUrl) {
-      img.src = profileSignatureDataUrl;
-      img.hidden = false;
-    } else {
-      img.src = '';
-      img.hidden = true;
+    const hasPad = !!document.getElementById('adminProfileSignaturePad');
+    if (img) {
+      if (profileSignatureDataUrl && !hasPad) {
+        img.src = profileSignatureDataUrl;
+        img.hidden = false;
+      } else {
+        img.src = profileSignatureDataUrl || '';
+        img.hidden = true;
+      }
+    }
+    if (hasPad) {
+      ensureProfileSignaturePad();
+      resizeProfileSignaturePad();
     }
   }
+
+  w.saveProfileSignature = async function saveProfileSignature() {
+    if (w.AdminEditOtp && w.AdminEditOtp.isLocked()) {
+      notify('This administrator account is locked to prevent unconfirmed profile, password, or access changes. Verify the one-time code first.', 'error');
+      return;
+    }
+    const userId = document.getElementById('profileUserId') && document.getElementById('profileUserId').value;
+    if (!userId) return;
+    captureProfileSignaturePad();
+    if (!profileSignatureDataUrl) {
+      notify('Draw a signature or upload an image first.', 'error');
+      return;
+    }
+    const btn = document.getElementById('profileSignatureSave');
+    if (btn) btn.disabled = true;
+    try {
+      const response = await profileAuthenticatedFetch('/api/admin/users/' + userId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ default_signature: profileSignatureDataUrl }),
+      });
+      const data = await response.json().catch(function () { return {}; });
+      if (handleOtpRequired(data)) return;
+      if (handleUnauthorized(response)) return;
+      if (response.ok && data.success) {
+        if (data.user && data.user.default_signature != null) {
+          profileSignatureDataUrl = data.user.default_signature || '';
+        }
+        const list = directoryUsers();
+        const u = list.find(function (x) { return Number(x.id) === Number(userId); });
+        if (u) u.default_signature = profileSignatureDataUrl;
+        notify(data.message || 'Signature saved', 'success');
+      } else {
+        notify((data && (data.error || data.message)) || 'Failed to save signature', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      notify('Error saving signature', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  };
 
   /* ── Password reset ──────────────────────────────────────── */
 
@@ -854,6 +1010,7 @@
     if (sigFileEl) sigFileEl.value = '';
     updateProfileSignaturePreview();
     syncProfileSignatureFileName();
+    setTimeout(function () { ensureProfileSignaturePad(); }, 80);
 
     const tbtn = document.getElementById('profileQuickToggleBtn');
     setProfileQuickToggleButton(tbtn, user.is_active);
@@ -1108,7 +1265,7 @@
           role: document.getElementById('profileRole').value,
           designation: des || null,
           default_comment: document.getElementById('profileDefaultComment').value.trim() || null,
-          default_signature: profileSignatureDataUrl || null,
+          default_signature: captureProfileSignaturePad() || null,
           employment_start_date:
             document.getElementById('profileEmploymentStartDate') &&
             document.getElementById('profileEmploymentStartDate').value.trim()
@@ -1242,6 +1399,15 @@
         pwCopy.dataset.bound = '1';
         pwCopy.addEventListener('click', w.copyProfilePassword);
       }
+      const pwInput = document.getElementById('profilePassword');
+      if (pwInput && !pwInput.dataset.saveOnEnterBound) {
+        pwInput.dataset.saveOnEnterBound = '1';
+        pwInput.addEventListener('keydown', function (e) {
+          if (e.key !== 'Enter') return;
+          e.preventDefault();
+          w.saveProfilePassword();
+        });
+      }
     } catch (_) { /* ignore */ }
 
     try {
@@ -1249,6 +1415,7 @@
       if (sigFile && !sigFile.dataset.bound) {
         sigFile.dataset.bound = '1';
         sigFile.addEventListener('change', function () {
+          sigFile.blur();
           const f = sigFile.files && sigFile.files[0];
           if (!f) return;
           if (f.size > 400 * 1024) {
@@ -1262,8 +1429,12 @@
             profileSignatureDataUrl = reader.result || '';
             updateProfileSignaturePreview();
             syncProfileSignatureFileName();
+            ensureProfileSignaturePad();
           };
           reader.readAsDataURL(f);
+        });
+        window.addEventListener('focus', function () {
+          if (document.activeElement === sigFile) sigFile.blur();
         });
       }
     } catch (_) { /* ignore */ }

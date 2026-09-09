@@ -25,11 +25,11 @@
       <button type="button" class="admin-otp-hint-btn" id="profileAdminOtpSendBtn" onclick="requestAdminProfileOtp()">Send verification code</button>
       <p class="admin-otp-resend-meta" id="profileAdminOtpHintResendMeta" hidden></p>
       <div class="admin-otp-password-fallback" id="profileAdminOtpHintPasswordWrap">
-        <p class="admin-otp-password-lead" id="profileAdminOtpHintPasswordLead">If a code cannot be sent, unlock with your admin login password.</p>
+        <p class="admin-otp-password-lead" id="profileAdminOtpHintPasswordLead">If a code cannot be sent, verify with your admin login password.</p>
         <label class="form-label" for="profileAdminOtpHintPassword">Your admin password</label>
         <div class="admin-otp-password-row">
           <input type="password" id="profileAdminOtpHintPassword" class="form-control" autocomplete="current-password" spellcheck="false">
-          <button type="button" class="btn injz-mgmt-btn-submit admin-otp-password-btn" id="profileAdminOtpHintPasswordUnlockBtn" onclick="unlockAdminProfileWithPassword('hint')">Unlock</button>
+          <button type="button" class="btn injz-mgmt-btn-submit admin-otp-password-btn" id="profileAdminOtpHintPasswordUnlockBtn" onclick="unlockAdminProfileWithPassword('hint')">Verify</button>
         </div>
       </div>
     </div>
@@ -63,8 +63,11 @@
               <button type="button" class="btn admin-profile-password-btn" id="profilePasswordToggle" aria-label="Show password">Show</button>
               <button type="button" class="btn admin-profile-password-btn" id="profilePasswordCopy" aria-label="Copy password">Copy</button>
             </div>
-            <button type="button" class="btn admin-profile-email-creds" id="profileEmailCredentialsBtn" onclick="profileModalEmailCredentials()">Email the user</button>
-            <p class="admin-profile-hint admin-profile-password-hint" id="profilePasswordHint">Admin view only. Edit and save to change.</p>
+            <div class="admin-profile-password-actions">
+              <button type="button" class="btn admin-profile-email-creds" id="profilePasswordSave" onclick="saveProfilePassword()">Save password</button>
+              <button type="button" class="btn admin-profile-email-creds" id="profileEmailCredentialsBtn" onclick="profileModalEmailCredentials()">Email the user</button>
+            </div>
+            <p class="admin-profile-hint admin-profile-password-hint" id="profilePasswordHint">Admin view only. Edit, then Save password to change.</p>
           </div>
         </div>
       </div>
@@ -207,16 +210,21 @@
             <textarea id="profileDefaultComment" class="form-control" rows="6" placeholder="Optional notes after “Signed &amp; Verified — Your Name”"></textarea>
           </div>
           <div class="form-group admin-profile-defaults-signature">
-            <label class="form-label" for="profileSignatureFile">Signature image</label>
+            <label class="form-label" for="adminProfileSignaturePad">Signature</label>
+            <div class="admin-profile-sig-pad-wrap" id="adminProfileSignaturePadWrap">
+              <canvas id="adminProfileSignaturePad" width="400" height="132" aria-label="Draw signature"></canvas>
+            </div>
+            <p class="admin-profile-hint">Draw with mouse or finger, then Save signature.</p>
             <label class="kyn-file-pick" for="profileSignatureFile">
               <input type="file" id="profileSignatureFile" class="kyn-file-pick-input" accept="image/*">
               <span class="kyn-file-pick-btn">Choose file</span>
               <span class="kyn-file-pick-name is-empty" id="profileSignatureFileName">No file chosen</span>
             </label>
-            <p class="admin-profile-hint">PNG or JPG, max ~400KB.</p>
+            <p class="admin-profile-hint">Or upload a PNG or JPG, max ~400KB.</p>
             <img id="profileSignaturePreview" class="admin-profile-sig-preview" alt="Signature preview" hidden>
             <div class="admin-profile-quick admin-profile-sig-toolbar">
-              <button type="button" class="btn btn-outline-secondary" id="profileSignatureClear" onclick="clearProfileSignaturePreview()">Clear signature</button>
+              <button type="button" class="btn btn-outline-secondary" id="profileSignatureClear" onclick="clearProfileSignaturePreview()">Clear</button>
+              <button type="button" class="btn admin-profile-email-creds" id="profileSignatureSave" onclick="saveProfileSignature()">Save signature</button>
             </div>
           </div>
         </div>
@@ -292,15 +300,11 @@
     </div>
     <div class="admin-otp-modal-resend">
       <button type="button" class="btn btn-cancel" id="profileAdminOtpResendBtn" onclick="requestAdminProfileOtp()" disabled>Resend code</button>
-      <span class="admin-otp-resend-meta" id="profileAdminOtpResendMeta"></span>
     </div>
     <div class="admin-otp-password-fallback admin-otp-password-fallback--modal">
-      <p class="admin-otp-password-lead">Didn’t get the email? Unlock with your admin login password.</p>
+      <p class="admin-otp-password-lead">Didn’t get the email? Verify with your admin login password.</p>
       <label class="form-label" for="profileAdminOtpPassword">Your admin password</label>
-      <div class="admin-otp-password-row">
-        <input type="password" id="profileAdminOtpPassword" class="form-control" autocomplete="current-password" spellcheck="false">
-        <button type="button" class="btn injz-mgmt-btn-submit admin-otp-password-btn" id="profileAdminOtpPasswordUnlockBtn" onclick="unlockAdminProfileWithPassword('modal')">Unlock</button>
-      </div>
+      <input type="password" id="profileAdminOtpPassword" class="form-control" autocomplete="current-password" spellcheck="false">
     </div>
     <div class="modal-actions">
       <button type="button" class="btn btn-cancel" onclick="closeAdminProfileOtpModal()">Cancel</button>

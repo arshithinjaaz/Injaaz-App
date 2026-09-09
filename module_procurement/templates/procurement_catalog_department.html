@@ -236,6 +236,20 @@
     .cat-table tbody tr:last-child { border-bottom: none; }
     .cat-table tbody tr:hover { background: color-mix(in srgb, var(--dc) 4%, white); }
     .cat-table td { padding: .8rem 1.1rem; font-size: .875rem; color: var(--text); vertical-align: middle; }
+    @media (max-width: 768px) {
+      .cat-search-wrap { flex: none; width: 100%; min-width: 0; max-width: none; }
+      .cat-table { min-width: 0 !important; width: 100%; }
+      .cat-table thead { display: none; }
+      .cat-table, .cat-table tbody { display: block; width: 100%; }
+      .cat-table tbody tr {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
+        padding: 12px 14px; margin-bottom: 10px;
+        border: 1.5px solid var(--border, #e9eaee); border-radius: 14px; background: #fff;
+      }
+      .cat-table tbody td { border: none; padding: 0 !important; width: auto; white-space: normal; }
+      .cat-table tbody td:nth-child(2) { flex: 1 1 100%; font-weight: 600; }
+      .cat-table tbody td.row-actions { flex: 1 1 100%; }
+    }
     .sno-cell  { color: #94a3b8; font-size: .75rem; font-weight: 600; width: 48px; }
     .name-cell { font-weight: 600; color: var(--text); }
     .tag {
@@ -494,12 +508,12 @@
           ? `<span class="price-cell">AED ${parseFloat(item.unit_price).toFixed(2)}</span>`
           : `<span class="price-na">—</span>`;
         return `<tr>
-          <td class="sno-cell">${n}</td>
-          <td class="name-cell">${esc(item.name)}</td>
-          <td>${item.brand ? `<span class="tag brand-tag">${esc(item.brand)}</span>` : '<span class="price-na">—</span>'}</td>
-          <td>${item.uom  ? `<span class="tag uom-tag">${esc(item.uom)}</span>`   : '—'}</td>
-          <td style="text-align:right">${price}</td>
-          <td class="row-actions">
+          <td class="sno-cell" data-label="#">${n}</td>
+          <td class="name-cell" data-label="Item">${esc(item.name)}</td>
+          <td data-label="Brand">${item.brand ? `<span class="tag brand-tag">${esc(item.brand)}</span>` : '<span class="price-na">—</span>'}</td>
+          <td data-label="UOM">${item.uom  ? `<span class="tag uom-tag">${esc(item.uom)}</span>`   : '—'}</td>
+          <td data-label="Price" style="text-align:right">${price}</td>
+          <td class="row-actions" data-label="">
             <button
               class="btn-edit js-edit"
               type="button"

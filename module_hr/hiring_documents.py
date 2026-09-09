@@ -45,6 +45,7 @@ from common.datetime_utils import utc_now_naive
 from common.error_responses import error_response, success_response
 from common.utils import ensure_dir, save_uploaded_file_cloud
 from config import GENERATED_DIR, MAX_UPLOAD_FILESIZE
+from module_hr.employee_from_hiring import ensure_employee_from_hiring_schema
 from module_hr.staffing_link import (
     ensure_staffing_link_schema,
     sync_vacancy_from_candidate,
@@ -88,6 +89,7 @@ def _require_hiring_user():
     if not user_can_manage_hiring_docs(user):
         return None, error_response('Access denied', status_code=403, error_code='ACCESS_DENIED')
     ensure_staffing_link_schema()
+    ensure_employee_from_hiring_schema()
     return user, None
 
 
@@ -274,6 +276,7 @@ def register_hiring_document_routes(hr_bp):
         if not user_can_manage_hiring_docs(user):
             return jsonify({'error': 'Access denied'}), 403
         ensure_staffing_link_schema()
+        ensure_employee_from_hiring_schema()
         return render_template(
             'hr_hiring_dashboard.html',
             user=user,
@@ -361,22 +364,30 @@ def register_hiring_document_routes(hr_bp):
         page_items = filtered[start:start + per_page]
 
         # Prefer facets from linked vacancies; fall back to this result set's chips.
-        vacancy_trades, vacancy_projects = _vacancy_filter_facets(
-            trade_id=trade_id,
-            project_id=project_id,
-        )
-        if not vacancy_trades and not vacancy_projects:
-            vacancy_trades, vacancy_projects = _facets_from_candidates(
-                candidates,
+        try:
+            vacancy_trades, vacancy_projects = _vacancy_filter_facets(
                 trade_id=trade_id,
                 project_id=project_id,
             )
-        elif not vacancy_trades or not vacancy_projects:
+        except Exception:
+            logger.exception('Hiring vacancy facets failed; continuing without them')
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            vacancy_trades, vacancy_projects = [], []
+        try:
             extra_trades, extra_projects = _facets_from_candidates(
                 candidates,
                 trade_id=trade_id,
                 project_id=project_id,
             )
+        except Exception:
+            logger.exception('Hiring candidate facets failed')
+            extra_trades, extra_projects = [], []
+        if not vacancy_trades and not vacancy_projects:
+            vacancy_trades, vacancy_projects = extra_trades, extra_projects
+        elif not vacancy_trades or not vacancy_projects:
             if not vacancy_trades:
                 vacancy_trades = extra_trades
             if not vacancy_projects:
@@ -911,6 +922,8 @@ def register_hiring_document_routes(hr_bp):
         user, err = _require_hiring_user()
         if err:
             return err
+        ensure_staffing_link_schema()
+        ensure_employee_from_hiring_schema()
 
         if 'file' not in request.files:
             return error_response('No file uploaded', status_code=400, error_code='VALIDATION_ERROR')
@@ -963,7 +976,15 @@ def register_hiring_document_routes(hr_bp):
             )
 
         if preview_only:
-            preview = preview_hiring_import(rows)
+            try:
+                preview = preview_hiring_import(rows)
+            except Exception as e:
+                logger.exception('Hiring Excel preview failed')
+                return error_response(
+                    f'Could not prepare import: {e}',
+                    status_code=500,
+                    error_code='SERVER_ERROR',
+                )
             return success_response(preview, message='Import preview ready')
 
         try:

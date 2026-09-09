@@ -518,28 +518,74 @@ body.fm-assets-shell .fm-wrap a:not(.fm-btn):not(.sb-nav-item):not(.sb-brand-lin
   .fm-filters select,
   .fm-filters button,
   .fm-filter-search,
-  .fm-filter-chip { width: 100%; min-width: 0; }
+  .fm-filter-chip { width: 100%; min-width: 0; flex: 0 0 auto; flex-basis: auto; }
+  .fm-filter-search {
+    min-height: 44px;
+    max-height: 48px;
+  }
+  .fm-filter-status {
+    min-height: 44px;
+    max-height: 48px;
+    flex-basis: auto;
+  }
   .fm-panel-head { flex-wrap: wrap; gap: 0.5rem; }
   .fm-table-wrap { overflow: visible; }
   .fm-table { min-width: 0; width: 100%; }
   .fm-table thead { display: none; }
   .fm-table, .fm-table tbody { display: block; width: 100%; }
   .fm-table tbody tr {
-    display: flex; flex-direction: column; gap: 0.3rem;
-    padding: 0.85rem 1rem; margin-bottom: 0.7rem;
-    border: 1px solid var(--fm-border, #e2ede8); border-radius: 12px; background: #fff;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    border: 1px solid var(--fm-border, #e2ede8);
+    border-radius: 14px;
+    background: #fff;
   }
   .fm-table tbody td {
-    display: flex; justify-content: space-between; gap: 0.75rem;
-    padding: 0.2rem 0; border: none; width: 100%; white-space: normal;
+    display: block;
+    padding: 0;
+    border: none;
+    width: auto;
+    white-space: normal;
   }
-  .fm-table tbody td::before {
-    content: attr(data-label);
-    font-weight: 600; font-size: 0.72rem; color: #587569; flex: 0 0 38%;
-    text-transform: uppercase; letter-spacing: 0.03em;
+  .fm-table tbody td::before { display: none; content: none; }
+  .fm-table--registry tbody td:nth-child(1) { flex: 1 1 auto; order: 1; font-weight: 700; }
+  .fm-table--registry tbody td:nth-child(7) { flex: 0 0 auto; order: 2; }
+  .fm-table--registry tbody td:nth-child(2) { flex: 1 1 100%; order: 3; font-weight: 600; }
+  .fm-table--registry tbody td:nth-child(3),
+  .fm-table--registry tbody td:nth-child(4),
+  .fm-table--registry tbody td:nth-child(5) {
+    flex: 0 1 auto;
+    order: 4;
+    font-size: 0.78rem;
+    color: #5c616e;
   }
-  .fm-table tbody td:not([data-label])::before,
-  .fm-table tbody td[data-label=""]::before { display: none; }
+  .fm-table--registry tbody td:nth-child(4)::before {
+    content: "· ";
+    display: inline;
+    color: #8b95a5;
+    font-weight: 600;
+  }
+  .fm-table--registry tbody td:nth-child(5)::before {
+    content: "· Health ";
+    display: inline;
+    color: #8b95a5;
+    font-weight: 600;
+  }
+  .fm-table--registry tbody td:nth-child(6) {
+    flex: 1 1 100%;
+    order: 5;
+    font-size: 0.75rem;
+    color: #8b95a5;
+  }
+  .fm-table--registry tbody td:nth-child(6)::before {
+    content: "Warranty ";
+    display: inline;
+    font-weight: 600;
+  }
 }
 
 .fm-qr-strip {

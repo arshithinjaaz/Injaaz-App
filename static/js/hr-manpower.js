@@ -136,17 +136,26 @@
     return body;
   }
 
+  function parseApiResponse(r) {
+    return r.text().then(function (text) {
+      var body = null;
+      try {
+        body = text ? JSON.parse(text) : {};
+      } catch (e) {
+        var plain = String(text || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        throw new Error(plain.slice(0, 160) || ('Request failed (' + r.status + ')'));
+      }
+      if (!r.ok || (body && body.success === false)) {
+        throw new Error((body && (body.error || body.message || body.msg)) || ('Request failed (' + r.status + ')'));
+      }
+      return unwrap(body);
+    });
+  }
+
   function apiGet(url) {
     return authFetch(url, {
       headers: { Accept: 'application/json' },
-    }).then(function (r) {
-      return r.json().then(function (body) {
-        if (!r.ok || body.success === false) {
-          throw new Error((body && (body.error || body.message || body.msg)) || 'Request failed');
-        }
-        return unwrap(body);
-      });
-    });
+    }).then(parseApiResponse);
   }
 
   function apiJson(url, method, payload) {
@@ -157,14 +166,7 @@
         'Content-Type': 'application/json',
       },
       body: payload != null ? JSON.stringify(payload) : undefined,
-    }).then(function (r) {
-      return r.json().then(function (body) {
-        if (!r.ok || body.success === false) {
-          throw new Error((body && (body.error || body.message || body.msg)) || 'Request failed');
-        }
-        return unwrap(body);
-      });
-    });
+    }).then(parseApiResponse);
   }
 
   function downloadBlob(url, filename) {
@@ -2196,8 +2198,92 @@
       downloadBlob('/hr/api/manpower/export', 'Manpower_Tracker_Export.xlsx')
         .catch(function (err) { showImportResult(err.message, true); });
     }
+    var pendingImportFile = null;
+    var importBusy = false;
+
+    function isExcelFile(file) {
+      if (!file) return false;
+      var name = String(file.name || '').toLowerCase();
+      return name.endsWith('.xlsx') || name.endsWith('.xls');
+    }
+
+    function importModeIsReplace() {
+      var checked = document.querySelector('#mpImportModal input[name="mpImportMode"]:checked');
+      return !!(checked && checked.value === 'replace');
+    }
+
+    function syncImportUi() {
+      var drop = $('mpImportDrop');
+      var title = $('mpImportDropTitle');
+      var hint = $('mpImportDropHint');
+      var btn = $('mpImportConfirm');
+      var hasFile = !!pendingImportFile;
+      if (drop) drop.classList.toggle('has-file', hasFile);
+      if (title) title.textContent = hasFile ? pendingImportFile.name : 'Drop an Excel file here';
+      if (hint) {
+        hint.textContent = hasFile
+          ? 'Click to choose a different file · .xlsx / .xls'
+          : 'or click to browse · .xlsx / .xls';
+      }
+      if (btn) {
+        btn.disabled = !hasFile || importBusy;
+        btn.textContent = importBusy ? 'Importing…' : 'Import';
+      }
+    }
+
+    function resetImportModal() {
+      pendingImportFile = null;
+      importBusy = false;
+      if ($('mpImportFile')) $('mpImportFile').value = '';
+      var merge = document.querySelector('#mpImportModal input[name="mpImportMode"][value="merge"]');
+      if (merge) merge.checked = true;
+      if ($('mpImportDrop')) $('mpImportDrop').classList.remove('is-drag');
+      syncImportUi();
+    }
+
+    function setImportFile(file) {
+      if (file && !isExcelFile(file)) {
+        showImportResult('Use an .xlsx or .xls workbook', true);
+        return;
+      }
+      pendingImportFile = file || null;
+      if ($('mpImportFile') && !file) $('mpImportFile').value = '';
+      syncImportUi();
+    }
+
     function openImportFlow() {
+      resetImportModal();
       openModal('mpImportModal');
+    }
+
+    function runManpowerImport() {
+      if (!pendingImportFile || importBusy) return;
+      importBusy = true;
+      syncImportUi();
+      var fd = new FormData();
+      fd.append('file', pendingImportFile);
+      if (importModeIsReplace()) fd.append('replace', '1');
+      authFetch('/hr/api/manpower/import', {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        body: fd,
+      }).then(parseApiResponse).then(function (data) {
+        var msg = 'Imported ' + (data.created || 0) + ' vacancies';
+        if (data.deleted) msg += ' (replaced ' + data.deleted + ')';
+        if (data.trades_created) msg += ', +' + data.trades_created + ' trades';
+        if (data.projects_created) msg += ', +' + data.projects_created + ' projects';
+        if (data.errors && data.errors.length) {
+          msg += '. Warnings: ' + data.errors.slice(0, 3).join('; ');
+        }
+        closeModal($('mpImportModal'));
+        resetImportModal();
+        showImportResult(msg, false);
+        return refreshAll();
+      }).catch(function (err) {
+        importBusy = false;
+        syncImportUi();
+        showImportResult(err.message || 'Import failed', true);
+      });
     }
 
     if ($('mpTemplateBtn')) {
@@ -2207,9 +2293,7 @@
       $('mpExportBtn').addEventListener('click', openExportDownload);
     }
     if ($('mpImportBtn')) {
-      $('mpImportBtn').addEventListener('click', function () {
-        openModal('mpImportModal');
-      });
+      $('mpImportBtn').addEventListener('click', openImportFlow);
     }
     if ($('mpSettingsTemplateBtn')) {
       $('mpSettingsTemplateBtn').addEventListener('click', openTemplateDownload);
@@ -2220,46 +2304,37 @@
     if ($('mpSettingsImportBtn')) {
       $('mpSettingsImportBtn').addEventListener('click', openImportFlow);
     }
+    if ($('mpImportTemplateLink')) {
+      $('mpImportTemplateLink').addEventListener('click', openTemplateDownload);
+    }
     if ($('mpImportConfirm')) {
-      $('mpImportConfirm').addEventListener('click', function () {
-        closeModal($('mpImportModal'));
-        if ($('mpImportFile')) $('mpImportFile').click();
-      });
+      $('mpImportConfirm').addEventListener('click', runManpowerImport);
     }
     if ($('mpImportFile')) {
       $('mpImportFile').addEventListener('change', function () {
         var file = $('mpImportFile').files && $('mpImportFile').files[0];
-        if (!file) return;
-        var fd = new FormData();
-        fd.append('file', file);
-        if ($('mpImportReplace') && $('mpImportReplace').checked) {
-          fd.append('replace', '1');
-        }
-        authFetch('/hr/api/manpower/import', {
-          method: 'POST',
-          body: fd,
-        }).then(function (r) {
-          return r.json().then(function (body) {
-            if (!r.ok || body.success === false) {
-              throw new Error((body && (body.error || body.message || body.msg)) || 'Import failed');
-            }
-            return unwrap(body);
-          });
-        }).then(function (data) {
-          var msg = 'Imported ' + (data.created || 0) + ' vacancies';
-          if (data.deleted) msg += ' (replaced ' + data.deleted + ')';
-          if (data.trades_created) msg += ', +' + data.trades_created + ' trades';
-          if (data.projects_created) msg += ', +' + data.projects_created + ' projects';
-          if (data.errors && data.errors.length) {
-            msg += '. Warnings: ' + data.errors.slice(0, 3).join('; ');
-          }
-          showImportResult(msg, false);
-          $('mpImportFile').value = '';
-          return refreshAll();
-        }).catch(function (err) {
-          showImportResult(err.message || 'Import failed', true);
-          $('mpImportFile').value = '';
+        setImportFile(file || null);
+      });
+    }
+    if ($('mpImportDrop')) {
+      ['dragenter', 'dragover'].forEach(function (evt) {
+        $('mpImportDrop').addEventListener(evt, function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          $('mpImportDrop').classList.add('is-drag');
         });
+      });
+      ['dragleave', 'dragend', 'drop'].forEach(function (evt) {
+        $('mpImportDrop').addEventListener(evt, function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (evt !== 'drop') $('mpImportDrop').classList.remove('is-drag');
+        });
+      });
+      $('mpImportDrop').addEventListener('drop', function (e) {
+        $('mpImportDrop').classList.remove('is-drag');
+        var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) setImportFile(file);
       });
     }
   }

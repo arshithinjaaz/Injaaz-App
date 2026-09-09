@@ -508,10 +508,14 @@ def create_app():
 
                 if 'ticket_materials' in inspector.get_table_names():
                     tm_cols = {col['name'] for col in inspector.get_columns('ticket_materials')}
+                    # DATETIME is invalid on Postgres (live) and left created_at missing,
+                    # which 500s every ticket detail page when materials are loaded.
+                    dialect = db.engine.dialect.name
+                    ts_sql = 'TIMESTAMP' if dialect == 'postgresql' else 'DATETIME'
                     for col_name, col_sql in (
                         ('catalog_item_id', 'INTEGER'),
                         ('qty_short', 'FLOAT DEFAULT 0'),
-                        ('created_at', 'DATETIME'),
+                        ('created_at', ts_sql),
                     ):
                         if col_name in tm_cols:
                             continue
@@ -709,13 +713,17 @@ def create_app():
                                 logger.info("Column pipeline_status already exists")
                             else:
                                 logger.warning(f"Could not add pipeline_status: {col_error}")
+                    # DATETIME is invalid on Postgres (live). Same class of bug as
+                    # ticket_materials.created_at — a missing column 500s Hiring Docs.
+                    dialect = db.engine.dialect.name
+                    ts_sql = 'TIMESTAMP' if dialect == 'postgresql' else 'DATETIME'
                     for col_name, col_sql in (
                         ('replacement_name', 'VARCHAR(200)'),
                         ('replacement_employee_id', 'VARCHAR(80)'),
                         ('comments', 'TEXT'),
                         ('hr_ref', 'VARCHAR(80)'),
                         ('leave_employee_id', 'INTEGER'),
-                        ('employee_list_dismissed_at', 'DATETIME'),
+                        ('employee_list_dismissed_at', ts_sql),
                     ):
                         if col_name not in hc_cols:
                             try:
@@ -1054,10 +1062,15 @@ def create_app():
         logger.warning("⚠️  Flask-WTF not installed - CSRF protection disabled")
         app.csrf = None
     
+    def _wants_json_error():
+        """JSON errors for /api/... and module APIs like /hr/api/..., /files/api/."""
+        path = request.path or ''
+        return '/api/' in path or bool(getattr(request, 'is_json', False))
+
     # Global error handlers
     @app.errorhandler(404)
     def not_found(e):
-        if request.path.startswith('/api/'):
+        if _wants_json_error():
             return jsonify({"success": False, "error": "Resource not found"}), 404
         try:
             return render_template('404.html'), 404
@@ -1077,7 +1090,7 @@ def create_app():
     def internal_error(e):
         logger.exception(f"Internal server error: {e}")
         request_id = request.headers.get('X-Request-ID', 'unknown')
-        if request.path.startswith('/api/'):
+        if _wants_json_error():
             return jsonify({"success": False, "error": "Internal server error", "request_id": request_id}), 500
         try:
             return render_template('500.html', request_id=request_id), 500
@@ -1087,7 +1100,7 @@ def create_app():
     @app.errorhandler(400)
     def bad_request(e):
         """Handle 400 errors - return JSON for API routes"""
-        if request.path.startswith('/api/'):
+        if _wants_json_error():
             return jsonify({"error": "Bad request", "message": str(e)}), 400
         return str(e), 400
     
@@ -1101,8 +1114,8 @@ def create_app():
         logger.exception(f"Unhandled exception: {e}")
         
         # Return JSON error for API calls
-        if request.path.startswith('/api/') or request.is_json:
-            return jsonify({"error": "An unexpected error occurred"}), 500
+        if _wants_json_error():
+            return jsonify({"success": False, "error": "An unexpected error occurred"}), 500
         
         # Return HTML error for browser requests
         return "An unexpected error occurred", 500

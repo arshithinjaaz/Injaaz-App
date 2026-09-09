@@ -108,24 +108,32 @@
     }
     .dm-sidebar-toggle {
       display: none;
-      position: fixed;
-      left: max(16px, env(safe-area-inset-left, 0px));
-      bottom: max(20px, env(safe-area-inset-bottom, 0px));
-      z-index: 198;
-      width: 44px;
-      height: 44px;
+      position: static !important;
+      left: auto !important;
+      right: auto !important;
+      top: auto !important;
+      bottom: auto !important;
+      z-index: 4;
+      width: auto !important;
+      height: 40px;
+      min-height: 40px;
+      min-width: 44px;
       border-radius: 12px;
       background: var(--accent, #ff8e68);
       color: #fff;
       border: none;
-      box-shadow: 0 2px 10px rgba(255, 142, 104, 0.28);
+      box-shadow: none !important;
       cursor: pointer;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
+      gap: 0.35rem;
+      font-size: 15px;
+      font-weight: 800;
       line-height: 1;
-      padding: 0;
+      padding: 0 0.8rem !important;
+      flex-shrink: 0;
     }
+    .dm-sidebar-toggle-label { display: none; }
     .dm-sidebar-overlay {
       display: none;
       position: fixed;
@@ -804,21 +812,35 @@
         padding-top: 8px;
         padding-bottom: 8px;
       }
-      .dm-page-title { font-size: 13px; flex: 1 1 100%; }
+      .dm-sidebar-toggle-label { display: inline; }
+      .dm-page-title { font-size: 13px; flex: 1 1 auto; min-width: 0; }
       .dm-topbar-spacer { display: none; }
       .dm-search-wrap { flex: 1 1 auto; }
       .dm-search-wrap input { width: 100%; }
       .dm-search-wrap input:focus { width: 100%; }
       .dm-add-btn { flex-shrink: 0; padding: 7px 11px; font-size: 12px; }
       .dm-content { padding: 0.875rem; }
-      .dm-device-grid-body .dm-device-grid-row { height: 56px; }
+      .dm-device-grid-head { display: none; }
+      .dm-device-grid-body .dm-device-grid-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 8px;
+        height: auto;
+        min-height: 0;
+        padding: 12px 14px;
+        margin-bottom: 10px;
+        border: 1.5px solid var(--gray-100, #e9eaee);
+        border-radius: 14px;
+        background: #fff;
+      }
       .dm-device-grid { min-width: 0; }
       .dm-device-grid-row {
-        grid-template-columns: 32px minmax(120px, 1fr) 80px 68px minmax(90px, 130px) 32px;
-        column-gap: 8px;
-        padding: 0 8px 0 12px;
+        grid-template-columns: none;
+        column-gap: 0;
+        padding: 0;
       }
-      .dm-device-name { font-size: 13px; }
+      .dm-device-name { font-size: 13px; flex: 1 1 auto; min-width: 0; }
       .dm-activity-list { max-height: min(240px, calc(100vh - 28rem)); }
       .dm-stat-card { padding: 12px 14px; }
       /* Modal form fields — prevent collapsed look */
@@ -835,7 +857,6 @@
 </head>
 <body class="has-main-nav dm-device-mgmt-page">
   {% set active_page = 'devices' %}
-  <button type="button" class="dm-sidebar-toggle dh-sidebar-toggle" id="dmSidebarToggle" onclick="dmToggleMobileSidebar()" aria-label="Open device menu" title="Menu">☰</button>
   <div class="dm-sidebar-overlay dh-overlay" id="dmSidebarOverlay" onclick="dmCloseMobileSidebar()" aria-hidden="true"></div>
   {% include 'partials/main_navbar.html' with context %}
 
@@ -881,6 +902,7 @@
 
     <div class="dm-main-col" style="flex:1; margin-left:0; min-width:0;">
     <header class="dm-topbar">
+      <button type="button" class="dm-sidebar-toggle dh-sidebar-toggle" id="dmSidebarToggle" onclick="dmToggleMobileSidebar()" aria-label="Open device menu" title="Menu">☰ <span class="dm-sidebar-toggle-label">Menu</span></button>
       <div>
         <div class="dm-page-title"><span>Dashboard /</span> Device Management</div>
       </div>
